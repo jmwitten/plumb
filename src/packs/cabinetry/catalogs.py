@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 from dataclasses import dataclass
 
 from ..project import ProjectSchemaError
@@ -74,6 +75,76 @@ class AdhesiveProduct:
     open_time_minutes: tuple[float, float]
     total_assembly_time_minutes: tuple[float, float]
     minimum_application_temperature_c: float
+    source_url: str
+    source_date: str
+
+
+@dataclass(frozen=True)
+class DrawerRunnerProduct:
+    product_id: str
+    manufacturer: str
+    product: str
+    sku: str
+    nominal_length_mm: float
+    physical_length_mm: float
+    minimum_inside_depth_mm: float
+    maximum_side_thickness_mm: float
+    inside_width_deduction_mm: float
+    bottom_recess_mm: float
+    bottom_clearance_mm: float
+    minimum_rear_notch_mm: float
+    hook_bore_mm: tuple[float, float]
+    minimum_top_clearance_mm: float
+    opening_height_deduction_mm: float
+    front_setback_mm: float
+    mounting_line_mm: float
+    required_rear_fixing_stations_mm: tuple[float, ...]
+    static_rating_lb: float
+    dynamic_rating_lb: float
+    motion: str
+    source_url: str
+    source_date: str
+
+
+@dataclass(frozen=True)
+class DrawerLockingDeviceProduct:
+    product_id: str
+    manufacturer: str
+    product: str
+    left_sku: str
+    right_sku: str
+    quantity_per_drawer: int
+    minimum_inside_drawer_width_mm: float
+    side_adjustment_mm: tuple[float, float]
+    source_url: str
+    source_date: str
+
+
+@dataclass(frozen=True)
+class LateralStabilizerProduct:
+    product_id: str
+    manufacturer: str
+    product: str
+    sku: str
+    recommended_from_opening_mm: float
+    maximum_opening_mm: float
+    linkage_rod_length_mm: float
+    capacity_increase_lb: float
+    quantity_per_drawer: int
+    source_url: str
+    source_date: str
+
+
+@dataclass(frozen=True)
+class DrawerPullProduct:
+    product_id: str
+    manufacturer: str
+    product: str
+    sku: str
+    finish: str
+    hole_spacing_mm: float
+    thread: str
+    quantity_per_drawer: int
     source_url: str
     source_date: str
 
@@ -204,6 +275,99 @@ _ASSEMBLY_FASTENERS = {
 }
 _ADHESIVES = {TITEBOND_ORIGINAL.product_id: TITEBOND_ORIGINAL}
 
+_MOVENTO_SOURCE = (
+    "https://d2.blum.com/services/BEC003/"
+    "movento_ep_dok_bus_%24sen-us_%24aof_%24v7.pdf"
+)
+
+BLUM_MOVENTO_763_5330S = DrawerRunnerProduct(
+    product_id="blum_movento_763_5330s@2026.1",
+    manufacturer="Blum",
+    product="MOVENTO 763 standard-duty full-extension runner with BLUMOTION",
+    sku="763.5330S",
+    nominal_length_mm=533.0,
+    physical_length_mm=544.0,
+    minimum_inside_depth_mm=553.0,
+    maximum_side_thickness_mm=16.0,
+    inside_width_deduction_mm=42.0,
+    bottom_recess_mm=13.0,
+    bottom_clearance_mm=16.0,
+    minimum_rear_notch_mm=50.0,
+    hook_bore_mm=(6.0, 10.0),
+    minimum_top_clearance_mm=7.0,
+    opening_height_deduction_mm=23.0,
+    front_setback_mm=3.0,
+    mounting_line_mm=37.0,
+    required_rear_fixing_stations_mm=(261.0, 357.0),
+    static_rating_lb=125.0,
+    dynamic_rating_lb=110.0,
+    motion="blumotion_soft_close",
+    source_url=_MOVENTO_SOURCE,
+    source_date="2026-04-14",
+)
+
+BLUM_T51_7601_PAIR = DrawerLockingDeviceProduct(
+    product_id="blum_t51_7601_pair@2026.1",
+    manufacturer="Blum",
+    product="MOVENTO standard locking-device handed pair",
+    left_sku="T51.7601 L",
+    right_sku="T51.7601 R",
+    quantity_per_drawer=2,
+    minimum_inside_drawer_width_mm=170.0,
+    side_adjustment_mm=(-1.5, 1.5),
+    source_url=_MOVENTO_SOURCE,
+    source_date="2026-04-14",
+)
+
+BLUM_ZS7M686MU = LateralStabilizerProduct(
+    product_id="blum_zs7m686mu@2026.1",
+    manufacturer="Blum",
+    product="MOVENTO 763/769 lateral stabilizer set",
+    sku="ZS7M686MU",
+    recommended_from_opening_mm=610.0,
+    maximum_opening_mm=1369.0,
+    linkage_rod_length_mm=1051.0,
+    capacity_increase_lb=0.0,
+    quantity_per_drawer=1,
+    source_url=(
+        "https://d2.blum.com/services/BEC003/"
+        "moventolatstab_ma_dok_bus_%24sen-us_%24aof_%24v3.pdf"
+    ),
+    source_date="2024-02-06",
+)
+
+HAFELE_VOGUE_224_BLACK = DrawerPullProduct(
+    product_id="hafele_vogue_155_01_613@2026.1",
+    manufacturer="Häfele",
+    product="Vogue zinc pull, 224 mm center-to-center",
+    sku="155.01.613",
+    finish="matte black",
+    hole_spacing_mm=224.0,
+    thread="M4",
+    quantity_per_drawer=1,
+    source_url="https://www.hafele.com/us/en/product/handle-zinc/15501623/",
+    source_date="2025-10-22",
+)
+
+_DRAWER_RUNNERS = {BLUM_MOVENTO_763_5330S.product_id: BLUM_MOVENTO_763_5330S}
+_DRAWER_LOCKING_DEVICES = {
+    BLUM_T51_7601_PAIR.product_id: BLUM_T51_7601_PAIR
+}
+_LATERAL_STABILIZERS = {BLUM_ZS7M686MU.product_id: BLUM_ZS7M686MU}
+_DRAWER_PULLS = {HAFELE_VOGUE_224_BLACK.product_id: HAFELE_VOGUE_224_BLACK}
+
+
+def _drawer_product(products: dict, product_id: str, kind: str):
+    try:
+        return products[product_id]
+    except KeyError:
+        suggestions = difflib.get_close_matches(product_id, sorted(products), n=1)
+        hint = f"; did you mean {suggestions[0]!r}?" if suggestions else ""
+        raise ProjectSchemaError(
+            f"unknown {kind} {product_id!r}; known products: "
+            f"{sorted(products)}{hint}"
+        ) from None
+
 
 def get_hinge_product(product_id: str) -> HingeProduct:
     try:
@@ -243,3 +407,23 @@ def get_adhesive(product_id: str) -> AdhesiveProduct:
             f"unknown adhesive {product_id!r}; known products: "
             f"{sorted(_ADHESIVES)}"
         ) from None
+
+
+def get_drawer_runner(product_id: str) -> DrawerRunnerProduct:
+    return _drawer_product(_DRAWER_RUNNERS, product_id, "drawer runner")
+
+
+def get_drawer_locking_device(product_id: str) -> DrawerLockingDeviceProduct:
+    return _drawer_product(
+        _DRAWER_LOCKING_DEVICES, product_id, "drawer locking device"
+    )
+
+
+def get_lateral_stabilizer(product_id: str) -> LateralStabilizerProduct:
+    return _drawer_product(
+        _LATERAL_STABILIZERS, product_id, "lateral stabilizer"
+    )
+
+
+def get_drawer_pull(product_id: str) -> DrawerPullProduct:
+    return _drawer_product(_DRAWER_PULLS, product_id, "drawer pull")
