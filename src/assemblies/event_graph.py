@@ -152,6 +152,30 @@ class ResolvedStage:
 
 
 @dataclass(frozen=True)
+class ResolvedUnit:
+    """One authored bench unit resolved to built ``Placed.id`` values."""
+
+    name: str
+    why: str
+    parts: tuple = ()
+
+
+@dataclass(frozen=True)
+class ResolvedStaging:
+    """The one compiled staging surface consumed by graph/check/readers.
+
+    ``mode`` is ``subassemblies``, ``bench_then_set``, or ``in_situ``.
+    Whole-detail sugar is already normalized into ``units``; context parts
+    are built ids for every authored ``role: existing`` body.
+    """
+
+    mode: str
+    why: str = ""
+    units: tuple[ResolvedUnit, ...] = ()
+    context_parts: frozenset[str] = frozenset()
+
+
+@dataclass(frozen=True)
 class ReaderStep:
     """One READER presentation unit (§5.1) — a deterministic grouping of
     events in the canonical linearization; NEVER an authored stage
@@ -179,7 +203,7 @@ class EventGraph:
     order everywhere)."""
 
     def __init__(self, events, edges, event_of, part_names, conn_labels,
-                 drives_of, members_of, stages):
+                 drives_of, members_of, stages, staging=None):
         self.events: tuple[Event, ...] = tuple(events)
         self.edges: tuple[EventEdge, ...] = tuple(edges)
         #: part id -> its governing event (fastener/stack hardware -> its
@@ -192,6 +216,7 @@ class EventGraph:
         #: connection label -> its member part ids, declaration order.
         self.members_of: dict[str, tuple[str, ...]] = members_of
         self.stages: tuple[ResolvedStage, ...] = tuple(stages)
+        self.staging: ResolvedStaging | None = staging
         self._out: dict[Event, list[tuple[Event, EventEdge]]] = {}
         for ev in self.events:
             self._out.setdefault(ev, [])
@@ -294,7 +319,7 @@ def _stage_events(stage: ResolvedStage, drives_of, event_of,
 
 
 def build_event_graph(assembly, connections, edges, installs,
-                      stages=()) -> EventGraph:
+                      stages=(), staging=None) -> EventGraph:
     """Build the merged assembly-slice CPG from the compiled surfaces
     (:func:`~detailgen.assemblies.connection.compile_connections` calls
     this after aggregation) and run the merged cycle check.
@@ -307,6 +332,37 @@ def build_event_graph(assembly, connections, edges, installs,
     accepted — ``chain`` defaults to one chain)."""
     parts = list(assembly.parts)
     part_names = {p.id: p.name for p in parts}
+
+    # Defense below the loader/compiler: direct Python callers must not be
+    # able to place one built part in two units or name an unbuilt/context
+    # part as a unit member. The event graph is the semantic trust boundary.
+    if staging is not None:
+        member_of: dict[str, str] = {}
+        for unit in staging.units:
+            for pid in unit.parts:
+                if pid not in part_names:
+                    raise ValueError(
+                        f"staging subassembly {unit.name!r}: part {pid!r} "
+                        f"names no built part; a bench unit can contain only "
+                        f"parts in this compiled assembly.")
+                prior = member_of.get(pid)
+                if prior is not None:
+                    raise ValueError(
+                        f"staging: part {part_names[pid]!r} belongs to both "
+                        f"subassemblies {prior!r} and {unit.name!r} — a part "
+                        f"may belong to at most one subassembly; nesting is "
+                        f"unsupported.")
+                if pid in staging.context_parts:
+                    raise ValueError(
+                        f"staging subassembly {unit.name!r}: context part "
+                        f"{part_names[pid]!r} cannot be a constructed bench-"
+                        f"unit member.")
+                member_of[pid] = unit.name
+        unknown_context = set(staging.context_parts) - set(part_names)
+        if unknown_context:
+            raise ValueError(
+                f"staging context part(s) {sorted(unknown_context)} name no "
+                f"built part in this compiled assembly.")
 
     # -- drive events + the hardware -> drive mapping ---------------------
     conn_labels = [c.label for c in connections]
@@ -518,7 +574,8 @@ def build_event_graph(assembly, connections, edges, installs,
                     EventEdge(mev, dev, FAMILY_NECESSITY, src))
 
     graph = EventGraph(events, graph_edges, event_of, part_names,
-                       conn_labels, drives_of, members_of, norm_stages)
+                       conn_labels, drives_of, members_of, norm_stages,
+                       staging=staging)
     _check_event_order(graph)
     return graph
 

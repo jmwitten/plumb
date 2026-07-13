@@ -22,7 +22,8 @@ from detailgen.assemblies import (
 from detailgen.assemblies.connection import Edge
 from detailgen.assemblies.event_graph import (
     FAMILY_AUTHORED, FAMILY_NECESSITY, FAMILY_TECHNIQUE, Event,
-    EventOrderCycleError, ResolvedStage, build_event_graph,
+    EventOrderCycleError, ResolvedStage, ResolvedStaging, ResolvedUnit,
+    build_event_graph,
     derive_reader_steps, linearize, unordered_parts,
 )
 from detailgen.assemblies.installation import straight_screw_group
@@ -31,8 +32,9 @@ from detailgen.components import (
 )
 
 
-def _graph(assembly, conns, stages=()):
-    checks = compile_connections(assembly, list(conns), sequence=stages)
+def _graph(assembly, conns, stages=(), staging=None):
+    checks = compile_connections(
+        assembly, list(conns), sequence=stages, staging=staging)
     return checks.event_graph
 
 
@@ -388,6 +390,122 @@ def test_stage_naming_unknown_connection_or_part_is_loud():
     with pytest.raises(ValueError, match="names no built part"):
         _graph(a, [c1], (ResolvedStage(name="s", why="w",
                                        parts=("ghost-part",)),))
+
+
+# -- +staging compiled surface ------------------------------------------------
+
+
+def _compile_staging(text: str):
+    from detailgen.spec.compiler import compile_spec
+    from detailgen.spec.loader import load_spec_text
+
+    return compile_spec(load_spec_text(text))
+
+
+def test_specdetail_resolves_explicit_units_and_existing_context_to_built_ids():
+    detail = _compile_staging("""
+name: resolved staging
+units: in
+components:
+  - {id: leg, type: lumber, params: {nominal: 2x4, length: 4}}
+  - {id: rail, type: lumber, params: {nominal: 2x4, length: 4}}
+  - {id: room, type: boulder, params: {width: 12, length: 12, depth: 4}}
+roles:
+  room: {role: existing, grounded_by: site}
+sequence:
+  subassemblies:
+    - name: side
+      parts: [leg, rail]
+      why: Screw the side flat on the bench.
+""")
+    resolved = detail.resolved_staging()
+    assert isinstance(resolved, ResolvedStaging)
+    assert resolved.mode == "subassemblies"
+    assert resolved.why == ""
+    assert len(resolved.units) == 1
+    assert isinstance(resolved.units[0], ResolvedUnit)
+    by_name = {p.name: p.id for p in detail.build().parts}
+    assert resolved.units[0].parts == (by_name["leg"], by_name["rail"])
+    assert resolved.context_parts == frozenset({by_name["room"]})
+
+
+def test_bench_then_set_resolves_to_one_unit_of_every_non_context_part():
+    detail = _compile_staging("""
+name: bench sugar
+units: in
+components:
+  - {id: board, type: lumber, params: {nominal: 2x4, length: 4}}
+  - {id: screw, type: structural_screw, params: {diameter: 0.16, length: 1.5}}
+  - {id: sofa, type: boulder, params: {width: 12, length: 12, depth: 4}}
+roles:
+  sofa: {role: existing, grounded_by: site}
+sequence:
+  assembly:
+    mode: bench_then_set
+    why: Build the whole product away from the sofa.
+""")
+    resolved = detail.resolved_staging()
+    by_name = {p.name: p.id for p in detail.build().parts}
+    assert resolved.mode == "bench_then_set"
+    assert resolved.why == "Build the whole product away from the sofa."
+    assert len(resolved.units) == 1
+    assert resolved.units[0].name == "whole detail"
+    assert resolved.units[0].parts == (by_name["board"], by_name["screw"])
+    assert resolved.context_parts == frozenset({by_name["sofa"]})
+
+
+def test_repeat_template_unit_membership_expands_to_every_built_instance():
+    detail = _compile_staging("""
+name: repeat staging
+units: in
+components:
+  - repeat: {var: i, count: 2}
+    body:
+      - id: 'leg_{i}'
+        type: lumber
+        params: {nominal: 2x4, length: 4}
+sequence:
+  subassemblies:
+    - name: pair
+      parts: ['leg_{i}']
+      why: Both repeated legs form one bench unit.
+""")
+    resolved = detail.resolved_staging()
+    assert resolved.units[0].parts == tuple(p.id for p in detail.build().parts)
+
+
+def test_zero_instance_unit_member_is_a_loud_compile_error():
+    detail = _compile_staging("""
+name: zero staging
+units: in
+components:
+  - repeat: {var: i, count: 0}
+    body:
+      - id: 'leg_{i}'
+        type: lumber
+        params: {nominal: 2x4, length: 4}
+sequence:
+  subassemblies:
+    - name: empty after expansion
+      parts: ['leg_{i}']
+      why: Probe the zero-instance diagnostic.
+""")
+    with pytest.raises(ValueError, match="built no instance"):
+        detail.resolved_staging()
+
+
+def test_event_graph_defends_against_multi_membership_if_loader_is_bypassed():
+    a, c1, _c2 = _two_screwed_plates()
+    repeated = c1.parts[0].id
+    staging = ResolvedStaging(
+        mode="subassemblies", why="", context_parts=frozenset(),
+        units=(
+            ResolvedUnit("side a", "first claim", (repeated,)),
+            ResolvedUnit("side b", "second claim", (repeated,)),
+        ))
+    with pytest.raises(ValueError, match="at most one subassembly") as err:
+        _graph(a, [c1], staging=staging)
+    assert "side a" in str(err.value) and "side b" in str(err.value)
 
 
 # -- canonical linearization + reader steps (§5.1; amendment 5 vocabulary) -----

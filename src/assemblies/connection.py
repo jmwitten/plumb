@@ -212,6 +212,7 @@ class ConnectionChecks:
     edges: list[Edge] = field(default_factory=list)
     installs: list[ResolvedInstallation] = field(default_factory=list)
     sequence: tuple = ()
+    staging: object = None
     event_graph: object = None
     fragments: dict = field(default_factory=dict)
 
@@ -607,6 +608,7 @@ class Connection:
 
 def compile_connections(assembly: DetailAssembly, connections: list[Connection],
                         sequence: tuple = (),
+                        staging=None,
                         fragments: dict | None = None) -> ConnectionChecks:
     """Aggregate every :class:`Connection`'s generated checks into one
     :class:`ConnectionChecks`, run the whole-detail installation-order
@@ -630,7 +632,8 @@ def compile_connections(assembly: DetailAssembly, connections: list[Connection],
     connection/part is a loud load-time teaching error here. ``fragments``
     is the composed-site connection-label -> fragment-id map (design §3.2);
     ``None``/empty for a standalone detail."""
-    out = ConnectionChecks(sequence=sequence, fragments=dict(fragments or {}))
+    out = ConnectionChecks(sequence=sequence, staging=staging,
+                           fragments=dict(fragments or {}))
     for conn in connections:
         c = conn.generate_checks(assembly)
         out.expected_overlaps |= c.expected_overlaps
@@ -645,7 +648,7 @@ def compile_connections(assembly: DetailAssembly, connections: list[Connection],
         out.installs.extend(c.installs)
     _check_install_order(out.edges)
     out.event_graph = build_event_graph(
-        assembly, connections, out.edges, out.installs, sequence)
+        assembly, connections, out.edges, out.installs, sequence, staging)
     return out
 
 

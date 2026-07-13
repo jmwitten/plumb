@@ -383,7 +383,8 @@ def check_installability(assembly: DetailAssembly, connections: list,
         # graph compile_connections would have — never a second order truth.
         from ..assemblies.event_graph import build_event_graph
         graph = build_event_graph(assembly, connections, checks.edges,
-                                  checks.installs, checks.sequence)
+                                  checks.installs, checks.sequence,
+                                  getattr(checks, "staging", None))
 
     findings: list[Finding] = []
     for ri in installs:
