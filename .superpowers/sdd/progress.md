@@ -43,6 +43,11 @@ clean): all 14 caddy components author the closed builder vocabulary; four
 raster title literals no longer expose `+X/-X`; machine names/ids, per-part
 geometry hashes, validation finding signatures, renderer lookup keys, and all
 geometry logic remain unchanged. Gate: 53 passed / 3 skipped.
+Task 3 complete (`593e6d2..5aec431`, review clean): build-sequence placement
+and unordered names, consolidated cut sources, existing-context BOM/hover rows,
+and inspector headings now consume the same projection. Raw technical contract
+labels and every graph/viewer/inspector machine key remain unchanged. Gates:
+88 prescribed + 36 additional regressions passed; JS/diff checks clean.
 
 +staging is COMPLETE on `codex/stepdoc-staging` per binding amendment 1:
 typed subassembly/frame/join authoring, `bench_then_set` sugar, R-1 bench

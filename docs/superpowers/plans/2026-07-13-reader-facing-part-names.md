@@ -271,7 +271,7 @@ Commit: `viewer: show canonical reader-facing part names`
 - Produces: canonical names in cut-plan part rows, build-sequence `place` and
   unordered-part lines, existing-context BOM/hover rows, and inspector headings.
 
-- [ ] **Step 1: Write failing cross-surface parity tests**
+- [x] **Step 1: Write failing cross-surface parity tests**
 
 ```python
 def test_caddy_reader_surfaces_share_the_same_rail_label(tmp_path):
@@ -290,14 +290,14 @@ def test_caddy_reader_surfaces_share_the_same_rail_label(tmp_path):
         "Registration rail") == 2
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 `PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest -q tests/test_reader_names.py tests/test_cpg_core.py tests/test_inspector_payload.py`
 
 Expected: FAIL because these surfaces still read `Placed.name`.
 
-- [ ] **Step 3: Replace independent name reads with the shared projection**
+- [x] **Step 3: Replace independent name reads with the shared projection**
 
 Compute labels once per detail/assembly. In `build_sequence_model`, keep the
 existing tuple shape but place `label.reader_name` in the first slot and map
@@ -310,7 +310,7 @@ add `reader_name` for the inspector header and render
 projection when relabeling existing-context rows so hover/BOM says
 `Sofa arm (existing)`, not the primitive or lowercase machine identity.
 
-- [ ] **Step 4: Pin the technical-appendix boundary**
+- [x] **Step 4: Pin the technical-appendix boundary**
 
 ```python
 def test_machine_connection_labels_remain_in_raw_contract_appendix(tmp_path):
@@ -325,7 +325,7 @@ def test_machine_connection_labels_remain_in_raw_contract_appendix(tmp_path):
     assert "place registration rail +X" not in sequence
 ```
 
-- [ ] **Step 5: Run GREEN tests and commit**
+- [x] **Step 5: Run GREEN tests and commit**
 
 Run:
 `PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest -q tests/test_reader_names.py tests/test_cpg_core.py tests/test_inspector_payload.py tests/test_armchair_caddy_e2e.py`
