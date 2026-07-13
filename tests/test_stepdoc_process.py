@@ -21,6 +21,7 @@ from detailgen.assemblies.installation import straight_screw_group
 from detailgen.components import Lumber, StructuralScrew
 from detailgen.spec.compiler import compile_spec
 from detailgen.spec.loader import load_spec_text
+from detailgen.spec.semantics import SemanticError
 
 
 def _boards(name="process"):
@@ -156,6 +157,43 @@ def test_semantics_asks_registered_capability_not_the_glued_display_key(
     detail = compile_spec(load_spec_text(raw))
     (conn,) = detail.connections()
     assert conn.kind.process_events(conn)[0].kind == "cure"
+
+
+def test_unknown_type_with_authored_process_keeps_registry_teaching_error():
+    raw = _AUTHORED_GLUE.replace("type: glued", "type: gluud")
+    with pytest.raises(SemanticError) as err:
+        compile_spec(load_spec_text(raw))
+    message = str(err.value)
+    assert "unknown connection type 'gluud'" in message
+    assert "known connection types" in message
+    assert "glued" in message
+    assert "does not support" not in message
+
+
+def test_unknown_after_source_type_keeps_registry_teaching_error():
+    raw = """
+name: unknown process source
+units: in
+components:
+  - {id: a, type: lumber, params: {nominal: 2x4, length: 12}}
+  - {id: b, type: lumber, params: {nominal: 2x4, length: 12}}
+  - {id: c, type: lumber, params: {nominal: 2x4, length: 12}}
+connections:
+  - {type: gluud, label: mystery source, parts: [a, b]}
+  - {type: glued, label: target, parts: [b, c]}
+sequence:
+  after:
+    - connection: target
+      after: [{cure: mystery source}]
+      why: The source process must finish before the target starts.
+"""
+    with pytest.raises(SemanticError) as err:
+        compile_spec(load_spec_text(raw))
+    message = str(err.value)
+    assert "unknown connection type 'gluud'" in message
+    assert "known connection types" in message
+    assert "glued" in message
+    assert "does not support" not in message
 
 
 def test_glued_process_event_and_derived_bond_before_cure_fact():
@@ -337,6 +375,54 @@ def test_runtime_rejects_connection_type_rewriting_authored_process_fact():
         process=(authored,))
     with pytest.raises(ValueError, match="rewriter.*changed authored.*cure"):
         compile_connections(assembly, [conn])
+
+
+def test_runtime_rejects_type_forging_an_unauthored_process_fact():
+    class _ForgesAuthored(ConnectionType):
+        @classmethod
+        def supported_process_kinds(cls):
+            return frozenset({"cure"})
+
+        def process_events(self, conn):
+            return (eg.ProcessFact(
+                kind="cure", instructions=("wait",),
+                completion="selected_label_full_cure", why="forged why",
+                provenance="authored_process_fact"),)
+
+        def install_contract(self, conn):
+            return ()
+
+    assembly, lower, upper = _boards()
+    conn = Connection(
+        kind=_ForgesAuthored(), parts=[lower, upper], label="forger")
+    with pytest.raises(
+            ValueError, match="forger.*connectiontype_default"):
+        compile_connections(assembly, [conn])
+
+
+def test_runtime_rejects_duplicate_after_targets_and_names_both_whys():
+    assembly, glue, target = _glue_and_target()
+    first = _after(why="First authored rationale.")
+    second = _after(why="Second conflicting rationale.")
+    with pytest.raises(ValueError) as err:
+        compile_connections(assembly, [glue, target], after=(first, second))
+    message = str(err.value)
+    assert "duplicate" in message
+    assert "target" in message
+    assert "First authored rationale." in message
+    assert "Second conflicting rationale." in message
+
+
+def test_runtime_rejects_duplicate_process_refs_in_one_after_claim():
+    assembly, glue, target = _glue_and_target()
+    duplicate = eg.ResolvedAfter(
+        connection="target",
+        after=(_cure_ref("glue"), _cure_ref("glue")),
+        why="One prerequisite must be declared once.",
+    )
+    with pytest.raises(
+            ValueError, match="duplicate.*cure.*glue.*target"):
+        compile_connections(assembly, [glue, target], after=(duplicate,))
 
 
 def test_process_constraints_cannot_cross_their_composed_fragment_chain():

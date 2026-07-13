@@ -703,6 +703,16 @@ def build_event_graph(assembly, connections, edges, installs,
                     f"invalid cure fact; cure requires non-empty instructions "
                     f"and why plus completion "
                     f"'selected_label_full_cure' (never a duration).")
+        authored_by_kind = {fact.kind: fact for fact in c.process}
+        for fact in produced:
+            if (fact.provenance == "authored_process_fact"
+                    and fact.kind not in authored_by_kind):
+                raise ValueError(
+                    f"event graph: connection {c.label!r} produced an "
+                    f"'authored_process_fact' for unauthored process kind "
+                    f"{fact.kind!r}; a fact created by ConnectionType "
+                    f"knowledge must use provenance "
+                    f"'connectiontype_default'.")
         dropped_authored = sorted(set(authored_kinds) - set(produced_kinds))
         if dropped_authored:
             raise ValueError(
@@ -985,6 +995,26 @@ def build_event_graph(assembly, connections, edges, installs,
     # again at the graph boundary; a direct Python caller bypasses the schema.
     fragments = dict(fragments or {})
     norm_after = tuple(after or ())
+    seen_after_targets: dict[str, ResolvedAfter] = {}
+    for claim in norm_after:
+        prior = seen_after_targets.get(claim.connection)
+        if prior is not None:
+            raise ValueError(
+                f"event graph: duplicate sequence.after target connection "
+                f"{claim.connection!r}; one target must have exactly one "
+                f"point-constraint declaration. First why: {prior.why!r}; "
+                f"duplicate why: {claim.why!r}.")
+        seen_after_targets[claim.connection] = claim
+        seen_refs: set[tuple[str, str]] = set()
+        for ref in claim.after:
+            key = (ref.kind, ref.connection)
+            if key in seen_refs:
+                raise ValueError(
+                    f"event graph: duplicate {ref.kind} process reference "
+                    f"to connection {ref.connection!r} for sequence.after "
+                    f"target {claim.connection!r}; list each typed "
+                    f"prerequisite once.")
+            seen_refs.add(key)
     for claim in norm_after:
         target_drives = drives_of.get(claim.connection)
         if target_drives is None:

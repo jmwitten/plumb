@@ -26,6 +26,8 @@ from detailgen.core.buildinfo import build_manifest
 from detailgen.spec.compiler import SpecCompileError, compile_spec
 from detailgen.spec.loader import load_spec_file
 from detailgen.spec.schema import SpecSchemaError
+from detailgen.spec.semantics import SemanticError
+from detailgen.spec import site as site_module
 from detailgen.spec.site import (
     SiteDetail,
     compile_site_file,
@@ -57,6 +59,30 @@ dedup:
   - {drop: platform/boulder, keep: rock_anchor/boulder}
 validation: {ground: rock_anchor/boulder}
 """
+
+
+def test_site_owned_process_capability_fails_before_fragment_compilation(
+        monkeypatch):
+    body = _TWO + """
+connections:
+  - type: cleat_screwed
+    label: unsupported site cure
+    parts: [platform/leg_pY, platform/beam_pY]
+    process:
+      cure:
+        instructions: [Wait for the selected adhesive label.]
+        completion: selected_label_full_cure
+        why: This is an adversarial unsupported-capability probe.
+"""
+
+    def _fragment_compile_must_not_run(_doc):
+        pytest.fail("site capability validation ran after fragment compilation")
+
+    monkeypatch.setattr(site_module, "compile_spec", _fragment_compile_must_not_run)
+    with pytest.raises(
+            SemanticError,
+            match="unsupported site cure.*cleat_screwed.*does not support.*cure"):
+        _site_from_text(body)
 
 
 # -- one compiled model ------------------------------------------------------ #

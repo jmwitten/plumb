@@ -131,6 +131,60 @@ PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest \
 `git diff --check` exited cleanly after the focused gate. The worktree shim
 resolved `detailgen` from this exact worktree before all runs.
 
+## Adversarial fix round
+
+A fresh adversarial review found four trust-boundary gaps after the initial
+Task 2 commit:
+
+1. unknown connection types in `process.cure` and `sequence.after` could leak
+   or lose the registry's teaching diagnostic;
+2. a `ConnectionType` hook could manufacture a new fact stamped
+   `authored_process_fact` when the connection authored no such fact;
+3. direct `ResolvedAfter` callers could bypass the loader's duplicate target /
+   reference checks and make derivation lookup attribute the wrong `why`;
+4. site-owned connections bypassed the early process-capability semantic gate.
+
+Six focused regression probes reproduced all four findings before production
+changes:
+
+```text
+6 failed in 2.18s
+```
+
+The fix centralizes the declaration-time registered-capability lookup so an
+unknown type resolves once and retains the registry's known-types /
+did-you-mean diagnostic. `SiteDetail` reuses that gate before fragment
+compilation. The event graph now requires exact authored-process equality in
+both directions, reserves `connectiontype_default` for type-created facts, and
+rejects duplicate target declarations or process references before emitting
+any authored point-constraint edge. The duplicate-target diagnostic carries
+both authored rationales so provenance disagreement is visible.
+
+Fresh focused verification on the adversarial-fix tree:
+
+```text
+PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest \
+  tests/test_stepdoc_process.py tests/test_sequence_schema.py \
+  tests/test_glued_connection.py tests/test_cpg_core.py \
+  tests/test_install_axes.py -q
+
+190 passed in 10.97s
+```
+
+Fresh site/spec verification on the same tree:
+
+```text
+PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest \
+  tests/test_site_model.py tests/test_spec.py tests/test_spec_repeat.py -q
+
+66 passed in 172.07s (0:02:52)
+```
+
+`git diff --check` exited cleanly after the fix round. A confirmation reviewer
+then re-attacked the four original findings on the exact final diff and found
+all four closed, the attacks discriminating, and no important regression or
+new gap. Its verdict was: **all clear; Task 3 may proceed.**
+
 ## Deliberate deferrals / next-task boundary
 
 - `process(cure)` is not yet a `ReaderStep`; Task 3 must make it its own step

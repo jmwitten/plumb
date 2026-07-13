@@ -80,6 +80,7 @@ from .schema import (
     _MISSING,
     _take,
 )
+from .semantics import require_connection_process_capability
 from .values import UNIT_FACTORS, Resolver, SpecValueError
 
 def _is_context_body(component) -> bool:
@@ -328,6 +329,15 @@ class SiteDetail(Detail):
             raise SpecCompileError(
                 f"unknown authoring unit {doc.units!r}; known: "
                 f"{sorted(UNIT_FACTORS)}")
+        # Site-owned connections bypass SpecDetail's semantic pass, so apply
+        # the same declaration-time capability gate before fragment compile or
+        # geometry. Unknown types keep the registry's teaching diagnostic.
+        for index, conn in enumerate(doc.connections):
+            if conn.process.cure is not None:
+                label = conn.label or f"site connection {index}"
+                require_connection_process_capability(
+                    conn, "cure",
+                    owner=f"site connection {label!r}: process.cure")
         self.doc = doc
         self.base_dir = Path(base_dir)
         self.unit = doc.units

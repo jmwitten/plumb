@@ -43,6 +43,31 @@ class SemanticError(ValueError):
     style (what is wrong + the constraint to add / remove)."""
 
 
+def require_connection_process_capability(conn: ConnectionSpec, kind: str,
+                                          *, owner: str) -> frozenset[str]:
+    """Resolve one registered process capability or fail with teaching text.
+
+    This is the declaration-time trust boundary shared by standalone and site
+    connections.  Registry resolution happens exactly once: an unknown type
+    keeps the registry's established known-types / did-you-mean diagnostic
+    instead of being mislabeled as a known type with no capability.
+    """
+    from ..assemblies.connection import connection_types
+
+    try:
+        type_cls = connection_types.get(conn.type)
+    except KeyError as e:
+        raise SemanticError(str(e)) from None
+    supported = frozenset(type_cls.supported_process_kinds())
+    if kind not in supported:
+        raise SemanticError(
+            f"{owner}: registered connection type {conn.type!r} does not "
+            f"support process-kind capability {kind!r}; its supported "
+            f"process kinds are "
+            f"{sorted(supported)}.")
+    return supported
+
+
 def analyze_mounts(doc) -> None:
     """Run the mount semantic-analysis pass over a loaded ``DetailSpecDoc``.
     Raises the FIRST :class:`SemanticError` found (declaration order), so the
@@ -188,23 +213,11 @@ def analyze_sequence(doc) -> None:
     # ConnectionType declares that capability.  The runtime graph asks the
     # same capability surface and also confirms an event was actually emitted;
     # no display key (including ``glued``) is a second authority.
-    from ..assemblies.connection import connection_types
-
-    def supports(conn, kind: str) -> bool:
-        try:
-            type_cls = connection_types.get(conn.type)
-        except KeyError:
-            # Preserve the compiler's established unknown-type diagnostic.
-            return False
-        return kind in type_cls.supported_process_kinds()
-
     for conn in connections:
-        if conn.process.cure is not None and not supports(conn, "cure"):
-            raise SemanticError(
-                f"connection {conn.label or conn.type!r}: process.cure is not "
-                f"supported by registered connection type {conn.type!r}; its "
-                f"supported process kinds are "
-                f"{sorted(connection_types.get(conn.type).supported_process_kinds())}.")
+        if conn.process.cure is not None:
+            require_connection_process_capability(
+                conn, "cure",
+                owner=f"connection {conn.label or conn.type!r}: process.cure")
 
     if (not doc.sequence.stages and not doc.sequence.subassemblies
             and doc.sequence.assembly is None and not doc.sequence.after):
@@ -253,13 +266,10 @@ def analyze_sequence(doc) -> None:
             source = _require_unique_sequence_connection(
                 ref.connection, conn_by_label,
                 f"sequence after {ref.kind} source {ref.connection!r}")
-            if not supports(source, ref.kind):
-                raise SemanticError(
-                    f"sequence after target {claim.connection!r}: {ref.kind} "
-                    f"source {ref.connection!r} is registered connection type "
-                    f"{source.type!r}, which does not support process kind "
-                    f"{ref.kind!r}. A process prerequisite can name only a "
-                    f"connection whose registered type has that capability.")
+            require_connection_process_capability(
+                source, ref.kind,
+                owner=(f"sequence after target {claim.connection!r}: "
+                       f"{ref.kind} source {ref.connection!r}"))
 
 
 def _require_unique_sequence_connection(label: str, by_label: dict[str, list],
