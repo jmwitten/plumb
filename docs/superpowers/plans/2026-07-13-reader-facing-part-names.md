@@ -173,7 +173,7 @@ Commit: `stepdoc: add reader-facing part names`
 - Produces: `part_labels(parts) -> dict[str, PartLabel]`, keyed by `Placed.id`.
 - Viewer payload remains keyed by `Placed.name`; each row gains `reader_name`, `instance_index`, and `instance_count`.
 
-- [ ] **Step 1: Write failing projection and payload tests**
+- [x] **Step 1: Write failing projection and payload tests**
 
 ```python
 def test_part_labels_number_duplicate_reader_names_once():
@@ -195,14 +195,14 @@ def test_viewer_keeps_machine_keys_and_adds_reader_fields():
     assert (row["instance_index"], row["instance_count"]) == (1, 2)
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 `PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest -q tests/test_reader_names.py tests/test_viewer_data.py`
 
 Expected: FAIL because `part_labels` and the new payload fields do not exist.
 
-- [ ] **Step 3: Implement the immutable shared projection**
+- [x] **Step 3: Implement the immutable shared projection**
 
 ```python
 @dataclass(frozen=True)
@@ -228,11 +228,11 @@ def part_labels(parts):
     return result
 ```
 
-- [ ] **Step 4: Render the two-line hover contract**
+- [x] **Step 4: Render the two-line hover contract**
 
 Keep lookup by machine name. Change `fillTooltip` so the header is `p.reader_name || partName`, and the subheading is either `p.item` or `${p.instance_index} of ${p.instance_count} · ${p.item}`. Add CSS classes for the primary name and secondary stock line; do not concatenate them into one opaque string.
 
-- [ ] **Step 5: Add a JavaScript-source contract test**
+- [x] **Step 5: Add a JavaScript-source contract test**
 
 ```python
 def test_tooltip_uses_reader_name_but_not_as_lookup_key():
@@ -242,7 +242,7 @@ def test_tooltip_uses_reader_name_but_not_as_lookup_key():
     assert "payload.parts[partName]" in js
 ```
 
-- [ ] **Step 6: Run GREEN tests and commit**
+- [x] **Step 6: Run GREEN tests and commit**
 
 Run:
 `PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest -q tests/test_reader_names.py tests/test_viewer_data.py tests/test_viewer_explode_and_fab.py`
@@ -329,7 +329,7 @@ Commit: `docs: unify model-driven part labels`
 - Modify: `tests/test_reader_names.py`
 
 **Interfaces:**
-- Consumes: `reader_name` schema and shared labels from Tasks 1–3.
+- Consumes: `reader_name` schema and shared labels from Tasks 1–2.
 - Produces: semantic caddy names for context, wood parts, and screws.
 
 - [ ] **Step 1: Write failing caddy authoring and invariant tests**
@@ -377,6 +377,11 @@ Author the exact vocabulary from Global Constraints on all 14 caddy components. 
 - [ ] **Step 4: Remove coordinate vocabulary from static builder captions**
 
 Replace `+X/-X` only in manually authored raster titles/captions that builders see. Preserve coordinate-bearing variable names and geometry logic. Re-render only the caddy presentation PNGs whose text changed; record that geometry hash remains unchanged while presentation hashes move intentionally.
+
+In this task, pin the source captions and leave ignored/generated PNG output to
+Task 5. Task 5 must force `scripts/render_caddy_views.py` before composing the
+HTML; `_ensure_views()` is existence-only and may otherwise retain stale
+caption pixels from an earlier run.
 
 - [ ] **Step 5: Run GREEN tests and commit**
 
