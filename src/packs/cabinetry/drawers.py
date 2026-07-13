@@ -173,6 +173,7 @@ def build_drawer_bank(
     inside_box_depth = runner.nominal_length_mm - 2 * _SIDE_THICKNESS_MM
     bottom_blank_depth = inside_box_depth + 2 * _BOTTOM_GROOVE_DEPTH_MM
     x_clearance = (opening_width_mm - outside_box_width) / 2
+    display_namespace = namespace.split(".", 1)[-1]
 
     for cell in declaration.cells:
         cell_parts: list[PartModel] = []
@@ -180,7 +181,7 @@ def build_drawer_bank(
         cell_hardware: list[HardwareSystem] = []
         box_z = front_bottom_by_cell[cell.cell_id] + runner.bottom_clearance_mm
         box_x = opening_origin_mm[0] + x_clearance
-        box_y = opening_origin_mm[1] + runner.front_setback_mm
+        box_y = opening_origin_mm[1]
 
         def add_part(
             role: str,
@@ -190,6 +191,7 @@ def build_drawer_bank(
             thickness: float,
             at: tuple[float, float, float],
             rule: str,
+            rotate: tuple[tuple[str, float], ...] = (),
             surface: str = "drawer_interior",
             bands: tuple[str, ...] = (),
         ) -> PartModel:
@@ -197,10 +199,11 @@ def build_drawer_bank(
             part = PartModel(
                 part_id=part_id,
                 role=role,
-                name=f"{namespace} {role.replace('_', ' ')}",
+                name=f"{display_namespace} {role.replace('_', ' ')}",
                 component_type="plywood_panel",
                 params=params(length=length, width=width, thickness=thickness),
                 at_mm=at,
+                rotate=rotate,
                 length_mm=length,
                 width_mm=width,
                 thickness_mm=thickness,
@@ -224,6 +227,7 @@ def build_drawer_bank(
             thickness=_SIDE_THICKNESS_MM,
             at=(box_x, box_y, box_z),
             rule="drawer_box.side_left",
+            rotate=(("X", 90.0), ("Z", 90.0)),
             bands=("top",),
         )
         side_right = add_part(
@@ -233,6 +237,7 @@ def build_drawer_bank(
             thickness=_SIDE_THICKNESS_MM,
             at=(box_x + outside_box_width - _SIDE_THICKNESS_MM, box_y, box_z),
             rule="drawer_box.side_right",
+            rotate=(("X", 90.0), ("Z", 90.0)),
             bands=("top",),
         )
         box_front = add_part(
@@ -240,8 +245,10 @@ def build_drawer_bank(
             length=inside_box_width,
             width=cell.box_height_mm,
             thickness=_SIDE_THICKNESS_MM,
-            at=(box_x + _SIDE_THICKNESS_MM, box_y, box_z),
+            at=(box_x + _SIDE_THICKNESS_MM,
+                box_y + _SIDE_THICKNESS_MM, box_z),
             rule="drawer_box.front",
+            rotate=(("X", 90.0),),
             bands=("top",),
         )
         box_back = add_part(
@@ -250,8 +257,9 @@ def build_drawer_bank(
             width=cell.box_height_mm,
             thickness=_SIDE_THICKNESS_MM,
             at=(box_x + _SIDE_THICKNESS_MM,
-                box_y + runner.nominal_length_mm - _SIDE_THICKNESS_MM, box_z),
+                box_y + runner.nominal_length_mm, box_z),
             rule="drawer_box.back",
+            rotate=(("X", 90.0),),
             bands=("top",),
         )
         bottom = add_part(
@@ -272,6 +280,7 @@ def build_drawer_bank(
             at=(front_origin_mm[0], front_origin_mm[1],
                 front_bottom_by_cell[cell.cell_id]),
             rule="drawer_front.applied",
+            rotate=(("X", 90.0),),
             surface="exposed_exterior",
             bands=("top", "bottom", "left", "right"),
         )
@@ -330,7 +339,8 @@ def build_drawer_bank(
                                 f"fixing_{side_name}_{station:g}"),
                     kind="runner_fixing_station",
                     part_id=mounting_part_id,
-                    location_mm=(station, box_z - opening_origin_mm[2]
+                    location_mm=(runner.front_setback_mm + station,
+                                 box_z - opening_origin_mm[2]
                                  + runner.mounting_line_mm),
                     diameter_mm=5.0,
                     depth_mm=13.0,

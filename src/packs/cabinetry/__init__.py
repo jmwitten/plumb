@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from ...spec import compile_spec
-from ..project import PackedProject
+from ..project import PackedProject, ProjectSchemaError
 from .artifacts import build_artifacts
+from .drawer_base import build_drawer_base_model
 from .lowering import lower_model
 from .model import build_model
 from .presets import expand_cabinetry_project
@@ -14,7 +15,7 @@ from .run import (
     lower_run_model,
     validate_run_model,
 )
-from .schema import CabinetrySection, parse_cabinetry_project
+from .schema import CabinetrySection, DrawerBaseDecl, parse_cabinetry_project
 from .validation import validate_model
 from .vanity import FramelessVanityPack
 
@@ -32,8 +33,21 @@ class FramelessCabinetryPack:
     def compile(self, doc):
         expanded, source_archetypes = expand_cabinetry_project(doc)
         section = parse_cabinetry_project(expanded, source_archetypes)
+        drawer_bases = tuple(
+            cabinet for cabinet in section.cabinets
+            if isinstance(cabinet, DrawerBaseDecl)
+        )
+        if drawer_bases and len(section.cabinets) != 1:
+            raise ProjectSchemaError(
+                "cabinetry.frameless@1 v1 supports drawer_base_three@1 only as "
+                "a single-cabinet project; mixed straight runs are not yet "
+                "implemented"
+            )
         if len(section.cabinets) == 1:
-            model = build_model(section, project_name=doc.name)
+            if drawer_bases:
+                model = build_drawer_base_model(section, project_name=doc.name)
+            else:
+                model = build_model(section, project_name=doc.name)
             lowered = lower_model(model)
             report = validate_model(model)
             artifacts = build_artifacts(model, report)

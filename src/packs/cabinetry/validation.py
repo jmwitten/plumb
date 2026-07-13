@@ -102,6 +102,33 @@ def _door_weight_kg(model: CabinetModel, role: str) -> float:
 def validate_model(model: CabinetModel) -> CabinetReport:
     """Run deterministic pack rules; never convert an unknown into a pass."""
 
+    if hasattr(model, "drawer_bank"):
+        message = (
+            "Drawer geometry is compiled, but the drawer-specific release-rule "
+            "set has not yet supplied its complete evidence report."
+        )
+        evidence_id = "evidence:cabinetry.drawer.validation_pending"
+        return CabinetReport(
+            mode=model.mode,
+            findings=(CabinetFinding(
+                rule="cabinetry.drawer.validation_pending",
+                verdict="UNKNOWN",
+                severity="required",
+                message=message,
+                evidence_level="unknown",
+                evidence_ids=(evidence_id,),
+                affected=tuple(
+                    part.part_id for part in model.drawer_bank.parts
+                ),
+            ),),
+            evidence=(EvidenceRecord(
+                evidence_id=evidence_id,
+                subject="cabinetry.drawer.validation_pending",
+                level="unknown",
+                statement=message,
+            ),),
+        )
+
     findings: list[CabinetFinding] = []
     evidence: list[EvidenceRecord] = []
 

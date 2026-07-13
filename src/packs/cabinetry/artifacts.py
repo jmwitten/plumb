@@ -86,7 +86,9 @@ def _edge_length(part, edge: str) -> float:
     if edge in {"left", "right", "front"}:
         # On door slabs left/right are vertical (panel width); on carcass/shelf
         # front edges the run is the panel length.
-        if part.role.startswith("door_") and edge in {"left", "right"}:
+        if (part.role.startswith("door_")
+                or part.role.startswith("drawer_front_")) \
+                and edge in {"left", "right"}:
             return part.width_mm
         return part.length_mm
     if edge in {"top", "bottom"}:
@@ -103,6 +105,9 @@ def _hardware_source(model: CabinetModel, product_id: str) -> str:
 
 
 def build_artifacts(model: CabinetModel, report: CabinetReport) -> CabinetArtifacts:
+    if hasattr(model, "drawer_bank"):
+        return _build_initial_drawer_artifacts(model)
+
     cabinet = model.section.cabinets[0]
     fabricated = sorted(
         (
@@ -366,6 +371,62 @@ def build_artifacts(model: CabinetModel, report: CabinetReport) -> CabinetArtifa
         fabrication_steps=fabrication_steps,
         assembly_steps=assembly_steps,
         installation_steps=installation_steps,
+    )
+
+
+def _build_initial_drawer_artifacts(model) -> CabinetArtifacts:
+    """Expose real shop rows while the later task adds ordered work steps."""
+
+    fabricated = tuple(sorted(
+        (part for part in model.parts if part.component_type == "plywood_panel"),
+        key=lambda part: part.part_id,
+    ))
+    cut_list = tuple(CutListItem(
+        part_id=part.part_id,
+        role=part.role,
+        description=part.name,
+        quantity=1,
+        length_mm=part.length_mm,
+        width_mm=part.width_mm,
+        thickness_mm=part.thickness_mm,
+        material=("1/4-inch plywood back" if part.role == "captured_back"
+                  else "prefinished plywood"),
+        surface_class=part.surface_class,
+        source_rule=model.source_map[part.part_id].rule,
+    ) for part in fabricated)
+    edge_banding = tuple(EdgeBandItem(
+        part_id=part.part_id,
+        edge=edge,
+        operation="band",
+        length_mm=_edge_length(part, edge),
+        material="applied matching edge band",
+        source_rule="surface_policy.exposed_or_semi_exposed_edge",
+    ) for part in fabricated for edge in part.edge_bands)
+    hardware_schedule = tuple(HardwareItem(
+        system_id=system.system_id,
+        kind=system.kind,
+        product_id=system.product_id,
+        quantity=system.quantity,
+        source_url=system.source_url,
+        evidence=system.evidence,
+        related_parts=system.related_parts,
+    ) for system in sorted(model.hardware, key=lambda item: item.system_id))
+    return CabinetArtifacts(
+        schema="detailgen/cabinetry-artifacts/v1",
+        project=model.project_name,
+        pack="cabinetry.frameless@1.0.0",
+        profile=model.profile.profile_id,
+        mode=model.mode,
+        release_ready=False,
+        cut_list=cut_list,
+        edge_banding=edge_banding,
+        hardware_schedule=hardware_schedule,
+        machining_schedule=tuple(sorted(
+            model.machining, key=lambda item: item.feature_id
+        )),
+        fabrication_steps=(),
+        assembly_steps=(),
+        installation_steps=(),
     )
 
 
