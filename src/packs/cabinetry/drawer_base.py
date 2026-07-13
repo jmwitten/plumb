@@ -25,6 +25,23 @@ _FRONT_FASTENER_ID = "grk_low_profile_cabinet_8x1_1_4_114069@2026.1"
 
 
 @dataclass(frozen=True)
+class ObstructionEnvelope:
+    """A declared room obstruction checked against a drawer's swept envelope."""
+
+    obstruction_id: str
+    bounds_mm: tuple[float, float, float, float, float, float]
+
+    def __post_init__(self):
+        if not self.obstruction_id.strip():
+            raise ValueError("obstruction_id must be non-empty")
+        if len(self.bounds_mm) != 6:
+            raise ValueError("obstruction bounds must be xmin,ymin,zmin,xmax,ymax,zmax")
+        if any(self.bounds_mm[index] >= self.bounds_mm[index + 3]
+               for index in range(3)):
+            raise ValueError("obstruction bounds must have positive extent")
+
+
+@dataclass(frozen=True)
 class DrawerBaseModel:
     """The DB40 parent product with the common packed-project model protocol."""
 
@@ -41,6 +58,8 @@ class DrawerBaseModel:
     hardware: tuple[HardwareSystem, ...]
     derived: tuple[DerivedValue, ...]
     source_map: dict[str, Provenance] = field(compare=True)
+    declared_obstructions: tuple[ObstructionEnvelope, ...] = ()
+    drawer_process_sequence: tuple[str, ...] = ()
     anchor_stud_ids: tuple[str, ...] = ()
 
     def part(self, role: str) -> PartModel:
@@ -144,5 +163,15 @@ def build_drawer_base_model(
             ),
         ),
         source_map=source_map,
+        declared_obstructions=(),
+        drawer_process_sequence=(
+            "shop.adjust_drawers",
+            "ship.record_adjustment_identity",
+            "ship.remove_drawers",
+            "ship.empty_carcass",
+            "install.anchor_empty_carcass",
+            "install.reinstall_by_identity",
+            "install.commission_drawers",
+        ),
         anchor_stud_ids=shell.anchor_stud_ids,
     )
