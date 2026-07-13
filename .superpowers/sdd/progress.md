@@ -25,7 +25,7 @@ ALL commit citations in this ledger and the sdd/ documents written before
 commit-map-authorship-2026-07-13.txt (old -> new, 633 entries) in this
 directory. Post-rewrite master tip at the time of the rewrite: 3bbdaa7.
 
-## ★ SESSION UPDATE 12 (2026-07-13 — STEPDOC/CPG +staging COMPLETE; merge and delivery in progress)
+## ★ SESSION UPDATE 12 (2026-07-13 — STEPDOC/CPG +staging COMPLETE + MERGED; documents DELIVERED)
 
 +staging is COMPLETE on `codex/stepdoc-staging` per binding amendment 1:
 typed subassembly/frame/join authoring, `bench_then_set` sugar, R-1 bench
@@ -50,6 +50,12 @@ stable machine identity from consistent document/hover names), then +process,
 then +presentation. A read-only speed audit also found a worthwhile later
 increment: duration profiling → xdist loadscope benchmark → immutable fixture
 reuse → carefully keyed installability cache; do not weaken the full gate.
+
+Merged @`6f4f131` and regenerated without geometry/view changes. Byte-identical
+copies were delivered to the dated vault locations and the convenient
+`~/Downloads/Build Documents/` names for both Armchair Caddy and Sit-and-Reach
+Box. Delivered HTML SHA-256: caddy `5546db2de31826bee4e8fe45a46ed09214926f6b4c973ccae261df6c16f6c93a`;
+frame `74944dc59c389e37657846484351f19349285b6a689eb3eb23525313c4632f74`.
 
 ## ★ SESSION UPDATE 11 (2026-07-13 — STEPDOC/CPG v1-core COMPLETE + merged; zipline REDELIVERED)
 

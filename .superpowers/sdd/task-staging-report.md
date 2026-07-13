@@ -2,7 +2,7 @@
 
 Date: 2026-07-13
 Branch: `codex/stepdoc-staging`
-Status: **COMPLETE; gated and ready to merge**
+Status: **COMPLETE; gated, merged @`6f4f131`, and delivered**
 
 ## Delivered semantics
 
@@ -62,3 +62,16 @@ Status: **COMPLETE; gated and ready to merge**
 - Process/cure semantics and grouped interactive presentation remain the
   separately approved later increments.
 
+## Delivery
+
+- Vault caddy:
+  `/Users/joelwitten/Code/JoelBrain/05_Attachments/Organized/Armchair Caddy Drawings/Armchair Caddy Build Document (model-backed) 2026-07-13.html`
+- Vault frame:
+  `/Users/joelwitten/Code/JoelBrain/05_Attachments/Organized/Sit-and-Reach Box Drawings/Sit-and-Reach Box 2x4 Frame Build Document (model-backed) 2026-07-13.html`
+- Downloads caddy:
+  `/Users/joelwitten/Downloads/Build Documents/Armchair Caddy Build Document.html`
+- Downloads frame:
+  `/Users/joelwitten/Downloads/Build Documents/Sit-and-Reach Box (2x4 Frame) Build Document.html`
+
+The source and both delivered copies were checked byte-for-byte. Existing view
+PNGs were checksum-verified unchanged after regeneration.
