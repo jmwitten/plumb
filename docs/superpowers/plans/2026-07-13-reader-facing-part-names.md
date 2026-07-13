@@ -268,7 +268,8 @@ Commit: `viewer: show canonical reader-facing part names`
 **Interfaces:**
 - Consumes: `part_labels(detail.assembly.parts)` from Task 2.
 - Preserves: raw connection labels and install-contract `describe()` lines in technical disclosures.
-- Produces: canonical names in cut-plan part rows, build-sequence `place` lines, and inspector headings.
+- Produces: canonical names in cut-plan part rows, build-sequence `place` and
+  unordered-part lines, existing-context BOM/hover rows, and inspector headings.
 
 - [ ] **Step 1: Write failing cross-surface parity tests**
 
@@ -278,7 +279,10 @@ def test_caddy_reader_surfaces_share_the_same_rail_label(tmp_path):
     sequence, _loose = build_sequence_model(detail)
     placed_names = [name for step in sequence for name, _bom, _fab in step["places"]]
     assert placed_names.count("Registration rail") == 2
-    html = build_caddy_html(tmp_path)
+    import single_detail_report as SDR
+    out = tmp_path / "caddy.html"
+    SDR.build_document(out, spec_path=CADDY, preview=False)
+    html = out.read_text()
     cut_plan = html.split("Consolidated stock & cut plan", 1)[1]
     assert cut_plan.count("Registration rail") >= 2
     payload = build_inspector_payload(detail)
@@ -295,16 +299,28 @@ Expected: FAIL because these surfaces still read `Placed.name`.
 
 - [ ] **Step 3: Replace independent name reads with the shared projection**
 
-Compute labels once per detail/assembly. In `build_sequence_model`, keep the existing tuple shape but place `label.reader_name` in the first slot. In cut-plan maps and inspector payloads, keep machine ids/keys unchanged and add/read the canonical display field.
+Compute labels once per detail/assembly. In `build_sequence_model`, keep the
+existing tuple shape but place `label.reader_name` in the first slot and map
+`loose_names` through the same projection. In cut-plan maps and inspector
+payloads, keep machine ids/keys unchanged and add/read the canonical display
+field. `PartInspection.name`, the `parts` dictionary key, `part_order`,
+`id_to_name`, graph queries, and neighbor references remain machine identity;
+add `reader_name` for the inspector header and render
+`part.reader_name || part.name`. In `single_detail_report.py`, use the same
+projection when relabeling existing-context rows so hover/BOM says
+`Sofa arm (existing)`, not the primitive or lowercase machine identity.
 
 - [ ] **Step 4: Pin the technical-appendix boundary**
 
 ```python
 def test_machine_connection_labels_remain_in_raw_contract_appendix(tmp_path):
-    html = build_caddy_html(tmp_path)
-    appendix = section_html(html, "install-disclosure")
+    import single_detail_report as SDR
+    out = tmp_path / "caddy.html"
+    SDR.build_document(out, spec_path=CADDY, preview=False)
+    html = out.read_text()
+    appendix = html.split("install-disclosure", 1)[1].split("</section>", 1)[0]
     assert "rail +X" in appendix
-    sequence = section_html(html, "build-sequence")
+    sequence = html.split("build-sequence", 1)[1].split("</section>", 1)[0]
     assert "place Registration rail" in sequence
     assert "place registration rail +X" not in sequence
 ```
