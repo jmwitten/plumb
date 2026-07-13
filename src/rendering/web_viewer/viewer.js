@@ -121,8 +121,13 @@
       el.style.display = "none";
       return false;
     }
+    var stockLine = p.item;
+    if (p.instance_count > 1) {
+      stockLine = `${p.instance_index} of ${p.instance_count} · ${p.item}`;
+    }
     var html = "";
-    html += '<div class="v-tip-item">' + esc(p.item) + "</div>";
+    html += '<div class="v-tip-name">' + esc(p.reader_name || partName) + "</div>";
+    html += '<div class="v-tip-stock">' + esc(stockLine) + "</div>";
     if (p.dims) html += '<div class="v-tip-dims">' + esc(p.dims) + "</div>";
     // The fabrication note rides WITH the overall dims: dims is the true finished
     // length ('48 in'), fab names the on-site cut that length alone would hide

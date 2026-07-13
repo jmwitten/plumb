@@ -27,6 +27,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ...details.base import fmt_frac_in
+from ..part_labels import part_labels
 
 _HERE = Path(__file__).parent
 
@@ -103,10 +104,12 @@ def build_viewer_payload(detail) -> dict:
             qty_by_id[part_id] = row["qty"]
 
     explode_vectors = _explode_for(detail, assembly)
+    labels = part_labels(assembly.parts)
 
     parts: dict[str, dict] = {}
     for p in assembly.parts:
         c = p.component
+        part_label = labels[p.id]
         specs = []
         for label, value in c.params().items():
             formatted = _format_spec_value(value)
@@ -127,7 +130,10 @@ def build_viewer_payload(detail) -> dict:
         parts[p.name] = {
             "id": p.id,
             "type": type(c).__name__,
-            "item": c.bom_label(),
+            "reader_name": part_label.reader_name,
+            "instance_index": part_label.index,
+            "instance_count": part_label.count,
+            "item": part_label.item,
             "dims": dims,
             "fab": _fab_note(c),
             "material": c.material.name,

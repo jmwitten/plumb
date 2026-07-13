@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from detailgen.rendering.part_labels import part_labels
 from detailgen.spec import SpecSchemaError, compile_spec, dump_yaml, load_spec_text
 
 
@@ -116,3 +117,26 @@ def test_reader_name_round_trip_and_omission_fallback():
     part = legacy.assembly.parts[0]
     assert part.reader_name == ""
     assert part.name == "legacy machine name"
+
+
+def test_part_labels_number_duplicate_reader_names_once():
+    detail = build_text(TWO_RAILS_YAML)
+    labels = part_labels(detail.assembly.parts)
+    rails = [
+        labels[p.id]
+        for p in detail.assembly.parts
+        if p.reader_name == "Registration rail"
+    ]
+    assert [(x.reader_name, x.index, x.count) for x in rails] == [
+        ("Registration rail", 1, 2),
+        ("Registration rail", 2, 2),
+    ]
+
+
+def test_part_labels_fall_back_to_machine_name():
+    detail = build_text(LEGACY_RAIL_YAML)
+    part = detail.assembly.parts[0]
+    label = part_labels(detail.assembly.parts)[part.id]
+    assert label.machine_name == "legacy machine name"
+    assert label.reader_name == "legacy machine name"
+    assert (label.index, label.count) == (1, 1)
