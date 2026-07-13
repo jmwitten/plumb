@@ -38,6 +38,11 @@ Task 2 complete (`02abd62..5ad9fdf`, review clean): the frozen shared
 payload remains keyed by machine `Placed.name` while hover shows the canonical
 reader name above an escaped stock/instance line. Gate: 32 passed / 3 skipped,
 plus clean JavaScript syntax and diff checks.
+Task 4 complete out of numeric order as planned (`ddc38be..67326da`, review
+clean): all 14 caddy components author the closed builder vocabulary; four
+raster title literals no longer expose `+X/-X`; machine names/ids, per-part
+geometry hashes, validation finding signatures, renderer lookup keys, and all
+geometry logic remain unchanged. Gate: 53 passed / 3 skipped.
 
 +staging is COMPLETE on `codex/stepdoc-staging` per binding amendment 1:
 typed subassembly/frame/join authoring, `bench_then_set` sugar, R-1 bench

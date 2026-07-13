@@ -332,7 +332,7 @@ Commit: `docs: unify model-driven part labels`
 - Consumes: `reader_name` schema and shared labels from Tasks 1–2.
 - Produces: semantic caddy names for context, wood parts, and screws.
 
-- [ ] **Step 1: Write failing caddy authoring and invariant tests**
+- [x] **Step 1: Write failing caddy authoring and invariant tests**
 
 ```python
 def test_caddy_authors_the_closed_reader_vocabulary():
@@ -363,18 +363,18 @@ def test_reader_name_only_edit_is_geometry_and_truth_inert(tmp_path):
         p.name for p in renamed.assembly.parts]
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 `PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest -q tests/test_reader_names.py tests/test_armchair_caddy_e2e.py`
 
 Expected: FAIL because the caddy has not authored `reader_name` values.
 
-- [ ] **Step 3: Add explicit caddy `reader_name` fields**
+- [x] **Step 3: Add explicit caddy `reader_name` fields**
 
 Author the exact vocabulary from Global Constraints on all 14 caddy components. Do not rename the existing `name` or `id` values.
 
-- [ ] **Step 4: Remove coordinate vocabulary from static builder captions**
+- [x] **Step 4: Remove coordinate vocabulary from static builder captions**
 
 Replace `+X/-X` only in manually authored raster titles/captions that builders see. Preserve coordinate-bearing variable names and geometry logic. Re-render only the caddy presentation PNGs whose text changed; record that geometry hash remains unchanged while presentation hashes move intentionally.
 
@@ -383,7 +383,7 @@ Task 5. Task 5 must force `scripts/render_caddy_views.py` before composing the
 HTML; `_ensure_views()` is existence-only and may otherwise retain stale
 caption pixels from an earlier run.
 
-- [ ] **Step 5: Run GREEN tests and commit**
+- [x] **Step 5: Run GREEN tests and commit**
 
 Run:
 `PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest -q tests/test_reader_names.py tests/test_armchair_caddy_e2e.py tests/test_viewer_data.py tests/test_inspector_payload.py`
