@@ -27,6 +27,13 @@ directory. Post-rewrite master tip at the time of the rewrite: 3bbdaa7.
 
 ## ★ SESSION UPDATE 12 (2026-07-13 — STEPDOC/CPG +staging COMPLETE + MERGED; documents DELIVERED)
 
+Reader-facing names arc (in progress on `codex/reader-names`): Task 1 complete
+(`8ec01de..f17c36b`, review clean). The strict spec/compiler plumbing now
+carries optional presentation-only `reader_name` on `ComponentSpec` and
+`Placed` while preserving every machine identity/export/cache/evidence key;
+47 focused tests pass. The initial end-to-end RED and later brace-sensitive
+mutation proof are recorded honestly in `task-1-report.md`.
+
 +staging is COMPLETE on `codex/stepdoc-staging` per binding amendment 1:
 typed subassembly/frame/join authoring, `bench_then_set` sugar, R-1 bench
 events before join, honest presence semantics (including explicit `in_situ`

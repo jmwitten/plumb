@@ -85,7 +85,7 @@ module.
 - Produces: `Placed.reader_name: str = ""`, where `placed.reader_name or placed.name` is the compatibility fallback.
 - Preserves: `Placed.name`, `Placed.id`, and every placement/export key.
 
-- [ ] **Step 1: Write failing schema and placement tests**
+- [x] **Step 1: Write failing schema and placement tests**
 
 ```python
 def test_reader_name_loads_and_duplicate_values_are_allowed():
@@ -109,14 +109,14 @@ def test_compiler_interpolates_reader_name_without_changing_machine_name():
         "Registration rail", "Registration rail"]
 ```
 
-- [ ] **Step 2: Run the tests and verify RED**
+- [x] **Step 2: Run the tests and verify RED**
 
 Run:
 `PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest -q tests/test_reader_names.py tests/test_spec.py`
 
 Expected: FAIL because `reader_name` is rejected as an unknown key or absent from `ComponentSpec`/`Placed`.
 
-- [ ] **Step 3: Add the minimal typed plumbing**
+- [x] **Step 3: Add the minimal typed plumbing**
 
 Add `reader_name: str = ""` to `ComponentSpec` and `Placed`. Teach `_build_component` to accept only a non-empty string when authored; teach `_component_to_dict` to emit it only when non-empty. In `_place_component`, interpolate the field through repeats and assign it to the returned `Placed` without changing `Component.name`.
 
@@ -129,7 +129,7 @@ placed = self._apply_placement(...)
 placed.reader_name = reader_name
 ```
 
-- [ ] **Step 4: Add round-trip and fallback assertions**
+- [x] **Step 4: Add round-trip and fallback assertions**
 
 ```python
 def test_reader_name_round_trip_and_omission_fallback():
@@ -142,7 +142,7 @@ def test_reader_name_round_trip_and_omission_fallback():
     assert part.name == "legacy machine name"
 ```
 
-- [ ] **Step 5: Run GREEN tests and commit**
+- [x] **Step 5: Run GREEN tests and commit**
 
 Run:
 `PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest -q tests/test_reader_names.py tests/test_spec.py tests/test_spec_repeat.py`
