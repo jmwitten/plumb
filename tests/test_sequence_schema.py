@@ -423,11 +423,12 @@ def test_after_target_and_source_must_name_declared_connections(target, source):
     assert missing in msg and "no declared connection" in msg
 
 
-def test_cure_source_must_name_a_glued_connection():
+def test_cure_source_must_name_a_connection_with_cure_capability():
     with pytest.raises(SemanticError) as e:
         compile_spec(_load(_base_doc(_AFTER)))
     msg = str(e.value)
-    assert "leg a to rail" in msg and "cure" in msg and "glued" in msg
+    assert "leg a to rail" in msg and "cure" in msg
+    assert "registered connection type" in msg and "capability" in msg
 
 
 def test_after_key_on_a_stage_entry_is_also_not_special_cased():
@@ -707,13 +708,15 @@ def test_connection_without_process_uses_empty_typed_default_and_omits_it():
     assert "process" not in spec_to_dict(doc)["connections"][0]
 
 
-def test_connection_local_cure_fact_requires_glued_connection_type():
+def test_connection_local_cure_fact_requires_registered_cure_capability():
     raw = _base_doc()
     raw["connections"][0]["process"] = _CURE
     with pytest.raises(SemanticError) as e:
         compile_spec(_load(raw))
     msg = str(e.value)
-    assert "leg a to rail" in msg and "process.cure" in msg and "glued" in msg
+    assert "leg a to rail" in msg and "process.cure" in msg
+    assert "registered connection type" in msg
+    assert "supported process kinds" in msg
 
 
 @pytest.mark.parametrize("process,needle", [

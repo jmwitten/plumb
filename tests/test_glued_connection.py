@@ -7,10 +7,10 @@ Pins the type's semantics exactly as its docstring claims them:
 - connectivity is a ``bonded_pairs`` bond + ONE ``bonded_to`` edge — the
   adhesive analog of ``fastened_by``, load-path-eligible and gated by the
   type's transfer claims like every other edge;
-- NO gravity seat (no ``bears_on``, no ``bearing_pairs``), NO
-  ``installed_before`` (clamp-and-cure is a process fact the connection's
-  assumptions disclose, not an ordering edge), NO hardware (declaring any is
-  a loud contradiction), exactly two members (a bond plane is pairwise);
+- NO gravity seat (no ``bears_on``, no ``bearing_pairs``), NO part-level
+  ``installed_before`` edge, NO hardware (declaring any is a loud
+  contradiction), exactly two members (a bond plane is pairwise); cure is a
+  typed process fact rather than an assumption-parsed part edge;
 - ``install_contract`` is the explicit ``()`` — "nothing to contract", never
   the base ``None`` ("cannot represent") — so the Fastener-installability
   machinery emits NOTHING for the joint: no contract, no NO-METHOD UNKNOWN,
@@ -32,6 +32,7 @@ from detailgen.core import IN
 from detailgen.components import Lumber, StructuralScrew
 from detailgen.assemblies import DetailAssembly, Connection, connection_types
 from detailgen.assemblies.connection import Glued
+from detailgen.assemblies.event_graph import ProcessFact
 from detailgen.spec.compiler import compile_spec
 from detailgen.spec.loader import load_spec_text
 
@@ -119,6 +120,25 @@ def test_glued_install_contract_is_explicit_empty_not_none():
     conn = _glued(lo, hi)
     assert conn.kind.install_contract(conn) == ()
     assert conn.kind.install_contract(conn) is not None
+
+
+def test_glued_supplies_safe_default_cure_and_preserves_authored_refinement():
+    a, lo, hi = _two_boards()
+    default_conn = _glued(lo, hi)
+    assert default_conn.kind.supported_process_kinds() == frozenset({"cure"})
+    (default,) = default_conn.kind.process_events(default_conn)
+    assert default.provenance == "connectiontype_default"
+    assert default.completion == "selected_label_full_cure"
+    assert "actual shop conditions" in default.why
+
+    authored = ProcessFact(
+        kind="cure", instructions=("Clamp the selected glue-up.",),
+        completion="selected_label_full_cure",
+        why="The selected product governs this glue-up.",
+        provenance="authored_process_fact")
+    refined = _glued(lo, hi)
+    refined.process = (authored,)
+    assert refined.kind.process_events(refined) == (authored,)
 
 
 def test_glued_rejects_hardware():

@@ -184,15 +184,27 @@ def analyze_sequence(doc) -> None:
         if conn.label:
             conn_by_label.setdefault(conn.label, []).append(conn)
 
-    # A connection-local cure refinement is meaningful only for the glued
-    # ConnectionType. This is declaration semantics (no geometry required), so
-    # reject type-label impersonation before a build can begin.
+    # A process refinement is meaningful only where the registered
+    # ConnectionType declares that capability.  The runtime graph asks the
+    # same capability surface and also confirms an event was actually emitted;
+    # no display key (including ``glued``) is a second authority.
+    from ..assemblies.connection import connection_types
+
+    def supports(conn, kind: str) -> bool:
+        try:
+            type_cls = connection_types.get(conn.type)
+        except KeyError:
+            # Preserve the compiler's established unknown-type diagnostic.
+            return False
+        return kind in type_cls.supported_process_kinds()
+
     for conn in connections:
-        if conn.process.cure is not None and conn.type != "glued":
+        if conn.process.cure is not None and not supports(conn, "cure"):
             raise SemanticError(
-                f"connection {conn.label or conn.type!r}: process.cure is only "
-                f"valid on a 'glued' connection; {conn.type!r} does not "
-                f"represent an adhesive bond whose cure can be refined.")
+                f"connection {conn.label or conn.type!r}: process.cure is not "
+                f"supported by registered connection type {conn.type!r}; its "
+                f"supported process kinds are "
+                f"{sorted(connection_types.get(conn.type).supported_process_kinds())}.")
 
     if (not doc.sequence.stages and not doc.sequence.subassemblies
             and doc.sequence.assembly is None and not doc.sequence.after):
@@ -241,12 +253,13 @@ def analyze_sequence(doc) -> None:
             source = _require_unique_sequence_connection(
                 ref.connection, conn_by_label,
                 f"sequence after {ref.kind} source {ref.connection!r}")
-            if ref.kind == "cure" and source.type != "glued":
+            if not supports(source, ref.kind):
                 raise SemanticError(
-                    f"sequence after target {claim.connection!r}: cure source "
-                    f"{ref.connection!r} is connection type {source.type!r}, "
-                    f"not 'glued'. A cure prerequisite can name only a glued "
-                    f"connection by its label.")
+                    f"sequence after target {claim.connection!r}: {ref.kind} "
+                    f"source {ref.connection!r} is registered connection type "
+                    f"{source.type!r}, which does not support process kind "
+                    f"{ref.kind!r}. A process prerequisite can name only a "
+                    f"connection whose registered type has that capability.")
 
 
 def _require_unique_sequence_connection(label: str, by_label: dict[str, list],

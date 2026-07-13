@@ -268,8 +268,8 @@ class Detail(ABC):
 
         Imperative details author none by default. ``SpecDetail`` resolves
         authored labels (and rejects ambiguous repeat expansion); composed
-        sites replay each fragment under its own chain. Task 2 threads this
-        inert bridge into the event graph.
+        sites replay each fragment under its own chain. The compiled graph
+        consumes these constraints beside the resolved authored stages.
         """
         return ()
 
@@ -297,11 +297,13 @@ class Detail(ABC):
         hand_spec = self.validation_spec()
         conns = self.connections()
         sequence = self.resolved_sequence()
+        after = self.resolved_after()
         staging = self.resolved_staging()
         self._evidence_graph = None  # invalidate any prior build
-        if conns or sequence or staging is not None:
+        if conns or sequence or after or staging is not None:
             generated = compile_connections(
-                assembly, conns, sequence=sequence, staging=staging,
+                assembly, conns, sequence=sequence, after=after,
+                staging=staging,
                 fragments=self.connection_fragments())
             spec = merge_into_spec(assembly, hand_spec, generated)
             self._derivation_log = generated.derived

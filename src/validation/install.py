@@ -385,7 +385,9 @@ def check_installability(assembly: DetailAssembly, connections: list,
         from ..assemblies.event_graph import build_event_graph
         graph = build_event_graph(assembly, connections, checks.edges,
                                   checks.installs, checks.sequence,
-                                  getattr(checks, "staging", None))
+                                  getattr(checks, "staging", None),
+                                  after=getattr(checks, "after", ()),
+                                  fragments=getattr(checks, "fragments", {}))
 
     findings: list[Finding] = []
     for ri in installs:
@@ -842,9 +844,10 @@ _DECLARED_ORDER_RUNG = (
 
 def _unordered_clauses(parts, scope: _Scope) -> str:
     """The teaching tail of an underdetermined verdict: name the missing
-    order fact and the authoring surfaces that EXIST in v1-core (an
-    authored ``sequence:`` stage; a ConnectionType technique edge) — a
-    staging declaration is an authorable frame/presence mechanism. Adds the
+    order fact and the authoring surfaces that EXIST (an authored
+    ``sequence:`` stage; a typed ``sequence.after`` process point constraint;
+    a ConnectionType technique edge) — a staging declaration is an
+    authorable frame/presence mechanism. Adds the
     composed-site cross-fragment gap and the epoxy-rod insertion gap where
     they are the true missing mechanisms."""
     graph = scope.graph
@@ -864,9 +867,10 @@ def _unordered_clauses(parts, scope: _Scope) -> str:
                 cross_frags |= {f for f in frags if f}
     clauses.append(
         f"no order fact relates {f_desc} to the occupants' own events — an "
-        f"authored sequence: stage ordering them, or a ConnectionType "
-        f"technique edge, would resolve it; an authorable staging declaration "
-        f"can instead establish the honest bench frame/presence context")
+        f"authored sequence: stage ordering them, a typed sequence.after "
+        f"process point constraint, or a ConnectionType technique edge, "
+        f"would resolve it; an authorable staging declaration can instead "
+        f"establish the honest bench frame/presence context")
     if no_conn:
         clauses.append(
             f"{', '.join(no_conn)} participates in no connection, so no "

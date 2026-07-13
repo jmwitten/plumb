@@ -26,6 +26,7 @@ from dataclasses import dataclass
 
 from ..assemblies.assembly import DetailAssembly, Placed
 from ..assemblies.connection import Connection, DerivedFact, connection_types
+from ..assemblies.event_graph import ProcessFact
 from ..assemblies.installation import EntryFace, Exit, ToolAxis, ToolEnvelope
 from ..core import IN
 from ..core.config import DEFAULT
@@ -958,6 +959,7 @@ class SpecDetail(Detail):
                     for sid, datum in conn.surfaces.items()}
         install = build_install_overrides(
             conn.install, resolver, self._resolve_part, bindings, ctx)
+        process = build_process_facts(conn.process)
         # Connection.__post_init__ validates surface datum names (with its own
         # did-you-mean) and part counts — surface those as spec diagnostics
         # rather than a leaked ValueError/KeyError.
@@ -965,7 +967,7 @@ class SpecDetail(Detail):
             return Connection(
                 kind=kind, parts=parts, hardware=hardware, surfaces=surfaces,
                 assumptions=list(conn.assumptions), label=label,
-                install=install,
+                install=install, process=process,
             )
         except (ValueError, KeyError) as e:
             raise SpecCompileError(f"{ctx}: {e}") from None
@@ -1506,6 +1508,24 @@ def build_install_overrides(ispec, resolver, resolve_part, bindings: dict,
     except SpecValueError as e:
         raise SpecCompileError(f"{ctx} install: {e}") from None
     return {ispec.role: fields}
+
+
+def build_process_facts(process_spec) -> tuple[ProcessFact, ...]:
+    """Lower typed connection-local process authoring to runtime facts.
+
+    The loader already validated the closed v1 completion token and non-empty
+    provenance.  This bridge is deliberately mechanical: the ConnectionType
+    remains the authority that decides whether the fact is supported and
+    actually emits an event for it.
+    """
+    cure = process_spec.cure
+    if cure is None:
+        return ()
+    return (ProcessFact(
+        kind="cure", instructions=tuple(cure.instructions),
+        completion=cure.completion, why=cure.why,
+        provenance="authored_process_fact",
+    ),)
 
 
 _INTERP_RE = re.compile(r"\{(\w+)\}")

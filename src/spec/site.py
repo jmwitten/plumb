@@ -909,7 +909,7 @@ class SiteDetail(Detail):
 
     def _build_site_connection(self, cspec: ConnectionSpec, index: int) -> Connection:
         from ..assemblies.connection import connection_types
-        from .compiler import build_install_overrides
+        from .compiler import build_install_overrides, build_process_facts
 
         label = cspec.label or f"site connection {index}"
         try:
@@ -935,11 +935,12 @@ class SiteDetail(Detail):
         install = build_install_overrides(
             cspec.install, self._site_resolver, self._resolve_qid, {},
             f"site connection {label!r}")
+        process = build_process_facts(cspec.process)
         try:
             return Connection(kind=kind, parts=parts, hardware=hardware,
                               surfaces=surfaces,
                               assumptions=list(cspec.assumptions), label=label,
-                              install=install)
+                              install=install, process=process)
         except (ValueError, KeyError) as e:
             raise SpecCompileError(f"site connection {label!r}: {e}") from None
 

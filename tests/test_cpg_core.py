@@ -19,7 +19,7 @@ from detailgen.assemblies import (
     BoltedClamp, Connection, ConnectionType, DetailAssembly, FaceMountHanger,
     compile_connections, connection_types,
 )
-from detailgen.assemblies.connection import Edge
+from detailgen.assemblies.connection import Edge, Glued
 from detailgen.assemblies.event_graph import (
     FAMILY_AUTHORED, FAMILY_NECESSITY, FAMILY_STAGING, FAMILY_TECHNIQUE, Event,
     EventOrderCycleError, ResolvedStage, ResolvedStaging, ResolvedUnit,
@@ -582,6 +582,25 @@ def test_r1_every_bench_event_precedes_its_join_without_ordering_other_units():
     assert not g.precedes(d1, d2) and not g.precedes(d2, d1)
     r1 = [e for e in g.edges if e.family == FAMILY_STAGING and e.b == j1]
     assert r1 and all("bench events precede join" in e.source for e in r1)
+
+
+def test_r1_includes_typed_process_event_in_its_connection_frame():
+    """R-1 says bench place/drive/PROCESS events precede the unit join."""
+    a, c1, _c2 = _two_screwed_plates()
+    glue = Connection(
+        kind=Glued(), parts=list(c1.parts), label="bench glue")
+    staging = ResolvedStaging(
+        mode="subassemblies", context_parts=frozenset(),
+        units=(ResolvedUnit(
+            "glue-up", "Clamp the glue-up on the bench.",
+            tuple(p.id for p in glue.parts)),))
+    graph = _graph(a, [glue], staging=staging)
+    cure = Event("process", "bench glue", "cure")
+    join = Event("join", "glue-up")
+    assert graph.frame_of[cure] == "glue-up"
+    assert graph.precedes(cure, join)
+    r1 = [e for e in graph.edges if e.a == cure and e.b == join]
+    assert len(r1) == 1 and r1[0].family == FAMILY_STAGING
 
 
 def test_root_connection_uses_joins_as_member_presence_events():
