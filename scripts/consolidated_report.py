@@ -250,8 +250,10 @@ def lumber_cut_items(purchased: list[dict], details: dict) -> list:
         if row["length_mm"] is None:
             continue
         for part_id in row["ids"]:
-            source, _comp = _resolve_cut(row, part_id, id_to_label, id_to_part)
-            items.append(CutItem(row["item"], row["length_mm"], source))
+            source, source_key, _comp = _resolve_cut(
+                row, part_id, id_to_label, id_to_part)
+            items.append(CutItem(
+                row["item"], row["length_mm"], source, source_key))
     return items
 
 
@@ -266,19 +268,26 @@ def _cut_id_maps(details: dict) -> tuple[dict, dict]:
     for name, d in details.items():
         labels = part_labels(d.assembly.parts)
         for p in d.assembly.parts:
-            id_to_label[(name, p.id)] = labels[p.id].reader_name
+            id_to_label[(name, p.id)] = labels[p.id].display_name
             id_to_part[(name, p.id)] = p.component
     return id_to_label, id_to_part
 
 
 def _resolve_cut(row: dict, part_id: str, id_to_label: dict, id_to_part: dict):
-    """Resolve a purchased-row part to ``(source, component)`` from the SAME
-    origin — so the cut-map source string and the fabrication note both come from
-    one resolution and cannot point at different parts."""
+    """Resolve one cut to display text, stable machine key, and component.
+
+    The display source may be duplicated or edited without changing the
+    ``(detail origin, Placed.id)`` identity that associates fabrication data.
+    """
     for origin in sorted(row["origin"]):
         if (origin, part_id) in id_to_label:
-            return f"{origin}: {id_to_label[(origin, part_id)]}", id_to_part.get((origin, part_id))
-    return f"{'+'.join(sorted(row['origin']))}: {row['item']}", None
+            source_key = (origin, part_id)
+            return (
+                f"{origin}: {id_to_label[source_key]}",
+                source_key,
+                id_to_part.get(source_key),
+            )
+    return f"{'+'.join(sorted(row['origin']))}: {row['item']}", None, None
 
 
 def _cutlist_fab_note(record) -> str:
@@ -294,18 +303,19 @@ def _cutlist_fab_note(record) -> str:
 
 def cutlist_fab_notes(purchased: list[dict], details: dict) -> dict:
     """Per-cut fabrication notes for the cut-plan renderer, keyed on
-    ``(profile, source)`` — the same profile+source a :class:`PlacedCut` carries
-    after packing, so the renderer can re-attach each note to its cut without the
-    packer ever having to carry it (the ``cutplan.py`` packer is untouched; only
-    the note's association is reconstructed on the far side, exactly as the
-    source label already is). Only cuts whose part has a non-empty note appear."""
+    ``(profile, source_key)`` when machine identity is available, with the
+    legacy ``(profile, source)`` shape retained for unresolved callers. The
+    packer carries the key independently of reader-facing source text, so
+    duplicate labels cannot overwrite one another's notes. Only cuts whose
+    part has a non-empty note appear."""
     id_to_label, id_to_part = _cut_id_maps(details)
     notes: dict = {}
     for row in purchased:
         if row["length_mm"] is None:
             continue
         for part_id in row["ids"]:
-            source, comp = _resolve_cut(row, part_id, id_to_label, id_to_part)
+            source, source_key, comp = _resolve_cut(
+                row, part_id, id_to_label, id_to_part)
             if comp is None:
                 continue
             fn = getattr(comp, "fabrication_record", None)
@@ -314,7 +324,8 @@ def cutlist_fab_notes(purchased: list[dict], details: dict) -> dict:
                 continue
             note = _cutlist_fab_note(record)
             if note:
-                notes[(row["item"], source)] = note
+                note_key = source_key if source_key is not None else source
+                notes[(row["item"], note_key)] = note
     return notes
 
 
@@ -1259,11 +1270,11 @@ def render_cutplan(cut_plans: dict, fab_notes: dict | None = None) -> str:
     quantities; this section says how to actually get those quantities out
     of full-length stock.
 
-    ``fab_notes`` (``{(profile, source): note}``, from :func:`cutlist_fab_notes`)
-    names the fabrication operations each cut carries beyond a plain crosscut —
-    the trunk notch, in v1. A cut with a note renders it inline so the cut list
-    describes the SAME operations the geometry folds (retro R28). Omitted/empty:
-    plain length only, the pre-note behaviour."""
+    ``fab_notes`` (normally ``{(profile, source_key): note}``, with legacy
+    ``(profile, source)`` fallback) names the fabrication operations each cut
+    carries beyond a plain crosscut — the trunk notch, in v1. A cut with a note
+    renders it inline so the cut list describes the SAME operations the geometry
+    folds (retro R28). Omitted/empty: plain length only, the pre-note behaviour."""
     from detailgen.core.cutplan import KERF_MM, END_TRIM_MM
     from detailgen.core.units import fmt_in, feet
 
@@ -1302,7 +1313,8 @@ def render_cutplan(cut_plans: dict, fab_notes: dict | None = None) -> str:
             cut_strs = []
             for c in s.cuts:
                 piece = f"{fmt_in(c.length_mm)} {esc(cut_label(c.source))}"
-                note = fab_notes.get((profile, c.source))
+                note_key = c.source_key if c.source_key is not None else c.source
+                note = fab_notes.get((profile, note_key))
                 if note:
                     piece += f" &mdash; {esc(note)}"
                 cut_strs.append(piece)

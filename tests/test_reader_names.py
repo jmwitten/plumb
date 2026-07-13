@@ -12,6 +12,7 @@ import pytest
 from detailgen.core.buildinfo import geometry_hash
 from detailgen.rendering.inspector import build_inspector_payload
 from detailgen.rendering.part_labels import part_labels
+from detailgen.rendering.web_viewer import build_viewer_payload
 from detailgen.spec import (
     SpecSchemaError,
     compile_spec,
@@ -181,6 +182,10 @@ def test_part_labels_number_duplicate_reader_names_once():
         ("Registration rail", 1, 2),
         ("Registration rail", 2, 2),
     ]
+    assert [x.display_name for x in rails] == [
+        "Registration rail (1 of 2)",
+        "Registration rail (2 of 2)",
+    ]
 
 
 def test_part_labels_fall_back_to_machine_name():
@@ -190,6 +195,43 @@ def test_part_labels_fall_back_to_machine_name():
     assert label.machine_name == "legacy machine name"
     assert label.reader_name == "legacy machine name"
     assert (label.index, label.count) == (1, 1)
+    assert label.display_name == "legacy machine name"
+
+
+def test_caddy_ordinals_match_projection_viewer_and_inspector():
+    detail = compile_caddy()
+    labels = part_labels(detail.assembly.parts)
+    viewer = build_viewer_payload(detail)["parts"]
+    inspector = build_inspector_payload(detail)["parts"]
+    repeated = [
+        part
+        for part in detail.assembly.parts
+        if part.reader_name in {"Registration rail", "Rail-to-side screw"}
+    ]
+
+    assert [labels[part.id].display_name for part in repeated] == [
+        "Registration rail (1 of 2)",
+        "Registration rail (2 of 2)",
+        "Rail-to-side screw (1 of 8)",
+        "Rail-to-side screw (2 of 8)",
+        "Rail-to-side screw (3 of 8)",
+        "Rail-to-side screw (4 of 8)",
+        "Rail-to-side screw (5 of 8)",
+        "Rail-to-side screw (6 of 8)",
+        "Rail-to-side screw (7 of 8)",
+        "Rail-to-side screw (8 of 8)",
+    ]
+    for part in repeated:
+        label = labels[part.id]
+        assert (
+            viewer[part.name]["reader_name"],
+            viewer[part.name]["instance_index"],
+            viewer[part.name]["instance_count"],
+        ) == (label.reader_name, label.index, label.count)
+        assert inspector[part.name]["reader_name"] == label.reader_name
+        assert inspector[part.name]["instance_index"] == label.index
+        assert inspector[part.name]["instance_count"] == label.count
+        assert inspector[part.name]["display_name"] == label.display_name
 
 
 def test_caddy_authors_the_closed_reader_vocabulary():
@@ -262,19 +304,24 @@ def test_caddy_reader_surfaces_share_the_same_rail_label(caddy_html):
         for step in sequence
         for name, _bom, _fab in step["places"]
     ]
-    assert placed_names.count("Registration rail") == 2
+    assert [name for name in placed_names if name.startswith("Registration rail")] == [
+        "Registration rail (1 of 2)",
+        "Registration rail (2 of 2)",
+    ]
 
     cut_plan = caddy_html.split(
         '<section class="notes cutplan">', 1)[1].split("</section>", 1)[0]
-    assert cut_plan.count("Registration rail") >= 2
+    assert cut_plan.count("Registration rail (1 of 2)") == 1
+    assert cut_plan.count("Registration rail (2 of 2)") == 1
     assert "registration rail +X" not in cut_plan
     assert "registration rail -X" not in cut_plan
 
     payload = build_inspector_payload(detail)
-    assert sum(
-        part["reader_name"] == "Registration rail"
+    assert [
+        part["display_name"]
         for part in payload["parts"].values()
-    ) == 2
+        if part["reader_name"] == "Registration rail"
+    ] == ["Registration rail (1 of 2)", "Registration rail (2 of 2)"]
 
 
 def test_caddy_existing_context_uses_reader_name_in_bom_and_hover(caddy_html):
@@ -300,5 +347,6 @@ def test_machine_connection_labels_remain_in_raw_contract_appendix(caddy_html):
     sequence = caddy_html.split(
         "<section class='notes build-sequence'>", 1
     )[1].split("</section>", 1)[0]
-    assert "place Registration rail" in sequence
+    assert "place Registration rail (1 of 2)" in sequence
+    assert "place Registration rail (2 of 2)" in sequence
     assert "place registration rail +X" not in sequence

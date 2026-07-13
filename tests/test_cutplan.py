@@ -104,3 +104,22 @@ def test_custom_stock_catalog_and_allowances_are_honored():
     plan = pack(items, stock_lengths_mm=(6 * FT,), kerf_mm=0.0, end_trim_mm=0.0)["2x4"]
     assert plan.stick_count == 1
     assert plan.sticks[0].stock_length_mm == 6 * FT
+
+
+def test_machine_source_keys_survive_packing_and_stabilize_equal_display_labels():
+    """Packing preserves the machine identity independently of visible source text."""
+    items = [
+        CutItem("1x6", 24 * IN, "fixture: Registration rail", ("fixture", "rail-b")),
+        CutItem("1x6", 24 * IN, "fixture: Registration rail", ("fixture", "rail-a")),
+    ]
+
+    cuts = pack(items, stock_lengths_mm=(8 * FT,))["1x6"].sticks[0].cuts
+
+    assert [cut.source for cut in cuts] == [
+        "fixture: Registration rail",
+        "fixture: Registration rail",
+    ]
+    assert [cut.source_key for cut in cuts] == [
+        ("fixture", "rail-a"),
+        ("fixture", "rail-b"),
+    ]

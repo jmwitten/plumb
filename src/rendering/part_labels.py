@@ -14,6 +14,13 @@ class PartLabel:
     index: int
     count: int
 
+    @property
+    def display_name(self) -> str:
+        """Canonical reader label, including the shared duplicate ordinal."""
+        if self.count > 1:
+            return f"{self.reader_name} ({self.index} of {self.count})"
+        return self.reader_name
+
 
 def part_labels(parts) -> dict[str, PartLabel]:
     """Project placed parts to immutable display labels keyed by part id."""

@@ -862,6 +862,40 @@ sequence:
     assert graph.part_names == by_id
 
 
+def test_build_sequence_model_reuses_projection_ordinals_for_duplicate_names():
+    from detailgen.validation.build_sequence import build_sequence_model
+
+    detail = _compile_staging("""
+name: reader sequence ordinal projection
+units: in
+components:
+  - id: first
+    type: lumber
+    name: staged rail +X
+    reader_name: Registration rail
+    params: {nominal: 2x4, length: 4}
+  - id: second
+    type: lumber
+    name: staged rail -X
+    reader_name: Registration rail
+    params: {nominal: 2x4, length: 4}
+sequence:
+  stages:
+    - name: prepare rails
+      parts: [first, second]
+      why: Prepare both rails first.
+""")
+    detail.validate()
+
+    steps, loose = build_sequence_model(detail)
+
+    assert [name for step in steps for name, _bom, _fab in step["places"]] == [
+        "Registration rail (1 of 2)",
+        "Registration rail (2 of 2)",
+    ]
+    assert loose == ()
+
+
 def test_reader_steps_group_bench_units_then_visible_joins_without_graph_edges():
     """Presentation may choose declaration order for independent units, but
     the graph must remain partially ordered: two bench steps, then two visible

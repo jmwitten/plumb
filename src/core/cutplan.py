@@ -8,9 +8,10 @@ cut map, instead of listing each cut length as its own purchase line.
 Algorithm — Best-Fit-Decreasing over a variable-length stock catalog, one
 profile at a time
 ------------------------------------------------------------------------
-1. Sort a profile's cut instances by ``(-length_mm, source)``, an explicit,
-   stable key — never a set/dict iteration order — so two runs over the same
-   input always produce identical output (see ``test_determinism``).
+1. Sort a profile's cut instances by
+   ``(-length_mm, source, source_key)``, an explicit, stable key — never a
+   set/dict iteration order — so two runs over the same input always produce
+   identical output (see ``test_determinism``).
 2. Repeatedly take the longest still-unplaced instance. For every stock
    length that can hold it alone, simulate greedily filling that stock with
    the remaining instances (longest-first, same fit rule as step 3) and
@@ -74,6 +75,9 @@ class CutPlanError(ValueError):
     """A cut item cannot be produced from any stock length in the catalog."""
 
 
+CutSourceKey = tuple[str, str]
+
+
 @dataclass(frozen=True)
 class CutItem:
     """One required cut: ``qty`` is expanded by the caller — each ``CutItem``
@@ -82,6 +86,7 @@ class CutItem:
     profile: str
     length_mm: float
     source: str
+    source_key: CutSourceKey | None = None
 
 
 @dataclass(frozen=True)
@@ -90,6 +95,7 @@ class PlacedCut:
 
     length_mm: float
     source: str
+    source_key: CutSourceKey | None = None
 
 
 @dataclass(frozen=True)
@@ -151,7 +157,10 @@ def _pack_profile(
             )
 
     # Explicit, stable order — sort key never touches dict/set iteration.
-    ordered = sorted(items, key=lambda it: (-it.length_mm, it.source))
+    ordered = sorted(
+        items,
+        key=lambda it: (-it.length_mm, it.source, it.source_key or ("", "")),
+    )
     remaining: list[tuple[int, CutItem]] = list(enumerate(ordered))
     stocks_sorted = sorted(stock_lengths_mm)
 
@@ -181,7 +190,10 @@ def _pack_profile(
         remaining = [(idx, it) for idx, it in remaining if idx not in packed_ids]
         raw_sum = sum(it.length_mm for _, it in best_packed)
         waste = _waste(raw_sum, len(best_packed), best_L, kerf_mm, end_trim_mm)
-        cuts = tuple(PlacedCut(it.length_mm, it.source) for _, it in best_packed)
+        cuts = tuple(
+            PlacedCut(it.length_mm, it.source, it.source_key)
+            for _, it in best_packed
+        )
         sticks.append(Stick(best_L, cuts, waste))
 
     return ProfilePlan(profile, tuple(sticks))

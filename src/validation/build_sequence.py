@@ -96,7 +96,7 @@ def build_sequence_model(detail):
             if p is None:
                 continue
             label = labels_by_id[p.id]
-            places.append((label.reader_name, label.item,
+            places.append((label.display_name, label.item,
                            _fab_note(p.component)))
         drives, units = [], []
         for label in step.connections:
@@ -114,7 +114,7 @@ def build_sequence_model(detail):
             "joins": step.joins,
         })
     loose_names = tuple(
-        labels_by_id[pid].reader_name
+        labels_by_id[pid].display_name
         if pid in labels_by_id else graph.part_names.get(pid, pid)
         for pid in loose
     )
