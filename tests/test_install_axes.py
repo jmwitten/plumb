@@ -20,6 +20,7 @@ from detailgen.assemblies import (
     compile_connections, connection_types,
 )
 from detailgen.assemblies.connection import Edge
+from detailgen.assemblies.event_graph import ResolvedStaging, ResolvedUnit
 from detailgen.assemblies.installation import (
     EntryFace, Exit, ToolAxis, straight_screw_group,
 )
@@ -30,6 +31,12 @@ from detailgen.validation.install import check_installability
 
 def _run(assembly, *conns):
     checks = compile_connections(assembly, list(conns))
+    return check_installability(assembly, list(conns), checks)
+
+
+def _run_staged(assembly, conns, staging):
+    checks = compile_connections(
+        assembly, list(conns), staging=staging)
     return check_installability(assembly, list(conns), checks)
 
 
@@ -240,7 +247,7 @@ def test_cat_e_foreign_blocker_is_named_unknown():
     """Re-pinned to the §4.1 wording: the CPG exists now, so the UNKNOWN
     names the occupant AND the missing order fact, and teaches the v1-core
     authoring surfaces that would resolve it (sequence: stage / technique
-    edge) — staging only as an explicitly-future mechanism."""
+    edge) — and staging as the authorable frame/presence mechanism."""
     a, conn = _blocked_corridor(_ScrewedPlate, blocker_in_connection=False)
     (acc,) = _by_kind(_run(a, conn), "install_access")
     assert acc.verdict == "UNKNOWN" and acc.blocking
@@ -249,10 +256,96 @@ def test_cat_e_foreign_blocker_is_named_unknown():
     assert "no order fact relates" in acc.detail
     assert "authored sequence: stage" in acc.detail
     assert "technique edge" in acc.detail
-    assert "FUTURE mechanism, not authorable today" in acc.detail
+    assert "staging declaration" in acc.detail
+    assert "authorable" in acc.detail
     # the slab participates in no connection — the verdict says exactly
     # that, so the reader knows no derived fact can ever exist for it
     assert "participates in no connection" in acc.detail
+
+
+def test_cat_g_bench_frame_clears_context_with_declared_trust_marker():
+    """CAT-G forward mechanism in miniature: same final-geometry corridor
+    hit as the foreign-blocker UNKNOWN, but a bench_then_set declaration
+    places the joint in a frame containing only the product's parts. The
+    context is absent by that declaration, so the access verdict PASSes with
+    the staging why, DECLARED TRUST ceiling, and P1 — never as a bare proof."""
+    a, conn = _blocked_corridor(_ScrewedPlate, blocker_in_connection=False)
+    blocker = next(p for p in a.parts if p.name == "hovering slab")
+    unit_parts = tuple(p.id for p in a.parts if p.id != blocker.id)
+    staging = ResolvedStaging(
+        mode="bench_then_set", why="build away from the context slab",
+        context_parts=frozenset({blocker.id}),
+        units=(ResolvedUnit(
+            "whole detail", "build away from the context slab",
+            unit_parts),))
+    (acc,) = _by_kind(_run_staged(a, [conn], staging), "install_access")
+    assert acc.verdict == "PASS"
+    assert "absent from bench frame" in acc.detail
+    assert "[staging]" in acc.detail
+    assert "build away from the context slab" in acc.detail
+    assert "DECLARED TRUST" in acc.detail
+    assert "insertion travel is not analyzed" in acc.detail
+    assert acc.declared_order and acc.declared_trust
+
+
+def test_cat_g_explicit_in_situ_is_the_honest_fail_mirror():
+    """The identical geometry explicitly built on context is blocked."""
+    a, conn = _blocked_corridor(_ScrewedPlate, blocker_in_connection=False)
+    blocker = next(p for p in a.parts if p.name == "hovering slab")
+    staging = ResolvedStaging(
+        mode="in_situ", why="build on the context slab",
+        context_parts=frozenset({blocker.id}))
+    (acc,) = _by_kind(_run_staged(a, [conn], staging), "install_access")
+    assert acc.verdict == "FAIL" and acc.blocking
+    assert "hovering slab" in acc.detail
+    assert "provably present" in acc.detail
+    assert "[staging]" in acc.detail
+    assert "build on the context slab" in acc.detail
+
+
+def test_subassembly_absence_is_declared_order_but_not_declared_trust():
+    """A real opposite unit is partially falsifiable through membership;
+    only connection-free context gets the stronger DECLARED TRUST marker."""
+    a, conn = _blocked_corridor(_ScrewedPlate, blocker_in_connection=False)
+    blocker = next(p for p in a.parts if p.name == "hovering slab")
+    far = conn.parts[1]
+    # Give the blocker a real owning connection in the other unit.
+    other = Connection(kind=_ScrewedPlate(), parts=[blocker, far], hardware=[],
+                       label="other side")
+    side_a = tuple(p.id for p in (conn.parts[0], conn.parts[1], conn.hardware[0]))
+    staging = ResolvedStaging(
+        mode="subassemblies", context_parts=frozenset(),
+        units=(
+            ResolvedUnit("side a", "bench side a flat", side_a),
+            ResolvedUnit("side b", "bench side b flat", (blocker.id,)),
+        ))
+    accs = _by_kind(_run_staged(a, [conn, other], staging), "install_access")
+    (acc,) = [f for f in accs if f.subject.startswith("cat-ef joint")]
+    assert acc.verdict == "PASS" and acc.declared_order
+    assert not acc.declared_trust
+    assert "DECLARED TRUST" not in acc.detail
+
+
+def test_epistemic_contract_prints_staging_r1_and_actual_whys():
+    """The reader's order-fact table derives the new family from the same
+    resolved staging object the checks consume; it cannot lag the graph."""
+    from types import SimpleNamespace
+    from detailgen.validation.install import epistemic_contract_rows
+
+    staging = ResolvedStaging(
+        mode="subassemblies", context_parts=frozenset({"ctx"}),
+        units=(ResolvedUnit("left side", "clamp it square on the bench",
+                            ("a", "b")),))
+    rows = epistemic_contract_rows(SimpleNamespace(
+        sequence=(), staging=staging))
+    rendered = "\n".join(" | ".join(row) for row in rows)
+    assert "Bench events before join (R-1)" in rendered
+    assert "DERIVED" in rendered
+    assert "Authored staging frames" in rendered
+    assert "left side" in rendered
+    assert "clamp it square on the bench" in rendered
+    assert "DECLARED TRUST" in rendered
+    assert "future declarations" not in rendered.lower()
 
 
 def test_f1_authored_stage_cannot_flip_a_member_fail_to_declared_pass():

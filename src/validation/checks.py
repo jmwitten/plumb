@@ -134,6 +134,11 @@ class Finding:
     #: deliberately never verdict-cached (the cache round-trip persists
     #: only passed/detail).
     declared_order: bool = False
+    #: Stronger ceiling for a declared-order clear that rests on excluding
+    #: connection-free context from an authored bench frame.  Unit
+    #: membership has graph structure behind it; this absence is a declared
+    #: trust claim until insertability can falsify it.
+    declared_trust: bool = False
 
     def __post_init__(self) -> None:
         if not self.verdict:
