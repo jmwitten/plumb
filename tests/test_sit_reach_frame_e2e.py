@@ -74,26 +74,22 @@ def _bb(detail, name):
     return _by_name(detail)[name].world_solid().val().BoundingBox()
 
 
-def test_compiles_and_validates_with_honest_install_unknowns(frame):
-    """HONEST NEW STATE since task INSTALL v1 (this doc shipped before the
-    axis checks existed): geometry and every non-install family stay clean —
-    no FAILs — but the 8 side-rail screws' declared 6in driver corridors back
-    across the ~2in interior gap into the OPPOSITE side's rail/legs (parts of
-    other connections), so static access is honestly UNDERDETERMINED on the
-    construction process graph (task CPGCORE §4.1 wording: occupants and the
-    missing order fact named; the blocking is mutually SYMMETRIC, so the
-    real fix is per-subassembly staging — a later increment). Blocking
-    UNKNOWNs, not FAILs."""
+def test_compiles_and_validates_with_two_bench_side_frames(frame):
+    """The eight symmetric rail corridors clear because each three-member
+    side is authored as its own bench frame. The opposite side is absent by
+    unit membership, an ordinary declared-order clear rather than the
+    caddy's stronger connection-free DECLARED TRUST case."""
     _detail, report = frame
     from collections import Counter
     assert report.failures == [], "\n".join(str(f) for f in report.failures)
-    assert Counter((f.check, f.verdict) for f in report.blocking) == Counter(
-        {("install_access", "UNKNOWN"): 8})
-    assert all("rail screw" in f.subject and
-               "UNKNOWN — build order underdetermined" in f.detail and
-               "no order fact relates" in f.detail
-               for f in report.blocking)
-    assert not report.ok
+    access = [f for f in report.findings
+              if f.check == "install_access" and "rail screw" in f.subject]
+    assert Counter(f.verdict for f in access) == Counter({"PASS": 8})
+    assert all("absent from bench frame" in f.detail
+               and "[staging]" in f.detail
+               and f.declared_order and not f.declared_trust
+               for f in access)
+    assert report.blocking == [] and report.ok
 
 
 def test_every_member_has_expected_fabrication_record(frame):
@@ -247,7 +243,5 @@ def test_full_flow_is_fast():
     verify_assembly_fabrication(detail.assembly)
     detail.bom_table()
     elapsed = time.perf_counter() - t0
-    # INSTALL v1: honest blocking UNKNOWNs on the rail-screw corridors (see
-    # test_compiles_and_validates_with_honest_install_unknowns).
-    assert not report.ok
+    assert report.ok
     assert elapsed < 60.0, f"e2e flow took {elapsed:.1f}s (budget 60s)"

@@ -69,30 +69,25 @@ def caddy():
     return detail, report
 
 
-def test_compiles_and_validates_with_honest_install_unknowns(caddy):
+def test_compiles_and_validates_with_declared_bench_staging(caddy):
     """compile_spec_file -> validate runs the full sweep with an HONEST
     verdict. The rail->top joints are hardware-free glued bonds (nothing
     for the installability checks to judge); the side joints author
-    joint-geometry embedment minimums. The caddy carries ZERO failures —
-    but it is NOT clean: all 8 side screws' driver corridors are honestly
-    UNDERDETERMINED — the sofa arm participates in no connection, so the
-    construction process graph relates it to nothing (task CPGCORE §4.1
-    wording: the occupant AND the missing order fact are named; the
-    resolving staging declaration is a FUTURE mechanism, named as such) —
-    so 8 blocking UNKNOWNs stand. Pinned exactly, so a regression
-    elsewhere can't hide under the expected not-ok."""
+    joint-geometry embedment minimums. The eight side-screw corridors meet
+    the sofa arm in final geometry but clear in the authored whole-detail
+    bench frame. Because the arm is connection-free context, every clear
+    carries the stronger DECLARED TRUST/P1 ceiling."""
     detail, report = caddy
     from collections import Counter
     assert report.failures == []
-    unknowns = [f for f in report.blocking if f.verdict == "UNKNOWN"]
-    assert Counter(f.check for f in unknowns) == Counter({"install_access": 8})
-    assert all("UNKNOWN — build order underdetermined" in f.detail
-               and "sofa arm" in f.detail
-               and "no order fact relates" in f.detail
-               and "participates in no connection" in f.detail
-               and "FUTURE mechanism, not authorable today" in f.detail
-               for f in unknowns)
-    assert all("rail-side screw" in f.subject for f in unknowns)
+    access = [f for f in report.findings if f.check == "install_access"]
+    assert Counter(f.verdict for f in access) == Counter({"PASS": 8})
+    assert all("sofa arm" in f.detail
+               and "[staging]" in f.detail
+               and "DECLARED TRUST" in f.detail
+               and "insertion travel is not analyzed" in f.detail
+               and f.declared_order and f.declared_trust
+               for f in access)
     # termination is green on merit: 8 GEOMETRY-PROVEN side bites at the
     # authored minimum. The glued rail->top bonds contribute NO install
     # verdicts at all (no hardware — the type's explicit empty contract),
@@ -104,7 +99,7 @@ def test_compiles_and_validates_with_honest_install_unknowns(caddy):
     bonded = [e for e in detail._connection_checks.edges
               if e.kind == "bonded_to"]
     assert len(bonded) == 2
-    assert not report.ok
+    assert report.blocking == [] and report.ok
 
 
 def test_every_board_has_expected_fabrication_record(caddy):
@@ -231,10 +226,7 @@ def test_full_flow_is_fast():
     detail.bom_table()
     elapsed = time.perf_counter() - t0
 
-    # INSTALL v1 + fix arc: the caddy honestly blocks on install-order
-    # UNKNOWNs (see test_compiles_and_validates_with_honest_install_unknowns)
-    # — the perf budget is about the flow, not the verdict.
-    assert not report.ok
+    assert report.ok
     assert elapsed < 60.0, f"e2e flow took {elapsed:.1f}s (budget 60s)"
 
 
@@ -296,10 +288,8 @@ def test_progression_harness_matches_the_tree_it_runs_on(caddy):
     for section in ("validation verdicts", "bill of materials",
                     "process records", "derived cut list", "evidence walkback"):
         assert section in block, section
-    # Zero failures, and the honest blocking set is the 8 side-screw
-    # install-order corridor UNKNOWNs (sofa arm) — the glued rail->top
-    # bonds carry no fastener to judge. The harness reports reality.
-    assert "failures: 0" in block and "blocking: 8" in block
+    # The declared off-sofa bench frame resolves all eight access questions.
+    assert "failures: 0" in block and "blocking: 0" in block
     assert "1x6 lumber" in block and '7.00"' in block and '9.50"' in block
     assert '5.50"' in block                              # the D6 1x6 registration rails
 
@@ -346,21 +336,13 @@ def test_progression_harness_matches_the_tree_it_runs_on(caddy):
 # ---------------------------------------------------------------------------- #
 # task 8: doc render through the real entry path, visual review, view coverage.
 # ---------------------------------------------------------------------------- #
-def test_render_refuses_but_documentation_still_renders(caddy, tmp_path):
-    """INSTALL v1's gate split, live on the caddy: the CERTIFYING verb
-    (``render``) refuses the honest blockers — the 8 side-screw
-    install-order UNKNOWNs, no FAILs — while the ungated
-    ``render_documentation`` (FAB-3) still writes the document ABOUT the
-    blocked state (a doc about a blocker is how it gets fixed)."""
+def test_certifying_render_accepts_declared_staging(caddy, tmp_path):
+    """With no blocking verdict left, both the certifying and documentation
+    entry paths render. The trust ceiling remains visible in their reports."""
     detail, _report = caddy
-    with pytest.raises(AssertionError) as exc:
-        detail.render(tmp_path / "refused")
-    msg = str(exc.value)
-    assert "install_access" in msg
-    assert "8 unresolved (UNKNOWN, blocking)" in msg
-    # no failure remains, and the message never conflates the verdicts:
-    assert "validation failure" not in msg
-    assert "install_termination" not in msg
+    certified = detail.render(tmp_path / "certified")
+    assert certified.exists()
+    assert "DECLARED TRUST" in (certified / "validation_report.md").read_text()
     out = detail.render_documentation(tmp_path / "doc")
     assert out.exists()
 
@@ -389,6 +371,7 @@ def test_doc_renders_through_render_documentation(caddy, tmp_path):
     assert "cup hole" in text.lower()
     # the coverage matrix is appended (honesty is a framework property).
     assert "Coverage matrix" in text
+    assert "DECLARED TRUST" in text
 
 
 def test_visual_review_store_is_valid_and_grounded():

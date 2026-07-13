@@ -264,6 +264,23 @@ connections:
       - "Screws bite the side board's FACE grain (broad face) — stronger in withdrawal than end grain; not analyzed to a number here."
       - "Authored embedment minimum 0.5in into the 0.75in side board: the geometric maximum honest bite that keeps 0.25in of show-face cover (the half-length default of 0.62in is not reachable in this joint without breaching the outer show face). Four screws per joint; withdrawal demand is the caddy's few-pound service load — engineering judgment, not analyzed to a number."
 
+# --- staging: the actual shop-to-room assembly strategy ---------------------
+# The caddy is a loose finished object, never joinery assembled around the
+# upholstered arm. `bench_then_set` is whole-detail sugar: all constructed
+# parts and their connections share one bench frame; the existing sofa arm is
+# outside it. This context exclusion is DECLARED TRUST until insertion travel
+# over the arm is analyzed (P1), so every dependent verdict says so.
+sequence:
+  assembly:
+    mode: bench_then_set
+    why: >-
+      Glue and clamp both registration rails to the top, then drive all eight
+      rail-to-side screws with the caddy assembled off the sofa. After the
+      joints are complete, cured, and checked square, carry the finished loose
+      caddy to the chair and set it over the sofa arm. The sofa arm is
+      connection-free context, so its absence from the bench frame is a
+      DECLARED TRUST claim until insertion travel is analyzed (P1).
+
 # --- roles: the load-system role of each part --------------------------------
 # The sofa arm is a pre-EXISTING site body: it self-grounds (it is furniture that
 # sits on the floor, outside the caddy's constructed load path), exactly the way

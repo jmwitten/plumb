@@ -258,6 +258,27 @@ connections:
     hardware: [rscrew_bm0, rscrew_bm1]
     assumptions: ["Screws pass through the rail's wide FACE and bite the leg's narrow EDGE — long grain both sides (unlike end grain); withdrawal not analyzed to a number here."]
 
+# --- staging: two bench-built side frames, then the top ----------------------
+# Each rail is screwed to its own front/back legs while that side lies flat on
+# the bench. The opposite side therefore is not present in the driver corridor;
+# the two finished sides are then stood up and joined at root by the top plate.
+sequence:
+  subassemblies:
+    - name: side +X
+      parts: [leg_fp, leg_bp, rail_pos]
+      why: >-
+        Lay the +X front leg, back leg, and side rail flat and clamp them square
+        on the bench; drive both rail-screw pairs while the opposite side is not
+        in the work frame. Stand the completed side only after all four screws
+        are installed.
+    - name: side -X
+      parts: [leg_fm, leg_bm, rail_neg]
+      why: >-
+        Lay the -X front leg, back leg, and side rail flat and clamp them square
+        on the bench; drive both rail-screw pairs while the opposite side is not
+        in the work frame. Stand the completed side only after all four screws
+        are installed.
+
 # --- roles ---------------------------------------------------------------------------
 roles:
   floor: {role: existing, grounded_by: site}
