@@ -97,21 +97,21 @@ IN = 25.4
 # primary views
 draw("v1_iso.png", 22, -55, "ISO — whole caddy saddling the arm")
 draw("v2_front.png", 6, -89, "FRONT (along -Y): straddle, cup-hole edge, sides hang free")
-draw("v3_end.png", 6, 1, "END (along -X): arm length, side-board 7in drop")
+draw("v3_end.png", 6, 1, "END: arm length, side-board 7in drop")
 draw("v4_top.png", 88, -90, "TOP (-Z): cup-hole opening — clean show face, NO fasteners")
 # zoom views
 draw("z1_cup.png", 55, -60, "ZOOM cup-hole interior (top board notch)",
      lims=([-60, -60, -20], [60, 60, 40]))
-draw("z2_joint.png", 26, -55, "ZOOM +X corner: hidden full-depth 1x6 rail, face-grain screws (2 pairs)",
+draw("z2_joint.png", 26, -55, "ZOOM registration-rail corner: hidden full-depth 1x6 rail, face-grain screws (2 pairs)",
      lims=([40, -55, -155], [125, 55, 40]))
-draw("z3_gap.png", 8, -89, "ZOOM arm-clearance fit (+X rail holds the 0.25in reveal off the arm)",
+draw("z3_gap.png", 8, -89, "ZOOM arm-clearance fit (registration rail holds the 0.25in reveal off the arm)",
      lims=([55, -75, -160], [125, 75, 35]))
 print("done")
 
 # --- arm-ghosted variants (context hidden so the joinery is inspectable) ------
 draw("g1_iso.png", 24, -55, "ISO (arm hidden) — 3 boards + 2 hidden full-depth registration rails",
      hide=("sofa arm",))
-draw("g2_joint.png", 30, -60, "ZOOM +X corner (arm hidden): 1x6 rail glued to the top + screwed into the side face (upper + lower)",
+draw("g2_joint.png", 30, -60, "ZOOM registration-rail corner (arm hidden): 1x6 rail glued to the top + screwed into the side face (upper + lower)",
      lims=([40, -60, -155], [125, 60, 40]), hide=("sofa arm",))
 draw("g3_underside.png", -35, -55, "UNDERSIDE (arm hidden): deep rails register + fasten the top to the sides, no show-face screws",
      hide=("sofa arm",))

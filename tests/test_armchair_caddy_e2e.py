@@ -17,6 +17,7 @@ an EXISTING context body (self-grounded, like the platform's trunk).
 
 from __future__ import annotations
 
+import ast
 import os
 import subprocess
 import sys
@@ -34,6 +35,7 @@ from detailgen.core.process_graph import (
 _REPO = Path(__file__).resolve().parents[1]
 SPEC = _REPO / "details" / "armchair_caddy.spec.yaml"
 HARNESS = _REPO / "scripts" / "smoke_progression.py"
+VIEW_RENDERER = _REPO / "scripts" / "render_caddy_views.py"
 
 #: The fabricated members and the fabrication steps each must carry. The two 1x6
 #: side boards are crosscut to length + eased; the 5/4x6 top board is additionally
@@ -237,6 +239,42 @@ def test_full_flow_is_fast():
 
     assert report.ok
     assert elapsed < 60.0, f"e2e flow took {elapsed:.1f}s (budget 60s)"
+
+
+def test_raster_builder_captions_avoid_x_coordinate_part_names():
+    """Static builder captions use semantic nouns while renderer contracts keep
+    their coordinate-bearing machine keys and explicit coordinate axes."""
+    source = VIEW_RENDERER.read_text()
+    tree = ast.parse(source)
+    captions = tuple(
+        call.args[3].value
+        for call in ast.walk(tree)
+        if isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Name)
+        and call.func.id == "draw"
+        and len(call.args) >= 4
+        and isinstance(call.args[3], ast.Constant)
+        and isinstance(call.args[3].value, str)
+    )
+
+    assert captions
+    assert not [caption for caption in captions
+                if "+X" in caption or "-X" in caption]
+    assert "END: arm length, side-board 7in drop" in captions
+    assert any("ZOOM registration-rail corner" in caption
+               for caption in captions)
+
+    for machine_name in (
+        "side board +X",
+        "side board -X",
+        "registration rail +X",
+        "registration rail -X",
+    ):
+        assert f'"{machine_name}":' in source
+    assert 'hide=("sofa arm",)' in source
+    assert 'ax.set_xlabel("X (across arm)")' in source
+    assert 'ax.set_ylabel("Y (along arm)")' in source
+    assert 'ax.set_zlabel("Z up")' in source
 
 
 def _fab2_surface_present() -> bool:

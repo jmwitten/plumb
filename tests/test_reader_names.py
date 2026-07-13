@@ -2,10 +2,25 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+from pathlib import Path
+
 import pytest
 
+from detailgen.core.buildinfo import geometry_hash
 from detailgen.rendering.part_labels import part_labels
-from detailgen.spec import SpecSchemaError, compile_spec, dump_yaml, load_spec_text
+from detailgen.spec import (
+    SpecSchemaError,
+    compile_spec,
+    compile_spec_file,
+    dump_yaml,
+    load_spec_file,
+    load_spec_text,
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
+CADDY = ROOT / "details" / "armchair_caddy.spec.yaml"
 
 
 ONE_RAIL_YAML = """
@@ -82,6 +97,26 @@ def build_text(text: str):
     return detail
 
 
+def compile_caddy():
+    detail = compile_spec_file(CADDY)
+    detail.validate()
+    return detail
+
+
+def finding_signature(detail):
+    return tuple(
+        (finding.verdict, finding.check, finding.subject, finding.detail)
+        for finding in detail.validate().findings
+    )
+
+
+def solid_hashes(detail):
+    return tuple(
+        (part.name, geometry_hash(part.world_solid()))
+        for part in detail.assembly.parts
+    )
+
+
 def test_reader_name_loads_and_duplicate_values_are_allowed():
     doc = load_spec_text(TWO_RAILS_YAML)
     assert [c.reader_name for c in doc.components] == [
@@ -140,3 +175,63 @@ def test_part_labels_fall_back_to_machine_name():
     assert label.machine_name == "legacy machine name"
     assert label.reader_name == "legacy machine name"
     assert (label.index, label.count) == (1, 1)
+
+
+def test_caddy_authors_the_closed_reader_vocabulary():
+    expected = {
+        "arm": ("sofa arm", "Sofa arm"),
+        "side_pos": ("side board +X", "Side board"),
+        "side_neg": ("side board -X", "Side board"),
+        "top": ("top board", "Top board"),
+        "cleat_pos": ("registration rail +X", "Registration rail"),
+        "cleat_neg": ("registration rail -X", "Registration rail"),
+        "hscrew_p0": ("rail-side screw +X upper 0", "Rail-to-side screw"),
+        "hscrew_p1": ("rail-side screw +X upper 1", "Rail-to-side screw"),
+        "hscrew_p2": ("rail-side screw +X lower 0", "Rail-to-side screw"),
+        "hscrew_p3": ("rail-side screw +X lower 1", "Rail-to-side screw"),
+        "hscrew_m0": ("rail-side screw -X upper 0", "Rail-to-side screw"),
+        "hscrew_m1": ("rail-side screw -X upper 1", "Rail-to-side screw"),
+        "hscrew_m2": ("rail-side screw -X lower 0", "Rail-to-side screw"),
+        "hscrew_m3": ("rail-side screw -X lower 1", "Rail-to-side screw"),
+    }
+
+    doc = load_spec_file(CADDY)
+    assert {
+        component.id: (component.name, component.reader_name)
+        for component in doc.components
+    } == expected
+    detail = compile_spec(doc)
+    detail.validate()
+    expected_by_machine = {
+        machine_name: reader_name
+        for machine_name, reader_name in expected.values()
+    }
+    assert {
+        part.name: part.reader_name
+        for part in detail.assembly.parts
+    } == expected_by_machine
+    assert {part.reader_name for part in detail.assembly.parts} == {
+        "Sofa arm",
+        "Side board",
+        "Top board",
+        "Registration rail",
+        "Rail-to-side screw",
+    }
+
+
+def test_reader_name_only_edit_is_geometry_and_truth_inert():
+    original = compile_caddy()
+    doc = load_spec_file(CADDY)
+    components = tuple(
+        replace(component, reader_name="Registration cleat")
+        if getattr(component, "id", None) == "cleat_pos"
+        else component
+        for component in doc.components
+    )
+    renamed = compile_spec(replace(doc, components=components))
+
+    assert solid_hashes(original) == solid_hashes(renamed)
+    assert finding_signature(original) == finding_signature(renamed)
+    assert [part.name for part in original.assembly.parts] == [
+        part.name for part in renamed.assembly.parts
+    ]
