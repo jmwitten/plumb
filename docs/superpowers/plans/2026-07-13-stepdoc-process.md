@@ -121,6 +121,8 @@ TDD sequence:
    `constraints`; keep event identity content-keyed and `process` open-tagged.
    The graph calls the connection type hook and never searches assumptions,
    compares display labels, or hardcodes an adhesive type.
+   Runtime resolved-reference validation asks this same hook/capability
+   surface; the spec's early `glued` check is not a second graph authority.
 5. Thread resolved constraints through `ConnectionChecks`,
    `compile_connections`, the detail validation path, and installability's
    direct-test fallback graph builder.
@@ -133,7 +135,11 @@ TDD sequence:
    blocker is UNORDERED/UNKNOWN; with cure-before-target authored, the source
    member is provably present and the same corridor is a loud FAIL. This
    proves `after` informs checks and cannot waive geometry.
-8. Run focused CPG/install tests plus all existing glued-connection tests.
+8. Add a discriminating composed-site negative: both target and cure source
+   must belong to the resolved claim's `chain` according to
+   `ConnectionChecks.fragments`; no authored process edge crosses fragments,
+   and a mismatched manually built `ResolvedAfter` fails loudly.
+9. Run focused CPG/install tests plus all existing glued-connection tests.
 
 ## Task 3 — cure is its own reader step; caddy authors CAT-K
 
