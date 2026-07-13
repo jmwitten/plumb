@@ -172,21 +172,40 @@ surface, then lowers it into the ordinary DetailSpec language. Packs are
 explicit and versioned; merely installing or importing one changes nothing in
 an existing spec.
 
-The first vertical slice is `cabinetry.frameless@1`: conventional-shop,
-two-door frameless base cabinets with an adjustable shelf, independent toe
-base, Blum hinge machining, a modeled surveyed stud wall, shop artifacts, and
-field installation instructions. It supports either one cabinet or a touching
-straight run. `vanity.frameless@1` adds one wall-hung two-door vanity with
-verified 2x8 backing, structural anchors, a plumbing keepout, and its own
-installation sequence. Compile a checked-in example with:
+The first vertical slice is `cabinetry.frameless@1`: conventional-shop
+frameless base cabinets with an independent toe base, a modeled surveyed stud
+wall, shop artifacts, and field installation instructions. Its bounded
+archetypes are `base_two_door@1` (adjustable shelf and Blum hinge machining)
+and `drawer_base_three@1` (three wood drawers on pinned Blum MOVENTO soft-close
+runners, locking devices, lateral stabilizers, applied fronts, and pulls). The
+two-door archetype also supports a touching straight run. `vanity.frameless@1`
+adds one wall-hung two-door vanity with verified 2x8 backing, structural
+anchors, a plumbing keepout, and its own installation sequence. Compile the
+checked-in 40-inch three-drawer clothing cabinet with:
 
 ```python
 from detailgen.packs import compile_project_file
 
-project = compile_project_file("details/frameless_base_cabinet.project.yaml")
+project = compile_project_file("details/frameless_three_drawer_40.project.yaml")
 project.require_release()               # pack rules + existing geometry sweep
 print(project.manifest_json())          # versions, evidence, shop/install data
 ```
+
+Generate its self-contained build document (six drawings, interactive model,
+cut/edge/hardware/machining schedules, evidence, and exact shop-to-install
+sequence) with:
+
+```bash
+python scripts/cabinetry_project_report.py \
+  details/frameless_three_drawer_40.project.yaml \
+  --out outputs/frameless_three_drawer_40/build_document.html
+```
+
+The drawer implementation has a parent-independent `DrawerBankModel` seam so a
+future split-bank vanity can reuse the same sizing, machining, hardware, load,
+and validation rules. That seam is internal: the public v1 archetype remains
+the narrow, replayable three-drawer base rather than accepting arbitrary
+layouts.
 
 Versioned archetypes remove repetitive declarations while expanding into the
 same strict schemas. These examples demonstrate derived run placement and a
@@ -206,9 +225,9 @@ remain explicitly `not_performed` unless real evidence is supplied. A floating
 vanity likewise does not become structurally adequate merely because a listed
 screw and manufacturer installation precedent exist: release requires a
 referenced, project-specific review of the complete custom wall-mount load path.
-Drawer bases, sink-base cutout systems, wall cabinets, tall cabinets,
-appliances, fillers, and corner units remain future profile/pack work rather
-than parse-and-ignore vocabulary.
+Arbitrary drawer counts, mixed door/drawer public layouts, sink-base cutout
+systems, wall cabinets, tall cabinets, appliances, fillers, and corner units
+remain future profile/pack work rather than parse-and-ignore vocabulary.
 
 ### Coverage matrix — the UNKNOWN rule
 
