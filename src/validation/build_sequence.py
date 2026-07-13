@@ -23,6 +23,7 @@ and the HTML build document (``scripts/single_detail_report.py``).
 from __future__ import annotations
 
 from ..assemblies.event_graph import derive_reader_steps, unordered_parts
+from ..rendering.part_labels import part_labels
 
 #: The standing intro every rendered build sequence carries — the section's
 #: epistemic contract in three sentences (derived, one-of-many valid
@@ -82,6 +83,7 @@ def build_sequence_model(detail):
     checks = detail._connection_checks
     graph = checks.event_graph
     by_id = {p.id: p for p in detail.assembly.parts}
+    labels_by_id = part_labels(detail.assembly.parts)
     installs_of: dict[str, list] = {}
     for ri in checks.installs:
         installs_of.setdefault(ri.connection, []).append(ri)
@@ -93,7 +95,8 @@ def build_sequence_model(detail):
             p = by_id.get(pid)
             if p is None:
                 continue
-            places.append((p.name, p.component.bom_label(),
+            label = labels_by_id[p.id]
+            places.append((label.reader_name, label.item,
                            _fab_note(p.component)))
         drives, units = [], []
         for label in step.connections:
@@ -110,7 +113,11 @@ def build_sequence_model(detail):
             "places": places, "drives": drives, "units": units,
             "joins": step.joins,
         })
-    loose_names = tuple(graph.part_names.get(pid, pid) for pid in loose)
+    loose_names = tuple(
+        labels_by_id[pid].reader_name
+        if pid in labels_by_id else graph.part_names.get(pid, pid)
+        for pid in loose
+    )
     return out, loose_names
 
 
@@ -128,7 +135,7 @@ def render_build_sequence_md(detail) -> str:
     """The markdown Build Sequence section for the per-detail report
     surface. Deterministic and fully derived: step grouping and order from
     the event graph's canonical linearization, part lines from the
-    assembly's own names/BOM labels/fab notes, fastener lines from the
+    assembly's shared reader labels/BOM labels/fab notes, fastener lines from the
     resolved installation contracts."""
     model = build_sequence_model(detail)
     if model is None:

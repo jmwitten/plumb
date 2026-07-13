@@ -32,6 +32,7 @@ import consolidated_report as CR  # the machinery we REUSE (never edit here)
 
 from detailgen.spec.compiler import compile_spec_file
 from detailgen.core.cutplan import pack
+from detailgen.rendering.part_labels import part_labels
 from detailgen.rendering.web_viewer import (
     build_viewer_payload, vendor_js, viewer_css, viewer_js)
 from detailgen.review import (
@@ -1049,16 +1050,18 @@ def build_single_detail_html(name: str, detail, views_dir: Path, panel_cfg: dict
     image_uris = {v: CR.png_data_uri(views_dir / view_files[v])
                   for v in panel_cfg["views"]}
     callouts = detail.rendered_callouts()
+    labels_by_id = part_labels(detail.assembly.parts)
     payload = build_viewer_payload(detail)
     # A rectangular geometry primitive may approximate context such as a sofa
     # arm or floor, but its domain metadata must not leak into the reader as
     # "Boulder / natural stone / leveling nuts". Preserve the model-derived
     # envelope/specs while labeling every existing body as context.
-    for part_name, row in payload["parts"].items():
+    for _machine_name, row in payload["parts"].items():
         if not row.get("existing"):
             continue
+        reader_name = labels_by_id[row["id"]].reader_name
         row["type"] = "Existing context"
-        row["item"] = f"{part_name} (existing)"
+        row["item"] = f"{reader_name} (existing)"
         row["material"] = "Existing context — material not specified"
         row["group"] = f"Existing context|{row.get('dims', '')}"
         row["assumptions"] = (
@@ -1091,12 +1094,15 @@ def build_single_detail_html(name: str, detail, views_dir: Path, panel_cfg: dict
     fab_notes = CR.cutlist_fab_notes(purchased, {name: detail})
 
     # Domain labels (F4): the arm is modeled on the `boulder` primitive, whose
-    # bom_label is "Boulder (existing)". Relabel every EXISTING row from the
-    # spec's own part name (`name: sofa arm`) so the reader sees the real thing,
-    # not the modeling primitive — a consumer-side render fix, no src/ change.
-    id_to_name = {p.id: p.name for p in detail.assembly.parts}
+    # bom_label is "Boulder (existing)". Relabel every EXISTING row through the
+    # shared reader projection so BOM and hover use the same authored name rather
+    # than the modeling primitive.
     for row in existing:
-        names = sorted({id_to_name[i] for i in row["ids"] if i in id_to_name})
+        names = sorted({
+            labels_by_id[part_id].reader_name
+            for part_id in row["ids"]
+            if part_id in labels_by_id
+        })
         if names:
             label = ", ".join(names)
             row["item"] = label if "(existing)" in label else f"{label} (existing)"

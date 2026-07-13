@@ -42,6 +42,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 import _site_overview
 from _site_overview import is_context_stub_lumber, is_existing
+from detailgen.rendering.part_labels import part_labels
 OUT_DIR = ROOT / "outputs" / "consolidated"
 RENDERS = OUT_DIR / "renders"
 HTML_OUT = OUT_DIR / "zipline-build-document.html"
@@ -263,8 +264,9 @@ def _cut_id_maps(details: dict) -> tuple[dict, dict]:
     id_to_label: dict = {}
     id_to_part: dict = {}
     for name, d in details.items():
+        labels = part_labels(d.assembly.parts)
         for p in d.assembly.parts:
-            id_to_label[(name, p.id)] = p.name
+            id_to_label[(name, p.id)] = labels[p.id].reader_name
             id_to_part[(name, p.id)] = p.component
     return id_to_label, id_to_part
 

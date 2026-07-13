@@ -27,6 +27,7 @@ from detailgen.rendering.inspector import (
     Verification,
     build_inspector_payload,
     emit_inspector_html,
+    inspector_js,
     render_inspector_document,
 )
 from detailgen.spec.compiler import compile_spec_file
@@ -79,6 +80,34 @@ def test_id_to_name_covers_every_part(payload, detail):
     for pid, name in payload["id_to_name"].items():
         assert pid.startswith("part:")
         assert name in payload["parts"]
+
+
+def test_caddy_inspector_adds_reader_names_without_rekeying_machine_identity():
+    caddy = compile_spec_file(DETAILS / "armchair_caddy.spec.yaml")
+    caddy.validate()
+    payload = build_inspector_payload(caddy)
+    machine_names = [part.name for part in caddy.assembly.parts]
+
+    assert list(payload["parts"]) == machine_names
+    assert payload["part_order"] == machine_names
+    assert list(payload["id_to_name"].values()) == machine_names
+    assert "Registration rail" not in payload["parts"]
+    rails = [
+        payload["parts"][name]
+        for name in ("registration rail +X", "registration rail -X")
+    ]
+    assert [part["name"] for part in rails] == [
+        "registration rail +X", "registration rail -X"
+    ]
+    assert [part["reader_name"] for part in rails] == [
+        "Registration rail", "Registration rail"
+    ]
+
+
+def test_inspector_header_uses_reader_name_without_changing_part_lookup():
+    js = inspector_js()
+    assert "this.payload.parts[name]" in js
+    assert "part.reader_name || part.name" in js
 
 
 # -- purity: the payload is JSON, all the way down ---------------------------

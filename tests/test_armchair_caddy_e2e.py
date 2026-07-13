@@ -590,7 +590,7 @@ def test_single_detail_html_build_document(tmp_path):
     vis = _visible_text(html)
     assert "1x6 lumber" in vis and "5/4x6 decking" in vis
     assert "structural screw" in vis.lower()
-    assert "sofa arm (existing)" in vis and "Boulder (existing)" not in vis
+    assert "Sofa arm (existing)" in vis and "Boulder (existing)" not in vis
     low = vis.lower()
     assert "five-piece saddle" in low
     assert "flush with the top-board ends" in low

@@ -366,7 +366,7 @@
 
     // sticky head
     this.panel.appendChild(el("div", { class: "ix-part-head" }, [
-      el("h2", { class: "ix-part-name", text: part.name }),
+      el("h2", { class: "ix-part-name", text: part.reader_name || part.name }),
       el("div", { class: "ix-part-type" }, [
         d.component_type + " · " + d.material,
       ]),

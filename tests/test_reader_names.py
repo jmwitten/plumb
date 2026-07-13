@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import json
 from pathlib import Path
+import sys
 
 import pytest
 
 from detailgen.core.buildinfo import geometry_hash
+from detailgen.rendering.inspector import build_inspector_payload
 from detailgen.rendering.part_labels import part_labels
 from detailgen.spec import (
     SpecSchemaError,
@@ -101,6 +104,18 @@ def compile_caddy():
     detail = compile_spec_file(CADDY)
     detail.validate()
     return detail
+
+
+@pytest.fixture(scope="module")
+def caddy_html(tmp_path_factory):
+    scripts = ROOT / "scripts"
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    import single_detail_report as SDR
+
+    out = tmp_path_factory.mktemp("reader-names") / "caddy.html"
+    SDR.build_document(out, spec_path=CADDY, preview=False)
+    return out.read_text()
 
 
 def finding_signature(detail):
@@ -235,3 +250,55 @@ def test_reader_name_only_edit_is_geometry_and_truth_inert():
     assert [part.name for part in original.assembly.parts] == [
         part.name for part in renamed.assembly.parts
     ]
+
+
+def test_caddy_reader_surfaces_share_the_same_rail_label(caddy_html):
+    from detailgen.validation.build_sequence import build_sequence_model
+
+    detail = compile_caddy()
+    sequence, _loose = build_sequence_model(detail)
+    placed_names = [
+        name
+        for step in sequence
+        for name, _bom, _fab in step["places"]
+    ]
+    assert placed_names.count("Registration rail") == 2
+
+    cut_plan = caddy_html.split(
+        '<section class="notes cutplan">', 1)[1].split("</section>", 1)[0]
+    assert cut_plan.count("Registration rail") >= 2
+    assert "registration rail +X" not in cut_plan
+    assert "registration rail -X" not in cut_plan
+
+    payload = build_inspector_payload(detail)
+    assert sum(
+        part["reader_name"] == "Registration rail"
+        for part in payload["parts"].values()
+    ) == 2
+
+
+def test_caddy_existing_context_uses_reader_name_in_bom_and_hover(caddy_html):
+    existing = caddy_html.split(
+        '<div class="existing">', 1)[1].split("</div>", 1)[0]
+    assert "Sofa arm (existing)" in existing
+    assert "sofa arm (existing)" not in existing
+
+    payload_json = caddy_html.split(
+        '<script type="application/json" id="detail-data-', 1
+    )[1].split(">", 1)[1].split("</script>", 1)[0]
+    payload = json.loads(payload_json)
+    assert "sofa arm" in payload["parts"]
+    assert payload["parts"]["sofa arm"]["item"] == "Sofa arm (existing)"
+
+
+def test_machine_connection_labels_remain_in_raw_contract_appendix(caddy_html):
+    appendix = caddy_html.split(
+        "<section class='notes install-disclosure'>", 1
+    )[1].split("</section>", 1)[0]
+    assert "rail +X" in appendix
+
+    sequence = caddy_html.split(
+        "<section class='notes build-sequence'>", 1
+    )[1].split("</section>", 1)[0]
+    assert "place Registration rail" in sequence
+    assert "place registration rail +X" not in sequence

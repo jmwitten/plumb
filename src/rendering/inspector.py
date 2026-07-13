@@ -43,6 +43,8 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from .part_labels import part_labels
+
 _HERE = Path(__file__).parent
 _ASSETS = _HERE / "inspector_assets"
 
@@ -203,6 +205,7 @@ class PartInspection:
     panel binds to when a mesh is clicked."""
 
     name: str
+    reader_name: str
     part_id: str
     descriptor: dict
     provenance: dict
@@ -244,6 +247,7 @@ def build_inspector_payload(detail) -> dict:
     parts: dict[str, dict] = {}
     id_to_name: dict[str, str] = {}
     order: list[str] = []
+    labels_by_id = part_labels(detail.assembly.parts)
     for placed in detail.assembly.parts:
         name = placed.name
         descriptor = ObjectDescriptor.build(graph.what_is(name))
@@ -251,7 +255,8 @@ def build_inspector_payload(detail) -> dict:
         verification = Verification.build(graph.how_verified(name), coverage_rows)
         dependencies = Dependencies.build(graph.what_depends_on(name))
         inspection = PartInspection(
-            name=name, part_id=descriptor.part_id,
+            name=name, reader_name=labels_by_id[placed.id].reader_name,
+            part_id=descriptor.part_id,
             descriptor=asdict(descriptor), provenance=asdict(provenance),
             verification=asdict(verification), dependencies=asdict(dependencies),
         )
