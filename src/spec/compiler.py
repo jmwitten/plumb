@@ -774,6 +774,64 @@ class SpecDetail(Detail):
                 connections=tuple(labels), parts=tuple(pids)))
         return tuple(out)
 
+    def resolved_staging(self):
+        """Resolve typed staging claims to built part ids exactly once.
+
+        Explicit subassemblies expand repeat-template component ids just like
+        :meth:`resolved_sequence`. ``bench_then_set`` is normalized here to
+        one unit containing every non-context built part, so the event graph,
+        installability, and reader surfaces consume one representation rather
+        than separately interpreting the sugar.
+        """
+        from ..assemblies.event_graph import ResolvedStaging, ResolvedUnit
+
+        seq = self.doc.sequence
+        if not seq.subassemblies and seq.assembly is None:
+            return None
+        self.build()
+
+        def expand(ref: str, owner: str) -> tuple[str, ...]:
+            if ref in self._by_id:
+                return (self._by_id[ref].id,)
+            instances = self._cid_instances.get(ref)
+            if not instances:
+                raise SpecCompileError(
+                    f"{owner}: part {ref!r} built no instance (retired, or "
+                    f"its repeat ran zero times) — a staging claim cannot "
+                    f"place a part that does not exist in the built detail")
+            return tuple(self._by_id[cid].id for cid in instances)
+
+        context: list[str] = []
+        for ref, role in self.doc.roles.items():
+            if role == "existing":
+                context.extend(expand(ref, "staging context"))
+        context_parts = frozenset(context)
+
+        if seq.subassemblies:
+            units = []
+            for unit in seq.subassemblies:
+                pids: list[str] = []
+                for ref in unit.parts:
+                    pids.extend(expand(
+                        ref, f"sequence subassembly {unit.name!r}"))
+                units.append(ResolvedUnit(
+                    name=unit.name, why=unit.why, parts=tuple(pids)))
+            return ResolvedStaging(
+                mode="subassemblies", units=tuple(units),
+                context_parts=context_parts)
+
+        authored = seq.assembly
+        if authored.mode == "bench_then_set":
+            built = tuple(p.id for p in self.assembly.parts
+                          if p.id not in context_parts)
+            units = (ResolvedUnit(
+                name="whole detail", why=authored.why, parts=built),)
+        else:  # explicit in_situ: no bench frames
+            units = ()
+        return ResolvedStaging(
+            mode=authored.mode, why=authored.why, units=units,
+            context_parts=context_parts)
+
     def _append_foundation_connections(self, out: list) -> None:
         """One post->block :class:`~detailgen.assemblies.connection.Connection`
         per foundation system that declares a post base (task FAB-3) — wired

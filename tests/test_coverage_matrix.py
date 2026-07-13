@@ -363,3 +363,47 @@ def test_declared_order_clears_carry_the_marker_on_every_summary_surface():
     row2 = next(r for r in coverage_matrix(bare)
                 if r.family == "Fastener installability")
     assert row2.declared == 0 and row2.verdict_display == PASS
+
+
+def test_declared_trust_clears_carry_the_stronger_marker_everywhere():
+    """A connection-free context exclusion is a declared staging claim,
+    not a graph-derived construction fact.  Keep that stronger epistemic
+    ceiling structured and visible on every family-summary surface."""
+    from detailgen.validation.coverage import (
+        coverage_matrix, coverage_payload, render_coverage_matrix_html,
+        render_coverage_matrix_md, render_headline_html,
+        render_headline_line)
+
+    rep = ValidationReport("trust marker")
+    rep.add(Finding(
+        "install_access", "caddy side screw", True,
+        "clear in a declared bench frame", declared_order=True,
+        declared_trust=True))
+    rows = coverage_matrix(rep)
+    row = next(r for r in rows if r.family == "Fastener installability")
+
+    assert row.declared == 1
+    assert row.declared_trust == 1
+    marker = "DECLARED TRUST"
+    assert marker in row.note
+    assert marker in row.verdict_display
+    assert marker in render_coverage_matrix_md(rep)
+    assert marker in render_coverage_matrix_html(rep)
+    assert marker in render_headline_line(rows)
+    assert marker in render_headline_html(rows)
+    payload_row = next(r for r in coverage_payload(rep)
+                       if r["family"] == "Fastener installability")
+    assert payload_row["declared_trust_clears"] == 1
+
+    ordinary = ValidationReport("ordinary declared order")
+    ordinary.add(Finding(
+        "install_access", "platform toe screw", True,
+        "clear after an authored stage", declared_order=True))
+    ordinary_rows = coverage_matrix(ordinary)
+    ordinary_row = next(r for r in ordinary_rows
+                        if r.family == "Fastener installability")
+    assert ordinary_row.declared == 1
+    assert ordinary_row.declared_trust == 0
+    assert marker not in ordinary_row.note
+    assert marker not in ordinary_row.verdict_display
+    assert marker not in render_headline_line(ordinary_rows)

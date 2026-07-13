@@ -14,8 +14,12 @@ import yaml
 
 from detailgen.spec.compiler import compile_spec
 from detailgen.spec.loader import load_spec_text
-from detailgen.spec.schema import AuthoredStage, SequenceSpec, SpecSchemaError
+from detailgen.spec.schema import (
+    AuthoredAssembly, AuthoredStage, AuthoredSubassembly, SequenceSpec,
+    SpecSchemaError,
+)
 from detailgen.spec.semantics import SemanticError
+from detailgen.spec.serialize import spec_to_dict
 
 
 # -- fixtures -----------------------------------------------------------------
@@ -273,17 +277,9 @@ def test_unknown_key_in_a_stage_entry_is_a_loud_load_error():
     assert "unknown key 'note'" in str(e.value)
 
 
-@pytest.mark.parametrize("key,value", [
-    ("after", ["cure(leg a to rail)"]),
-    ("subassemblies", [{"name": "side", "parts": ["leg_a"]}]),
-    ("assembly", "bench_then_set"),
-])
-def test_future_staging_keys_are_not_special_cased(key, value):
-    """'after:' (point constraints), 'subassemblies:'/'assembly:' (§3.4
-    staging) are FUTURE keys of the sequence: language, deliberately not
-    implemented in this v1-core plumbing task. They must hit the ordinary
-    unknown-key error like any other typo — never a distinct "not yet
-    supported" message, and never a silent no-op."""
+def test_future_after_key_is_not_special_cased():
+    """Point constraints remain outside +staging and stay loud unknown keys."""
+    key, value = "after", ["cure(leg a to rail)"]
     seq = {"stages": [{"name": "s0", "connections": ["leg a to rail"],
                        "why": "x"}], key: value}
     with pytest.raises(SpecSchemaError) as e:
@@ -297,6 +293,170 @@ def test_after_key_on_a_stage_entry_is_also_not_special_cased():
     with pytest.raises(SpecSchemaError) as e:
         _load(_base_doc(seq))
     assert "unknown key 'after'" in str(e.value)
+
+
+# -- +staging: typed assembly/subassembly declarations -----------------------
+
+
+_BENCH_THEN_SET = {
+    "assembly": {
+        "mode": "bench_then_set",
+        "why": "Build every joint on the bench before setting the unit on "
+               "the existing context.",
+    },
+}
+
+
+_SIDE_UNITS = {
+    "subassemblies": [
+        {"name": "side_a", "parts": ["leg_a"],
+         "why": "Screw side A flat while side B is absent."},
+        {"name": "side_b", "parts": ["leg_b", "rail"],
+         "why": "Screw side B flat while side A is absent."},
+    ],
+}
+
+
+def test_staging_only_sequence_loads_typed_bench_then_set_claim():
+    doc = _load(_base_doc(_BENCH_THEN_SET))
+    assert doc.sequence.stages == ()
+    assert doc.sequence.subassemblies == ()
+    assert isinstance(doc.sequence.assembly, AuthoredAssembly)
+    assert doc.sequence.assembly.mode == "bench_then_set"
+    assert doc.sequence.assembly.why.startswith("Build every joint")
+
+
+def test_staging_only_sequence_loads_typed_subassemblies_in_order():
+    doc = _load(_base_doc(_SIDE_UNITS))
+    assert doc.sequence.assembly is None
+    assert all(isinstance(u, AuthoredSubassembly)
+               for u in doc.sequence.subassemblies)
+    assert [u.name for u in doc.sequence.subassemblies] == [
+        "side_a", "side_b"]
+    assert doc.sequence.subassemblies[1].parts == ("leg_b", "rail")
+
+
+@pytest.mark.parametrize("mode", ["bench", "set_in_place", "", None])
+def test_assembly_mode_is_a_loud_closed_vocabulary(mode):
+    seq = {"assembly": {"mode": mode, "why": "a real reason"}}
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_base_doc(seq))
+    msg = str(e.value)
+    assert "mode" in msg and "bench_then_set" in msg and "in_situ" in msg
+
+
+@pytest.mark.parametrize("assembly", [
+    {"mode": "bench_then_set"},
+    {"mode": "bench_then_set", "why": "   "},
+    {"mode": "bench_then_set", "why": None},
+])
+def test_assembly_claim_requires_a_nonempty_why(assembly):
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_base_doc({"assembly": assembly}))
+    assert "why" in str(e.value)
+
+
+def test_scalar_assembly_shorthand_is_rejected_because_it_cannot_carry_why():
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_base_doc({"assembly": "bench_then_set"}))
+    assert "mapping" in str(e.value) and "why" in str(e.value)
+
+
+@pytest.mark.parametrize("unit", [
+    {"name": "side_a", "parts": ["leg_a"]},
+    {"name": "side_a", "parts": ["leg_a"], "why": "   "},
+    {"name": "side_a", "parts": ["leg_a"], "why": None},
+    {"name": None, "parts": ["leg_a"], "why": "a real reason"},
+])
+def test_subassembly_claim_requires_a_nonempty_why(unit):
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_base_doc({"subassemblies": [unit]}))
+    expected = "name" if unit.get("name") is None else "why"
+    assert expected in str(e.value)
+
+
+def test_root_is_reserved_and_cannot_be_a_subassembly_name():
+    seq = {"subassemblies": [
+        {"name": "root", "parts": ["leg_a"],
+         "why": "would collide with the root-frame sentinel"}]}
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_base_doc(seq))
+    msg = str(e.value)
+    assert "root" in msg and "reserved" in msg and "frame" in msg
+
+
+@pytest.mark.parametrize("stage", [
+    {"name": None, "parts": ["leg_a"], "why": "a real reason"},
+    {"name": "s0", "parts": ["leg_a"], "why": None},
+])
+def test_stage_null_name_or_why_is_not_stringified(stage):
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_base_doc({"stages": [stage]}))
+    assert "non-empty" in str(e.value) or "required" in str(e.value)
+
+
+def test_subassembly_requires_at_least_one_part():
+    seq = {"subassemblies": [
+        {"name": "empty", "parts": [], "why": "nothing is not a unit"}]}
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_base_doc(seq))
+    assert "at least one" in str(e.value) and "part" in str(e.value)
+
+
+def test_duplicate_subassembly_names_are_loud():
+    seq = {"subassemblies": [
+        {"name": "side", "parts": ["leg_a"], "why": "first"},
+        {"name": "side", "parts": ["leg_b"], "why": "second"},
+    ]}
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_base_doc(seq))
+    assert "side" in str(e.value) and "unique" in str(e.value)
+
+
+def test_part_in_two_subassemblies_is_loud_and_names_both_units():
+    seq = {"subassemblies": [
+        {"name": "side_a", "parts": ["leg_a"], "why": "first"},
+        {"name": "side_b", "parts": ["leg_a"], "why": "second"},
+    ]}
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_base_doc(seq))
+    msg = str(e.value)
+    assert "leg_a" in msg and "side_a" in msg and "side_b" in msg
+    assert "at most one" in msg
+
+
+def test_assembly_sugar_and_explicit_subassemblies_cannot_coexist():
+    seq = {**_BENCH_THEN_SET, **_SIDE_UNITS}
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_base_doc(seq))
+    assert "assembly" in str(e.value) and "subassemblies" in str(e.value)
+
+
+def test_subassembly_part_must_exist_with_did_you_mean():
+    seq = {"subassemblies": [
+        {"name": "side", "parts": ["leg_aa"], "why": "typo probe"}]}
+    with pytest.raises(SemanticError) as e:
+        compile_spec(_load(_base_doc(seq)))
+    msg = str(e.value)
+    assert "leg_aa" in msg and "no declared component" in msg
+    assert "leg_a" in msg
+
+
+def test_existing_context_cannot_be_authored_inside_a_bench_unit():
+    raw = _base_doc({"subassemblies": [
+        {"name": "not_a_shop_unit", "parts": ["leg_a"],
+         "why": "invalid context membership"}]})
+    raw["roles"] = {"leg_a": {"role": "existing", "grounded_by": "site"}}
+    with pytest.raises(SemanticError) as e:
+        compile_spec(_load(raw))
+    assert "existing" in str(e.value) and "context" in str(e.value)
+
+
+@pytest.mark.parametrize("sequence", [_BENCH_THEN_SET, _SIDE_UNITS])
+def test_staging_round_trips_through_the_one_serializer(sequence):
+    doc = _load(_base_doc(sequence))
+    emitted = spec_to_dict(doc)["sequence"]
+    assert emitted == sequence
 
 
 # -- landing surface: reaches the compiled surface axis-3 will consume -------

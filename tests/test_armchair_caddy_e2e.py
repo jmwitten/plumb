@@ -69,30 +69,25 @@ def caddy():
     return detail, report
 
 
-def test_compiles_and_validates_with_honest_install_unknowns(caddy):
+def test_compiles_and_validates_with_declared_bench_staging(caddy):
     """compile_spec_file -> validate runs the full sweep with an HONEST
     verdict. The rail->top joints are hardware-free glued bonds (nothing
     for the installability checks to judge); the side joints author
-    joint-geometry embedment minimums. The caddy carries ZERO failures —
-    but it is NOT clean: all 8 side screws' driver corridors are honestly
-    UNDERDETERMINED — the sofa arm participates in no connection, so the
-    construction process graph relates it to nothing (task CPGCORE §4.1
-    wording: the occupant AND the missing order fact are named; the
-    resolving staging declaration is a FUTURE mechanism, named as such) —
-    so 8 blocking UNKNOWNs stand. Pinned exactly, so a regression
-    elsewhere can't hide under the expected not-ok."""
+    joint-geometry embedment minimums. The eight side-screw corridors meet
+    the sofa arm in final geometry but clear in the authored whole-detail
+    bench frame. Because the arm is connection-free context, every clear
+    carries the stronger DECLARED TRUST/P1 ceiling."""
     detail, report = caddy
     from collections import Counter
     assert report.failures == []
-    unknowns = [f for f in report.blocking if f.verdict == "UNKNOWN"]
-    assert Counter(f.check for f in unknowns) == Counter({"install_access": 8})
-    assert all("UNKNOWN — build order underdetermined" in f.detail
-               and "sofa arm" in f.detail
-               and "no order fact relates" in f.detail
-               and "participates in no connection" in f.detail
-               and "FUTURE mechanism, not authorable today" in f.detail
-               for f in unknowns)
-    assert all("rail-side screw" in f.subject for f in unknowns)
+    access = [f for f in report.findings if f.check == "install_access"]
+    assert Counter(f.verdict for f in access) == Counter({"PASS": 8})
+    assert all("sofa arm" in f.detail
+               and "[staging]" in f.detail
+               and "DECLARED TRUST" in f.detail
+               and "insertion travel is not analyzed" in f.detail
+               and f.declared_order and f.declared_trust
+               for f in access)
     # termination is green on merit: 8 GEOMETRY-PROVEN side bites at the
     # authored minimum. The glued rail->top bonds contribute NO install
     # verdicts at all (no hardware — the type's explicit empty contract),
@@ -104,7 +99,16 @@ def test_compiles_and_validates_with_honest_install_unknowns(caddy):
     bonded = [e for e in detail._connection_checks.edges
               if e.kind == "bonded_to"]
     assert len(bonded) == 2
-    assert not report.ok
+    assert report.blocking == [] and report.ok
+
+
+def test_interior_caddy_screw_heads_are_authored_flush_not_proud(caddy):
+    detail, _report = caddy
+    installs = detail._connection_checks.installs
+    assert len(installs) == 2
+    assert all(ri.contract.head == "flush_countersunk" for ri in installs)
+    assert all(ri.provenance_map["head"] == "authored_override"
+               for ri in installs)
 
 
 def test_every_board_has_expected_fabrication_record(caddy):
@@ -231,10 +235,7 @@ def test_full_flow_is_fast():
     detail.bom_table()
     elapsed = time.perf_counter() - t0
 
-    # INSTALL v1 + fix arc: the caddy honestly blocks on install-order
-    # UNKNOWNs (see test_compiles_and_validates_with_honest_install_unknowns)
-    # — the perf budget is about the flow, not the verdict.
-    assert not report.ok
+    assert report.ok
     assert elapsed < 60.0, f"e2e flow took {elapsed:.1f}s (budget 60s)"
 
 
@@ -296,10 +297,8 @@ def test_progression_harness_matches_the_tree_it_runs_on(caddy):
     for section in ("validation verdicts", "bill of materials",
                     "process records", "derived cut list", "evidence walkback"):
         assert section in block, section
-    # Zero failures, and the honest blocking set is the 8 side-screw
-    # install-order corridor UNKNOWNs (sofa arm) — the glued rail->top
-    # bonds carry no fastener to judge. The harness reports reality.
-    assert "failures: 0" in block and "blocking: 8" in block
+    # The declared off-sofa bench frame resolves all eight access questions.
+    assert "failures: 0" in block and "blocking: 0" in block
     assert "1x6 lumber" in block and '7.00"' in block and '9.50"' in block
     assert '5.50"' in block                              # the D6 1x6 registration rails
 
@@ -346,21 +345,13 @@ def test_progression_harness_matches_the_tree_it_runs_on(caddy):
 # ---------------------------------------------------------------------------- #
 # task 8: doc render through the real entry path, visual review, view coverage.
 # ---------------------------------------------------------------------------- #
-def test_render_refuses_but_documentation_still_renders(caddy, tmp_path):
-    """INSTALL v1's gate split, live on the caddy: the CERTIFYING verb
-    (``render``) refuses the honest blockers — the 8 side-screw
-    install-order UNKNOWNs, no FAILs — while the ungated
-    ``render_documentation`` (FAB-3) still writes the document ABOUT the
-    blocked state (a doc about a blocker is how it gets fixed)."""
+def test_certifying_render_accepts_declared_staging(caddy, tmp_path):
+    """With no blocking verdict left, both the certifying and documentation
+    entry paths render. The trust ceiling remains visible in their reports."""
     detail, _report = caddy
-    with pytest.raises(AssertionError) as exc:
-        detail.render(tmp_path / "refused")
-    msg = str(exc.value)
-    assert "install_access" in msg
-    assert "8 unresolved (UNKNOWN, blocking)" in msg
-    # no failure remains, and the message never conflates the verdicts:
-    assert "validation failure" not in msg
-    assert "install_termination" not in msg
+    certified = detail.render(tmp_path / "certified")
+    assert certified.exists()
+    assert "DECLARED TRUST" in (certified / "validation_report.md").read_text()
     out = detail.render_documentation(tmp_path / "doc")
     assert out.exists()
 
@@ -389,6 +380,43 @@ def test_doc_renders_through_render_documentation(caddy, tmp_path):
     assert "cup hole" in text.lower()
     # the coverage matrix is appended (honesty is a framework property).
     assert "Coverage matrix" in text
+    assert "DECLARED TRUST" in text
+    assert "**bench whole detail**" in text
+    assert "**set whole detail in place**" in text
+    assert "authored staging claim" in text
+
+
+def test_build_sequence_derives_bench_then_set_and_does_not_list_arm_loose(caddy):
+    from detailgen.validation.build_sequence import build_sequence_model
+
+    detail, _report = caddy
+    steps, loose = build_sequence_model(detail)
+    titles = [step["title"] for step in steps]
+    assert titles[0] == "bench whole detail"
+    assert "set whole detail in place" in titles
+    assert titles.index("bench whole detail") < \
+        titles.index("set whole detail in place")
+    # The staging defense names only the frame/context claim. Glue/cure/screw
+    # process order is not representable until +process and must not be smuggled
+    # into a reader step as if the CPG had checked it.
+    why = steps[0]["why"]
+    assert "assembled off the sofa" in why and "DECLARED TRUST" in why
+    assert "then drive" not in why and "cure" not in why.lower()
+    assert steps[0]["claim"] == "staging"
+    assert steps[titles.index("set whole detail in place")]["joins"] == \
+        ("whole detail",)
+    assert "sofa arm" not in loose
+
+
+def test_reader_configuration_formats_values_from_the_compiled_namespace():
+    if str(_REPO / "scripts") not in sys.path:
+        sys.path.insert(0, str(_REPO / "scripts"))
+    import single_detail_report as SDR
+
+    value = {"notes": [("Cut", "{top_len:g}in / {station:.2f}in")]}
+    assert SDR._format_reader_data(
+        value, {"top_len": 9.5, "station": 2.15}) == {
+            "notes": [("Cut", "9.5in / 2.15in")]}
 
 
 def test_visual_review_store_is_valid_and_grounded():
@@ -511,6 +539,9 @@ def test_single_detail_html_build_document(tmp_path):
     assert 'class="panel"' in html                    # render_panel
     assert html.count("data:image/png;base64,") >= 5  # embedded panel stills
     assert "UNKNOWN — NOT ANALYZED" in html            # coverage matrix
+    assert "Build sequence (derived)" in html
+    assert "bench whole detail" in html
+    assert "set whole detail in place" in html
     for cid in ("C1", "C2", "C3", "C4"):               # caddy visual-review block
         assert cid in html
     assert 'id="detail-glb-' in html and "Explore in 3D" in html  # 3D viewer + GLB
@@ -522,6 +553,27 @@ def test_single_detail_html_build_document(tmp_path):
     assert "1x6 lumber" in vis and "5/4x6 decking" in vis
     assert "structural screw" in vis.lower()
     assert "sofa arm (existing)" in vis and "Boulder (existing)" not in vis
+    low = vis.lower()
+    assert "five-piece saddle" in low
+    assert "flush with the top-board ends" in low
+    assert "inner face sits 1in outside" in low
+    assert "top cut formula" in low and "9.5in" in low
+    assert "rail layout" in low and "6.5in apart" in low
+    assert "screw stations" in low and "2.15in" in low and "3.35in" in low
+    assert "0.75in and 4in below" in low
+    assert "tools:" in low and "3.5in opening" in low and "hole saw" in low
+    assert "drill/driver" in low
+    assert "consumables:" in low and "water-resistant finish" in low
+    assert "intended cup" in low and "fit template" in low
+    assert "drill press" in low and "side handle" in low and "jigsaw" in low
+    assert "workpiece clamped" in low
+    assert "head=flush_countersunk" in low and "head=proud" not in low
+    assert "longitudinal sliding is not analyzed" in low
+    # Hidden viewer metadata is reader-visible on hover and must use the
+    # domain part, not the rectangular primitive used to approximate it.
+    raw = html.lower()
+    assert "leveling nuts" not in raw and "natural stone" not in raw
+    assert '"type":"existing context"' in raw
 
     # a real, self-contained document, not a stub.
     assert info["size_bytes"] > 200_000
@@ -583,7 +635,8 @@ def test_caddy_doc_prose_describes_the_current_rail_joint(tmp_path):
     # NEGATIVE: the retired pre-D1 joint narrative is gone. These phrases described
     # ONLY the top board screwed straight down into the side's end grain on the show
     # face — impossible for the hidden-rail joint, so their presence = stale prose.
-    for stale in ("screwed straight down", "screw stations", "screws per joint"):
+    for stale in ("screwed straight down", "top-face screw stations",
+                  "screws per joint"):
         assert stale not in vis, f"stale pre-D1 joint prose in caddy doc: {stale!r}"
 
 

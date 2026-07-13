@@ -178,7 +178,8 @@ def analyze_sequence(doc) -> None:
     target-existence check is likewise deferred here rather than done at
     load. Did-you-mean on the near misses, same style throughout this
     module."""
-    if not doc.sequence.stages:
+    if (not doc.sequence.stages and not doc.sequence.subassemblies
+            and doc.sequence.assembly is None):
         return
     conn_labels = {c.label for c in _walk_connections(doc.connections) if c.label}
     member_ids = _declared_ids(doc.components)
@@ -199,6 +200,22 @@ def analyze_sequence(doc) -> None:
                     f"sequence stage {stage.name!r}: part {pid!r} names no "
                     f"declared component{tip}. An authored order claim can "
                     f"only reference a part by its authored component id.")
+    for unit in doc.sequence.subassemblies:
+        for pid in unit.parts:
+            if pid not in member_ids:
+                hint = difflib.get_close_matches(pid, sorted(member_ids), n=3)
+                tip = f" — did you mean one of {hint}?" if hint else ""
+                raise SemanticError(
+                    f"sequence subassembly {unit.name!r}: part {pid!r} "
+                    f"names no declared component{tip}. A staging claim can "
+                    f"only reference a part by its authored component id.")
+            if doc.roles.get(pid) == "existing":
+                raise SemanticError(
+                    f"sequence subassembly {unit.name!r}: part {pid!r} is "
+                    f"declared role 'existing' — a pre-existing context body "
+                    f"cannot be a constructed bench-unit member. Leave context "
+                    f"out of subassemblies and declare its presence through "
+                    f"assembly mode when needed.")
 
 
 def _member_dependents(doc, mid: str, retired_conn: set) -> list[str]:

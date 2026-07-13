@@ -74,26 +74,22 @@ def _bb(detail, name):
     return _by_name(detail)[name].world_solid().val().BoundingBox()
 
 
-def test_compiles_and_validates_with_honest_install_unknowns(frame):
-    """HONEST NEW STATE since task INSTALL v1 (this doc shipped before the
-    axis checks existed): geometry and every non-install family stay clean —
-    no FAILs — but the 8 side-rail screws' declared 6in driver corridors back
-    across the ~2in interior gap into the OPPOSITE side's rail/legs (parts of
-    other connections), so static access is honestly UNDERDETERMINED on the
-    construction process graph (task CPGCORE §4.1 wording: occupants and the
-    missing order fact named; the blocking is mutually SYMMETRIC, so the
-    real fix is per-subassembly staging — a later increment). Blocking
-    UNKNOWNs, not FAILs."""
+def test_compiles_and_validates_with_two_bench_side_frames(frame):
+    """The eight symmetric rail corridors clear because each three-member
+    side is authored as its own bench frame. The opposite side is absent by
+    unit membership, an ordinary declared-order clear rather than the
+    caddy's stronger connection-free DECLARED TRUST case."""
     _detail, report = frame
     from collections import Counter
     assert report.failures == [], "\n".join(str(f) for f in report.failures)
-    assert Counter((f.check, f.verdict) for f in report.blocking) == Counter(
-        {("install_access", "UNKNOWN"): 8})
-    assert all("rail screw" in f.subject and
-               "UNKNOWN — build order underdetermined" in f.detail and
-               "no order fact relates" in f.detail
-               for f in report.blocking)
-    assert not report.ok
+    access = [f for f in report.findings
+              if f.check == "install_access" and "rail screw" in f.subject]
+    assert Counter(f.verdict for f in access) == Counter({"PASS": 8})
+    assert all("absent from bench frame" in f.detail
+               and "[staging]" in f.detail
+               and f.declared_order and not f.declared_trust
+               for f in access)
+    assert report.blocking == [] and report.ok
 
 
 def test_every_member_has_expected_fabrication_record(frame):
@@ -106,6 +102,24 @@ def test_every_member_has_expected_fabrication_record(frame):
     assert steps_by_name == _EXPECTED_STEPS
     for name in ("cap screw front +X", "rail screw back -X lo", "floor"):
         assert _fabrication_record_of(_by_name(detail)[name].component) is None
+
+
+def test_build_sequence_benches_both_sides_then_sets_them_before_caps(frame):
+    from detailgen.validation.build_sequence import build_sequence_model
+
+    detail, _report = frame
+    steps, loose = build_sequence_model(detail)
+    titles = [step["title"] for step in steps]
+    assert titles[:4] == [
+        "bench side +X", "bench side -X",
+        "set side +X in place", "set side -X in place"]
+    first_cap = min(i for i, title in enumerate(titles)
+                    if title.startswith("install top plate ->"))
+    assert first_cap > 3
+    assert steps[0]["why"].startswith("Lay the +X front leg")
+    assert steps[1]["why"].startswith("Lay the -X front leg")
+    assert steps[0]["claim"] == steps[1]["claim"] == "staging"
+    assert "floor" not in loose
 
 
 def test_fabrication_fold_invariant_holds(frame):
@@ -213,6 +227,17 @@ def test_frame_joinery_uses_existing_words_honestly(frame):
             assert "bears_on" in edge_kinds  # the cap genuinely seats
 
 
+def test_cap_screw_heads_are_authored_flush_while_inner_rail_heads_may_be_proud(frame):
+    detail, _report = frame
+    installs = detail._connection_checks.installs
+    caps = [ri for ri in installs if ri.role == "cap_screws"]
+    rails = [ri for ri in installs if ri.role == "cleat_screws"]
+    assert len(caps) == 4 and len(rails) == 4
+    assert all(ri.contract.head == "flush_countersunk" for ri in caps)
+    assert all(ri.provenance_map["head"] == "authored_override" for ri in caps)
+    assert all(ri.contract.head == "proud" for ri in rails)
+
+
 def test_prose_truthfulness_guard(frame, tmp_path):
     import json
     detail, _report = frame
@@ -233,6 +258,29 @@ def test_prose_truthfulness_guard(frame, tmp_path):
     doc = Path(info["path"]).read_text()
     assert "NOT ANALYZED" in doc
     assert "23cm" in doc or "23 cm" in doc
+    for title in ("bench side +X", "bench side -X",
+                  "set side +X in place", "set side -X in place"):
+        assert title in doc
+    from html import unescape
+    visible = unescape(doc).lower()
+    assert "rail screw stations" in visible
+    assert "0.75in from each rail end" in visible
+    assert "0.75in and 2.75in below the rail top" in visible
+    assert "cap screw stations" in visible and "1.75in in from each side edge" in visible
+    assert "0.75in from the front and back body edges" in visible
+    assert "tools:" in visible and "countersink bit" in visible and "clamps" in visible
+    assert "required loose accessory" in visible and "adhesive metric rule" in visible
+    assert "prototype gate" in visible and "do not use" in visible
+    assert "verify the intended test protocol" in visible
+    assert "stud and screw stations are free to tune" not in visible
+    assert "scores compare to published norms" not in visible
+    assert "leveling nuts" not in visible and "natural stone" not in visible
+    assert '"type":"existing context"' in visible
+    cap_lines = [line for line in visible.split("install contract")
+                 if "'cap_screws'" in line]
+    assert cap_lines and all("head=flush_countersunk" in line for line in cap_lines)
+    assert doc.index("bench side +X") < doc.index("bench side -X") < \
+        doc.index("set side +X in place") < doc.index("set side -X in place")
     low = doc.lower()
     for forbidden in ("proven stable", "stability verified", "capacity verified",
                       "load-tested", "certified safe", "will not tip",
@@ -247,7 +295,5 @@ def test_full_flow_is_fast():
     verify_assembly_fabrication(detail.assembly)
     detail.bom_table()
     elapsed = time.perf_counter() - t0
-    # INSTALL v1: honest blocking UNKNOWNs on the rail-screw corridors (see
-    # test_compiles_and_validates_with_honest_install_unknowns).
-    assert not report.ok
+    assert report.ok
     assert elapsed < 60.0, f"e2e flow took {elapsed:.1f}s (budget 60s)"

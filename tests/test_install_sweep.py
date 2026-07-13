@@ -94,27 +94,23 @@ def test_caddy_glued_top_joints_carry_no_install_verdicts(swept):
     assert all("top underside (glued)" in e.connection for e in bonded)
 
 
-def test_caddy_side_screws_unknown_access_blocked_by_arm(swept):
-    """The side screws' heads sit ON the rail's free face (no burial), but
-    the 6in driver corridor backs across the 0.25in reveal into the SOFA
-    ARM — a pre-existing site body foreign to the cleat_screwed connection.
-    Honest blocking UNKNOWN naming the blocker: whether the caddy is
-    assembled OFF the arm first is install-order knowledge v1 does not have."""
+def test_cat_g_caddy_bench_frame_clears_arm_with_declared_trust(swept):
+    """CAT-G forward half: the shipped caddy explicitly says it is assembled
+    off the sofa.  Its eight measured arm intersections therefore clear in
+    the whole-detail bench frame, with the claim and its ceiling on paper."""
     _, report = swept["armchair_caddy"]
     side = [f for f in _install(report, "install_access")
             if "rail-side screw" in f.subject]
     assert len(side) == 8
     for f in side:
-        assert f.verdict == "UNKNOWN"
-        assert not f.passed and f.blocking
-        assert "UNKNOWN — build order underdetermined" in f.detail
+        assert f.verdict == "PASS" and f.passed and not f.blocking
         assert "sofa arm" in f.detail
-        # §4.1 wording: the missing order fact is NAMED, the v1-core
-        # authoring surfaces are teachable, staging is future-only, and the
-        # arm's no-connection reality is on paper.
-        assert "no order fact relates" in f.detail
-        assert "participates in no connection" in f.detail
-        assert "FUTURE mechanism, not authorable today" in f.detail
+        assert "absent from bench frame" in f.detail
+        assert "[staging]" in f.detail
+        assert "DECLARED TRUST" in f.detail
+        assert "assembled off the sofa" in f.detail.lower()
+        assert "insertion travel is not analyzed" in f.detail
+        assert f.declared_order and f.declared_trust
     # Termination now PASSES at the AUTHORED joint-geometry minimum: 0.5in
     # is the geometric max bite into the 0.75in side board that keeps the
     # 0.25in show-face cover (the half-length default of 0.62in is
@@ -129,16 +125,12 @@ def test_caddy_side_screws_unknown_access_blocked_by_arm(swept):
         assert ">= 0.50\" declared minimum [authored_override]" in f.detail
 
 
-def test_caddy_blocks_clean_export(swept):
-    """The caddy carries NO failures — but its 8 install-order UNKNOWNs
-    (the side screws' sofa-arm corridors) are blocking, so it still cannot
-    certify-export. Pinned truth, not chased CLEAN."""
+def test_caddy_has_no_install_blocker_after_declared_staging(swept):
     detail, report = swept["armchair_caddy"]
     assert not report.failures
-    assert len(report.blocking) == 8
-    assert not report.ok
-    with pytest.raises(Exception):
-        detail.require_clean()
+    assert report.blocking == []
+    assert report.ok
+    detail.require_clean()
 
 
 #: The D6 impossible joint, re-added to the SHIPPED spec as a text mutation:
@@ -179,7 +171,7 @@ def test_caddy_driven_straight_reversion_is_still_caught(swept):
     test_install_axes.py; this keeps it covered on the real spec.)"""
     text = (ROOT / "details" / "armchair_caddy.spec.yaml").read_text()
     anchor_comp = "# --- connections: the hidden rail joints"
-    anchor_conn = "# --- roles: the load-system role of each part"
+    anchor_conn = "# --- staging: the actual shop-to-room assembly strategy"
     assert anchor_comp in text and anchor_conn in text
     mutated = text.replace(anchor_comp, _GHOST_COMPONENT + anchor_comp)
     mutated = mutated.replace(anchor_conn, _GHOST_CONNECTION + anchor_conn)
@@ -464,17 +456,51 @@ def test_platform_install_blocking_set_is_now_capacity_only(swept):
     assert not report.ok
 
 
-def _mutated_platform(mutate):
-    """Compile a spec-TEXT mutation of the shipped platform (the
+def _mutated_spec(name, mutate):
+    """Compile a spec-TEXT mutation of one shipped detail (the
     install-sweep mutation pattern — the shipped file is untouched):
     ``mutate`` edits the parsed YAML mapping in place."""
     import yaml as _yaml
 
-    raw = _yaml.safe_load((ROOT / "details" / "platform.spec.yaml").read_text())
+    raw = _yaml.safe_load((ROOT / "details" / f"{name}.spec.yaml").read_text())
     mutate(raw)
     # sort_keys=False: the derived: block resolves in declaration order,
     # so re-serializing must preserve it.
     return compile_spec(load_spec_text(_yaml.safe_dump(raw, sort_keys=False)))
+
+
+def _mutated_platform(mutate):
+    return _mutated_spec("platform", mutate)
+
+
+def test_cat_g_reversion_without_staging_restores_all_four_unknown_facts():
+    detail = _mutated_spec("armchair_caddy",
+                           lambda raw: raw.pop("sequence"))
+    access = _install(detail.validate(), "install_access")
+    assert len(access) == 8
+    for finding in access:
+        assert finding.verdict == "UNKNOWN"              # class
+        assert finding.blocking and not finding.passed    # gate
+        assert "sofa arm" in finding.detail               # occupant
+        assert "staging declaration" in finding.detail    # missing fact
+
+
+def test_cat_g_explicit_in_situ_makes_all_eight_arm_hits_fail():
+    def in_situ(raw):
+        raw["sequence"] = {"assembly": {
+            "mode": "in_situ",
+            "why": "test mirror: assemble directly around the sofa arm",
+        }}
+
+    detail = _mutated_spec("armchair_caddy", in_situ)
+    access = _install(detail.validate(), "install_access")
+    assert len(access) == 8
+    for finding in access:
+        assert finding.verdict == "FAIL" and finding.blocking
+        assert "sofa arm" in finding.detail
+        assert "provably present" in finding.detail
+        assert "[staging]" in finding.detail
+        assert "assemble directly around the sofa arm" in finding.detail
 
 
 def test_cat_i_opposite_authored_order_flips_the_toes_to_fail():
@@ -550,29 +576,67 @@ def test_sit_reach_box_clean_both_axes(swept):
     assert report.ok
 
 
-def test_sit_reach_frame_rail_screws_honest_unknown(swept):
-    """HONEST NEW STATE (pinned, flagged in the task report): the frame's 8
-    rail screws pass termination (3in screws, exactly the 1.5in half-length
-    bite into the leg edges) but their 6in driver corridors back across the
-    ~2in interior gap into the OPPOSITE side's rail/legs — parts of other
-    connections. Real build order (screw each rail before closing the box)
-    is exactly what v1 cannot know ⇒ blocking UNKNOWN naming the blockers.
-    Phase 0's head-burial probe could not see this; the fix arc is a
-    declared stubby-driver ``install: tool`` override or a sequenced build."""
+def test_cat_h_frame_benches_both_sides_before_root_cap_work(swept):
+    """CAT-H forward half: each rail's opposite-side corridor occupant is
+    absent from its own side's bench frame; cap installs remain root-scoped."""
     detail, report = swept["sit_reach_frame"]
     assert _verdicts(report) == Counter({
         ("install_termination", "PASS"): 12,
-        ("install_access", "PASS"): 4,       # the 4 top-plate cap screws
-        ("install_access", "UNKNOWN"): 8,    # the 8 rail screws
+        ("install_access", "PASS"): 12,
     })
     rail = [f for f in _install(report, "install_access")
             if "rail screw" in f.subject]
     assert len(rail) == 8
     for f in rail:
-        assert f.verdict == "UNKNOWN"
-        assert "UNKNOWN — build order underdetermined" in f.detail
-        assert "no order fact relates" in f.detail
-    assert not report.ok  # honest new state — was 'clean' before INSTALL v1
+        assert f.verdict == "PASS" and f.declared_order
+        assert "absent from bench frame" in f.detail
+        assert "[staging]" in f.detail
+        assert not f.declared_trust
+    graph = detail._connection_checks.event_graph
+    cap_drives = [ev for label, evs in graph.drives_of.items()
+                  if label.startswith("top plate ->") for ev in evs]
+    assert len(cap_drives) == 4
+    assert all(graph.frame_of[ev] == "root" for ev in cap_drives)
+    assert all(graph.precedes(join, drive)
+               for join in graph.join_of.values() for drive in cap_drives)
+    assert report.ok
+
+
+def test_cat_h_in_situ_side_a_then_side_b_is_four_pass_four_fail():
+    def ordered_in_situ(raw):
+        raw["sequence"] = {
+            "assembly": {
+                "mode": "in_situ",
+                "why": "test mirror: close the two sides in place",
+            },
+            "stages": [
+                {
+                    "name": "build +X side first",
+                    "parts": ["leg_fp", "leg_bp", "rail_pos"],
+                    "connections": [
+                        "+X rail -> front +X leg inner edge (screwed, long grain)",
+                        "+X rail -> back +X leg inner edge (screwed, long grain)",
+                    ],
+                    "why": "test mirror establishes the first side as present",
+                },
+                {
+                    "name": "build -X side second",
+                    "parts": ["leg_fm", "leg_bm", "rail_neg"],
+                    "connections": [
+                        "-X rail -> front -X leg inner edge (screwed, long grain)",
+                        "-X rail -> back -X leg inner edge (screwed, long grain)",
+                    ],
+                    "why": "test mirror closes the opposite side last",
+                },
+            ],
+        }
+
+    detail = _mutated_spec("sit_reach_frame", ordered_in_situ)
+    rail = [f for f in _install(detail.validate(), "install_access")
+            if "rail screw" in f.subject]
+    assert Counter(f.verdict for f in rail) == Counter({"PASS": 4, "FAIL": 4})
+    assert all(f.declared_order for f in rail if f.verdict == "PASS")
+    assert all("[authored_sequence]" in f.detail for f in rail)
 
 
 def test_rock_anchor_clean_epoxy_rods_and_two_sided_bolts(swept):

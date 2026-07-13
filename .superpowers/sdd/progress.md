@@ -25,6 +25,32 @@ ALL commit citations in this ledger and the sdd/ documents written before
 commit-map-authorship-2026-07-13.txt (old -> new, 633 entries) in this
 directory. Post-rewrite master tip at the time of the rewrite: 3bbdaa7.
 
+## ★ SESSION UPDATE 12 (2026-07-13 — STEPDOC/CPG +staging COMPLETE; merge and delivery in progress)
+
++staging is COMPLETE on `codex/stepdoc-staging` per binding amendment 1:
+typed subassembly/frame/join authoring, `bench_then_set` sugar, R-1 bench
+events before join, honest presence semantics (including explicit `in_situ`
+and visible DECLARED TRUST), axis-3 reclassification, and derived bench/join
+reader steps. Caddy CAT-G and frame CAT-H ship with their full reversion
+mirrors: caddy 8 declared-order PASS / removal 8 UNKNOWN / in-situ 8 FAIL;
+frame 8 declared-order PASS / in-situ 4 PASS + 4 FAIL. Geometry and every
+existing view PNG are unchanged.
+
+Fresh adversarial review found and closed root-context, cross-frame hardware,
+`bench_then_set` root-hardware, and reader-stage-erasure constructions;
+confirmation is CLEAN (`review-staging.md`). Fresh document-only builder reads
+closed the caddy cup-fit and safe-bore blockers; the frame is buildable as
+woodwork but remains plainly use-blocked on calibration, continuous foot
+support, stability/racking, and capacity. Implementation detail and residuals:
+`task-staging-report.md`.
+
+Binding verified-worktree gate: **1337 passed / 3 skipped / 1 xfailed** in
+1183.90s. Next after merge/delivery: the reader-facing-name increment (separate
+stable machine identity from consistent document/hover names), then +process,
+then +presentation. A read-only speed audit also found a worthwhile later
+increment: duration profiling → xdist loadscope benchmark → immutable fixture
+reuse → carefully keyed installability cache; do not weaken the full gate.
+
 ## ★ SESSION UPDATE 11 (2026-07-13 — STEPDOC/CPG v1-core COMPLETE + merged; zipline REDELIVERED)
 
 v1-core is DONE per amendment 1, merged in two arcs: `sdd/stepdoc-core`

@@ -263,6 +263,15 @@ class Detail(ABC):
         no cross-fragment order is ever invented (design §3.2)."""
         return self.sequence()
 
+    def resolved_staging(self):
+        """The detail's staging claim resolved to built ids.
+
+        Imperative details author none by default. ``SpecDetail`` overrides
+        this bridge for the typed ``sequence.subassemblies`` / ``assembly``
+        surface, exactly beside :meth:`resolved_sequence`.
+        """
+        return None
+
     def validate(self) -> ValidationReport:
         """Build (if needed) and run the full validation sweep, caching the
         report. Validating an unbuilt detail builds it first.
@@ -278,10 +287,11 @@ class Detail(ABC):
         hand_spec = self.validation_spec()
         conns = self.connections()
         sequence = self.resolved_sequence()
+        staging = self.resolved_staging()
         self._evidence_graph = None  # invalidate any prior build
-        if conns or sequence:
+        if conns or sequence or staging is not None:
             generated = compile_connections(
-                assembly, conns, sequence=sequence,
+                assembly, conns, sequence=sequence, staging=staging,
                 fragments=self.connection_fragments())
             spec = merge_into_spec(assembly, hand_spec, generated)
             self._derivation_log = generated.derived

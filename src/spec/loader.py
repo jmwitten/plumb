@@ -22,9 +22,12 @@ from pathlib import Path
 import yaml
 
 from .schema import (
+    ASSEMBLY_MODES,
     RENDERABLE_CHECK_KINDS,
     RESERVED_SPATIAL_NAMES,
+    AuthoredAssembly,
     AuthoredStage,
+    AuthoredSubassembly,
     BearingSpec,
     BomTableSection,
     BondSpec,
@@ -451,33 +454,51 @@ def _build_retire(raw: dict, index: int) -> RetireSpec:
 
 
 def _build_sequence(raw: dict) -> SequenceSpec:
-    """Load the spec-level ``sequence:`` block into a :class:`SequenceSpec`.
-    Structural checks only, exactly what one block can see on its own:
+    """Load the authored order + staging block structurally.
 
-    - stage names unique within the block;
-    - no connection/part named by more than one stage (two stages would
-      claim contradictory order over the same events).
-
-    Whether a named connection/part actually EXISTS elsewhere in the doc is
-    NOT checked here — the loader builds this block in isolation, with no
-    view of ``connections:``/``components:`` (same division as
-    :func:`_build_retire`, whose target-existence check is likewise deferred
-    to the semantic-analysis pass). See
-    :func:`~detailgen.spec.semantics.analyze_sequence`.
-
-    Deliberately unsupported v1-core keys — ``after:`` (point constraints),
-    ``subassemblies:``/``assembly:`` (§3.4 staging) — are NOT in the known-key
-    sets below, so each hits the ordinary unknown-key teaching error; they
-    are never special-cased as "not yet supported"."""
+    Existence of named connections/parts is a whole-doc semantic handled by
+    :func:`~detailgen.spec.semantics.analyze_sequence`. This block owns the
+    internal contradictions: duplicate stage/unit names, a stage double-
+    claiming one target, and a part belonging to more than one bench unit.
+    """
     ctx = "sequence"
-    f = _take(raw, {"stages": True}, ctx)
-    raw_stages = _as_list(f["stages"], f"{ctx}.stages")
-    if not raw_stages:
+    if not isinstance(raw, dict):
         raise SpecSchemaError(
-            f"{ctx}: 'stages' is empty — a sequence: block with no stages "
-            f"declares no order over anything; omit the whole block instead."
-        )
+            f"{ctx}: expected a mapping containing stages, subassemblies, "
+            f"or assembly; got {type(raw).__name__}")
+    f = _take(raw, {
+        "stages": False, "subassemblies": False, "assembly": False,
+    }, ctx)
+    if all(f[k] is _MISSING for k in ("stages", "subassemblies", "assembly")):
+        raise SpecSchemaError(
+            f"{ctx}: declares no stages, subassemblies, or assembly mode — "
+            f"omit the empty sequence: block instead.")
+
+    raw_stages = ([] if f["stages"] is _MISSING else
+                  _as_list(f["stages"], f"{ctx}.stages"))
+    if f["stages"] is not _MISSING and not raw_stages:
+        raise SpecSchemaError(
+            f"{ctx}: 'stages' is empty — an explicit stages list with no "
+            f"entries declares no order; omit that key instead.")
     stages = tuple(_build_stage(s, i, ctx) for i, s in enumerate(raw_stages))
+
+    raw_units = ([] if f["subassemblies"] is _MISSING else
+                 _as_list(f["subassemblies"], f"{ctx}.subassemblies"))
+    if f["subassemblies"] is not _MISSING and not raw_units:
+        raise SpecSchemaError(
+            f"{ctx}: 'subassemblies' is empty — an explicit unit list with "
+            f"no units declares no staging; omit that key instead.")
+    subassemblies = tuple(
+        _build_subassembly(u, i, ctx) for i, u in enumerate(raw_units))
+
+    assembly = (None if f["assembly"] is _MISSING else
+                _build_assembly(f["assembly"], ctx))
+    if assembly is not None and subassemblies:
+        raise SpecSchemaError(
+            f"{ctx}: 'assembly' and 'subassemblies' cannot coexist — "
+            f"bench_then_set is sugar for one whole-detail subassembly, while "
+            f"in_situ explicitly declares no bench units. Choose exactly one "
+            f"staging shape.")
 
     seen_names: dict[str, int] = {}
     for i, stage in enumerate(stages):
@@ -505,7 +526,81 @@ def _build_sequence(raw: dict) -> SequenceSpec:
                     )
                 claimed[key] = i
 
-    return SequenceSpec(stages=stages)
+    seen_units: dict[str, int] = {}
+    member_of: dict[str, tuple[int, str]] = {}
+    for i, unit in enumerate(subassemblies):
+        if unit.name in seen_units:
+            raise SpecSchemaError(
+                f"{ctx}: subassembly name {unit.name!r} is used by both "
+                f"subassemblies[{seen_units[unit.name]}] and "
+                f"subassemblies[{i}] — subassembly names must be unique.")
+        seen_units[unit.name] = i
+        for pid in unit.parts:
+            prior = member_of.get(pid)
+            if prior is not None:
+                prior_i, prior_name = prior
+                raise SpecSchemaError(
+                    f"{ctx}: part {pid!r} belongs to both subassemblies "
+                    f"{prior_name!r} (subassemblies[{prior_i}]) and "
+                    f"{unit.name!r} (subassemblies[{i}]) — a part may belong "
+                    f"to at most one subassembly; nesting is unsupported.")
+            member_of[pid] = (i, unit.name)
+
+    return SequenceSpec(stages=stages, subassemblies=subassemblies,
+                        assembly=assembly)
+
+
+def _build_subassembly(raw: dict, index: int,
+                       seq_ctx: str) -> AuthoredSubassembly:
+    ctx = f"{seq_ctx}.subassemblies[{index}]"
+    if not isinstance(raw, dict):
+        raise SpecSchemaError(
+            f"{ctx}: expected a mapping with name, parts, and why")
+    f = _take(raw, {"name": True, "parts": True, "why": True}, ctx)
+    name = f["name"].strip() if isinstance(f["name"], str) else ""
+    if not name:
+        raise SpecSchemaError(f"{ctx}: 'name' must be non-empty")
+    if name == "root":
+        raise SpecSchemaError(
+            f"{ctx}: subassembly name 'root' is reserved for the root build "
+            f"frame; choose a distinct bench-unit name.")
+    why = f["why"].strip() if isinstance(f["why"], str) else ""
+    if not why:
+        raise SpecSchemaError(
+            f"{ctx} ({name!r}): 'why' is required and must be non-empty — "
+            f"a staging claim ships with its defense, never a bare assertion.")
+    parts = tuple(str(p) for p in _as_list(f["parts"], f"{ctx}.parts"))
+    if not parts:
+        raise SpecSchemaError(
+            f"{ctx} ({name!r}): list at least one part — an empty bench unit "
+            f"declares no construction fact.")
+    if len(parts) != len(set(parts)):
+        dupes = sorted({p for p in parts if parts.count(p) > 1})
+        raise SpecSchemaError(
+            f"{ctx} ({name!r}): part(s) {dupes} are repeated inside one "
+            f"subassembly; list each part exactly once.")
+    return AuthoredSubassembly(name=name, why=why, parts=parts)
+
+
+def _build_assembly(raw: dict, seq_ctx: str) -> AuthoredAssembly:
+    ctx = f"{seq_ctx}.assembly"
+    if not isinstance(raw, dict):
+        raise SpecSchemaError(
+            f"{ctx}: expected a mapping {{mode: bench_then_set|in_situ, "
+            f"why: ...}} — a scalar mode cannot carry the required why.")
+    f = _take(raw, {"mode": True, "why": True}, ctx)
+    mode = f["mode"] if isinstance(f["mode"], str) else ""
+    mode = mode.strip()
+    if mode not in ASSEMBLY_MODES:
+        raise SpecSchemaError(
+            f"{ctx}.mode: choose one of {list(ASSEMBLY_MODES)}, got "
+            f"{f['mode']!r}.")
+    why = f["why"].strip() if isinstance(f["why"], str) else ""
+    if not why:
+        raise SpecSchemaError(
+            f"{ctx}: 'why' is required and must be non-empty — a staging "
+            f"claim ships with its defense, never a bare assertion.")
+    return AuthoredAssembly(mode=mode, why=why)
 
 
 def _build_stage(raw: dict, index: int, seq_ctx: str) -> AuthoredStage:
@@ -518,13 +613,13 @@ def _build_stage(raw: dict, index: int, seq_ctx: str) -> AuthoredStage:
     f = _take(raw, {
         "name": True, "connections": False, "parts": False, "why": True,
     }, ctx)
-    name = str(f["name"]).strip()
+    name = f["name"].strip() if isinstance(f["name"], str) else ""
     if not name:
         raise SpecSchemaError(
             f"{ctx}: 'name' must be non-empty — stages are referenced by "
             f"name in the uniqueness/conflict diagnostics above."
         )
-    why = str(f["why"]).strip()
+    why = f["why"].strip() if isinstance(f["why"], str) else ""
     if not why:
         raise SpecSchemaError(
             f"{ctx} ({name!r}): 'why' is required and must be non-empty — "

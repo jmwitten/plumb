@@ -85,6 +85,7 @@ from dataclasses import dataclass
 import cadquery as cq
 
 from ..assemblies.assembly import DetailAssembly, Placed
+from ..assemblies.event_graph import PresenceFact
 from ..assemblies.installation import ResolvedInstallation, is_fastener
 from ..core.config import DEFAULT, Tolerances
 from ..core.units import fmt_in
@@ -383,7 +384,8 @@ def check_installability(assembly: DetailAssembly, connections: list,
         # graph compile_connections would have — never a second order truth.
         from ..assemblies.event_graph import build_event_graph
         graph = build_event_graph(assembly, connections, checks.edges,
-                                  checks.installs, checks.sequence)
+                                  checks.installs, checks.sequence,
+                                  getattr(checks, "staging", None))
 
     findings: list[Finding] = []
     for ri in installs:
@@ -735,6 +737,10 @@ def _classify(hits, scope: _Scope, fastener_id: str):
       NEVER declare an order fact (type edge, sequence: stage) to silence
       a blocker: a declared order is a construction-sequence CLAIM its
       author must defend, and every use prints in the verdict sentence.
+    - ``absent`` — an authored bench frame excludes the occupant without
+      inventing cross-unit order.  Connection-free context absence carries
+      the stronger DECLARED TRUST ceiling; ordinary opposite-unit membership
+      is still a declared-order clear but not declared trust.
     - ``unordered`` — no order path either way (including every context
       body that participates in no connection): honest blocking
       ``UNKNOWN — build order underdetermined`` naming the occupant AND the
@@ -744,23 +750,29 @@ def _classify(hits, scope: _Scope, fastener_id: str):
       model does not know, and names the fix."""
     graph = scope.graph
     e_f = graph.event_of[fastener_id]
-    present: list = []   # (part, proof-path edges)
+    present: list = []   # (part, proof-path/presence facts)
     later: list = []     # (part, proof-path edges)
+    absent: list = []    # (part, presence facts, declared-trust bool)
     unordered: list = []
     for p, _s in hits:
-        e_p = graph.event_of.get(p.id)
-        if e_p is None or e_p == e_f:
+        decision = graph.presence_at(e_f, p.id)
+        if decision.state == "coincident":
             # co-installed at this very event — same-group material is
             # already skipped; anything mapping here is co-driven in free
             # order, disclosed by the sibling/stack notes, never a blocker.
             continue
-        if graph.precedes(e_p, e_f):
-            present.append((p, graph.path_edges(e_p, e_f)))
-        elif graph.precedes(e_f, e_p):
-            later.append((p, graph.path_edges(e_f, e_p)))
+        if decision.state == "present":
+            present.append((p, decision.facts))
+        elif decision.state == "absent":
+            if any(isinstance(fact, PresenceFact)
+                   for fact in decision.facts):
+                absent.append((p, decision.facts,
+                               decision.declared_trust))
+            else:
+                later.append((p, decision.facts))
         else:
             unordered.append(p)
-    return present, later, unordered
+    return present, later, absent, unordered
 
 
 def _order_facts(items, graph) -> tuple[str, str]:
@@ -796,6 +808,27 @@ def _later_note(later, scope: _Scope) -> str:
             f"(declared, not sequence-proven)")
 
 
+def _frame_absence_note(absent) -> str:
+    """Disclose a clear decided by authored frame-presence semantics.
+
+    This is deliberately separate from ``_later_note``: another unit or a
+    context body is absent from the bench frame; the graph does not claim it
+    merely arrives later in some invented total order.
+    """
+    if not absent:
+        return ""
+    occupants = ", ".join(p.name for p, _facts, _trust in absent)
+    claims: list[str] = []
+    for _part, facts, _trust in absent:
+        for fact in facts:
+            desc = f"[{fact.family}] {fact.source}"
+            if desc not in claims:
+                claims.append(desc)
+    return (f"; occupants of the corridor in final geometry are absent from "
+            f"bench frame: {occupants} — deciding presence facts: "
+            f"{'; '.join(claims)} (declared, not sequence-proven)")
+
+
 #: The §4.3 rung sentence every axis-3 clear that leans on a declared order
 #: carries: geometry is proven, the order is DECLARED — v1 claims
 #: SEQUENCE-PROVEN nowhere — and the accretion assumption + the
@@ -811,9 +844,9 @@ def _unordered_clauses(parts, scope: _Scope) -> str:
     """The teaching tail of an underdetermined verdict: name the missing
     order fact and the authoring surfaces that EXIST in v1-core (an
     authored ``sequence:`` stage; a ConnectionType technique edge) — a
-    staging declaration is named only as a future mechanism, because it is
-    not authorable today. Adds the composed-site cross-fragment gap and the
-    epoxy-rod insertion gap where they are the true missing mechanisms."""
+    staging declaration is an authorable frame/presence mechanism. Adds the
+    composed-site cross-fragment gap and the epoxy-rod insertion gap where
+    they are the true missing mechanisms."""
     graph = scope.graph
     e_f = graph.event_of[scope.ri.fasteners[0]] if scope.ri.fasteners else None
     f_desc = graph.describe(e_f) if e_f is not None else "this fastener"
@@ -832,13 +865,13 @@ def _unordered_clauses(parts, scope: _Scope) -> str:
     clauses.append(
         f"no order fact relates {f_desc} to the occupants' own events — an "
         f"authored sequence: stage ordering them, or a ConnectionType "
-        f"technique edge, would resolve it (a subassembly staging "
-        f"declaration is a FUTURE mechanism, not authorable today)")
+        f"technique edge, would resolve it; an authorable staging declaration "
+        f"can instead establish the honest bench frame/presence context")
     if no_conn:
         clauses.append(
             f"{', '.join(no_conn)} participates in no connection, so no "
-            f"order fact can be derived for it — only a declared order can "
-            f"resolve it")
+            f"order fact can be derived for it — only an authored order or "
+            f"staging declaration can resolve it")
     if cross_frags:
         clauses.append(
             f"the occupants belong to another site fragment "
@@ -954,16 +987,22 @@ def _access_shank(sweep, scope: _Scope, f, entry, entry_chord, chords,
     side_notes: list[str] = []
     later_all: list = []
     later_seen: set[str] = set()
+    absent_all: list = []
+    absent_seen: set[str] = set()
     sibling_hits: list = []
     worst: Finding | None = None
     for prefix, s_base, s_dir in sides:
         hits = sweep.intersections(s_base + s_dir * _CORRIDOR_EPS, s_dir,
                                    radius, env.length, skip)
-        present, later, unordered = _classify(hits, scope, f.id)
+        present, later, absent, unordered = _classify(hits, scope, f.id)
         for p, path in later:
             if p.id not in later_seen:
                 later_seen.add(p.id)
                 later_all.append((p, path))
+        for p, facts, trust in absent:
+            if p.id not in absent_seen:
+                absent_seen.add(p.id)
+                absent_all.append((p, facts, trust))
         if siblings:
             for p, _s in sweep.intersections(
                     s_base + s_dir * _CORRIDOR_EPS, s_dir, radius,
@@ -990,6 +1029,7 @@ def _access_shank(sweep, scope: _Scope, f, entry, entry_chord, chords,
         if len(sides) > 1:
             worst.detail += " [" + "; ".join(side_notes) + "]"
         worst.detail += _later_note(later_all, scope)
+        worst.detail += _frame_absence_note(absent_all)
         if represented_note or sibling_note:
             worst.detail += "." + sibling_note + represented_note
         return worst
@@ -999,18 +1039,20 @@ def _access_shank(sweep, scope: _Scope, f, entry, entry_chord, chords,
     # v1 claims SEQUENCE-PROVEN nowhere.
     if represented_note:
         rung = ""
-    elif later_all:
+    elif later_all or absent_all:
         rung = _DECLARED_ORDER_RUNG
     else:
         rung = f" ({_GEOMETRY_PROVEN})"
     return Finding(
         "install_access", subject, True,
         f"clear tool corridor along the shank axis "
-        f"({'; '.join(side_notes)}){_later_note(later_all, scope)}{rung}."
+        f"({'; '.join(side_notes)}){_later_note(later_all, scope)}"
+        f"{_frame_absence_note(absent_all)}{rung}."
         f"{sibling_note}{represented_note} {env_txt}",
         # amendment 3, structured (review F-2): this clear leans on
         # declared order facts iff any occupant's later arrival decided it
-        declared_order=bool(later_all))
+        declared_order=bool(later_all or absent_all),
+        declared_trust=any(trust for _p, _facts, trust in absent_all))
 
 
 def _cheek_candidates(entry: Placed, d: cq.Vector,
@@ -1104,7 +1146,7 @@ def _access_angled(sweep, scope: _Scope, f, entry, head, d, subject,
         t_dir = (n * math.sin(theta)) - (d * math.cos(theta))
         hits = sweep.intersections(entry_pt + t_dir * _CORRIDOR_EPS, t_dir,
                                    radius, env.length, skip)
-        present, later, unordered = _classify(hits, scope, f.id)
+        present, later, absent, unordered = _classify(hits, scope, f.id)
         if not present and not unordered:
             # One workable cheek is a pass — REPRESENTED rung (the angle is
             # declared, not modeled). A clear that leans on later-arrival
@@ -1112,8 +1154,9 @@ def _access_angled(sweep, scope: _Scope, f, entry, head, d, subject,
             # the deciding declarations print inline, never sequence-proven,
             # and insertion travel stays un-analyzed (P1).
             later_note = _later_note(later, scope)
+            absent_note = _frame_absence_note(absent)
             order_note = ""
-            if later:
+            if later or absent:
                 order_note = (
                     " — clear at the DECLARED build order only: the "
                     "deciding order facts above are declared claims (a "
@@ -1127,8 +1170,11 @@ def _access_angled(sweep, scope: _Scope, f, entry, head, d, subject,
                 f"analyzed against the drawn solid — the declared "
                 f"{c.tool_axis.angle_deg:g}° corridor off {entry.name}'s "
                 f"{face_name} is clear of third-party material"
-                f"{later_note}{order_note}{rung_note}; {env_txt}",
-                declared_order=bool(later))
+                f"{later_note}{absent_note}{order_note}{rung_note}; "
+                f"{env_txt}",
+                declared_order=bool(later or absent),
+                declared_trust=any(
+                    trust for _p, _facts, trust in absent))
         tried.append(face_name)
         for p, path in present:
             if p.id not in present_seen:
@@ -1174,6 +1220,23 @@ def epistemic_contract_rows(checks) -> list[tuple[str, str, str]]:
         declared_seq = f"this detail authors: {declared_seq}"
     else:
         declared_seq = "none authored by this detail"
+    staging = getattr(checks, "staging", None)
+    if staging is None:
+        declared_staging = "none authored by this detail"
+    elif staging.mode == "in_situ":
+        declared_staging = (
+            f"this detail authors assembly mode 'in_situ' "
+            f"(why: {staging.why})")
+    else:
+        units = "; ".join(
+            f"unit {u.name!r} (why: {u.why})" for u in staging.units)
+        trust = (
+            "; connection-free context exclusion carries DECLARED TRUST "
+            "until insertability is analyzed (P1)"
+            if staging.context_parts else "")
+        declared_staging = (
+            f"this detail authors assembly mode {staging.mode!r}: "
+            f"{units}{trust}")
     return [
         ("Structural necessity (a member exists before its own "
          "connection's fasteners are driven)",
@@ -1189,12 +1252,19 @@ def epistemic_contract_rows(checks) -> list[tuple[str, str, str]]:
          "DECLARED (authored claim; a why is required and prints with "
          "every verdict that leans on it)",
          declared_seq),
-        ("Context bodies with no connection, cross-fragment order, "
-         "insertion travel",
-         "UNKNOWN — no mechanism exists in v1 (subassembly staging and "
-         "site-level sequencing are future declarations; insertability is "
-         "P1)",
-         "verdicts that meet these stay blocking UNKNOWNs naming the gap"),
+        ("Bench events before join (R-1)",
+         "DERIVED",
+         "all place/drive events inside a declared bench unit precede that "
+         "unit's join event; no order is invented between separate units"),
+        ("Authored staging frames",
+         "DECLARED (frame/presence claim; every unit or assembly requires a "
+         "why; connection-free context absence is DECLARED TRUST)",
+         declared_staging),
+        ("Undeclared context bodies, cross-fragment order, insertion travel",
+         "UNKNOWN — undeclared context/site order has no mechanism in this "
+         "increment; insertability remains P1",
+         "verdicts that meet these gaps stay blocking UNKNOWNs and name the "
+         "missing declaration or analysis"),
     ]
 
 

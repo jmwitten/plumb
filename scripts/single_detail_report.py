@@ -52,9 +52,12 @@ TITLE = "Armchair Coffee Caddy — Model-Backed Build Document"
 # Caddy-specific text passed into the reused (parametrized) site builders so the
 # reader-facing document carries the CADDY's identity, not the zipline's (F1-F4).
 CADDY_BUY_LEDE = (
-    "Everything to build the caddy: two 1x6 side boards, one 5/4x6 top board, and "
-    "the joint screws. Wood glue for the rail-to-top bonds is a shop consumable, "
-    "not a billed row. The sofa arm is existing furniture (listed below), not bought.")
+    "Everything modeled to build the caddy: one 5/4x6 top board, two 1x6 side "
+    "boards, two 1x6 registration rails, and eight joint screws. Glue, finish, "
+    "abrasives, and optional protective padding are listed in Build notes as "
+    "shop consumables rather than geometry/BOM rows. Bring the actual intended "
+    "cup as a loose fit template. The sofa arm and adjacent cushion/upholstery "
+    "are existing fit context, not bought.")
 
 CADDY_FOOTER = {
     "byline": "Witten Dacha &middot; Armchair Coffee Caddy",
@@ -69,11 +72,12 @@ CADDY_FOOTER = {
 CADDY_TITLE_BLOCK = {
     "eyebrow": "Furniture &middot; Weekend Build",
     "h1": "Armchair Coffee Caddy",
-    "lede": ("A loose three-board saddle that straddles a sofa arm and holds a coffee "
+    "lede": ("A loose five-piece saddle that straddles a sofa arm and holds a coffee "
              "cup — it fastens to nothing on the sofa and lifts straight off. Every "
              "drawing and number below is generated from one validated parametric 3D model."),
     "scale": "Rendered to scale; verify on your arm",
-    "stock": "1x 5/4x6 offcut + 1x 1x6 offcut + 8 screws + wood glue",
+    "stock": ("1x 5/4x6 offcut + 1x 1x6 offcut + 8 screws + wood glue + "
+              "intended cup (fit template)"),
 }
 
 # F4 (CLOSED by CL-2): the top board's cup hole is now a `bore` FEATURE that
@@ -89,36 +93,43 @@ _CUT_NOTE_CONTEXT = ""
 PANEL = {
     "letter": "A",
     "title": "Armchair Coffee Caddy",
-    "sub": "a three-board saddle that straddles a sofa arm",
+    "sub": "a five-piece saddle that straddles a sofa arm",
     "views": ["iso", "front", "top", "cup", "joint"],
     "captions": {
-        "iso": "The three-board saddle with the context arm ghosted (the solid arm "
+        "iso": "The five-piece saddle with the context arm ghosted (the solid arm "
                "occludes it in a plain view — see the visual-review notes). Top board "
                "caps the arm; two side boards hang down its sides; the cup hole is "
                "bored through the top.",
-        "front": "Along the arm. The saddle straddles the arm, both side boards hang "
-                 "FREE with a 1in clearance each side (a removable gravity fit); the two "
+        "front": "Along the arm. The saddle straddles the arm; both side boards are "
+                 "flush with the top-board ends, and each inner face sits 1in outside "
+                 "the sofa-arm side. The two "
                  "interior 1x6 registration rails hold a 1/4in reveal off the arm and "
-                 "keep the caddy from rocking. The boards stop above the arm bottom.",
+                 "limit cross-arm rocking. The boards stop above the arm bottom; "
+                 "longitudinal sliding is not analyzed.",
         "top": "Straight down: the cup-hole opening (the arm shows through it) on a "
                "CLEAN show face — every fastener is hidden in the interior rails below, "
                "none on top.",
         "cup": "Cup-hole interior — a full-thickness bore through the 1in top board; a "
                "cup's tapered body/lip catches on it and the cup rests on the arm top.",
-        "joint": "A top<->side corner, arm ghosted: a hidden full-depth 1x6 registration "
-                 "rail GLUED up to the top board's underside (long grain both faces) and "
-                 "screwed into the side board's inner FACE — no fastener on the show face.",
+        "joint": "Underside with the arm hidden: both full-depth 1x6 registration rails "
+                 "are GLUED to the top underside and screwed into the side boards' inner "
+                 "faces. No fastener lands on the top show face.",
     },
     "why": ("WHY A LOOSE GRAVITY SADDLE (NOT FASTENED TO THE SOFA)?",
             "The caddy fastens to nothing on the sofa. It drops onto the arm and lifts "
             "straight off — the two deep interior registration rails hold a 1/4in reveal "
-            "off the arm's sides so it won't rock or slide, and gravity holds it down. "
-            "The side boards themselves hang free 1in off the arm; it is the rails, not "
+            "off the arm's sides and limit cross-arm rocking; gravity holds it down. "
+            "There is no positive longitudinal retainer, so sliding along the arm is "
+            "not analyzed. "
+            "The side boards are flush with the top-board ends, but their inner faces "
+            "sit 1in outside the arm sides; it is the rails, not "
             "the sides, that register the caddy across a 1/4in reveal rather than gripping."),
     "narrative": [
-        "One 5/4x6 top board (dressed 1in x 5.5in), 9.5in long, caps the arm, bored with "
-        "a 3.5in cup hole. Two 1x6 side boards (0.75in x 5.5in) drop 7in down the arm's "
-        "sides, hanging free 1in off each side.",
+        "One 5/4x6 top board (dressed 1in x 5.5in), {top_len:g}in long, caps the arm, "
+        "bored with a {cup_dia:g}in cup hole. Two 1x6 side boards (0.75in x 5.5in) "
+        "drop {side_drop:g}in down the arm's sides, flush with the top-board ends. "
+        "Each side board's inner face is 1in outside the sofa-arm side: 0.75in is "
+        "occupied by the registration rail and 0.25in remains clear to the arm.",
         "The top<->side corners are joined by two HIDDEN full-depth 1x6 registration "
         "rails (dressed 0.75in x 5.5in, dropping 5.5in down the arm side), each GLUED "
         "up to the top board's underside (long grain both faces) and screwed "
@@ -131,22 +142,58 @@ PANEL = {
         "the coverage matrix below.",
     ],
     "fieldnotes": [
-        ("Fit the saddle to your arm.", "Inner clear span = arm width + 1in each side "
-         "(the room the 3/4in rail + a 1/4in reveal need). The default is a 6in arm "
-         "(8in inner span); measure your arm and re-cut the top board and rail spacing "
-         "to match."),
-        ("Cup hole.", "A 3.5in full-thickness bore sized so a coffee cup's taper/lip "
-         "catches on the 1in top board; the cup rests on the arm through the ring. "
-         "Cut it from a paper template struck at 1.75in radius on the board centre."),
+        ("Top cut formula — measure before cutting.", "Top cut = arm width + 2 x "
+         "(side thickness + rail thickness + reveal) = {arm_w:g}in + 2 x "
+         "({stock_thk:g}in + {rail_thk:g}in + {arm_gap:g}in) = {top_len:g}in. "
+         "That leaves {inner_span:g}in between side-board inner faces and "
+         "the rail inner faces {rail_clear_span:g}in apart. The side boards finish "
+         "flush with the top ends and with its front/back edges."),
+        ("Rail layout.", "Lay the top show-face down. Mark each rail's outer face "
+         "{stock_thk:g}in in from its top-board end; the two {rail_len:g}in rails "
+         "run the full front-to-back depth with their front and back edges flush to "
+         "the top. Dry-clamp a side board outside each rail and verify square."),
+        ("Cup hole.", "A {cup_dia:g}in full-thickness bore is centered "
+         "{cup_center_from_end:g}in from either top-board end and on the width "
+         "centerline. The intended cup is a required loose fit template: before "
+         "cutting, confirm its base/body can enter, its lip or taper cannot fall "
+         "through, its handle clears, and it can be lifted out. The model assumes "
+         "the arm top beneath the bore is firm and planar; if it is soft or deeply "
+         "upholstered, do not use this design for a hot drink without revising it "
+         "to add modeled bottom support."),
+        ("Screw stations — four per rail.", "From the front edge of each rail, mark "
+         "columns at {screw_station_near:.2f}in and {screw_station_far:.2f}in; the "
+         "two distances sum to the {board_depth:g}in rail depth. Mark upper/lower "
+         "rows {sidescrew_drop_u:g}in and {sidescrew_drop_l:g}in below the top "
+         "underside. Predrill and countersink for #10-class {screw_len_h:g}in "
+         "flat-head wood/structural screws per the selected screw manufacturer's "
+         "chart; seat every head flush with the rail face."),
         ("Hidden rail joints — glue, then screws, all off the sofa.", "Two full-depth "
          "1x6 registration rails, one per corner. Spread wood glue on BOTH mating faces "
          "(the rail's top edge and the top board's underside — long grain both, the "
          "strong glue case), clamp each rail to the top, and let it cure per the "
          "adhesive label. Then drive the side screws into each side board's inner face "
          "(2 pairs, upper + lower, into FACE grain — stronger in withdrawal than end "
-         "grain). All hidden, nothing on the show face. The deep rail also registers "
-         "the caddy against the arm so it does not rock; bond and withdrawal capacity "
-         "are not analyzed to a number here."),
+         "grain). All hidden, nothing on the show face. The deep rail limits cross-arm "
+         "rocking; bond, withdrawal, and longitudinal sliding are not analyzed."),
+        ("Tools and consumables.", "Tools: tape measure, square, pencil, saw, "
+         "drill/driver, pilot/countersink bits, clamps, sanding tools, and "
+         "eye/hearing/dust protection. For the {cup_dia:g}in opening, use a hole saw "
+         "or Forstner bit in a drill press with the workpiece clamped; use a handheld "
+         "drill only when the bit maker permits it and with its specified arbor, "
+         "side handle, speed, and workholding. Otherwise drill a starter hole and "
+         "cut to the line with a jigsaw. Consumables: "
+         "wood glue compatible with the chosen stock, sandpaper, water-resistant "
+         "finish and applicator; optional felt/cork may be added only after its "
+         "thickness is included in the fit check. If the modeled pressure-treated "
+         "decking is used indoors, let it dry and follow the treatment supplier's "
+         "cutting, dust-control, and compatible-finish instructions; dry furniture-"
+         "grade stock at the same finished dimensions is preferable indoors."),
+        ("Dry-fit and use gate.", "Before glue, test the empty saddle on the actual "
+         "arm with its adjacent cushion/upholstery in place: check taper/curvature, "
+         "cushion clearance, square bearing, intended-cup fit, and "
+         "movement in both directions. Seal the bore and all faces. Do not use it "
+         "with a hot drink unless the finished empty caddy is stable; longitudinal "
+         "sliding is not analyzed and no load capacity is certified."),
     ],
 }
 
@@ -156,7 +203,7 @@ VIEW_FILES = {
     "front": "v2_front.png",
     "top": "v4_top.png",
     "cup": "z1_cup.png",
-    "joint": "g2_joint.png",
+    "joint": "g3_underside.png",
 }
 
 WEB_GLB_TOL = (0.4, 0.5)   # coarse web-viewer tolerance (same class as the site's)
@@ -445,22 +492,26 @@ SITFRAME_TITLE = "Sit-and-Reach Test Box (2x4 Frame) — Model-Backed Build Docu
 SITFRAME_TITLE_BLOCK = {
     "eyebrow": "Fitness Equipment &middot; Weekend Build",
     "h1": "Sit-and-Reach Test Box &mdash; 2x4 Frame",
-    "lede": ("The standard adult flexibility-testing box, built as a 2x4 frame under a "
+    "lede": ("A sit-and-reach flexibility-testing box built as a 2x4 frame under a "
              "plywood reach surface — plywood only where sheet stock is genuinely "
-             "needed. The metrology is unchanged: a 12in reach surface and a top plate "
+             "needed. Its calibration geometry is a 12in reach surface and a top plate "
              "overhanging the foot plane by exactly 23cm, so a centimeter scale reads "
-             "23.0cm at the plane the feet press (President's Challenge / FitnessGram) "
-             "and scores compare to published norms. The two front legs ARE the "
-             "footplates. Every drawing and number below is generated from one "
+             "23.0cm at the plane the feet press. Those dimensions do not establish "
+             "equivalence to a named assessment: verify the intended test protocol "
+             "before marking the scale or interpreting a score. The two front legs "
+             "ARE the footplates. Every drawing and number below is generated from one "
              "validated parametric 3D model."),
     "scale": "Rendered to scale; verify the 23cm foot line after assembly",
-    "stock": "1x 8-ft 2x4 (whole frame) + a 3/4in ply offcut ~12x22in (top) + 12 screws",
+    "stock": ("1x 8-ft 2x4 + a 3/4in ply offcut ~12x22in + 12 screws + glue + "
+              "adhesive metric rule + loose reach slider"),
 }
 
 SITFRAME_BUY_LEDE = (
     "Everything to build the frame variant: one 8-ft 2x4 cut into four 11.25in legs "
     "and two 12in rails, one 3/4in plywood offcut (~12 x 22in) for the top plate, and "
-    "twelve joint screws. Wood glue at every mating face is a fabrication note. The "
+    "twelve joint screws. Add wood glue, finish, abrasives, and an adhesive metric "
+    "rule. A required loose accessory — the reach slider specified by the intended "
+    "test protocol — is not modeled as attached geometry. The "
     "floor is existing (listed below), not bought.")
 
 SITFRAME_FOOTER = {
@@ -482,13 +533,13 @@ SITFRAME_PANEL = {
                "front/back planes, two full-depth side rails flush under the top, and "
                "the ply top plate — flush at the back, overhanging 23cm toward the "
                "sitter. One 8-ft 2x4 yields every stick.",
-        "side": "THE protocol elevation: the reach surface at 12in and the top plate "
-                "running 23cm (9.055in) past the foot plane. Identical metrology to the "
-                "five-panel ply variant — only the structure beneath changed.",
+        "side": "Calibration elevation: the reach surface at 12in and the top plate "
+                "running 23cm (9.055in) past the foot plane. This matches the modeled "
+                "ply variant; protocol equivalence still requires an operating-manual check.",
         "front": "The foot plane: the two FRONT LEGS are the footplates — full-height "
                  "3.5in bearing strips at stance width, with the rails' end grain "
-                 "landing flush between them at the top. The center is open; feet never "
-                 "land there in the protocol stance (disclosed).",
+                 "landing flush between them at the top. The center is open; confirm "
+                 "that both feet bear fully on the strips for the intended test.",
         "rail": "The +X rail corners from inside (the whole -X side hidden — its two "
                 "screws float in frame, an x-ray convention): the rail runs full depth, "
                 "cleat_screwed flat against both legs' inner EDGES — the rail's wide "
@@ -504,7 +555,7 @@ SITFRAME_PANEL = {
             "The owner's constraint: little plywood on hand, 2x4s available. Sheet "
             "stock is genuinely needed for exactly ONE part — the scale/slide surface. "
             "Everything else is structure, and structure is what a 2x4 does. In the "
-            "protocol the tester's feet sit roughly hip-width apart, so the two front "
+            "modeled stance the tester's feet sit roughly hip-width apart, so the two front "
             "legs, stood flat to the front plane, put full-height 3.5in bearing strips "
             "exactly where the soles press — better toe-tip coverage than the classic "
             "stacked-board face, from one stud. The 23cm/12in metrology is untouched."),
@@ -521,28 +572,49 @@ SITFRAME_PANEL = {
         "Flush at the back, cantilevering 9.055in (23cm) past the foot plane.",
         "The frame rests on the floor by gravity and lifts straight off; nothing "
         "fastens to the room. Cut plan: one 8-ft 2x4 -> 4 legs + 2 rails (69in used).",
-        "The measuring scale is a FINISHING step: lay a centimeter tape from the top "
+        "The measuring scale is a FINISHING step: apply an adhesive metric rule from the top "
         "plate's sitter edge — the geometry puts the foot plane at exactly 23.0cm. "
-        "Slide/tip/racking under test loads and structural capacity are honestly NOT "
-        "ANALYZED (ANALYSIS-v1).",
+        "Verify the intended test protocol, zero/orientation, and loose slider before "
+        "interpreting scores. Slide/tip/racking under test loads and structural "
+        "capacity are honestly NOT ANALYZED (ANALYSIS-v1).",
     ],
     "fieldnotes": [
-        ("Governing dims are pinned — same contract as the ply variant.", "Reach "
+        ("Calibration dims are pinned; verify the intended test protocol.", "Reach "
          "surface 12in, foot line 23cm, body 12x12in: asserted with LITERAL expecteds "
-         "in the model's dimension checks and guarded by the e2e test. Stud and screw "
-         "stations are free to tune."),
-        ("Countersink the four cap screws FLUSH.", "They land on the reach surface — "
-         "the fingertip slide lane. Two coats of poly make it slide-friendly; apply "
-         "the scale after finishing."),
+         "in the model's dimension checks and guarded by the e2e test. These dimensions "
+         "alone do not certify protocol equivalence."),
+        ("Rail screw stations.", "On each 12in rail, mark both screw columns "
+         "{front_leg_mid_y:g}in from each rail end. Mark the rows "
+         "{rail_screw_drop_u:g}in and {rail_screw_drop_l:g}in below the rail top. "
+         "Predrill per the selected 3in #10-class screw maker's chart; the rail-side "
+         "heads remain proud by the authored install contract, so keep them out of "
+         "contact paths."),
+        ("Cap screw stations.", "After both side frames are square and set upright, "
+         "place the top flush at the back with its 23cm overhang toward the sitter. "
+         "The four cap screws sit {cap_edge_x:g}in in from each side edge, centered "
+         "over the front/back legs and {front_leg_mid_y:g}in from the front and back "
+         "body edges. Predrill and countersink every head flush with or just below "
+         "the reach surface."),
+        ("Tools, consumables, and required loose accessory.", "Tools: tape measure, "
+         "square, pencil, saw, drill/driver, pilot and countersink bit, clamps, sanding "
+         "tools, and eye/hearing/dust protection. Consumables: wood glue, sandpaper, "
+         "durable low-friction finish, adhesive metric rule, and applicators. Obtain "
+         "the loose reach slider required by the intended test protocol."),
         ("Glue every mating face and hand-check for wobble.", "An open frame has no "
          "panel shear: its racking stiffness comes from eight rail screws and four cap "
          "screws plus whatever glue you add. Glue is the prior-art norm (not yet a "
          "declarable connection — design finding DS4); racking is named ANALYSIS-v1 "
          "material and left UNKNOWN."),
         ("The stance assumption is disclosed.", "The footplate strips (centers ~8.5in "
-         "apart) cover the protocol's hip-width stance at full height. For a "
+         "apart) cover the modeled hip-width stance at full height. For a "
          "narrower stance, screw a 1x4 across the legs' faces — a one-board revision, "
          "not modeled."),
+        ("Prototype gate — do not use until checked.", "Support/Stability, structural "
+         "capacity, slide, tip, and racking remain NOT ANALYZED. Do not use for scored "
+         "or unsupervised testing until a qualified person has checked square, wobble, "
+         "sliding, tipping, sharp edges, and response under the intended service load. "
+         "Then verify the intended test protocol, scale zero/orientation, stance, and "
+         "slider instructions before interpreting a score."),
     ],
 }
 
@@ -902,6 +974,27 @@ CONSUMERS = {
 }
 
 
+def _format_reader_data(value, namespace):
+    """Format reader configuration from the compiled model namespace.
+
+    Panel prose used to repeat dimensions as Python literals, so a spec change
+    could move geometry while leaving shop instructions stale. Strings may now
+    name compiled params/derived values with ordinary ``str.format`` fields;
+    containers are copied recursively so the module-level consumer registry is
+    never mutated. Literal braces remain available as ``{{`` / ``}}``.
+    """
+    if isinstance(value, str):
+        return value.format_map(namespace)
+    if isinstance(value, dict):
+        return {key: _format_reader_data(item, namespace)
+                for key, item in value.items()}
+    if isinstance(value, list):
+        return [_format_reader_data(item, namespace) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_format_reader_data(item, namespace) for item in value)
+    return value
+
+
 def _title_block(detail, headline: str, tb: dict) -> str:
     """The document header, from the consumer's ``title_block`` dict (eyebrow / h1 /
     lede / scale / stock) — parametrized so a second detail carries its OWN identity,
@@ -941,6 +1034,11 @@ def build_single_detail_html(name: str, detail, views_dir: Path, panel_cfg: dict
     (optional) is a SIBLING design-review store rendered as a second findings
     block via the SAME renderer, so the document itself discloses the design
     review (design-review-directive.md)."""
+    namespace = detail.namespace
+    panel_cfg = _format_reader_data(panel_cfg, namespace)
+    title_block = _format_reader_data(title_block, namespace)
+    buy_lede = _format_reader_data(buy_lede, namespace)
+    footer = _format_reader_data(footer, namespace)
     report = detail.report or detail.validate()
 
     # documentation render (the REAL ungated path) -> manifest + GLB source parity.
@@ -952,6 +1050,20 @@ def build_single_detail_html(name: str, detail, views_dir: Path, panel_cfg: dict
                   for v in panel_cfg["views"]}
     callouts = detail.rendered_callouts()
     payload = build_viewer_payload(detail)
+    # A rectangular geometry primitive may approximate context such as a sofa
+    # arm or floor, but its domain metadata must not leak into the reader as
+    # "Boulder / natural stone / leveling nuts". Preserve the model-derived
+    # envelope/specs while labeling every existing body as context.
+    for part_name, row in payload["parts"].items():
+        if not row.get("existing"):
+            continue
+        row["type"] = "Existing context"
+        row["item"] = f"{part_name} (existing)"
+        row["material"] = "Existing context — material not specified"
+        row["group"] = f"Existing context|{row.get('dims', '')}"
+        row["assumptions"] = (
+            "Existing context approximated by its model envelope for fit and "
+            "interference checks; not purchased and not structurally qualified.")
     slug = payload["slug"]
 
     # interactive GLB (CadQuery path, no Blender) for "Explore in 3D".
@@ -1125,9 +1237,13 @@ def _render_build_sequence_section(detail) -> str:
     for step in steps:
         title = _html.escape(step["title"])
         head = f"<strong>{title}</strong>"
-        if step["why"] is not None:
+        if step["claim"] == "stage":
             head += (" &mdash; authored build strategy, declared and "
                      "checked, never derived (why: "
+                     f"{_html.escape(step['why'])})")
+        elif step["claim"] == "staging":
+            head += (" &mdash; authored staging claim, declared and "
+                     "checked (why: "
                      f"{_html.escape(step['why'])})")
         subs = []
         for name, bom, fab in step["places"]:
@@ -1139,6 +1255,10 @@ def _render_build_sequence_section(detail) -> str:
                         f"fastener contract (a bond or connector install "
                         f"unit; its process facts live on the connection's "
                         f"own assumptions)</li>")
+        for unit in step["joins"]:
+            subs.append(
+                f"<li>set {_html.escape(unit)} in place &mdash; join the "
+                f"completed bench unit into the root assembly</li>")
         for d in step["drives"]:
             subs.append(f"<li>drive: <code>{_html.escape(d)}</code></li>")
         items.append(f"<li>{head}<ul>{''.join(subs)}</ul></li>")

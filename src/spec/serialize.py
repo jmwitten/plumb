@@ -72,13 +72,24 @@ def spec_to_dict(doc: DetailSpecDoc) -> dict:
     if doc.retire:
         out["retire"] = [{r.kind: r.target, "reason": r.reason}
                          for r in doc.retire]
-    # SEQSCHEMA/CPGCORE: the authored build-order claim. Emitted only when
-    # present so a sequence-free spec round-trips unchanged; each stage's
-    # optional connections/parts lists are emitted only when non-empty
-    # (the loader requires at least one of the two).
-    if doc.sequence.stages:
-        out["sequence"] = {"stages": [_stage_to_dict(st)
-                                      for st in doc.sequence.stages]}
+    # STEPDOC: authored order + staging claims. Emitted only when present so
+    # a sequence-free spec round-trips unchanged. Preserve authoring order:
+    # stages, explicit units, whole-detail assembly mode.
+    if (doc.sequence.stages or doc.sequence.subassemblies
+            or doc.sequence.assembly is not None):
+        sequence = {}
+        if doc.sequence.stages:
+            sequence["stages"] = [_stage_to_dict(st)
+                                  for st in doc.sequence.stages]
+        if doc.sequence.subassemblies:
+            sequence["subassemblies"] = [
+                _subassembly_to_dict(u) for u in doc.sequence.subassemblies]
+        if doc.sequence.assembly is not None:
+            sequence["assembly"] = {
+                "mode": doc.sequence.assembly.mode,
+                "why": doc.sequence.assembly.why,
+            }
+        out["sequence"] = sequence
     vd = _validation_to_dict(doc.validation)
     if vd:
         out["validation"] = vd
@@ -189,6 +200,11 @@ def _stage_to_dict(st) -> dict:
         out["parts"] = list(st.parts)
     out["why"] = st.why
     return out
+
+
+def _subassembly_to_dict(unit) -> dict:
+    """One authored bench unit in its exact spec-local shape."""
+    return {"name": unit.name, "parts": list(unit.parts), "why": unit.why}
 
 
 def dump_yaml(doc: DetailSpecDoc) -> str:

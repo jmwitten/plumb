@@ -940,14 +940,11 @@ class RetireSpec:
 
 # -- sequence (task SEQSCHEMA, stepdoc-cpg-design.md §3.1 family 3) ----------
 
-#: Unknown-key registry discipline note (owner amendment 5 is about
-#: VOCABULARY, this is about SCOPE): ``after:`` (point constraints on a
-#: connection), ``subassemblies:``/``assembly:`` (§3.4 staging) are all
-#: FUTURE keys of the ``sequence:`` language — deliberately NOT in the
-#: loader's known-key sets below, so each hits the same unknown-key teaching
-#: error as any other typo. No special-casing: a spec authoring ``after:``
-#: today gets "unknown key 'after'", not a distinct "not yet supported"
-#: message — the loader has exactly one way to say "I don't know this key."
+#: ``after:`` point constraints remain a later +process key and therefore an
+#: ordinary unknown key in +staging. The staging vocabulary itself is closed:
+#: a whole detail is either built apart and set onto its context, or explicitly
+#: built in place. Undeclared context is neither — it remains UNORDERED.
+ASSEMBLY_MODES = ("bench_then_set", "in_situ")
 
 
 @dataclass(frozen=True)
@@ -989,19 +986,49 @@ class AuthoredStage:
 
 
 @dataclass(frozen=True)
-class SequenceSpec:
-    """A detail spec's authored build-order claim (task SEQSCHEMA): the
-    parsed ``sequence:`` block, as an ordered tuple of :class:`AuthoredStage`.
-    Deliberately MINIMAL v1-core plumbing — no ``after:`` point constraints,
-    no ``subassemblies:``/staging (design §3.4's later increment); both are
-    unknown keys here, not silently-ignored ones.
+class AuthoredSubassembly:
+    """One named unit assembled in its own bench frame before it joins root.
 
-    Empty (``stages=()``) for a detail that authors no ``sequence:`` block,
-    so a sequence-free spec loads and compiles exactly as before this task —
-    no shipped spec authors one yet (the platform's authored order is the
-    NEXT task's job, per the brief)."""
+    ``parts`` are authored component ids. A part may belong to at most one
+    unit (loader-enforced and defended again after compile); nesting is not a
+    v1 feature. ``why`` is the provenance of the staging claim and is required
+    anywhere the claim is authored or rendered.
+    """
+
+    name: str
+    why: str
+    parts: tuple = ()
+
+
+@dataclass(frozen=True)
+class AuthoredAssembly:
+    """Whole-detail staging sugar or its explicit in-place mirror.
+
+    ``bench_then_set`` normalizes to one unit containing every constructed
+    (non-context) part. ``in_situ`` creates no bench unit and explicitly makes
+    context present from the root build. The mapping form is deliberate: a
+    scalar could not carry the mandatory ``why`` without an ambiguous loose
+    field on the enclosing sequence block.
+    """
+
+    mode: str
+    why: str
+
+
+@dataclass(frozen=True)
+class SequenceSpec:
+    """A detail spec's authored construction-order and staging claims.
+
+    ``stages`` are authored order groups. ``subassemblies`` and ``assembly``
+    are the unified +staging surface: explicit named units, or whole-detail
+    sugar / in-place mirror. A sequence block may carry either kind alone;
+    an entirely absent block is the empty default below. ``after:`` point
+    constraints remain outside this increment and stay an unknown key.
+    """
 
     stages: tuple = ()
+    subassemblies: tuple = ()
+    assembly: AuthoredAssembly | None = None
 
 
 # -- the whole document ------------------------------------------------------

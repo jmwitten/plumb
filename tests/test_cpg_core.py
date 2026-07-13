@@ -21,8 +21,9 @@ from detailgen.assemblies import (
 )
 from detailgen.assemblies.connection import Edge
 from detailgen.assemblies.event_graph import (
-    FAMILY_AUTHORED, FAMILY_NECESSITY, FAMILY_TECHNIQUE, Event,
-    EventOrderCycleError, ResolvedStage, build_event_graph,
+    FAMILY_AUTHORED, FAMILY_NECESSITY, FAMILY_STAGING, FAMILY_TECHNIQUE, Event,
+    EventOrderCycleError, ResolvedStage, ResolvedStaging, ResolvedUnit,
+    build_event_graph,
     derive_reader_steps, linearize, unordered_parts,
 )
 from detailgen.assemblies.installation import straight_screw_group
@@ -31,8 +32,9 @@ from detailgen.components import (
 )
 
 
-def _graph(assembly, conns, stages=()):
-    checks = compile_connections(assembly, list(conns), sequence=stages)
+def _graph(assembly, conns, stages=(), staging=None):
+    checks = compile_connections(
+        assembly, list(conns), sequence=stages, staging=staging)
     return checks.event_graph
 
 
@@ -390,6 +392,384 @@ def test_stage_naming_unknown_connection_or_part_is_loud():
                                        parts=("ghost-part",)),))
 
 
+# -- +staging compiled surface ------------------------------------------------
+
+
+def _compile_staging(text: str):
+    from detailgen.spec.compiler import compile_spec
+    from detailgen.spec.loader import load_spec_text
+
+    return compile_spec(load_spec_text(text))
+
+
+def test_specdetail_resolves_explicit_units_and_existing_context_to_built_ids():
+    detail = _compile_staging("""
+name: resolved staging
+units: in
+components:
+  - {id: leg, type: lumber, params: {nominal: 2x4, length: 4}}
+  - {id: rail, type: lumber, params: {nominal: 2x4, length: 4}}
+  - {id: room, type: boulder, params: {width: 12, length: 12, depth: 4}}
+roles:
+  room: {role: existing, grounded_by: site}
+sequence:
+  subassemblies:
+    - name: side
+      parts: [leg, rail]
+      why: Screw the side flat on the bench.
+""")
+    resolved = detail.resolved_staging()
+    assert isinstance(resolved, ResolvedStaging)
+    assert resolved.mode == "subassemblies"
+    assert resolved.why == ""
+    assert len(resolved.units) == 1
+    assert isinstance(resolved.units[0], ResolvedUnit)
+    by_name = {p.name: p.id for p in detail.build().parts}
+    assert resolved.units[0].parts == (by_name["leg"], by_name["rail"])
+    assert resolved.context_parts == frozenset({by_name["room"]})
+
+
+def test_bench_then_set_resolves_to_one_unit_of_every_non_context_part():
+    detail = _compile_staging("""
+name: bench sugar
+units: in
+components:
+  - {id: board, type: lumber, params: {nominal: 2x4, length: 4}}
+  - {id: screw, type: structural_screw, params: {diameter: 0.16, length: 1.5}}
+  - {id: sofa, type: boulder, params: {width: 12, length: 12, depth: 4}}
+roles:
+  sofa: {role: existing, grounded_by: site}
+sequence:
+  assembly:
+    mode: bench_then_set
+    why: Build the whole product away from the sofa.
+""")
+    resolved = detail.resolved_staging()
+    by_name = {p.name: p.id for p in detail.build().parts}
+    assert resolved.mode == "bench_then_set"
+    assert resolved.why == "Build the whole product away from the sofa."
+    assert len(resolved.units) == 1
+    assert resolved.units[0].name == "whole detail"
+    assert resolved.units[0].parts == (by_name["board"], by_name["screw"])
+    assert resolved.context_parts == frozenset({by_name["sofa"]})
+
+
+def test_repeat_template_unit_membership_expands_to_every_built_instance():
+    detail = _compile_staging("""
+name: repeat staging
+units: in
+components:
+  - repeat: {var: i, count: 2}
+    body:
+      - id: 'leg_{i}'
+        type: lumber
+        params: {nominal: 2x4, length: 4}
+sequence:
+  subassemblies:
+    - name: pair
+      parts: ['leg_{i}']
+      why: Both repeated legs form one bench unit.
+""")
+    resolved = detail.resolved_staging()
+    assert resolved.units[0].parts == tuple(p.id for p in detail.build().parts)
+
+
+def test_zero_instance_unit_member_is_a_loud_compile_error():
+    detail = _compile_staging("""
+name: zero staging
+units: in
+components:
+  - repeat: {var: i, count: 0}
+    body:
+      - id: 'leg_{i}'
+        type: lumber
+        params: {nominal: 2x4, length: 4}
+sequence:
+  subassemblies:
+    - name: empty after expansion
+      parts: ['leg_{i}']
+      why: Probe the zero-instance diagnostic.
+""")
+    with pytest.raises(ValueError, match="built no instance"):
+        detail.resolved_staging()
+
+
+def test_event_graph_defends_against_multi_membership_if_loader_is_bypassed():
+    a, c1, _c2 = _two_screwed_plates()
+    repeated = c1.parts[0].id
+    staging = ResolvedStaging(
+        mode="subassemblies", why="", context_parts=frozenset(),
+        units=(
+            ResolvedUnit("side a", "first claim", (repeated,)),
+            ResolvedUnit("side b", "second claim", (repeated,)),
+        ))
+    with pytest.raises(ValueError, match="at most one subassembly") as err:
+        _graph(a, [c1], staging=staging)
+    assert "side a" in str(err.value) and "side b" in str(err.value)
+
+
+def test_event_graph_defends_against_reserved_root_unit_if_loader_is_bypassed():
+    a, c1, _c2 = _two_screwed_plates()
+    staging = ResolvedStaging(
+        mode="subassemblies", context_parts=frozenset(),
+        units=(ResolvedUnit("root", "collides with frame sentinel",
+                            tuple(p.id for p in c1.parts)),))
+    with pytest.raises(ValueError, match="reserved.*root frame"):
+        _graph(a, [c1], staging=staging)
+
+
+def test_event_graph_defends_against_duplicate_unit_names_if_loader_is_bypassed():
+    a, c1, c2 = _two_screwed_plates()
+    staging = ResolvedStaging(
+        mode="subassemblies", context_parts=frozenset(),
+        units=(
+            ResolvedUnit("side", "first", tuple(p.id for p in c1.parts)),
+            ResolvedUnit("side", "second", tuple(p.id for p in c2.parts)),
+        ))
+    with pytest.raises(ValueError, match="duplicated.*unique"):
+        _graph(a, [c1, c2], staging=staging)
+
+
+def _two_bench_units_with_root_joint():
+    a, c1, c2 = _two_screwed_plates()
+    bridge_screw = a.add(
+        StructuralScrew(0.19 * IN, 1.5 * IN, name="bridge screw"),
+        at=(50, 100, 88.9))
+    bridge = Connection(
+        kind=connection_types.get("cleat_screwed")(n_screws=1),
+        parts=[c1.parts[0], c2.parts[0]], hardware=[bridge_screw],
+        label="root bridge")
+    staging = ResolvedStaging(
+        mode="subassemblies", context_parts=frozenset(),
+        units=(
+            ResolvedUnit("side a", "bench side A flat",
+                         tuple(p.id for p in c1.parts)),
+            ResolvedUnit("side b", "bench side B flat",
+                         tuple(p.id for p in c2.parts)),
+        ))
+    return a, c1, c2, bridge, staging
+
+
+def test_connections_scope_to_bench_only_when_all_members_share_one_unit():
+    a, c1, c2, bridge, staging = _two_bench_units_with_root_joint()
+    g = _graph(a, [c1, c2, bridge], staging=staging)
+    d1 = Event("drive", "joint one", "cleat_screws")
+    d2 = Event("drive", "joint two", "cleat_screws")
+    root_drive = Event("drive", "root bridge", "cleat_screws")
+    assert g.frame_of[d1] == "side a"
+    assert g.frame_of[d2] == "side b"
+    assert g.frame_of[root_drive] == "root"
+    for pid in staging.units[0].parts:
+        ev = g.event_of[pid]
+        if ev.kind == "place":
+            assert g.frame_of[ev] == "side a"
+
+
+def test_r1_every_bench_event_precedes_its_join_without_ordering_other_units():
+    a, c1, c2, bridge, staging = _two_bench_units_with_root_joint()
+    g = _graph(a, [c1, c2, bridge], staging=staging)
+    d1 = Event("drive", "joint one", "cleat_screws")
+    d2 = Event("drive", "joint two", "cleat_screws")
+    j1, j2 = Event("join", "side a"), Event("join", "side b")
+    assert j1 in g.events and j2 in g.events
+    assert g.precedes(d1, j1) and g.precedes(d2, j2)
+    assert all(g.precedes(ev, j1) for ev in g.events
+               if g.frame_of[ev] == "side a")
+    assert all(g.precedes(ev, j2) for ev in g.events
+               if g.frame_of[ev] == "side b")
+    # Frame semantics do not invent a construction order between independent
+    # bench units; declaration order is a presentation tie-breaker only.
+    assert not g.precedes(d1, d2) and not g.precedes(d2, d1)
+    r1 = [e for e in g.edges if e.family == FAMILY_STAGING and e.b == j1]
+    assert r1 and all("bench events precede join" in e.source for e in r1)
+
+
+def test_root_connection_uses_joins_as_member_presence_events():
+    a, c1, c2, bridge, staging = _two_bench_units_with_root_joint()
+    g = _graph(a, [c1, c2, bridge], staging=staging)
+    root_drive = Event("drive", "root bridge", "cleat_screws")
+    for unit in staging.units:
+        join = Event("join", unit.name)
+        assert g.precedes(join, root_drive)
+        assert (join, root_drive) in {
+            (e.a, e.b) for e in g.edges if e.family == FAMILY_NECESSITY}
+
+
+def test_bench_frame_presence_excludes_every_nonmember_without_cross_order():
+    a, c1, c2, bridge, staging = _two_bench_units_with_root_joint()
+    g = _graph(a, [c1, c2, bridge], staging=staging)
+    d1 = Event("drive", "joint one", "cleat_screws")
+    opposite = c2.parts[0]
+    decision = g.presence_at(d1, opposite.id)
+    assert decision.state == "absent"
+    assert decision.event == Event("join", "side b")
+    assert decision.facts and decision.facts[0].family == FAMILY_STAGING
+    assert "bench side A flat" in decision.facts[0].source
+    assert not decision.declared_trust
+
+
+def test_same_bench_hardware_uses_reachability_instead_of_false_absence():
+    """Hardware inherits its connection drive's frame even when an explicit
+    subassembly lists only structural members. Another same-unit fastener is
+    therefore internal work, not an absent nonmember that staging may clear."""
+    a, c1, c2 = _two_screwed_plates()
+    staging = ResolvedStaging(
+        mode="subassemblies",
+        units=(ResolvedUnit(
+            "case", "assemble both joints on one bench",
+            tuple(p.id for c in (c1, c2) for p in c.parts)),))
+    g = _graph(a, [c1, c2], staging=staging)
+    drive = Event("drive", "joint one", "cleat_screws")
+    other_hardware = c2.hardware[0]
+    own_event = g.event_of[other_hardware.id]
+    assert g.frame_of[drive] == g.frame_of[own_event] == "case"
+    assert other_hardware.id not in g.unit_of
+    decision = g.presence_at(drive, other_hardware.id)
+    assert decision.state == "unordered"
+    assert not decision.facts
+
+
+def test_hardware_cannot_be_authored_into_a_unit_other_than_its_drive_frame():
+    a, c1, c2 = _two_screwed_plates()
+    misplaced = c2.hardware[0]
+    staging = ResolvedStaging(
+        mode="subassemblies",
+        units=(
+            ResolvedUnit(
+                "side a", "first unit",
+                tuple(p.id for p in c1.parts) + (misplaced.id,)),
+            ResolvedUnit(
+                "side b", "the hardware's actual connection unit",
+                tuple(p.id for p in c2.parts)),
+        ))
+    with pytest.raises(ValueError, match="hardware.*side a.*side b") as err:
+        _graph(a, [c1, c2], staging=staging)
+    assert misplaced.name in str(err.value)
+    assert "drive frame" in str(err.value)
+
+
+def test_bench_then_set_context_absence_is_explicit_declared_trust():
+    a, c1, _c2 = _two_screwed_plates()
+    context = a.add(Lumber("2x4", 4 * IN, name="sofa context"),
+                    at=(0, 500, 0))
+    unit_parts = tuple(p.id for p in a.parts if p.id != context.id)
+    staging = ResolvedStaging(
+        mode="bench_then_set", why="build away from the sofa",
+        context_parts=frozenset({context.id}),
+        units=(ResolvedUnit("whole detail", "build away from the sofa",
+                            unit_parts),))
+    g = _graph(a, [c1], staging=staging)
+    drive = Event("drive", "joint one", "cleat_screws")
+    decision = g.presence_at(drive, context.id)
+    assert decision.state == "absent" and decision.declared_trust
+    assert "DECLARED TRUST" in decision.facts[0].source
+    assert "build away from the sofa" in decision.facts[0].source
+
+
+def test_bench_then_set_context_is_present_for_root_work_after_whole_unit_join():
+    """A stage may not re-author a context body's ordinary place event after
+    root work and thereby turn context into a false later-arrival clear. Under
+    bench_then_set, the whole-detail join governs context presence at root."""
+    a, bench, _unused = _two_screwed_plates()
+    anchor = a.add(Lumber("2x4", 4 * IN, name="anchored context"),
+                   at=(0, 500, 0))
+    free_context = a.add(Lumber("2x4", 4 * IN, name="free context blocker"),
+                         at=(0, 700, 0))
+    root_screw = a.add(
+        StructuralScrew(0.19 * IN, 1.5 * IN, name="root screw"),
+        at=(50, 500, 88.9))
+    root_conn = Connection(
+        kind=connection_types.get("cleat_screwed")(n_screws=1),
+        parts=[bench.parts[0], anchor], hardware=[root_screw],
+        label="root work")
+    unit_parts = tuple(
+        p.id for p in a.parts if p not in (anchor, free_context))
+    staging = ResolvedStaging(
+        mode="bench_then_set", why="set the completed unit onto its context",
+        context_parts=frozenset({anchor.id, free_context.id}),
+        units=(ResolvedUnit("whole detail", "assemble away from context",
+                            unit_parts),))
+    stages = (
+        ResolvedStage(name="root connection", why="real root work",
+                      connections=("root work",)),
+        ResolvedStage(name="fictional late context", why="must not win",
+                      parts=(free_context.id,)),
+    )
+    g = _graph(a, [bench, root_conn], stages=stages, staging=staging)
+    drive = Event("drive", "root work", "cleat_screws")
+    assert g.precedes(g.join_of["whole detail"], drive)
+    assert g.precedes(drive, g.event_of[free_context.id])
+    decision = g.presence_at(drive, free_context.id)
+    assert decision.state == "present"
+    assert decision.facts and decision.facts[0].family == FAMILY_STAGING
+    assert "whole-detail join" in decision.facts[0].source
+
+
+def test_bench_then_set_root_hardware_keeps_its_drive_presence_event():
+    """The whole-detail sugar lists every non-context component, but hardware
+    for post-join root work arrives at its own root drive, not at the unit join.
+    Mapping it to the join would make later hardware falsely present early."""
+    a, bench, _unused = _two_screwed_plates()
+    context_one = a.add(
+        Lumber("2x4", 4 * IN, name="context one"), at=(0, 500, 0))
+    context_two = a.add(
+        Lumber("2x4", 4 * IN, name="context two"), at=(0, 700, 0))
+    screw_one = a.add(
+        StructuralScrew(0.19 * IN, 1.5 * IN, name="root screw one"),
+        at=(50, 500, 88.9))
+    screw_two = a.add(
+        StructuralScrew(0.19 * IN, 1.5 * IN, name="root screw two"),
+        at=(50, 700, 88.9))
+    root_one = Connection(
+        kind=connection_types.get("cleat_screwed")(n_screws=1),
+        parts=[bench.parts[0], context_one], hardware=[screw_one],
+        label="root one")
+    root_two = Connection(
+        kind=connection_types.get("cleat_screwed")(n_screws=1),
+        parts=[bench.parts[0], context_two], hardware=[screw_two],
+        label="root two")
+    contexts = frozenset({context_one.id, context_two.id})
+    staging = ResolvedStaging(
+        mode="bench_then_set", why="set before root work",
+        context_parts=contexts,
+        units=(ResolvedUnit(
+            "whole detail", "synthetic all-non-context unit",
+            tuple(p.id for p in a.parts if p.id not in contexts)),))
+    stages = (
+        ResolvedStage(name="first root drive", why="declared first",
+                      connections=("root one",)),
+        ResolvedStage(name="second root drive", why="declared second",
+                      connections=("root two",)),
+    )
+    g = _graph(
+        a, [bench, root_one, root_two], stages=stages, staging=staging)
+    drive_one = Event("drive", "root one", "cleat_screws")
+    drive_two = Event("drive", "root two", "cleat_screws")
+    assert g.frame_of[drive_one] == g.frame_of[drive_two] == "root"
+    assert g.event_of[screw_two.id] == drive_two
+    decision = g.presence_at(drive_one, screw_two.id)
+    assert decision.state == "absent"
+    assert decision.event == drive_two
+    assert decision.facts and decision.facts[0].family == FAMILY_AUTHORED
+
+
+def test_explicit_in_situ_context_is_present_and_undeclared_is_unordered():
+    a, c1, _c2 = _two_screwed_plates()
+    context = a.add(Lumber("2x4", 4 * IN, name="context"), at=(0, 500, 0))
+    drive = Event("drive", "joint one", "cleat_screws")
+    in_situ = ResolvedStaging(
+        mode="in_situ", why="build on the context",
+        context_parts=frozenset({context.id}))
+    declared_graph = _graph(a, [c1], staging=in_situ)
+    decision = declared_graph.presence_at(drive, context.id)
+    assert decision.state == "present"
+    assert decision.facts[0].family == FAMILY_STAGING
+    assert "build on the context" in decision.facts[0].source
+
+    undeclared_graph = _graph(a, [c1])
+    assert undeclared_graph.presence_at(drive, context.id).state == "unordered"
+
+
 # -- canonical linearization + reader steps (§5.1; amendment 5 vocabulary) -----
 
 
@@ -444,6 +824,93 @@ def test_unordered_parts_are_reported_not_positioned():
     steps = derive_reader_steps(g)
     for s in steps:
         assert ctx.id not in s.parts_placed
+
+
+def test_reader_steps_group_bench_units_then_visible_joins_without_graph_edges():
+    """Presentation may choose declaration order for independent units, but
+    the graph must remain partially ordered: two bench steps, then two visible
+    joins, with no invented cross-unit event edge."""
+    a, c1, c2 = _two_screwed_plates()
+    staging = ResolvedStaging(
+        mode="subassemblies",
+        units=(
+            ResolvedUnit("side one", "clamp side one square",
+                         tuple(p.id for p in c1.parts)),
+            ResolvedUnit("side two", "clamp side two square",
+                         tuple(p.id for p in c2.parts)),
+        ))
+    g = _graph(a, [c1, c2], staging=staging)
+    steps = derive_reader_steps(g)
+    assert [s.title for s in steps] == [
+        "bench side one", "bench side two",
+        "set side one in place", "set side two in place"]
+    assert [s.unit.name if s.unit else None for s in steps] == [
+        "side one", "side two", "side one", "side two"]
+    assert [s.joins for s in steps] == [(), (), ("side one",), ("side two",)]
+    assert steps[0].connections == ("joint one",)
+    assert steps[1].connections == ("joint two",)
+    assert not g.precedes(g.join_of["side one"],
+                          next(iter(g.drives_of["joint two"])))
+    assert not g.precedes(g.join_of["side two"],
+                          next(iter(g.drives_of["joint one"])))
+
+
+def test_reader_steps_preserve_authored_stage_order_inside_a_bench_unit():
+    """A bench frame is a presence boundary, not permission to erase finer
+    authored order. Stage buckets inside the unit must retain the graph order,
+    the declared rationale, and the connection each stage owns."""
+    a, c1, c2 = _two_screwed_plates()
+    staging = ResolvedStaging(
+        mode="subassemblies",
+        units=(ResolvedUnit(
+            "case", "assemble both joints on the bench",
+            tuple(p.id for c in (c1, c2) for p in c.parts)),))
+    stages = (
+        ResolvedStage(name="joint two first", why="declared first",
+                      connections=("joint two",),
+                      parts=(c2.parts[0].id,)),
+        ResolvedStage(name="joint one second", why="declared second",
+                      connections=("joint one",)),
+    )
+    g = _graph(a, [c1, c2], stages=stages, staging=staging)
+    assert g.precedes(Event("drive", "joint two", "cleat_screws"),
+                      Event("drive", "joint one", "cleat_screws"))
+    steps = derive_reader_steps(g)
+    assert [s.title for s in steps] == [
+        "bench case",
+        "bench case: stage 'joint two first' (declared order)",
+        "bench case: stage 'joint one second' (declared order)",
+        "set case in place",
+    ]
+    assert [s.connections for s in steps] == [
+        (), ("joint two",), ("joint one",), ()]
+    assert c2.parts[0].id not in steps[0].parts_placed
+    assert c2.parts[0].id in steps[1].parts_placed
+    assert [s.stage.why for s in steps[1:3]] == [
+        "declared first", "declared second"]
+
+
+def test_reader_steps_keep_a_part_only_stage_inside_a_bench_unit():
+    a, c1, _c2 = _two_screwed_plates()
+    staging = ResolvedStaging(
+        mode="subassemblies",
+        units=(ResolvedUnit(
+            "case", "assemble the joint on the bench",
+            tuple(p.id for p in c1.parts)),))
+    prepared = c1.parts[0].id
+    stages = (ResolvedStage(
+        name="prepare plate", why="mark the plate before assembly",
+        parts=(prepared,)),)
+    g = _graph(a, [c1], stages=stages, staging=staging)
+    steps = derive_reader_steps(g)
+    stage_steps = [s for s in steps if s.stage is not None]
+    assert len(stage_steps) == 1
+    assert stage_steps[0].title == \
+        "bench case: stage 'prepare plate' (declared order)"
+    assert stage_steps[0].stage.why == "mark the plate before assembly"
+    assert stage_steps[0].parts_placed == (prepared,)
+    assert prepared not in next(
+        s for s in steps if s.title == "bench case").parts_placed
 
 
 # -- §4.3 rung guard: SEQUENCE-PROVEN is claimed NOWHERE -----------------------

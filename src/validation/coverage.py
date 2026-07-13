@@ -258,6 +258,9 @@ class FamilyCoverage:
     #: must carry the marker when this is non-zero, so "resolved" never
     #: reads as "proved". Default 0 keeps the field additive.
     declared: int = 0
+    #: Subset of ``declared`` that rests on connection-free context absence
+    #: in a declared bench frame: the stronger DECLARED TRUST ceiling.
+    declared_trust: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -269,6 +272,7 @@ class FamilyCoverage:
             "ran_kinds": [list(rk) for rk in self.ran_kinds],
             "note": self.note,
             "declared_order_clears": self.declared,
+            "declared_trust_clears": self.declared_trust,
         }
 
     @property
@@ -280,9 +284,13 @@ class FamilyCoverage:
         (CSS classes, gating)."""
         if not self.declared:
             return self.verdict
+        trust = (
+            f"; {self.declared_trust} of these rely on DECLARED TRUST — "
+            f"connection-free staging is not falsifiable until "
+            f"insertability (P1)" if self.declared_trust else "")
         return (f"{self.verdict} ({self.declared} clear(s) at a DECLARED "
                 f"build order — resolved on paper, declared, not "
-                f"sequence-proven)")
+                f"sequence-proven{trust})")
 
 
 def coverage_matrix(report) -> list[FamilyCoverage]:
@@ -334,6 +342,8 @@ def _coverage_from_findings(all_findings) -> list[FamilyCoverage]:
         # verdict sentence's wording.
         declared = sum(1 for f in fs if f.passed
                        and getattr(f, "declared_order", False))
+        declared_trust = sum(1 for f in fs if f.passed
+                             and getattr(f, "declared_trust", False))
         ran = tuple(sorted(Counter(f.check for f in fs).items()))
         # Verdict precedence: a real FAIL dominates; else an unresolved UNKNOWN
         # (ran but couldn't answer, blocking) dominates a PASS; else PASS if any
@@ -350,19 +360,26 @@ def _coverage_from_findings(all_findings) -> list[FamilyCoverage]:
             family=fam, verdict=verdict, checks_run=checks_run,
             findings=checks_run, failures=failures, ran_kinds=ran,
             note=_derivation_note(verdict, ran, failures, unresolved,
-                                  declared),
+                                  declared, declared_trust),
             declared=declared,
+            declared_trust=declared_trust,
         ))
     return rows
 
 
 def _derivation_note(verdict: str, ran_kinds, failures: int,
-                     unresolved: int = 0, declared: int = 0) -> str:
+                     unresolved: int = 0, declared: int = 0,
+                     declared_trust: int = 0) -> str:
     # Declared-trust visibility (STEPDOC owner amendment 3): "resolved"
     # must never read as "proved" on any summary surface.
     declared_note = (
         f"; {declared} clear(s) hold at a DECLARED build order — resolved "
         f"on paper, declared, not sequence-proven" if declared else "")
+    if declared_trust:
+        declared_note += (
+            f"; {declared_trust} of these rely on DECLARED TRUST — "
+            f"connection-free staging is not falsifiable until "
+            f"insertability (P1)")
     if not ran_kinds:
         return "no check of this family ran"
     ran_str = ", ".join(f"{k}×{n}" for k, n in ran_kinds)
@@ -467,7 +484,10 @@ def headline_by_verdict(rows) -> list[tuple[str, tuple[str, ...]]]:
     for verdict in _HEADLINE_VERDICT_ORDER:
         fams = tuple(
             r.family + (f" ({r.declared} declared-order clear(s) — "
-                        f"resolved, not proved)" if r.declared else "")
+                        f"resolved, not proved"
+                        + (f"; {r.declared_trust} DECLARED TRUST" if
+                           r.declared_trust else "")
+                        + ")" if r.declared else "")
             for r in rows if r.verdict == verdict)
         if fams:
             grouped.append((verdict, fams))
