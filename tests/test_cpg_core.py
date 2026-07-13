@@ -677,6 +677,35 @@ def test_unordered_parts_are_reported_not_positioned():
         assert ctx.id not in s.parts_placed
 
 
+def test_reader_steps_group_bench_units_then_visible_joins_without_graph_edges():
+    """Presentation may choose declaration order for independent units, but
+    the graph must remain partially ordered: two bench steps, then two visible
+    joins, with no invented cross-unit event edge."""
+    a, c1, c2 = _two_screwed_plates()
+    staging = ResolvedStaging(
+        mode="subassemblies",
+        units=(
+            ResolvedUnit("side one", "clamp side one square",
+                         tuple(p.id for p in c1.parts)),
+            ResolvedUnit("side two", "clamp side two square",
+                         tuple(p.id for p in c2.parts)),
+        ))
+    g = _graph(a, [c1, c2], staging=staging)
+    steps = derive_reader_steps(g)
+    assert [s.title for s in steps] == [
+        "bench side one", "bench side two",
+        "set side one in place", "set side two in place"]
+    assert [s.unit.name if s.unit else None for s in steps] == [
+        "side one", "side two", "side one", "side two"]
+    assert [s.joins for s in steps] == [(), (), ("side one",), ("side two",)]
+    assert steps[0].connections == ("joint one",)
+    assert steps[1].connections == ("joint two",)
+    assert not g.precedes(g.join_of["side one"],
+                          next(iter(g.drives_of["joint two"])))
+    assert not g.precedes(g.join_of["side two"],
+                          next(iter(g.drives_of["joint one"])))
+
+
 # -- §4.3 rung guard: SEQUENCE-PROVEN is claimed NOWHERE -----------------------
 
 

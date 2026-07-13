@@ -104,6 +104,24 @@ def test_every_member_has_expected_fabrication_record(frame):
         assert _fabrication_record_of(_by_name(detail)[name].component) is None
 
 
+def test_build_sequence_benches_both_sides_then_sets_them_before_caps(frame):
+    from detailgen.validation.build_sequence import build_sequence_model
+
+    detail, _report = frame
+    steps, loose = build_sequence_model(detail)
+    titles = [step["title"] for step in steps]
+    assert titles[:4] == [
+        "bench side +X", "bench side -X",
+        "set side +X in place", "set side -X in place"]
+    first_cap = min(i for i, title in enumerate(titles)
+                    if title.startswith("install top plate ->"))
+    assert first_cap > 3
+    assert steps[0]["why"].startswith("Lay the +X front leg")
+    assert steps[1]["why"].startswith("Lay the -X front leg")
+    assert steps[0]["claim"] == steps[1]["claim"] == "staging"
+    assert "floor" not in loose
+
+
 def test_fabrication_fold_invariant_holds(frame):
     detail, _report = frame
     verify_assembly_fabrication(detail.assembly)
@@ -229,6 +247,11 @@ def test_prose_truthfulness_guard(frame, tmp_path):
     doc = Path(info["path"]).read_text()
     assert "NOT ANALYZED" in doc
     assert "23cm" in doc or "23 cm" in doc
+    for title in ("bench side +X", "bench side -X",
+                  "set side +X in place", "set side -X in place"):
+        assert title in doc
+    assert doc.index("bench side +X") < doc.index("bench side -X") < \
+        doc.index("set side +X in place") < doc.index("set side -X in place")
     low = doc.lower()
     for forbidden in ("proven stable", "stability verified", "capacity verified",
                       "load-tested", "certified safe", "will not tip",

@@ -372,6 +372,26 @@ def test_doc_renders_through_render_documentation(caddy, tmp_path):
     # the coverage matrix is appended (honesty is a framework property).
     assert "Coverage matrix" in text
     assert "DECLARED TRUST" in text
+    assert "**bench whole detail**" in text
+    assert "**set whole detail in place**" in text
+    assert "authored staging claim" in text
+
+
+def test_build_sequence_derives_bench_then_set_and_does_not_list_arm_loose(caddy):
+    from detailgen.validation.build_sequence import build_sequence_model
+
+    detail, _report = caddy
+    steps, loose = build_sequence_model(detail)
+    titles = [step["title"] for step in steps]
+    assert titles[0] == "bench whole detail"
+    assert "set whole detail in place" in titles
+    assert titles.index("bench whole detail") < \
+        titles.index("set whole detail in place")
+    assert "Glue and clamp both registration rails" in steps[0]["why"]
+    assert steps[0]["claim"] == "staging"
+    assert steps[titles.index("set whole detail in place")]["joins"] == \
+        ("whole detail",)
+    assert "sofa arm" not in loose
 
 
 def test_visual_review_store_is_valid_and_grounded():
@@ -494,6 +514,9 @@ def test_single_detail_html_build_document(tmp_path):
     assert 'class="panel"' in html                    # render_panel
     assert html.count("data:image/png;base64,") >= 5  # embedded panel stills
     assert "UNKNOWN — NOT ANALYZED" in html            # coverage matrix
+    assert "Build sequence (derived)" in html
+    assert "bench whole detail" in html
+    assert "set whole detail in place" in html
     for cid in ("C1", "C2", "C3", "C4"):               # caddy visual-review block
         assert cid in html
     assert 'id="detail-glb-' in html and "Explore in 3D" in html  # 3D viewer + GLB

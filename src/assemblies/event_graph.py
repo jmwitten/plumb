@@ -214,6 +214,8 @@ class ReaderStep:
     stage: ResolvedStage | None
     connections: tuple = ()   # labels driven in this step, declaration order
     parts_placed: tuple = ()  # part ids whose place events fold into it
+    unit: ResolvedUnit | None = None  # authored bench frame, when applicable
+    joins: tuple = ()          # unit names joined/set into the root assembly
 
 
 class EventOrderCycleError(ValueError):
@@ -838,12 +840,14 @@ def linearize(graph: EventGraph) -> tuple[Event, ...]:
 def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
     """The reader-step grouping (§5.1), a PURE function of the graph — one
     step per authored stage where stages exist, else one step per
-    connection install unit; ``place`` events fold into the step of the
-    first connection that consumes the part (a stage's explicitly listed
-    parts fold into that stage's step). Parts consumed by no connection and
-    claimed by no stage have no order fact and are reported by the renderer
-    as exactly that, never given an invented position. Regrouping cannot
-    change a verdict (§2)."""
+    connection install unit. Declared bench units group all of their
+    internal place/drive events and get a separate visible join/set step;
+    independent units use declaration order only as a presentation tie-break,
+    never as a new graph edge. ``place`` events otherwise fold into the step
+    of the first connection that consumes the part (a stage's explicitly
+    listed parts fold into that stage's step). Parts consumed by no connection
+    and governed by neither a stage nor staging are reported as unordered,
+    never given an invented position. Regrouping cannot change a verdict (§2)."""
     order = linearize(graph)
     pos = {ev: i for i, ev in enumerate(order)}
 
@@ -857,27 +861,59 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
 
     conn_idx = {label: i for i, label in enumerate(graph.conn_labels)}
 
-    # bucket key: ("stage", chain, name) or ("conn", label)
+    # bucket key: ("unit", name), ("join", name),
+    # ("stage", chain, name), or ("conn", label)
     buckets: dict[tuple, dict] = {}
 
-    def bucket_for(key: tuple, stage: ResolvedStage | None, title: str):
+    unit_idx = {u.name: i for i, u in enumerate(
+        graph.staging.units if graph.staging is not None else ())}
+
+    def bucket_for(key: tuple, stage: ResolvedStage | None, title: str,
+                   *, unit: ResolvedUnit | None = None, joins=(),
+                   preferred=None):
         b = buckets.get(key)
         if b is None:
             b = {"stage": stage, "title": title, "connections": [],
-                 "parts": [], "first": len(order) + 1}
+                 "parts": [], "first": len(order) + 1, "events": [],
+                 "unit": unit, "joins": tuple(joins),
+                 "preferred": preferred}
             buckets[key] = b
         return b
 
+    # Create unit and join buckets in declaration order even when a unit has
+    # only place events or a connection-free join. This is presentation state,
+    # not an event-order assertion.
+    for unit in (graph.staging.units if graph.staging is not None else ()):
+        idx = unit_idx[unit.name]
+        bucket_for(("unit", unit.name), None, f"bench {unit.name}",
+                   unit=unit, preferred=(0, idx))
+        join = graph.join_of[unit.name]
+        b = bucket_for(("join", unit.name), None,
+                       f"set {unit.name} in place", unit=unit,
+                       joins=(unit.name,), preferred=(1, idx))
+        b["events"].append(join)
+        b["first"] = min(b["first"], pos.get(join, len(order)))
+
     for label in graph.conn_labels:
-        st = stage_of_conn.get(label)
-        if st is not None:
-            key = ("stage", st.chain, st.name)
-            b = bucket_for(key, st, f"stage {st.name!r} (declared order)")
+        drives = graph.drives_of[label]
+        frame = graph.frame_of[drives[0]] if drives else "root"
+        if frame != "root":
+            unit = graph.units[frame]
+            key = ("unit", frame)
+            b = bucket_for(key, None, f"bench {frame}", unit=unit,
+                           preferred=(0, unit_idx[frame]))
         else:
-            key = ("conn", label)
-            b = bucket_for(key, None, f"install {label}")
+            st = stage_of_conn.get(label)
+            if st is not None:
+                key = ("stage", st.chain, st.name)
+                b = bucket_for(key, st,
+                               f"stage {st.name!r} (declared order)")
+            else:
+                key = ("conn", label)
+                b = bucket_for(key, None, f"install {label}")
         b["connections"].append(label)
-        for ev in graph.drives_of[label]:
+        for ev in drives:
+            b["events"].append(ev)
             b["first"] = min(b["first"], pos.get(ev, len(order)))
 
     # fold place events: stage-claimed parts to their stage's step; every
@@ -885,11 +921,22 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
     for p_id, ev in graph.event_of.items():
         if ev.kind != "place":
             continue
+        unit_name = graph.unit_of.get(p_id)
+        if unit_name is not None:
+            unit = graph.units[unit_name]
+            b = bucket_for(("unit", unit_name), None,
+                           f"bench {unit_name}", unit=unit,
+                           preferred=(0, unit_idx[unit_name]))
+            b["parts"].append(p_id)
+            b["events"].append(ev)
+            b["first"] = min(b["first"], pos.get(ev, len(order)))
+            continue
         st = stage_of_part.get(p_id)
         if st is not None:
             b = bucket_for(("stage", st.chain, st.name), st,
                            f"stage {st.name!r} (declared order)")
             b["parts"].append(p_id)
+            b["events"].append(ev)
             b["first"] = min(b["first"], pos.get(ev, len(order)))
             continue
         consumers = [label for label in graph.conn_labels
@@ -901,13 +948,50 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
         key = (("stage", st2.chain, st2.name) if st2 is not None
                else ("conn", first))
         buckets[key]["parts"].append(p_id)
+        buckets[key]["events"].append(ev)
+
+    # Topologically order presentation buckets by the real graph edges. The
+    # preferred key makes independent units read bench-all, then set-all, then
+    # root work; dependency edges always win. No edge is added to ``graph``.
+    event_bucket = {
+        ev: key for key, b in buckets.items() for ev in b["events"]}
+    successors: dict[tuple, set[tuple]] = {key: set() for key in buckets}
+    indeg: dict[tuple, int] = {key: 0 for key in buckets}
+    for edge in graph.edges:
+        a, b = event_bucket.get(edge.a), event_bucket.get(edge.b)
+        if a is None or b is None or a == b or b in successors[a]:
+            continue
+        successors[a].add(b)
+        indeg[b] += 1
+
+    root_base = 2
+    def presentation_key(key):
+        b = buckets[key]
+        preferred = b["preferred"]
+        if preferred is not None:
+            return preferred
+        return (root_base, b["first"], b["title"])
+
+    heap = [(presentation_key(key), key) for key, degree in indeg.items()
+            if degree == 0]
+    heapq.heapify(heap)
+    bucket_order = []
+    while heap:
+        _sort, key = heapq.heappop(heap)
+        bucket_order.append(key)
+        for nxt in successors[key]:
+            indeg[nxt] -= 1
+            if indeg[nxt] == 0:
+                heapq.heappush(heap, (presentation_key(nxt), nxt))
 
     steps = []
-    for b in sorted(buckets.values(), key=lambda b: b["first"]):
+    for key in bucket_order:
+        b = buckets[key]
         steps.append(ReaderStep(
             title=b["title"], stage=b["stage"],
             connections=tuple(b["connections"]),
-            parts_placed=tuple(sorted(b["parts"]))))
+            parts_placed=tuple(sorted(b["parts"])),
+            unit=b["unit"], joins=b["joins"]))
     return tuple(steps)
 
 
@@ -924,7 +1008,8 @@ def unordered_parts(graph: EventGraph) -> tuple[str, ...]:
         consumed.update(mids)
     out = []
     for pid, ev in graph.event_of.items():
-        if ev.kind != "place" or pid in consumed or pid in claimed:
+        if (ev.kind != "place" or pid in consumed or pid in claimed
+                or pid in graph.unit_of or pid in graph.context_parts):
             continue
         if not graph._out.get(ev) and not any(
                 e.b == ev for e in graph.edges):

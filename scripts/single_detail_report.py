@@ -1125,9 +1125,13 @@ def _render_build_sequence_section(detail) -> str:
     for step in steps:
         title = _html.escape(step["title"])
         head = f"<strong>{title}</strong>"
-        if step["why"] is not None:
+        if step["claim"] == "stage":
             head += (" &mdash; authored build strategy, declared and "
                      "checked, never derived (why: "
+                     f"{_html.escape(step['why'])})")
+        elif step["claim"] == "staging":
+            head += (" &mdash; authored staging claim, declared and "
+                     "checked (why: "
                      f"{_html.escape(step['why'])})")
         subs = []
         for name, bom, fab in step["places"]:
@@ -1139,6 +1143,10 @@ def _render_build_sequence_section(detail) -> str:
                         f"fastener contract (a bond or connector install "
                         f"unit; its process facts live on the connection's "
                         f"own assumptions)</li>")
+        for unit in step["joins"]:
+            subs.append(
+                f"<li>set {_html.escape(unit)} in place &mdash; join the "
+                f"completed bench unit into the root assembly</li>")
         for d in step["drives"]:
             subs.append(f"<li>drive: <code>{_html.escape(d)}</code></li>")
         items.append(f"<li>{head}<ul>{''.join(subs)}</ul></li>")

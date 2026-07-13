@@ -56,7 +56,8 @@ def derive_build_sequence(detail):
     to derive, and fabricating a section would be fake coverage)."""
     checks = getattr(detail, "_connection_checks", None)
     graph = getattr(checks, "event_graph", None) if checks is not None else None
-    if graph is None or (not graph.conn_labels and not graph.stages):
+    if graph is None or (not graph.conn_labels and not graph.stages
+                         and not graph.units):
         return None, ()
     return derive_reader_steps(graph), unordered_parts(graph)
 
@@ -67,8 +68,9 @@ def build_sequence_model(detail):
     surfaces can never disagree. ``None`` when no event graph exists.
 
     Returns ``(steps, loose_names)`` where each step is a dict:
-    ``title`` (the reader-step title), ``why`` (the authored stage's why,
-    or ``None`` for a per-connection install unit), ``places`` (name, BOM
+    ``title`` (the reader-step title), ``why`` (the authored stage/unit why,
+    or ``None`` for a per-connection install unit), ``claim`` (``stage``,
+    ``staging``, or ``None``), ``places`` (name, BOM
     label, fab note triples), ``drives`` (resolved-contract one-liners,
     per-field provenance included — the disclosure content scoped to the
     step), ``units`` (contract-less install-unit labels: bonds,
@@ -100,8 +102,12 @@ def build_sequence_model(detail):
             drives.extend(ri.describe() for ri in ris)
         out.append({
             "title": step.title,
-            "why": step.stage.why if step.stage is not None else None,
+            "why": (step.stage.why if step.stage is not None else
+                    step.unit.why if step.unit is not None else None),
+            "claim": ("stage" if step.stage is not None else
+                      "staging" if step.unit is not None else None),
             "places": places, "drives": drives, "units": units,
+            "joins": step.joins,
         })
     loose_names = tuple(graph.part_names.get(pid, pid) for pid in loose)
     return out, loose_names
@@ -114,7 +120,7 @@ def unordered_note(names) -> str:
         f"connection and claimed by no authored stage, so a printed "
         f"position would be an invention, not a derivation (a context "
         f"body's presence at any step is likewise underdetermined until a "
-        f"staging declaration exists — a future mechanism).")
+        f"staging declaration is authored).")
 
 
 def render_build_sequence_md(detail) -> str:
@@ -129,10 +135,14 @@ def render_build_sequence_md(detail) -> str:
     steps, loose_names = model
     lines = ["## Build sequence (derived)", "", SEQUENCE_INTRO, ""]
     for i, step in enumerate(steps, start=1):
-        if step["why"] is not None:
+        if step["claim"] == "stage":
             lines.append(
                 f"{i}. **{step['title']}** — authored build strategy, "
                 f"declared and checked, never derived (why: {step['why']})")
+        elif step["claim"] == "staging":
+            lines.append(
+                f"{i}. **{step['title']}** — authored staging claim, "
+                f"declared and checked (why: {step['why']})")
         else:
             lines.append(f"{i}. **{step['title']}**")
         for name, bom, fab in step["places"]:
@@ -143,6 +153,10 @@ def render_build_sequence_md(detail) -> str:
                 f"   - install {label} — no fastener contract (a bond or "
                 f"connector install unit; its process facts live on the "
                 f"connection's own assumptions)")
+        for unit in step["joins"]:
+            lines.append(
+                f"   - set {unit} in place — join the completed bench unit "
+                f"into the root assembly")
         for d in step["drives"]:
             lines.append(f"   - drive: {d}")
     if loose_names:
