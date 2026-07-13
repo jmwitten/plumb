@@ -1,5 +1,19 @@
 # Wave 1+2 progress ledger — detailgen framework roadmap
 
+## BRANCH RESET NOTE (2026-07-13, supersedes the push half of the rewrite note)
+
+GitHub (jmwitten/plumb) was recreated with a SINGLE-ROOT history: branch
+**main**, one initial commit (tree = the full working codebase at that
+moment, README retitled plumb). The working branch is now **main** — there
+is NO master. The full 633-commit pre-GitHub history is preserved LOCALLY
+on branch `history/pre-github-2026-07-13` (never push it); the
+authorship-rewrite commit map still resolves old citations within it.
+RULE for in-flight branches that predate the reset (the codex
+three-drawer-cabinet branch is the live case): land them on main by
+`git rebase --onto main <base>` or cherry-pick — NEVER `git merge`
+(unrelated histories; a merge would drag the whole archived ancestry into
+main). Push main after merges.
+
 ## HISTORY REWRITE NOTE (2026-07-13, after SESSION UPDATE 11)
 
 The repo was pushed to private GitHub (jmwitten/plumb) and its FULL history
