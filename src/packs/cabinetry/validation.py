@@ -398,7 +398,7 @@ def _validate_drawer_model(model) -> CabinetReport:
         bottom_rows.append((
             cell.cell_id,
             bottom.at_mm[2] - side.at_mm[2],
-            side.at_mm[2] - front.at_mm[2],
+            cell.bottom_clearance_mm,
             bottom.thickness_mm,
         ))
     bottom_ok = all(

@@ -44,6 +44,7 @@ class DrawerCellModel:
     contents_load_lb: float
     moving_mass_kg: float
     rated_moving_load_lb: float
+    bottom_clearance_mm: float
     part_ids: tuple[str, ...]
     machining_ids: tuple[str, ...]
     hardware_ids: tuple[str, ...]
@@ -179,7 +180,10 @@ def build_drawer_bank(
         cell_parts: list[PartModel] = []
         cell_machining: list[MachiningFeature] = []
         cell_hardware: list[HardwareSystem] = []
-        box_z = front_bottom_by_cell[cell.cell_id] + runner.bottom_clearance_mm
+        box_z = max(
+            front_bottom_by_cell[cell.cell_id] + runner.bottom_clearance_mm,
+            opening_origin_mm[2] + runner.bottom_clearance_mm,
+        )
         box_x = opening_origin_mm[0] + x_clearance
         box_y = opening_origin_mm[1]
 
@@ -453,6 +457,7 @@ def build_drawer_bank(
             contents_load_lb=cell.contents_load_lb,
             moving_mass_kg=moving_mass,
             rated_moving_load_lb=rated_moving_load,
+            bottom_clearance_mm=runner.bottom_clearance_mm,
             part_ids=tuple(part.part_id for part in cell_parts),
             machining_ids=tuple(feature.feature_id for feature in cell_machining),
             hardware_ids=tuple(system.system_id for system in cell_hardware),

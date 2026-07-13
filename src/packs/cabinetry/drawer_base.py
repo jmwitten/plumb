@@ -80,6 +80,29 @@ class DrawerBaseModel:
                 f"{[value.name for value in self.derived]}"
             ) from None
 
+    def catalog_manifest(self) -> dict[str, str]:
+        return {
+            "front_fastener": self.front_fastener.product_id,
+            "lateral_stabilizer": self.drawer_bank.stabilizer.product_id,
+            "locking_device": self.drawer_bank.locking_device.product_id,
+            "pull": self.drawer_bank.pull_product.product_id,
+            "runner": self.drawer_bank.runner.product_id,
+            "wall_anchor": self.wall_anchor.product_id,
+        }
+
+    def catalog_source_manifest(self) -> dict[str, str]:
+        return {
+            "front_fastener": self.front_fastener.source_url,
+            "lateral_stabilizer": self.drawer_bank.stabilizer.source_url,
+            "locking_device": self.drawer_bank.locking_device.source_url,
+            "pull": self.drawer_bank.pull_product.source_url,
+            "runner": self.drawer_bank.runner.source_url,
+            "wall_anchor": self.wall_anchor.source_url,
+        }
+
+    def sizing_policy_manifest(self) -> tuple[str, ...]:
+        return (self.section.cabinets[0].drawer_bank.sizing_policy_id,)
+
 
 def build_drawer_base_model(
     section: CabinetrySection, *, project_name: str
@@ -99,7 +122,8 @@ def build_drawer_base_model(
         opening_origin_mm=(
             shell.x0_mm + shell.profile.carcass_thickness_mm,
             shell.front_y_mm,
-            shell.base_z_mm + cabinet.toe_kick_height_mm,
+            shell.base_z_mm + cabinet.toe_kick_height_mm
+            + shell.profile.carcass_thickness_mm,
         ),
         opening_width_mm=shell.inside_width_mm,
         opening_height_mm=shell.body_height_mm,

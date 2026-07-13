@@ -170,16 +170,13 @@ class PackedProject:
             "packs": [ref.key for ref in expanded.packs],
             **expanded.sections,
         }
-        return _json_native({
+        payload = {
             "schema": "detailgen/packed-project/v1",
             "project": self.project_doc.name,
             "mode": model.mode,
             "packs": {self.pack_id: self.pack_version},
             "profile": model.profile.profile_id,
-            "catalogs": {
-                "hinge": model.hinge.product_id,
-                "wall_anchor": model.wall_anchor.product_id,
-            },
+            "catalogs": model.catalog_manifest(),
             "release_ready": self.release_ready,
             "base_validation": (
                 "not_run" if self._base_report is None
@@ -204,7 +201,14 @@ class PackedProject:
             "findings": [asdict(finding) for finding in self.report.findings],
             "evidence": [asdict(item) for item in self.report.evidence],
             "artifacts": self.artifacts.to_dict(),
-        })
+        }
+        catalog_sources = model.catalog_source_manifest()
+        if catalog_sources:
+            payload["catalog_sources"] = catalog_sources
+        sizing_policies = model.sizing_policy_manifest()
+        if sizing_policies:
+            payload["sizing_policies"] = sorted(sizing_policies)
+        return _json_native(payload)
 
     def manifest_json(self) -> str:
         return json.dumps(

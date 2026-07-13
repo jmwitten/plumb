@@ -52,6 +52,21 @@ class CabinetModel:
                 f"{[value.name for value in self.derived]}"
             ) from None
 
+    def catalog_manifest(self) -> dict[str, str]:
+        return {
+            "hinge": self.hinge.product_id,
+            "wall_anchor": self.wall_anchor.product_id,
+        }
+
+    def catalog_source_manifest(self) -> dict[str, str]:
+        # Preserve the v1 door-cabinet manifest byte-for-byte. Drawer products
+        # opt into source entries because their multi-product adapter contract
+        # requires the URLs at manifest level.
+        return {}
+
+    def sizing_policy_manifest(self) -> tuple[str, ...]:
+        return ()
+
 
 def build_model(section: CabinetrySection, *, project_name: str) -> CabinetModel:
     """Compose the existing two-door product over the common base shell."""
