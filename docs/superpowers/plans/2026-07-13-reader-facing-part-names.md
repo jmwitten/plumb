@@ -67,6 +67,11 @@ the presentation-only mutation test. Reuse the GLB parsing pattern already in
 `tests/test_viewer_data.py`; do not import private helpers from another test
 module.
 
+**Execution dependency:** run Tasks 1 → 2 → 4 → 3 → 5. Task 2 proves the
+generic projection with the two-rail fixture. Task 4 then authors the real
+caddy vocabulary. Task 3 deliberately follows it because its cross-document
+parity checks compile the caddy from disk.
+
 ---
 
 ### Task 1: Schema, loader, serializer, and placement plumbing
@@ -172,7 +177,7 @@ Commit: `stepdoc: add reader-facing part names`
 
 ```python
 def test_part_labels_number_duplicate_reader_names_once():
-    detail = compile_caddy()
+    detail = build_text(TWO_RAILS_YAML)
     labels = part_labels(detail.assembly.parts)
     rails = [labels[p.id] for p in detail.assembly.parts
              if p.reader_name == "Registration rail"]
@@ -183,7 +188,7 @@ def test_part_labels_number_duplicate_reader_names_once():
 
 
 def test_viewer_keeps_machine_keys_and_adds_reader_fields():
-    payload = build_viewer_payload(compile_caddy())
+    payload = build_viewer_payload(build_text(TWO_RAILS_YAML))
     assert "registration rail +X" in payload["parts"]
     row = payload["parts"]["registration rail +X"]
     assert row["reader_name"] == "Registration rail"
