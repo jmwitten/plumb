@@ -1,9 +1,9 @@
 """Runtime/graph acceptance probes for the STEPDOC +process increment.
 
 These fixtures stay synthetic and small: they pin the typed cure fact, the
-two process-order edges, runtime capability defense, fragment isolation, and
-the axis-3 falsifiability direction without depending on the caddy authoring
-or reader surfaces (Task 3).
+two process-order edges, runtime capability defense, fragment isolation,
+axis-3 falsifiability, and the Task-3 reader-process boundary independently
+from the shipped caddy authoring.
 """
 
 from __future__ import annotations
@@ -465,3 +465,152 @@ def test_process_linearization_is_connection_order_then_process_kind():
     assert order == eg.linearize(graph)
     assert order.index(eg.Event("process", "first glue", "cure")) < \
         order.index(eg.Event("process", "second glue", "cure"))
+
+
+def test_reader_cure_is_its_own_typed_step_and_splits_bond_from_target():
+    """CAT-K's presentation boundary: a process event is never swallowed by
+    a connection, authored stage, or bench-unit bucket.  The ReaderStep owns
+    the exact event/fact emitted by the graph, so renderers cannot rediscover
+    process truth from connection assumptions."""
+    assembly, glue, target = _glue_and_target()
+    authored = eg.ProcessFact(
+        kind="cure",
+        instructions=(
+            "Spread the selected adhesive on both prepared mating faces.",
+            "Clamp the joint in the label-required fixture state.",
+        ),
+        completion="selected_label_full_cure",
+        why="The selected adhesive creates this bond.",
+        provenance="authored_process_fact",
+    )
+    glue = Connection(
+        kind=glue.kind, parts=glue.parts, label=glue.label,
+        assumptions=glue.assumptions, process=(authored,))
+    claim = _after(why="Keep the registration datum fixed while screws drive.")
+    checks = compile_connections(assembly, [glue, target], after=(claim,))
+
+    steps = eg.derive_reader_steps(checks.event_graph)
+
+    assert [step.title for step in steps] == [
+        "install glue", "cure glue", "install target"]
+    cure_step = steps[1]
+    assert cure_step.process_event == eg.Event("process", "glue", "cure")
+    assert cure_step.process_fact is authored
+    assert cure_step.connections == ()
+    assert all(step.process_event is None for step in (steps[0], steps[2]))
+
+
+def test_reader_cure_hard_break_survives_bench_and_stage_grouping():
+    """A presentation grouping cannot swallow a real process barrier.  This
+    is the adversarial same-stage + same-bench case that would otherwise turn
+    bond -> cure -> target into a bucket-level cycle."""
+    assembly, glue, target = _glue_and_target()
+    claim = _after()
+    members = tuple(
+        part.id for conn in (glue, target)
+        for part in (*conn.parts, *conn.hardware))
+    staging = eg.ResolvedStaging(
+        mode="subassemblies",
+        units=(eg.ResolvedUnit("case", "assemble the case on the bench",
+                               members),))
+    stage = eg.ResolvedStage(
+        name="join case", why="One authored shop operation.",
+        connections=("glue", "target"))
+    checks = compile_connections(
+        assembly, [glue, target], sequence=(stage,), after=(claim,),
+        staging=staging)
+
+    steps = eg.derive_reader_steps(checks.event_graph)
+    titles = [step.title for step in steps]
+
+    assert titles == [
+        "bench case",
+        "bench case: stage 'join case' (declared order): install glue",
+        "cure glue",
+        "bench case: stage 'join case' (declared order): install target",
+        "set case in place",
+    ]
+    assert steps[2].process_fact is checks.event_graph.process_facts[
+        eg.Event("process", "glue", "cure")]
+    assert steps[1].stage is stage and steps[3].stage is stage
+
+
+def test_build_sequence_model_renders_typed_process_and_both_constraint_ends():
+    from types import SimpleNamespace
+
+    from detailgen.validation.build_sequence import (
+        build_sequence_model, render_build_sequence_md)
+
+    assembly, glue, target = _glue_and_target()
+    authored = eg.ProcessFact(
+        kind="cure",
+        instructions=(
+            "Spread adhesive on both prepared faces.",
+            "Maintain the selected label's fixture state.",
+        ),
+        completion="selected_label_full_cure",
+        why="This joint uses the selected adhesive bond.",
+        provenance="authored_process_fact",
+    )
+    glue = Connection(
+        kind=glue.kind, parts=glue.parts, label=glue.label,
+        assumptions=glue.assumptions, process=(authored,))
+    claim = _after(why="Preserve the registration datum while screws drive.")
+    checks = compile_connections(assembly, [glue, target], after=(claim,))
+    detail = SimpleNamespace(assembly=assembly, _connection_checks=checks)
+
+    model = build_sequence_model(detail)
+    assert model is not None
+    steps, _loose = model
+    process = next(step for step in steps if step["process"] is not None)
+    target_step = next(step for step in steps
+                       if "target" in step["connections"])
+
+    assert process["process"] == {
+        "event": eg.Event("process", "glue", "cure"),
+        "fact": authored,
+    }
+    assert process["order_claims"] == ({
+        "role": "source", "process_kind": "cure", "source": "glue",
+        "target": "target", "why": claim.why,
+        "provenance": eg.FAMILY_AUTHORED,
+    },)
+    assert target_step["order_claims"] == ({
+        "role": "target", "process_kind": "cure", "source": "glue",
+        "target": "target", "why": claim.why,
+        "provenance": eg.FAMILY_AUTHORED,
+    },)
+
+    md = render_build_sequence_md(detail)
+    assert "Spread adhesive on both prepared faces." in md
+    assert "Maintain the selected label's fixture state." in md
+    assert "selected adhesive label's full-cure/full-strength condition" in md
+    assert "under the actual shop conditions" in md
+    assert "No generic duration is represented" in md
+    assert "authored_process_fact" in md
+    assert ("do not install target until this cure completes — "
+            "authored_sequence" in md)
+    assert ("complete cure for glue before installing target — "
+            "authored_sequence" in md)
+    assert md.count(claim.why) == 2
+
+
+def test_epistemic_contract_uses_actual_process_edges_and_point_constraint():
+    from detailgen.validation.install import epistemic_contract_rows
+
+    assembly, glue, target = _glue_and_target()
+    claim = _after(why="Preserve this fixture's registration datum.")
+    checks = compile_connections(assembly, [glue, target], after=(claim,))
+
+    rendered = "\n".join(" | ".join(row)
+                           for row in epistemic_contract_rows(checks))
+
+    assert "Bond/install before process cure" in rendered
+    assert "DERIVED" in rendered
+    assert "drive(glue, install)" in rendered
+    assert "process(glue, cure)" in rendered
+    assert "Glued.process_events" in rendered
+    assert "Authored process point constraints" in rendered
+    assert "DECLARED" in rendered
+    assert "glue" in rendered and "target" in rendered
+    assert claim.why in rendered

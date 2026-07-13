@@ -1241,12 +1241,35 @@ def epistemic_contract_rows(checks) -> list[tuple[str, str, str]]:
         declared_staging = (
             f"this detail authors assembly mode {staging.mode!r}: "
             f"{units}{trust}")
+    derived_process = [
+        fact for fact in tuple(getattr(checks, "derived", ()) or ())
+        if fact.rule.endswith(".process_events")
+        and "event order" in fact.fact]
+    if derived_process:
+        process_sources = "; ".join(
+            f"{fact.connection}: {fact.fact} (source: {fact.rule})"
+            for fact in derived_process)
+        process_sources = f"this detail derives: {process_sources}"
+    else:
+        process_sources = "no typed process event is emitted by this detail"
+    after = tuple(getattr(checks, "after", ()) or ())
+    if after:
+        declared_after = "; ".join(
+            f"{ref.kind} for {ref.connection!r} -> {claim.connection!r} "
+            f"(why: {claim.why})"
+            for claim in after for ref in claim.after)
+        declared_after = f"this detail authors: {declared_after}"
+    else:
+        declared_after = "none authored by this detail"
     return [
         ("Structural necessity (a member exists before its own "
          "connection's fasteners are driven)",
          "DERIVED",
          "derived from connection membership; points only INTO a drive "
          "event, so no derived fact ever clears a corridor"),
+        ("Bond/install before process cure",
+         "DERIVED",
+         process_sources),
         ("Technique defaults (a ConnectionType's own installed_before "
          "edges, lifted to events)",
          "DECLARED (type-level construction knowledge, defended in the "
@@ -1256,6 +1279,10 @@ def epistemic_contract_rows(checks) -> list[tuple[str, str, str]]:
          "DECLARED (authored claim; a why is required and prints with "
          "every verdict that leans on it)",
          declared_seq),
+        ("Authored process point constraints",
+         "DECLARED (authored claim; a why is required and prints on both "
+         "the process step and the dependent connection step)",
+         declared_after),
         ("Bench events before join (R-1)",
          "DERIVED",
          "all place/drive events inside a declared bench unit precede that "

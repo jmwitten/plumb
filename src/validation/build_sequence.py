@@ -22,7 +22,8 @@ and the HTML build document (``scripts/single_detail_report.py``).
 
 from __future__ import annotations
 
-from ..assemblies.event_graph import derive_reader_steps, unordered_parts
+from ..assemblies.event_graph import (
+    FAMILY_AUTHORED, derive_reader_steps, unordered_parts)
 from ..rendering.part_labels import part_labels
 
 #: The standing intro every rendered build sequence carries — the section's
@@ -32,7 +33,9 @@ SEQUENCE_INTRO = (
     "Derived from the construction process graph — the same derived and "
     "declared order facts the installability verdicts are judged on. No "
     "step title, grouping, or placement line is hand-typed; authored stage "
-    "and staging rationales are quoted and labeled. The printed order "
+    "and staging rationales are quoted and labeled, as are typed point-"
+    "constraint rationales; typed process facts provide process "
+    "instructions. The printed order "
     "is ONE valid linearization, chosen deterministically for "
     "presentation: every verdict holds for EVERY build order that respects "
     "the order facts, so a builder who deviates from this printout but "
@@ -76,7 +79,9 @@ def build_sequence_model(detail):
     label, fab note triples), ``drives`` (resolved-contract one-liners,
     per-field provenance included — the disclosure content scoped to the
     step), ``units`` (contract-less install-unit labels: bonds,
-    connectors)."""
+    connectors), ``process`` (the exact event + typed fact carried by the
+    ReaderStep), and ``order_claims`` (authored process point constraints
+    that touch this step, printed on both source and target)."""
     steps, loose = derive_build_sequence(detail)
     if steps is None:
         return None
@@ -104,6 +109,23 @@ def build_sequence_model(detail):
             if not ris:
                 units.append(label)
             drives.extend(ri.describe() for ri in ris)
+        order_claims = []
+        for claim in graph.constraints:
+            for ref in claim.after:
+                common = {
+                    "process_kind": ref.kind,
+                    "source": ref.connection,
+                    "target": claim.connection,
+                    "why": claim.why,
+                    "provenance": FAMILY_AUTHORED,
+                }
+                if (step.process_event is not None
+                        and step.process_event.kind == "process"
+                        and step.process_event.subject == ref.connection
+                        and step.process_event.group == ref.kind):
+                    order_claims.append({"role": "source", **common})
+                if claim.connection in step.connections:
+                    order_claims.append({"role": "target", **common})
         out.append({
             "title": step.title,
             "why": (step.stage.why if step.stage is not None else
@@ -112,6 +134,11 @@ def build_sequence_model(detail):
                       "staging" if step.unit is not None else None),
             "places": places, "drives": drives, "units": units,
             "joins": step.joins,
+            "connections": step.connections,
+            "process": ({"event": step.process_event,
+                         "fact": step.process_fact}
+                        if step.process_event is not None else None),
+            "order_claims": tuple(order_claims),
         })
     loose_names = tuple(
         labels_by_id[pid].display_name
@@ -159,8 +186,37 @@ def render_build_sequence_md(detail) -> str:
         for label in step["units"]:
             lines.append(
                 f"   - install {label} — no fastener contract (a bond or "
-                f"connector install unit; its process facts live on the "
-                f"connection's own assumptions)")
+                f"connector install unit; any typed process fact follows "
+                f"as its own reader step)")
+        if step["process"] is not None:
+            fact = step["process"]["fact"]
+            lines.append(
+                f"   - process fact: {fact.provenance} "
+                f"(why: {fact.why})")
+            for instruction in fact.instructions:
+                lines.append(f"   - {instruction}")
+            if fact.completion == "selected_label_full_cure":
+                lines.append(
+                    "   - complete only when the selected adhesive label's "
+                    "full-cure/full-strength condition is met under the "
+                    "actual shop conditions. No generic duration is "
+                    "represented.")
+            else:
+                lines.append(
+                    f"   - completion condition: {fact.completion} (no "
+                    "generic duration is represented)")
+        for claim in step["order_claims"]:
+            if claim["role"] == "source":
+                lines.append(
+                    f"   - do not install {claim['target']} until this "
+                    f"{claim['process_kind']} completes — "
+                    f"{claim['provenance']} (why: {claim['why']})")
+            else:
+                lines.append(
+                    f"   - complete {claim['process_kind']} for "
+                    f"{claim['source']} before installing "
+                    f"{claim['target']} — {claim['provenance']} "
+                    f"(why: {claim['why']})")
         for unit in step["joins"]:
             lines.append(
                 f"   - set {unit} in place — join the completed bench unit "

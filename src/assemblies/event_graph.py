@@ -270,6 +270,8 @@ class ReaderStep:
     parts_placed: tuple = ()  # part ids whose place events fold into it
     unit: ResolvedUnit | None = None  # authored bench frame, when applicable
     joins: tuple = ()          # unit names joined/set into the root assembly
+    process_event: Event | None = None
+    process_fact: ProcessFact | None = None
 
 
 class EventOrderCycleError(ValueError):
@@ -1215,24 +1217,86 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
     conn_idx = {label: i for i, label in enumerate(graph.conn_labels)}
 
     # bucket key: ("unit", name), ("unit-stage", unit, chain, stage),
-    # ("join", name),
-    # ("stage", chain, name), or ("conn", label)
+    # their process-adjacent per-connection variants, ("process", label,
+    # kind), ("join", name), ("stage", chain, name), or ("conn", label).
+    # A real process is a hard presentation break: if its bond and dependent
+    # target were left in one stage/unit bucket, bond -> cure -> target would
+    # collapse into a false bucket-level cycle and the wait would disappear.
     buckets: dict[tuple, dict] = {}
+
+    process_adjacent = {
+        label for label, events in graph.processes_of.items() if events}
+    process_adjacent.update(claim.connection for claim in graph.constraints)
 
     unit_idx = {u.name: i for i, u in enumerate(
         graph.staging.units if graph.staging is not None else ())}
 
     def bucket_for(key: tuple, stage: ResolvedStage | None, title: str,
                    *, unit: ResolvedUnit | None = None, joins=(),
-                   preferred=None):
+                   preferred=None, process_event=None, process_fact=None):
         b = buckets.get(key)
         if b is None:
             b = {"stage": stage, "title": title, "connections": [],
                  "parts": [], "first": len(order) + 1, "events": [],
                  "unit": unit, "joins": tuple(joins),
-                 "preferred": preferred}
+                 "preferred": preferred,
+                 "process_event": process_event,
+                 "process_fact": process_fact}
             buckets[key] = b
         return b
+
+    def connection_bucket(label: str):
+        """Return the presentation bucket for one connection's drive events.
+
+        Only process-adjacent connections split out of their ordinary
+        stage/bench grouping.  This preserves existing grouping everywhere
+        no real process barrier exists while making cure non-foldable.
+        """
+        drives = graph.drives_of[label]
+        frame = graph.frame_of[drives[0]] if drives else "root"
+        split = label in process_adjacent
+        st = stage_of_conn.get(label)
+        first = min((pos.get(ev, len(order)) for ev in drives),
+                    default=len(order))
+        if frame != "root":
+            unit = graph.units[frame]
+            if st is not None and split:
+                key = ("unit-stage-conn", frame, st.chain, st.name, label)
+                return bucket_for(
+                    key, st,
+                    f"bench {frame}: stage {st.name!r} (declared order): "
+                    f"install {label}",
+                    unit=unit,
+                    preferred=(0, unit_idx[frame],
+                               1 + stage_order[(st.chain, st.name)],
+                               first, label))
+            if st is not None:
+                key = ("unit-stage", frame, st.chain, st.name)
+                return bucket_for(
+                    key, st,
+                    f"bench {frame}: stage {st.name!r} (declared order)",
+                    unit=unit,
+                    preferred=(0, unit_idx[frame],
+                               1 + stage_order[(st.chain, st.name)]))
+            if split:
+                key = ("unit-conn", frame, label)
+                return bucket_for(
+                    key, None, f"bench {frame}: install {label}", unit=unit,
+                    preferred=(0, unit_idx[frame], 1, first, label))
+            return bucket_for(
+                ("unit", frame), None, f"bench {frame}", unit=unit,
+                preferred=(0, unit_idx[frame], 0))
+        if st is not None and split:
+            key = ("stage-conn", st.chain, st.name, label)
+            return bucket_for(
+                key, st,
+                f"stage {st.name!r} (declared order): install {label}")
+        if st is not None:
+            key = ("stage", st.chain, st.name)
+            return bucket_for(
+                key, st, f"stage {st.name!r} (declared order)")
+        return bucket_for(
+            ("conn", label), None, f"install {label}")
 
     # Create unit and join buckets in declaration order even when a unit has
     # only place events or a connection-free join. This is presentation state,
@@ -1250,35 +1314,28 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
 
     for label in graph.conn_labels:
         drives = graph.drives_of[label]
-        frame = graph.frame_of[drives[0]] if drives else "root"
-        if frame != "root":
-            unit = graph.units[frame]
-            st = stage_of_conn.get(label)
-            if st is not None:
-                key = ("unit-stage", frame, st.chain, st.name)
-                b = bucket_for(
-                    key, st,
-                    f"bench {frame}: stage {st.name!r} (declared order)",
-                    unit=unit,
-                    preferred=(0, unit_idx[frame],
-                               1 + stage_order[(st.chain, st.name)]))
-            else:
-                key = ("unit", frame)
-                b = bucket_for(key, None, f"bench {frame}", unit=unit,
-                               preferred=(0, unit_idx[frame], 0))
-        else:
-            st = stage_of_conn.get(label)
-            if st is not None:
-                key = ("stage", st.chain, st.name)
-                b = bucket_for(key, st,
-                               f"stage {st.name!r} (declared order)")
-            else:
-                key = ("conn", label)
-                b = bucket_for(key, None, f"install {label}")
+        b = connection_bucket(label)
         b["connections"].append(label)
         for ev in drives:
             b["events"].append(ev)
             b["first"] = min(b["first"], pos.get(ev, len(order)))
+
+        # A process event is its own reader step and directly carries the
+        # typed graph fact.  Renderers must never re-call connections() or
+        # search assumptions to reconstruct this content.
+        for ev in graph.processes_of.get(label, ()):
+            frame = graph.frame_of.get(ev, "root")
+            unit = graph.units.get(frame)
+            preferred = None
+            if unit is not None:
+                preferred = (0, unit_idx[frame], 2,
+                             pos.get(ev, len(order)), label, ev.group)
+            pb = bucket_for(
+                ("process", label, ev.group), None,
+                f"{ev.group} {label}", unit=unit, preferred=preferred,
+                process_event=ev, process_fact=graph.process_facts[ev])
+            pb["events"].append(ev)
+            pb["first"] = min(pb["first"], pos.get(ev, len(order)))
 
     # fold place events: stage-claimed parts to their stage's step; every
     # other consumed part to its FIRST consuming connection's step.
@@ -1320,11 +1377,9 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
         if not consumers:
             continue  # no order fact — the renderer says so
         first = min(consumers, key=lambda lbl: conn_idx[lbl])
-        st2 = stage_of_conn.get(first)
-        key = (("stage", st2.chain, st2.name) if st2 is not None
-               else ("conn", first))
-        buckets[key]["parts"].append(p_id)
-        buckets[key]["events"].append(ev)
+        b = connection_bucket(first)
+        b["parts"].append(p_id)
+        b["events"].append(ev)
 
     # Topologically order presentation buckets by the real graph edges. The
     # preferred key makes independent units read bench-all, then set-all, then
@@ -1367,7 +1422,9 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
             title=b["title"], stage=b["stage"],
             connections=tuple(b["connections"]),
             parts_placed=tuple(sorted(b["parts"])),
-            unit=b["unit"], joins=b["joins"]))
+            unit=b["unit"], joins=b["joins"],
+            process_event=b["process_event"],
+            process_fact=b["process_fact"]))
     return tuple(steps)
 
 
