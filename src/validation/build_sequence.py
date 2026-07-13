@@ -29,8 +29,9 @@ from ..assemblies.event_graph import derive_reader_steps, unordered_parts
 #: linearizations, accretion + P1 stated).
 SEQUENCE_INTRO = (
     "Derived from the construction process graph — the same derived and "
-    "declared order facts the installability verdicts are judged on; no "
-    "step title, order, or sentence here is hand-typed. The printed order "
+    "declared order facts the installability verdicts are judged on. No "
+    "step title, grouping, or placement line is hand-typed; authored stage "
+    "and staging rationales are quoted and labeled. The printed order "
     "is ONE valid linearization, chosen deterministically for "
     "presentation: every verdict holds for EVERY build order that respects "
     "the order facts, so a builder who deviates from this printout but "

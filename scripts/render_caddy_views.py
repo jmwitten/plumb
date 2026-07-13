@@ -111,7 +111,7 @@ print("done")
 # --- arm-ghosted variants (context hidden so the joinery is inspectable) ------
 draw("g1_iso.png", 24, -55, "ISO (arm hidden) — 3 boards + 2 hidden full-depth registration rails",
      hide=("sofa arm",))
-draw("g2_joint.png", 30, -60, "ZOOM +X corner (arm hidden): 1x6 rail screwed up into the top + into the side face (upper + lower)",
+draw("g2_joint.png", 30, -60, "ZOOM +X corner (arm hidden): 1x6 rail glued to the top + screwed into the side face (upper + lower)",
      lims=([40, -60, -155], [125, 60, 40]), hide=("sofa arm",))
 draw("g3_underside.png", -35, -55, "UNDERSIDE (arm hidden): deep rails register + fasten the top to the sides, no show-face screws",
      hide=("sofa arm",))

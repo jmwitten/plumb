@@ -312,7 +312,8 @@ def test_install_disclosures_reach_the_per_detail_reader_surfaces(treb, tmp_path
     assert "### Epistemic contract — where each order fact comes from" in md
     assert "none authored by this detail" in md
     assert "## Build sequence (derived)" in md
-    assert "no step title, order, or sentence here is hand-typed" in md
+    assert "No step title, grouping, or placement line is hand-typed" in md
+    assert "authored stage and staging rationales are quoted and labeled" in md
     assert md.count("**install ") == 13   # the trebuchet's 13 install units
     assert "SEQUENCE-PROVEN" not in md.replace(
         "SEQUENCE-PROVEN — a rung RESERVED", "")

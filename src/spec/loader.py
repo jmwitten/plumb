@@ -557,10 +557,14 @@ def _build_subassembly(raw: dict, index: int,
         raise SpecSchemaError(
             f"{ctx}: expected a mapping with name, parts, and why")
     f = _take(raw, {"name": True, "parts": True, "why": True}, ctx)
-    name = str(f["name"]).strip()
+    name = f["name"].strip() if isinstance(f["name"], str) else ""
     if not name:
         raise SpecSchemaError(f"{ctx}: 'name' must be non-empty")
-    why = str(f["why"]).strip()
+    if name == "root":
+        raise SpecSchemaError(
+            f"{ctx}: subassembly name 'root' is reserved for the root build "
+            f"frame; choose a distinct bench-unit name.")
+    why = f["why"].strip() if isinstance(f["why"], str) else ""
     if not why:
         raise SpecSchemaError(
             f"{ctx} ({name!r}): 'why' is required and must be non-empty — "
@@ -591,7 +595,7 @@ def _build_assembly(raw: dict, seq_ctx: str) -> AuthoredAssembly:
         raise SpecSchemaError(
             f"{ctx}.mode: choose one of {list(ASSEMBLY_MODES)}, got "
             f"{f['mode']!r}.")
-    why = str(f["why"]).strip()
+    why = f["why"].strip() if isinstance(f["why"], str) else ""
     if not why:
         raise SpecSchemaError(
             f"{ctx}: 'why' is required and must be non-empty — a staging "
@@ -609,13 +613,13 @@ def _build_stage(raw: dict, index: int, seq_ctx: str) -> AuthoredStage:
     f = _take(raw, {
         "name": True, "connections": False, "parts": False, "why": True,
     }, ctx)
-    name = str(f["name"]).strip()
+    name = f["name"].strip() if isinstance(f["name"], str) else ""
     if not name:
         raise SpecSchemaError(
             f"{ctx}: 'name' must be non-empty — stages are referenced by "
             f"name in the uniqueness/conflict diagnostics above."
         )
-    why = str(f["why"]).strip()
+    why = f["why"].strip() if isinstance(f["why"], str) else ""
     if not why:
         raise SpecSchemaError(
             f"{ctx} ({name!r}): 'why' is required and must be non-empty — "

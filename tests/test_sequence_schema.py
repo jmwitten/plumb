@@ -348,6 +348,7 @@ def test_assembly_mode_is_a_loud_closed_vocabulary(mode):
 @pytest.mark.parametrize("assembly", [
     {"mode": "bench_then_set"},
     {"mode": "bench_then_set", "why": "   "},
+    {"mode": "bench_then_set", "why": None},
 ])
 def test_assembly_claim_requires_a_nonempty_why(assembly):
     with pytest.raises(SpecSchemaError) as e:
@@ -364,11 +365,34 @@ def test_scalar_assembly_shorthand_is_rejected_because_it_cannot_carry_why():
 @pytest.mark.parametrize("unit", [
     {"name": "side_a", "parts": ["leg_a"]},
     {"name": "side_a", "parts": ["leg_a"], "why": "   "},
+    {"name": "side_a", "parts": ["leg_a"], "why": None},
+    {"name": None, "parts": ["leg_a"], "why": "a real reason"},
 ])
 def test_subassembly_claim_requires_a_nonempty_why(unit):
     with pytest.raises(SpecSchemaError) as e:
         _load(_base_doc({"subassemblies": [unit]}))
-    assert "why" in str(e.value)
+    expected = "name" if unit.get("name") is None else "why"
+    assert expected in str(e.value)
+
+
+def test_root_is_reserved_and_cannot_be_a_subassembly_name():
+    seq = {"subassemblies": [
+        {"name": "root", "parts": ["leg_a"],
+         "why": "would collide with the root-frame sentinel"}]}
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_base_doc(seq))
+    msg = str(e.value)
+    assert "root" in msg and "reserved" in msg and "frame" in msg
+
+
+@pytest.mark.parametrize("stage", [
+    {"name": None, "parts": ["leg_a"], "why": "a real reason"},
+    {"name": "s0", "parts": ["leg_a"], "why": None},
+])
+def test_stage_null_name_or_why_is_not_stringified(stage):
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_base_doc({"stages": [stage]}))
+    assert "non-empty" in str(e.value) or "required" in str(e.value)
 
 
 def test_subassembly_requires_at_least_one_part():

@@ -227,6 +227,17 @@ def test_frame_joinery_uses_existing_words_honestly(frame):
             assert "bears_on" in edge_kinds  # the cap genuinely seats
 
 
+def test_cap_screw_heads_are_authored_flush_while_inner_rail_heads_may_be_proud(frame):
+    detail, _report = frame
+    installs = detail._connection_checks.installs
+    caps = [ri for ri in installs if ri.role == "cap_screws"]
+    rails = [ri for ri in installs if ri.role == "cleat_screws"]
+    assert len(caps) == 4 and len(rails) == 4
+    assert all(ri.contract.head == "flush_countersunk" for ri in caps)
+    assert all(ri.provenance_map["head"] == "authored_override" for ri in caps)
+    assert all(ri.contract.head == "proud" for ri in rails)
+
+
 def test_prose_truthfulness_guard(frame, tmp_path):
     import json
     detail, _report = frame
@@ -250,6 +261,24 @@ def test_prose_truthfulness_guard(frame, tmp_path):
     for title in ("bench side +X", "bench side -X",
                   "set side +X in place", "set side -X in place"):
         assert title in doc
+    from html import unescape
+    visible = unescape(doc).lower()
+    assert "rail screw stations" in visible
+    assert "0.75in from each rail end" in visible
+    assert "0.75in and 2.75in below the rail top" in visible
+    assert "cap screw stations" in visible and "1.75in in from each side edge" in visible
+    assert "0.75in from the front and back body edges" in visible
+    assert "tools:" in visible and "countersink bit" in visible and "clamps" in visible
+    assert "required loose accessory" in visible and "adhesive metric rule" in visible
+    assert "prototype gate" in visible and "do not use" in visible
+    assert "verify the intended test protocol" in visible
+    assert "stud and screw stations are free to tune" not in visible
+    assert "scores compare to published norms" not in visible
+    assert "leveling nuts" not in visible and "natural stone" not in visible
+    assert '"type":"existing context"' in visible
+    cap_lines = [line for line in visible.split("install contract")
+                 if "'cap_screws'" in line]
+    assert cap_lines and all("head=flush_countersunk" in line for line in cap_lines)
     assert doc.index("bench side +X") < doc.index("bench side -X") < \
         doc.index("set side +X in place") < doc.index("set side -X in place")
     low = doc.lower()

@@ -102,6 +102,15 @@ def test_compiles_and_validates_with_declared_bench_staging(caddy):
     assert report.blocking == [] and report.ok
 
 
+def test_interior_caddy_screw_heads_are_authored_flush_not_proud(caddy):
+    detail, _report = caddy
+    installs = detail._connection_checks.installs
+    assert len(installs) == 2
+    assert all(ri.contract.head == "flush_countersunk" for ri in installs)
+    assert all(ri.provenance_map["head"] == "authored_override"
+               for ri in installs)
+
+
 def test_every_board_has_expected_fabrication_record(caddy):
     """Each fabricated board carries a ProcessRecord whose steps are exactly the
     operations a builder performs — crosscut + ease on every board, plus the cup
@@ -387,11 +396,27 @@ def test_build_sequence_derives_bench_then_set_and_does_not_list_arm_loose(caddy
     assert "set whole detail in place" in titles
     assert titles.index("bench whole detail") < \
         titles.index("set whole detail in place")
-    assert "Glue and clamp both registration rails" in steps[0]["why"]
+    # The staging defense names only the frame/context claim. Glue/cure/screw
+    # process order is not representable until +process and must not be smuggled
+    # into a reader step as if the CPG had checked it.
+    why = steps[0]["why"]
+    assert "assembled off the sofa" in why and "DECLARED TRUST" in why
+    assert "then drive" not in why and "cure" not in why.lower()
     assert steps[0]["claim"] == "staging"
     assert steps[titles.index("set whole detail in place")]["joins"] == \
         ("whole detail",)
     assert "sofa arm" not in loose
+
+
+def test_reader_configuration_formats_values_from_the_compiled_namespace():
+    if str(_REPO / "scripts") not in sys.path:
+        sys.path.insert(0, str(_REPO / "scripts"))
+    import single_detail_report as SDR
+
+    value = {"notes": [("Cut", "{top_len:g}in / {station:.2f}in")]}
+    assert SDR._format_reader_data(
+        value, {"top_len": 9.5, "station": 2.15}) == {
+            "notes": [("Cut", "9.5in / 2.15in")]}
 
 
 def test_visual_review_store_is_valid_and_grounded():
@@ -528,6 +553,27 @@ def test_single_detail_html_build_document(tmp_path):
     assert "1x6 lumber" in vis and "5/4x6 decking" in vis
     assert "structural screw" in vis.lower()
     assert "sofa arm (existing)" in vis and "Boulder (existing)" not in vis
+    low = vis.lower()
+    assert "five-piece saddle" in low
+    assert "flush with the top-board ends" in low
+    assert "inner face sits 1in outside" in low
+    assert "top cut formula" in low and "9.5in" in low
+    assert "rail layout" in low and "6.5in apart" in low
+    assert "screw stations" in low and "2.15in" in low and "3.35in" in low
+    assert "0.75in and 4in below" in low
+    assert "tools:" in low and "3.5in opening" in low and "hole saw" in low
+    assert "drill/driver" in low
+    assert "consumables:" in low and "water-resistant finish" in low
+    assert "intended cup" in low and "fit template" in low
+    assert "drill press" in low and "side handle" in low and "jigsaw" in low
+    assert "workpiece clamped" in low
+    assert "head=flush_countersunk" in low and "head=proud" not in low
+    assert "longitudinal sliding is not analyzed" in low
+    # Hidden viewer metadata is reader-visible on hover and must use the
+    # domain part, not the rectangular primitive used to approximate it.
+    raw = html.lower()
+    assert "leveling nuts" not in raw and "natural stone" not in raw
+    assert '"type":"existing context"' in raw
 
     # a real, self-contained document, not a stub.
     assert info["size_bytes"] > 200_000
@@ -589,7 +635,8 @@ def test_caddy_doc_prose_describes_the_current_rail_joint(tmp_path):
     # NEGATIVE: the retired pre-D1 joint narrative is gone. These phrases described
     # ONLY the top board screwed straight down into the side's end grain on the show
     # face — impossible for the hidden-rail joint, so their presence = stale prose.
-    for stale in ("screwed straight down", "screw stations", "screws per joint"):
+    for stale in ("screwed straight down", "top-face screw stations",
+                  "screws per joint"):
         assert stale not in vis, f"stale pre-D1 joint prose in caddy doc: {stale!r}"
 
 

@@ -5,10 +5,11 @@
 # needed — the top plate, which IS the instrument (the scale/reach surface) — and
 # construction lumber for everything else. One 8-ft 2x4 yields the whole frame.
 #
-# The METROLOGY CONTRACT IS UNCHANGED and identical to the ply box: reach surface
-# at 12in, top plate overhanging the foot plane by EXACTLY 23cm (foot_line_cm /
-# 2.54 = 9.055in), President's Challenge / FitnessGram — scores compare to
-# published norms. Same register: FUNCTIONAL-DOMINANT measurement instrument.
+# The CALIBRATION GEOMETRY is unchanged from the ply variant: reach surface at
+# 12in, top plate overhanging the foot plane by EXACTLY 23cm (foot_line_cm /
+# 2.54 = 9.055in). Those dimensions do not by themselves establish equivalence
+# to any named assessment protocol; the operator must verify the intended test.
+# Same register: FUNCTIONAL-DOMINANT measurement instrument.
 #
 # FRAME FORM (design pass FRAME-A, "legs are the footplates"): in the protocol the
 # tester's feet sit roughly shoulder-width apart — so the two FRONT LEGS, 2x4s
@@ -58,6 +59,8 @@ params:
   screw_dia: 0.19
   screw_len_v: 1.5        # plate cap screw: through 3/4 ply + 3/4 into leg end grain
   screw_len_h: 3.0        # rail screw: through the 1.5 rail + 1.5 into the leg face
+  rail_screw_drop_u: 0.75 # upper row below the rail top
+  rail_screw_drop_l: 2.75 # lower row below the rail top
 
 # --- derived: every fit relationship, from the four governing dims ------------------
 derived:
@@ -73,6 +76,9 @@ derived:
   front_leg_mid_y: "= stud_thk / 2"              # 0.75
   back_leg_mid_y: "= box_depth - stud_thk / 2"   # 11.25
   rail_screw_mid_z: "= rail_bot_z + stud_w / 2"  # 9.5 — rail screw drive height
+  rail_screw_z_u: "= rail_top_z - rail_screw_drop_u"
+  rail_screw_z_l: "= rail_top_z - rail_screw_drop_l"
+  cap_edge_x: "= outer_x - leg_mid_x"             # 1.75 from each top side edge
 
 components:
   # EXISTING floor — plain slab, top at Z=0 (stool/caddy/ply-box pattern).
@@ -159,42 +165,42 @@ components:
     type: structural_screw
     name: rail screw front +X hi
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["$rail_inner_x", "$front_leg_mid_y", "10.5 in"], rotate: [["Y", -90]]}}
+    place: {raw: {at: ["$rail_inner_x", "$front_leg_mid_y", "$rail_screw_z_u"], rotate: [["Y", -90]]}}
   - id: rscrew_fp1
     type: structural_screw
     name: rail screw front +X lo
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["$rail_inner_x", "$front_leg_mid_y", "8.5 in"], rotate: [["Y", -90]]}}
+    place: {raw: {at: ["$rail_inner_x", "$front_leg_mid_y", "$rail_screw_z_l"], rotate: [["Y", -90]]}}
   - id: rscrew_bp0
     type: structural_screw
     name: rail screw back +X hi
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["$rail_inner_x", "$back_leg_mid_y", "10.5 in"], rotate: [["Y", -90]]}}
+    place: {raw: {at: ["$rail_inner_x", "$back_leg_mid_y", "$rail_screw_z_u"], rotate: [["Y", -90]]}}
   - id: rscrew_bp1
     type: structural_screw
     name: rail screw back +X lo
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["$rail_inner_x", "$back_leg_mid_y", "8.5 in"], rotate: [["Y", -90]]}}
+    place: {raw: {at: ["$rail_inner_x", "$back_leg_mid_y", "$rail_screw_z_l"], rotate: [["Y", -90]]}}
   - id: rscrew_fm0
     type: structural_screw
     name: rail screw front -X hi
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["= -rail_inner_x", "$front_leg_mid_y", "10.5 in"], rotate: [["Y", 90]]}}
+    place: {raw: {at: ["= -rail_inner_x", "$front_leg_mid_y", "$rail_screw_z_u"], rotate: [["Y", 90]]}}
   - id: rscrew_fm1
     type: structural_screw
     name: rail screw front -X lo
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["= -rail_inner_x", "$front_leg_mid_y", "8.5 in"], rotate: [["Y", 90]]}}
+    place: {raw: {at: ["= -rail_inner_x", "$front_leg_mid_y", "$rail_screw_z_l"], rotate: [["Y", 90]]}}
   - id: rscrew_bm0
     type: structural_screw
     name: rail screw back -X hi
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["= -rail_inner_x", "$back_leg_mid_y", "10.5 in"], rotate: [["Y", 90]]}}
+    place: {raw: {at: ["= -rail_inner_x", "$back_leg_mid_y", "$rail_screw_z_u"], rotate: [["Y", 90]]}}
   - id: rscrew_bm1
     type: structural_screw
     name: rail screw back -X lo
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["= -rail_inner_x", "$back_leg_mid_y", "8.5 in"], rotate: [["Y", 90]]}}
+    place: {raw: {at: ["= -rail_inner_x", "$back_leg_mid_y", "$rail_screw_z_l"], rotate: [["Y", 90]]}}
 
 # --- connections: the honest joinery (Construction-Graph edges) ---------------------
 connections:
@@ -206,24 +212,28 @@ connections:
     params: {n_screws: 1}
     parts: [leg_fp, top]
     hardware: [cscrew_fp]
+    install: {head: flush_countersunk}
     assumptions: ["Screw bites the leg's top END grain; end-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
   - type: rail_cap_screwed
     label: "top plate -> front -X leg top (screwed down)"
     params: {n_screws: 1}
     parts: [leg_fm, top]
     hardware: [cscrew_fm]
+    install: {head: flush_countersunk}
     assumptions: ["Screw bites the leg's top END grain; end-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
   - type: rail_cap_screwed
     label: "top plate -> back +X leg top (screwed down)"
     params: {n_screws: 1}
     parts: [leg_bp, top]
     hardware: [cscrew_bp]
+    install: {head: flush_countersunk}
     assumptions: ["Screw bites the leg's top END grain; end-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
   - type: rail_cap_screwed
     label: "top plate -> back -X leg top (screwed down)"
     params: {n_screws: 1}
     parts: [leg_bm, top]
     hardware: [cscrew_bm]
+    install: {head: flush_countersunk}
     assumptions: ["Screw bites the leg's top END grain; end-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
   # Each rail is screwed flat against its two legs' inner EDGES — the rail's
   # wide FACE to the leg's narrow (1.5in) edge, LONG grain both sides (review-
@@ -268,16 +278,20 @@ sequence:
       parts: [leg_fp, leg_bp, rail_pos]
       why: >-
         Lay the +X front leg, back leg, and side rail flat and clamp them square
-        on the bench; drive both rail-screw pairs while the opposite side is not
-        in the work frame. Stand the completed side only after all four screws
-        are installed.
+        on the bench, with the rail ends flush to the legs' front/back outer
+        faces and its top edge flush to the leg tops. Check equal diagonals,
+        then drive both rail-screw pairs while the opposite side is not in the
+        work frame. Stand the completed side only after all four screws are
+        installed.
     - name: side -X
       parts: [leg_fm, leg_bm, rail_neg]
       why: >-
         Lay the -X front leg, back leg, and side rail flat and clamp them square
-        on the bench; drive both rail-screw pairs while the opposite side is not
-        in the work frame. Stand the completed side only after all four screws
-        are installed.
+        on the bench, with the rail ends flush to the legs' front/back outer
+        faces and its top edge flush to the leg tops. Check equal diagonals,
+        then drive both rail-screw pairs while the opposite side is not in the
+        work frame. Stand the completed side only after all four screws are
+        installed.
 
 # --- roles ---------------------------------------------------------------------------
 roles:
@@ -321,7 +335,7 @@ doc:
     - prose: |
         # Sit-and-Reach Test Box (2x4 Frame) — Validation Report
 
-        The standard adult sit-and-reach flexibility box, built as a 2x4 FRAME under a plywood reach surface — the owner's material constraint (little plywood on hand) drives the form; the METROLOGY IS UNCHANGED from the five-panel ply variant: reach surface at {top_surface_h:g}in and a top plate overhanging the foot plane by exactly 23cm, so a centimeter scale laid from the sitter edge reads 23.0cm at the plane the feet press (President's Challenge / FitnessGram). The two FRONT LEGS are the footplates: 2x4s stood flat to the front plane, two full-height bearing strips at stance width. One 8-ft 2x4 yields the whole frame; the top plate is the only plywood. The frame rests on the floor by gravity; nothing fastens to the room. Deterministic computed placement is canonical.
+        A sit-and-reach flexibility box built as a 2x4 FRAME under a plywood reach surface — the owner's material constraint (little plywood on hand) drives the form. Its calibration geometry matches the five-panel ply variant: reach surface at {top_surface_h:g}in and a top plate overhanging the foot plane by exactly 23cm, so an adhesive metric rule laid from the sitter edge reads 23.0cm at the plane the feet press. Those two dimensions do not by themselves establish equivalence to a named assessment protocol; verify the intended test protocol before marking the scale or interpreting a score. The two FRONT LEGS are the footplates: 2x4s stood flat to the front plane, two full-height bearing strips at stance width. One 8-ft 2x4 yields the whole frame; the top plate is the only plywood. The frame rests on the floor by gravity; nothing fastens to the room. Deterministic computed placement is canonical.
 
         ## Collision / interference
         - Pairwise interference checks run: **{interference_checks}**
@@ -339,9 +353,9 @@ doc:
     - bom_table: {header: "## Bill of materials"}
     - prose: |
         ## Modeling assumptions & honest limits
-        - **The protocol geometry is the contract — same as the ply variant.** Reach surface {top_surface_h:g}in and the 23cm foot line are PINNED with LITERAL in-model expecteds and guarded by the e2e test.
+        - **The calibration geometry is pinned — protocol equivalence is not inferred.** Reach surface {top_surface_h:g}in and the 23cm foot line are PINNED with LITERAL in-model expecteds and guarded by the e2e test. Verify the intended test protocol and its operating instructions before laying out the scale or comparing scores.
         - **The legs are the footplates.** Feet sit roughly stance width apart in the protocol; the front legs' 3.5in faces run floor to plate at exactly that spacing, so soles bear on solid wood at full height (no toe-tip gap). The center between the strips is open — feet never land there; if a user with an unusual stance needs continuous width, add a 1x board across the legs (a revision, not modeled).
-        - **The measuring scale is a finishing step, not modeled geometry.** Lay a centimeter tape from the top plate's SITTER edge after finishing; the geometry guarantees the foot plane falls at 23.0cm. Verify after assembly.
-        - **The max-reach slider is a loose accessory, not modeled** (same open vocabulary/design item as the ply variant — any small block pushed along the top serves the protocol).
-        - **Loose object; slide/tip under test loads NOT ANALYZED.** Heel push and overhang hand-pressure are named ANALYSIS-v1 material; Support/Stability, Load-path capacity and Structural capacity are honestly NOT ANALYZED. The frame's racking stiffness (four cap screws + four two-screw rail corners) is likewise not analyzed to a number — glue the rail-to-leg joints (fabrication note) and hand-check for wobble before use.
+        - **The measuring scale is a finishing step, not modeled geometry.** Apply an adhesive metric rule from the top plate's SITTER edge after finishing; the geometry guarantees the foot plane falls at 23.0cm. Verify after assembly and confirm its zero/orientation against the intended protocol.
+        - **The max-reach slider is a required loose accessory, not modeled.** Make or obtain the sliding reach indicator required by the intended protocol; do not substitute an arbitrary block without confirming its geometry and operating instructions.
+        - **Prototype gate — slide/tip/racking/capacity NOT ANALYZED.** Heel push and overhang hand-pressure are named ANALYSIS-v1 material; Support/Stability, Load-path capacity and Structural capacity are honestly NOT ANALYZED. Do not use the prototype for scored or unsupervised testing until it has been checked for square, wobble, sliding, tipping, sharp edges, and response under the intended service load by a qualified person.
         - **Honest joinery.** The plate is `rail_cap_screwed` down into each leg's top END grain (this frame gives the word its true substrate — the ply box could only offer edge grain); each rail is `cleat_screwed` flat against its legs' inner EDGES — the rail's wide face to the leg's narrow edge, long grain both sides (the legs' wide faces are the front/back planes; the front one is the footplate) — holding the frame together while the plate's rest on the rail tops is a separately declared bearing. Glue every mating face (adhesive is not yet a declarable connection — advisory prose). Countersink the four cap screws FLUSH in the slide lane. The floor is EXISTING context, excluded from the buy list.

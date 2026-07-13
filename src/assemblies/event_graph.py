@@ -3,8 +3,8 @@
 
 The Construction Graph says what exists; this graph says in what order it can
 be built. It is a DAG of install EVENTS — one node kind, open-tagged like
-every other kind in this codebase (``cure``/``join`` are later increments and
-deliberately NOT built here; the tag headroom is the point):
+every other kind in this codebase (``join`` lands in the ``+staging``
+increment; ``cure`` remains later; the tag headroom is the point):
 
 - ``place(part)`` — the part arrives at its final relative pose. Identity:
   the part's id (repeat instances already carry their index).
@@ -15,6 +15,8 @@ deliberately NOT built here; the tag headroom is the point):
   ONE drive event (``group=""``) — the glue-up / set-the-connector act is a
   real installation act even though no fastener is driven (``bond`` = drive
   with an empty hardware set).
+- ``join(unit)`` — a completed bench unit enters the root assembly. Every
+  internal bench event precedes its own join; separate units are not ordered.
 
 Identity is CONTENT, never an ordinal (the INCR/FAB-Q3 lesson): regrouping
 presentation can never move a verdict, because verdicts bind to events and
@@ -64,9 +66,9 @@ the source claim it came from:
    and is a loud cycle error naming both claims (design §6 rule 1 — a
    declared order contradicting structural necessity must be tested, never
    silenced; review-cpgcore F-1). A residual contradiction is a loud
-   cycle. Every derived edge points INTO
-   a drive event — no derived family ever places an occupant AFTER a
-   fastener, which is why §4.3's rung ceiling holds: v1 claims
+   cycle. Every structural-necessity edge points INTO a drive event — it
+   never places an occupant AFTER a fastener, which is why §4.3's rung
+   ceiling holds: v1 claims
    SEQUENCE-PROVEN for no clear, anywhere.
 
 3. ``authored_sequence`` — declared: a spec's ``sequence:`` stages (already
@@ -75,6 +77,12 @@ the source claim it came from:
    and its parts' place events; stage k's events precede stage k+1's,
    WITHIN the stage's chain only (a site fragment's stages never order
    another fragment's — cross-fragment order does not exist in v1, §3.2).
+
+4. ``staging`` — a declared frame/presence claim plus the R-1 derived lift:
+   all place/drive events inside a bench unit precede that unit's join into
+   root. Bench-frame membership excludes nonmembers without inventing any
+   order between separate units. Connection-free context exclusion carries
+   the stronger DECLARED TRUST ceiling until insertability is analyzed (P1).
 
 Vocabulary discipline (owner amendment 5, BINDING): a "stage" is the
 AUTHORED grouping (:class:`ResolvedStage` here, ``AuthoredStage`` in the
@@ -95,8 +103,7 @@ import heapq
 from collections import deque
 from dataclasses import dataclass
 
-#: The three v1-core edge families (open set — ``staging`` is a later
-#: increment and deliberately not built).
+#: The four implemented edge families (open set — process/cure is later).
 FAMILY_TECHNIQUE = "technique_default"
 FAMILY_NECESSITY = "structural_necessity"
 FAMILY_AUTHORED = "authored_sequence"
@@ -114,7 +121,8 @@ DECLARED_FAMILIES = frozenset({
 class Event:
     """One install event, content-keyed (§2): ``place`` keyed by the part's
     id, ``drive`` keyed by ``(connection label, role-group key)``. ``kind``
-    is an open tag — ``cure``/``join`` are later increments."""
+    is an open tag — ``join`` is the +staging event and ``cure`` remains a
+    later process increment."""
 
     kind: str          # "place" | "drive" | "join"
     subject: str       # place: part id; drive: connection label; join: unit
@@ -281,11 +289,17 @@ class EventGraph:
         """The event governing ``part_id`` in ``at_frame``.
 
         Inside its own bench frame a unit part is governed by its internal
-        place/drive event. At root, the whole unit is governed by its join.
+        place/drive event. At root, structural members are governed by the
+        whole unit's join, while hardware remains governed by its mapped drive
+        event — including post-join root hardware included mechanically by
+        ``bench_then_set`` sugar.
         """
+        own_event = self.event_of.get(part_id)
+        if own_event is not None and own_event.kind == "drive":
+            return own_event
         if at_frame == "root" and part_id in self.unit_of:
             return self.join_of[self.unit_of[part_id]]
-        return self.event_of.get(part_id)
+        return own_event
 
     def presence_at(self, drive: Event, part_id: str) -> PresenceDecision:
         """Classify one occupant at ``drive`` using graph + frame semantics.
@@ -304,7 +318,19 @@ class EventGraph:
             return PresenceDecision("coincident", own_event)
 
         staging = self.staging
-        if frame != "root" and self.unit_of.get(part_id) != frame:
+        # Explicit subassembly declarations normally enumerate structural
+        # members, not connection hardware. Hardware still belongs to the
+        # frame inherited by its own drive event; treating ``unit_of`` as the
+        # whole membership truth would falsely declare same-bench hardware
+        # absent and could clear a real corridor hit. Prefer explicit member
+        # membership, then the occupant event's resolved frame.
+        if own_event is not None and own_event.kind == "drive":
+            occupant_frame = self.frame_of.get(own_event)
+        else:
+            occupant_frame = self.unit_of.get(part_id)
+            if occupant_frame is None and own_event is not None:
+                occupant_frame = self.frame_of.get(own_event)
+        if frame != "root" and occupant_frame != frame:
             unit = self.units[frame]
             governed = self._presence_event(part_id, "root")
             trust = (part_id in self.context_parts
@@ -322,14 +348,42 @@ class EventGraph:
                 declared_trust=trust)
 
         if (frame == "root" and part_id in self.context_parts
-                and staging is not None and staging.mode == "in_situ"):
-            src = (
-                f"staging claim assembly mode 'in_situ': context body "
-                f"{self.part_names.get(part_id, part_id)} is present from "
-                f"the root build (why: {staging.why})")
-            return PresenceDecision(
-                "present", own_event,
-                (PresenceFact(FAMILY_STAGING, src),))
+                and staging is not None):
+            if staging.mode == "in_situ":
+                src = (
+                    f"staging claim assembly mode 'in_situ': context body "
+                    f"{self.part_names.get(part_id, part_id)} is present from "
+                    f"the root build (why: {staging.why})")
+                return PresenceDecision(
+                    "present", own_event,
+                    (PresenceFact(FAMILY_STAGING, src),))
+            if staging.mode == "bench_then_set":
+                join = self.join_of.get("whole detail")
+                if join is None:
+                    raise ValueError(
+                        "bench_then_set staging has no 'whole detail' join; "
+                        "the normalized staging surface is inconsistent")
+                name = self.part_names.get(part_id, part_id)
+                src = (
+                    f"staging claim assembly mode 'bench_then_set': context "
+                    f"body {name} becomes present at the whole-detail join "
+                    f"(why: {staging.why}); insertion travel is not analyzed "
+                    f"(P1)")
+                if self.precedes(join, drive):
+                    return PresenceDecision(
+                        "present", join,
+                        (PresenceFact(FAMILY_STAGING, src),))
+                if self.precedes(drive, join):
+                    trust = part_id not in self._connected_parts
+                    marker = " DECLARED TRUST:" if trust else ""
+                    absent_src = (
+                        f"{marker} {src}; the root work is ordered before that "
+                        f"join, so {name} is absent at this drive")
+                    return PresenceDecision(
+                        "absent", join,
+                        (PresenceFact(FAMILY_STAGING, absent_src),),
+                        declared_trust=trust)
+                return PresenceDecision("unordered", join)
 
         governed = self._presence_event(part_id, frame)
         if governed is None:
@@ -450,7 +504,17 @@ def build_event_graph(assembly, connections, edges, installs,
     # part as a unit member. The event graph is the semantic trust boundary.
     unit_of: dict[str, str] = {}
     if staging is not None:
+        unit_names: set[str] = set()
         for unit in staging.units:
+            if unit.name == "root":
+                raise ValueError(
+                    "staging subassembly name 'root' is reserved for the root "
+                    "frame; choose a distinct bench-unit name.")
+            if unit.name in unit_names:
+                raise ValueError(
+                    f"staging subassembly name {unit.name!r} is duplicated; "
+                    f"unit names must be unique at the event-graph boundary.")
+            unit_names.add(unit.name)
             for pid in unit.parts:
                 if pid not in part_names:
                     raise ValueError(
@@ -578,6 +642,25 @@ def build_event_graph(assembly, connections, edges, installs,
     for label, drives in drives_of.items():
         for dev in drives:
             frame_of[dev] = connection_frame[label]
+    # Hardware is installed at its mapped drive event and therefore inherits
+    # that event's frame. If an author explicitly lists it in a different
+    # subassembly, the claims contradict one another; reject the mismatch.
+    # ``bench_then_set`` is different: its synthetic whole-detail unit expands
+    # to every non-context component, including hardware for legitimate root
+    # work performed after the join. The drive frame remains canonical there.
+    for pid, authored_unit in unit_of.items():
+        ev = event_of[pid]
+        if ev.kind != "drive":
+            continue
+        drive_frame = frame_of[ev]
+        if (authored_unit != drive_frame and staging is not None
+                and staging.mode == "subassemblies"):
+            raise ValueError(
+                f"staging: hardware {part_names[pid]!r} is explicitly "
+                f"assigned to subassembly {authored_unit!r}, but its "
+                f"connection's drive frame is {drive_frame!r}. Hardware "
+                f"inherits its drive frame; move the hardware or the whole "
+                f"connection's structural members into the same unit.")
     for join in join_of.values():
         frame_of[join] = "root"
 
@@ -840,8 +923,10 @@ def linearize(graph: EventGraph) -> tuple[Event, ...]:
 def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
     """The reader-step grouping (§5.1), a PURE function of the graph — one
     step per authored stage where stages exist, else one step per
-    connection install unit. Declared bench units group all of their
+    connection install unit. Declared bench units group their unstaged
     internal place/drive events and get a separate visible join/set step;
+    authored stages inside a bench unit remain distinct nested reader steps,
+    so the frame grouping cannot erase or reverse their declared order.
     independent units use declaration order only as a presentation tie-break,
     never as a new graph edge. ``place`` events otherwise fold into the step
     of the first connection that consumes the part (a stage's explicitly
@@ -853,7 +938,9 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
 
     stage_of_conn: dict[str, ResolvedStage] = {}
     stage_of_part: dict[str, ResolvedStage] = {}
-    for st in graph.stages:
+    stage_order: dict[tuple[str, str], int] = {}
+    for i, st in enumerate(graph.stages):
+        stage_order[(st.chain, st.name)] = i
         for label in st.connections:
             stage_of_conn.setdefault(label, st)
         for pid in st.parts:
@@ -861,7 +948,8 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
 
     conn_idx = {label: i for i, label in enumerate(graph.conn_labels)}
 
-    # bucket key: ("unit", name), ("join", name),
+    # bucket key: ("unit", name), ("unit-stage", unit, chain, stage),
+    # ("join", name),
     # ("stage", chain, name), or ("conn", label)
     buckets: dict[tuple, dict] = {}
 
@@ -886,7 +974,7 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
     for unit in (graph.staging.units if graph.staging is not None else ()):
         idx = unit_idx[unit.name]
         bucket_for(("unit", unit.name), None, f"bench {unit.name}",
-                   unit=unit, preferred=(0, idx))
+                   unit=unit, preferred=(0, idx, 0))
         join = graph.join_of[unit.name]
         b = bucket_for(("join", unit.name), None,
                        f"set {unit.name} in place", unit=unit,
@@ -899,9 +987,19 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
         frame = graph.frame_of[drives[0]] if drives else "root"
         if frame != "root":
             unit = graph.units[frame]
-            key = ("unit", frame)
-            b = bucket_for(key, None, f"bench {frame}", unit=unit,
-                           preferred=(0, unit_idx[frame]))
+            st = stage_of_conn.get(label)
+            if st is not None:
+                key = ("unit-stage", frame, st.chain, st.name)
+                b = bucket_for(
+                    key, st,
+                    f"bench {frame}: stage {st.name!r} (declared order)",
+                    unit=unit,
+                    preferred=(0, unit_idx[frame],
+                               1 + stage_order[(st.chain, st.name)]))
+            else:
+                key = ("unit", frame)
+                b = bucket_for(key, None, f"bench {frame}", unit=unit,
+                               preferred=(0, unit_idx[frame], 0))
         else:
             st = stage_of_conn.get(label)
             if st is not None:
@@ -922,16 +1020,28 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
         if ev.kind != "place":
             continue
         unit_name = graph.unit_of.get(p_id)
-        if unit_name is not None:
+        st = stage_of_part.get(p_id)
+        if unit_name is not None and st is not None:
             unit = graph.units[unit_name]
-            b = bucket_for(("unit", unit_name), None,
-                           f"bench {unit_name}", unit=unit,
-                           preferred=(0, unit_idx[unit_name]))
+            b = bucket_for(
+                ("unit-stage", unit_name, st.chain, st.name), st,
+                f"bench {unit_name}: stage {st.name!r} (declared order)",
+                unit=unit,
+                preferred=(0, unit_idx[unit_name],
+                           1 + stage_order[(st.chain, st.name)]))
             b["parts"].append(p_id)
             b["events"].append(ev)
             b["first"] = min(b["first"], pos.get(ev, len(order)))
             continue
-        st = stage_of_part.get(p_id)
+        if unit_name is not None:
+            unit = graph.units[unit_name]
+            b = bucket_for(("unit", unit_name), None,
+                           f"bench {unit_name}", unit=unit,
+                           preferred=(0, unit_idx[unit_name], 0))
+            b["parts"].append(p_id)
+            b["events"].append(ev)
+            b["first"] = min(b["first"], pos.get(ev, len(order)))
+            continue
         if st is not None:
             b = bucket_for(("stage", st.chain, st.name), st,
                            f"stage {st.name!r} (declared order)")
