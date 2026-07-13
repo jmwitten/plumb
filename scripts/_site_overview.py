@@ -304,7 +304,7 @@ def build_site_overview(details: dict) -> SiteOverviewResult:
             new_frame = transform.compose(p.world_frame)
             site.parts.append(Placed(
                 p.component, new_frame, at=new_frame.origin, rotate=[],
-                id=f"{name}-{p.id}",
+                id=f"{name}-{p.id}", reader_name=p.reader_name,
             ))
             kept_counts[name] += 1
 

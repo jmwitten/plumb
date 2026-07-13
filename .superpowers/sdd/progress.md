@@ -27,6 +27,28 @@ directory. Post-rewrite master tip at the time of the rewrite: 3bbdaa7.
 
 ## ★ SESSION UPDATE 12 (2026-07-13 — STEPDOC/CPG +staging COMPLETE + MERGED; documents DELIVERED)
 
+Reader-facing names arc (in progress on `codex/reader-names`): Task 1 complete
+(`8ec01de..f17c36b`, review clean). The strict spec/compiler plumbing now
+carries optional presentation-only `reader_name` on `ComponentSpec` and
+`Placed` while preserving every machine identity/export/cache/evidence key;
+47 focused tests pass. The initial end-to-end RED and later brace-sensitive
+mutation proof are recorded honestly in `task-1-report.md`.
+Task 2 complete (`02abd62..5ad9fdf`, review clean): the frozen shared
+`part_labels()` projection owns duplicate ordinals by `Placed.id`; the viewer
+payload remains keyed by machine `Placed.name` while hover shows the canonical
+reader name above an escaped stock/instance line. Gate: 32 passed / 3 skipped,
+plus clean JavaScript syntax and diff checks.
+Task 4 complete out of numeric order as planned (`ddc38be..67326da`, review
+clean): all 14 caddy components author the closed builder vocabulary; four
+raster title literals no longer expose `+X/-X`; machine names/ids, per-part
+geometry hashes, validation finding signatures, renderer lookup keys, and all
+geometry logic remain unchanged. Gate: 53 passed / 3 skipped.
+Task 3 complete (`593e6d2..5aec431`, review clean): build-sequence placement
+and unordered names, consolidated cut sources, existing-context BOM/hover rows,
+and inspector headings now consume the same projection. Raw technical contract
+labels and every graph/viewer/inspector machine key remain unchanged. Gates:
+88 prescribed + 36 additional regressions passed; JS/diff checks clean.
+
 +staging is COMPLETE on `codex/stepdoc-staging` per binding amendment 1:
 typed subassembly/frame/join authoring, `bench_then_set` sugar, R-1 bench
 events before join, honest presence semantics (including explicit `in_situ`

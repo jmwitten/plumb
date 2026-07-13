@@ -11,9 +11,11 @@ redirects RENDERS to a scratch directory first.
 
 from __future__ import annotations
 
+from dataclasses import replace
 import importlib.util
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -63,6 +65,26 @@ def test_details_contribute_parts(overview):
     assert overview.kept_counts["tree_attachment"] == 0
     total_kept = sum(overview.kept_counts.values())
     assert len(overview.assembly.parts) == total_kept
+
+
+def test_composition_preserves_reader_name_and_machine_identity(so, details):
+    original = details["platform"].assembly.parts[0]
+    readable = replace(original, reader_name="Readable platform part")
+    platform = SimpleNamespace(
+        params=details["platform"].params,
+        assembly=SimpleNamespace(
+            parts=[readable, *details["platform"].assembly.parts[1:]],
+        ),
+    )
+    composed = so.build_site_overview({**details, "platform": platform})
+    copied = next(
+        part for part in composed.assembly.parts
+        if part.id == f"platform-{original.id}"
+    )
+
+    assert copied.reader_name == "Readable platform part"
+    assert copied.name == original.name
+    assert copied.id == f"platform-{original.id}"
 
 
 def test_platform_parts_are_never_dropped(so, details):

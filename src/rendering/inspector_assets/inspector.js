@@ -139,13 +139,19 @@
         el("div", { class: "ix-fallback-list" },
           this.payload.part_order.map(function (name) {
             return el("div", {}, [el("a", {
-              href: "#", class: "ix-neighbor-name", text: name,
+              href: "#", class: "ix-neighbor-name",
+              text: self.partDisplayName(name),
               onclick: function (e) { e.preventDefault(); self.selectPart(name); },
             })]);
           })),
       ]),
     ]);
     this.stage.appendChild(list);
+  };
+
+  Inspector.prototype.partDisplayName = function (name) {
+    var part = this.payload.parts[name];
+    return part && part.display_name ? part.display_name : name;
   };
 
   Inspector.prototype.toggleTheme = function () {
@@ -366,7 +372,7 @@
 
     // sticky head
     this.panel.appendChild(el("div", { class: "ix-part-head" }, [
-      el("h2", { class: "ix-part-name", text: part.name }),
+      el("h2", { class: "ix-part-name", text: part.display_name || part.name }),
       el("div", { class: "ix-part-type" }, [
         d.component_type + " · " + d.material,
       ]),
@@ -578,7 +584,7 @@
       if (i) chain.appendChild(el("span", { class: "ix-lp-arrow", text: "→" }));
       chain.appendChild(el("span", {
         class: "ix-lp-node" + (nodeName === self.selected ? " current" : ""),
-        text: nodeName,
+        text: self.partDisplayName(nodeName),
         onclick: function () { if (self.payload.parts[nodeName]) self.selectPart(nodeName); },
       }));
     });
@@ -605,7 +611,8 @@
       nb.appendChild(el("div", { class: "ix-neighbor" }, [
         el("span", { class: "ix-edge-kind", text: n.edge }),
         el("span", { class: "ix-arrow", text: n.direction === "out" ? "→" : "←" }),
-        el("span", { class: "ix-neighbor-name", text: name || n.other,
+        el("span", { class: "ix-neighbor-name",
+          text: self.partDisplayName(name || n.other),
           onclick: function () { if (name && self.payload.parts[name]) self.selectPart(name); } }),
       ]));
     });

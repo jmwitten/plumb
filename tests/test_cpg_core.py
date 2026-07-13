@@ -826,6 +826,76 @@ def test_unordered_parts_are_reported_not_positioned():
         assert ctx.id not in s.parts_placed
 
 
+def test_build_sequence_model_projects_reader_names_for_placed_and_loose_parts():
+    from detailgen.validation.build_sequence import build_sequence_model
+
+    detail = _compile_staging("""
+name: reader sequence projection
+units: in
+components:
+  - id: staged
+    type: lumber
+    name: staged rail +X
+    reader_name: Staged rail
+    params: {nominal: 2x4, length: 4}
+  - id: loose
+    type: lumber
+    name: loose panel -X
+    reader_name: Loose panel
+    params: {nominal: 2x4, length: 4}
+sequence:
+  stages:
+    - name: prepare staged rail
+      parts: [staged]
+      why: Prepare the staged rail first.
+""")
+    detail.validate()
+
+    steps, loose = build_sequence_model(detail)
+    assert [name for step in steps for name, _bom, _fab in step["places"]] == [
+        "Staged rail"
+    ]
+    assert loose == ("Loose panel",)
+
+    graph = detail._connection_checks.event_graph
+    by_id = {part.id: part.name for part in detail.assembly.parts}
+    assert graph.part_names == by_id
+
+
+def test_build_sequence_model_reuses_projection_ordinals_for_duplicate_names():
+    from detailgen.validation.build_sequence import build_sequence_model
+
+    detail = _compile_staging("""
+name: reader sequence ordinal projection
+units: in
+components:
+  - id: first
+    type: lumber
+    name: staged rail +X
+    reader_name: Registration rail
+    params: {nominal: 2x4, length: 4}
+  - id: second
+    type: lumber
+    name: staged rail -X
+    reader_name: Registration rail
+    params: {nominal: 2x4, length: 4}
+sequence:
+  stages:
+    - name: prepare rails
+      parts: [first, second]
+      why: Prepare both rails first.
+""")
+    detail.validate()
+
+    steps, loose = build_sequence_model(detail)
+
+    assert [name for step in steps for name, _bom, _fab in step["places"]] == [
+        "Registration rail (1 of 2)",
+        "Registration rail (2 of 2)",
+    ]
+    assert loose == ()
+
+
 def test_reader_steps_group_bench_units_then_visible_joins_without_graph_edges():
     """Presentation may choose declaration order for independent units, but
     the graph must remain partially ordered: two bench steps, then two visible

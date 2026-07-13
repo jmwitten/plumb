@@ -213,6 +213,37 @@ class _FakeDetail:
         self.assembly = assembly
 
 
+class _NoteRecord:
+    def __init__(self, note):
+        self._note = note
+
+    def fab_note(self):
+        return self._note
+
+
+class _NamedFabPart:
+    def __init__(self, name, note):
+        self.name = name
+        self._record = _NoteRecord(note)
+
+    def bom_label(self):
+        return "1x6 lumber"
+
+    def fabrication_record(self):
+        return self._record
+
+
+class _NamedPlaced:
+    def __init__(self, pid, component, reader_name):
+        self.id = pid
+        self.component = component
+        self.reader_name = reader_name
+
+    @property
+    def name(self):
+        return self.component.name
+
+
 def test_cat4_production_build_rejects_a_mystery_cut(cr):
     """fab-design §11 CAT-4 + the FAB-1 review's FIX-FIRST obligation: the guard
     the doc build runs (assert_details_fabrication_sound) rejects a component
@@ -236,6 +267,80 @@ def test_cat4_production_build_passes_on_a_sound_board(cr):
     details = {"platform": _FakeDetail(_FakeAssembly(
         [_FakePlaced("deck_3", board)]))}
     cr.assert_details_fabrication_sound(details)  # no raise
+
+
+def test_duplicate_reader_labels_keep_distinct_fabrication_notes(cr):
+    """Machine-distinct cuts never associate notes through their display label."""
+    parts = [
+        _NamedPlaced(
+            "rail-a",
+            _NamedFabPart("registration rail +X", "drill the left registration holes"),
+            "Registration rail",
+        ),
+        _NamedPlaced(
+            "rail-b",
+            _NamedFabPart("registration rail -X", "drill the right registration holes"),
+            "Registration rail",
+        ),
+    ]
+    details = {"fixture": _FakeDetail(_FakeAssembly(parts))}
+    purchased = [
+        {
+            "item": "1x6 lumber",
+            "length_mm": 24 * IN,
+            "ids": ["rail-a"],
+            "origin": {"fixture"},
+        },
+        {
+            "item": "1x6 lumber",
+            "length_mm": 36 * IN,
+            "ids": ["rail-b"],
+            "origin": {"fixture"},
+        },
+    ]
+
+    items = cr.lumber_cut_items(purchased, details)
+    notes = cr.cutlist_fab_notes(purchased, details)
+    from detailgen.core.cutplan import pack
+    plan = pack(items)["1x6 lumber"]
+    cuts = [cut for stick in plan.sticks for cut in stick.cuts]
+    html = cr.render_cutplan({"1x6 lumber": plan}, notes)
+
+    assert len(cuts) == 2
+    assert {cut.source_key for cut in cuts} == {
+        ("fixture", "rail-a"),
+        ("fixture", "rail-b"),
+    }
+    assert set(notes) == {
+        ("1x6 lumber", ("fixture", "rail-a")),
+        ("1x6 lumber", ("fixture", "rail-b")),
+    }
+    assert html.count("Registration rail (1 of 2)") == 1
+    assert html.count("Registration rail (2 of 2)") == 1
+    assert html.count("drill the left registration holes") == 1
+    assert html.count("drill the right registration holes") == 1
+    assert re.search(
+        r"Registration rail \(1 of 2\) &mdash; drill the left registration holes",
+        html,
+    )
+    assert re.search(
+        r"Registration rail \(2 of 2\) &mdash; drill the right registration holes",
+        html,
+    )
+
+
+def test_render_cutplan_keeps_legacy_source_text_note_keys(cr):
+    """Callers that omit ``source_key`` retain the pre-identity note contract."""
+    from detailgen.core.cutplan import CutItem, pack
+
+    source = "legacy fixture: legacy rail"
+    plan = pack([CutItem("1x6 lumber", 24 * IN, source)])["1x6 lumber"]
+    html = cr.render_cutplan(
+        {"1x6 lumber": plan},
+        {("1x6 lumber", source): "legacy fabrication note"},
+    )
+
+    assert "legacy rail &mdash; legacy fabrication note" in html
 
 
 # --------------------------------------------------------------------------- #

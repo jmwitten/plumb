@@ -112,6 +112,7 @@ components:
   - id: arm
     type: boulder
     name: sofa arm
+    reader_name: Sofa arm
     # Boulder maps its `length` to X and `width` to Y, so the 6in straddled
     # dimension (arm_w) is the `length` (X) and the 10in run (arm_l) is the `width` (Y).
     params: {width: "$arm_l", length: "$arm_w", depth: "$arm_h"}
@@ -123,11 +124,13 @@ components:
   - id: side_pos
     type: lumber
     name: side board +X
+    reader_name: Side board
     params: {nominal: "1x6", length: "$side_drop", ease_radius: "$ease_r"}
     place: {raw: {at: ["$side_inner_x", "= -board_depth/2", "$side_bot_z"], rotate: [["Y", -90], ["Z", -90]]}}
   - id: side_neg
     type: lumber
     name: side board -X
+    reader_name: Side board
     params: {nominal: "1x6", length: "$side_drop", ease_radius: "$ease_r"}
     place: {raw: {at: ["= -side_outer_x", "= -board_depth/2", "$side_bot_z"], rotate: [["Y", -90], ["Z", -90]]}}
 
@@ -140,6 +143,7 @@ components:
   - id: top
     type: deck_board
     name: top board
+    reader_name: Top board
     params:
       length: "$top_len"
       ease_radius: "$ease_r"
@@ -162,11 +166,13 @@ components:
   - id: cleat_pos
     type: lumber
     name: registration rail +X
+    reader_name: Registration rail
     params: {nominal: "1x6", length: "$rail_len"}
     place: {raw: {at: ["$side_inner_x", "= -rail_len/2", "$rail_bot_z"], rotate: [["Z", 90]]}}
   - id: cleat_neg
     type: lumber
     name: registration rail -X
+    reader_name: Registration rail
     params: {nominal: "1x6", length: "$rail_len"}
     place: {raw: {at: ["= -rail_inner_x", "= -rail_len/2", "$rail_bot_z"], rotate: [["Z", 90]]}}
 
@@ -179,41 +185,49 @@ components:
   - id: hscrew_p0
     type: structural_screw
     name: rail-side screw +X upper 0
+    reader_name: Rail-to-side screw
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
     place: {raw: {at: ["$rail_inner_x", "= -screw_dy_h", "$sidescrew_z_u"], rotate: [["Y", -90]]}}
   - id: hscrew_p1
     type: structural_screw
     name: rail-side screw +X upper 1
+    reader_name: Rail-to-side screw
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
     place: {raw: {at: ["$rail_inner_x", "$screw_dy_h", "$sidescrew_z_u"], rotate: [["Y", -90]]}}
   - id: hscrew_p2
     type: structural_screw
     name: rail-side screw +X lower 0
+    reader_name: Rail-to-side screw
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
     place: {raw: {at: ["$rail_inner_x", "= -screw_dy_h", "$sidescrew_z_l"], rotate: [["Y", -90]]}}
   - id: hscrew_p3
     type: structural_screw
     name: rail-side screw +X lower 1
+    reader_name: Rail-to-side screw
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
     place: {raw: {at: ["$rail_inner_x", "$screw_dy_h", "$sidescrew_z_l"], rotate: [["Y", -90]]}}
   - id: hscrew_m0
     type: structural_screw
     name: rail-side screw -X upper 0
+    reader_name: Rail-to-side screw
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
     place: {raw: {at: ["= -rail_inner_x", "= -screw_dy_h", "$sidescrew_z_u"], rotate: [["Y", 90]]}}
   - id: hscrew_m1
     type: structural_screw
     name: rail-side screw -X upper 1
+    reader_name: Rail-to-side screw
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
     place: {raw: {at: ["= -rail_inner_x", "$screw_dy_h", "$sidescrew_z_u"], rotate: [["Y", 90]]}}
   - id: hscrew_m2
     type: structural_screw
     name: rail-side screw -X lower 0
+    reader_name: Rail-to-side screw
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
     place: {raw: {at: ["= -rail_inner_x", "= -screw_dy_h", "$sidescrew_z_l"], rotate: [["Y", 90]]}}
   - id: hscrew_m3
     type: structural_screw
     name: rail-side screw -X lower 1
+    reader_name: Rail-to-side screw
     params: {diameter: "$screw_dia", length: "$screw_len_h"}
     place: {raw: {at: ["= -rail_inner_x", "$screw_dy_h", "$sidescrew_z_l"], rotate: [["Y", 90]]}}
 

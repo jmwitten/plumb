@@ -28,11 +28,37 @@ import pytest
 
 import baseline_lib as bl
 from detailgen.rendering.export import export_glb
-from detailgen.rendering.web_viewer import build_viewer_payload
-from detailgen.spec.compiler import compile_spec_file
+from detailgen.rendering.web_viewer import (
+    build_viewer_payload,
+    viewer_css,
+    viewer_js,
+)
+from detailgen.spec import compile_spec, compile_spec_file, load_spec_text
 
 ROOT = Path(__file__).resolve().parents[1]
 DETAILS = ROOT / "details"
+
+
+TWO_RAILS_YAML = """
+name: reader-name-two-rails-viewer
+components:
+  - id: rail_pos
+    type: lumber
+    name: registration rail +X
+    reader_name: Registration rail
+    params: {nominal: "2x6", length: "6 in"}
+  - id: rail_neg
+    type: lumber
+    name: registration rail -X
+    reader_name: Registration rail
+    params: {nominal: "2x6", length: "6 in"}
+"""
+
+
+def build_text(text: str):
+    detail = compile_spec(load_spec_text(text))
+    detail.build()
+    return detail
 
 
 def _load_detail_class(modname: str, filename: str, clsname: str):
@@ -143,6 +169,27 @@ def test_viewer_assets_inline_structure_and_escaping():
     assert html_out.count("THREE") >= 1
     assert "GLTFLoader" in html_out
     assert html_out.count("<style>") == 1
+
+
+def test_viewer_keeps_machine_keys_and_adds_reader_fields():
+    payload = build_viewer_payload(build_text(TWO_RAILS_YAML))
+    assert "registration rail +X" in payload["parts"]
+    row = payload["parts"]["registration rail +X"]
+    assert row["reader_name"] == "Registration rail"
+    assert (row["instance_index"], row["instance_count"]) == (1, 2)
+
+
+def test_tooltip_uses_reader_name_but_not_as_lookup_key():
+    js = viewer_js()
+    assert "p.reader_name || partName" in js
+    assert "instance_index" in js and "instance_count" in js
+    assert "payload.parts[partName]" in js
+    assert 'class="v-tip-name"' in js
+    assert 'class="v-tip-stock"' in js
+
+    css = viewer_css()
+    assert ".v-tip-name" in css
+    assert ".v-tip-stock" in css
 
 
 @pytest.fixture(scope="module")

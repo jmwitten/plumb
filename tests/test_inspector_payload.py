@@ -27,6 +27,7 @@ from detailgen.rendering.inspector import (
     Verification,
     build_inspector_payload,
     emit_inspector_html,
+    inspector_js,
     render_inspector_document,
 )
 from detailgen.spec.compiler import compile_spec_file
@@ -79,6 +80,56 @@ def test_id_to_name_covers_every_part(payload, detail):
     for pid, name in payload["id_to_name"].items():
         assert pid.startswith("part:")
         assert name in payload["parts"]
+
+
+def test_caddy_inspector_adds_reader_names_without_rekeying_machine_identity():
+    caddy = compile_spec_file(DETAILS / "armchair_caddy.spec.yaml")
+    caddy.validate()
+    payload = build_inspector_payload(caddy)
+    machine_names = [part.name for part in caddy.assembly.parts]
+
+    assert list(payload["parts"]) == machine_names
+    assert payload["part_order"] == machine_names
+    assert list(payload["id_to_name"].values()) == machine_names
+    assert "Registration rail" not in payload["parts"]
+    rails = [
+        payload["parts"][name]
+        for name in ("registration rail +X", "registration rail -X")
+    ]
+    assert [part["name"] for part in rails] == [
+        "registration rail +X", "registration rail -X"
+    ]
+    assert [part["reader_name"] for part in rails] == [
+        "Registration rail", "Registration rail"
+    ]
+    assert [part["instance_index"] for part in rails] == [1, 2]
+    assert [part["instance_count"] for part in rails] == [2, 2]
+    assert [part["display_name"] for part in rails] == [
+        "Registration rail (1 of 2)", "Registration rail (2 of 2)"
+    ]
+
+    screws = [
+        part for part in payload["parts"].values()
+        if part["reader_name"] == "Rail-to-side screw"
+    ]
+    assert [part["display_name"] for part in screws] == [
+        f"Rail-to-side screw ({index} of 8)" for index in range(1, 9)
+    ]
+
+
+def test_inspector_header_uses_reader_name_without_changing_part_lookup():
+    js = inspector_js()
+    assert "this.payload.parts[name]" in js
+    assert "part.display_name || part.name" in js
+
+
+def test_inspector_navigation_labels_resolve_display_names_with_legacy_fallback():
+    js = inspector_js()
+    assert "Inspector.prototype.partDisplayName = function (name)" in js
+    assert "part && part.display_name ? part.display_name : name" in js
+    assert "text: self.partDisplayName(name)" in js  # no-WebGL picker
+    assert "text: self.partDisplayName(name || n.other)" in js  # neighbors
+    assert "self.selectPart(name)" in js  # clicks retain the machine target
 
 
 # -- purity: the payload is JSON, all the way down ---------------------------
