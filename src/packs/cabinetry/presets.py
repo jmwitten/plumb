@@ -12,6 +12,7 @@ from .schema import _length
 _CABINET_ARCHETYPES = {
     "base_two_door_30@1",
     "base_two_door@1",
+    "drawer_base_three@1",
     "straight_base_run@1",
 }
 _VANITY_ARCHETYPES = {"floating_vanity_two_door@1"}
@@ -84,6 +85,60 @@ def _base_cabinet(
         raw["archetype"], _CABINET_ARCHETYPES - {"straight_base_run@1"},
         "cabinet",
     )
+    if archetype == "drawer_base_three@1":
+        if "width" not in raw:
+            raise ProjectSchemaError(
+                f"{ctx}.width is required by drawer_base_three@1"
+            )
+        if raw.get("overrides"):
+            raise ProjectSchemaError(
+                f"{ctx}.overrides: drawer_base_three@1 has no supported "
+                "overrides; author width, placement, and conditions only"
+            )
+        result = {
+            "id": raw["id"],
+            "type": "drawer_base",
+            "width": raw["width"],
+            "placement": copy.deepcopy(raw["placement"]),
+            "drawer_bank": {
+                "sizing_policy": "progressive_clothing_3@1",
+                "runner_product": "blum_movento_763_5330s@2026.1",
+                "locking_device_product": "blum_t51_7601_pair@2026.1",
+                "stabilizer_product": "blum_zs7m686mu@2026.1",
+                "pull_product": "hafele_vogue_155_01_613@2026.1",
+                "cells": [
+                    {
+                        "id": "top",
+                        "front_height": "158.75 mm",
+                        "box_height": "101.6 mm",
+                        "contents_load_lb": 40,
+                    },
+                    {
+                        "id": "middle",
+                        "front_height": "254 mm",
+                        "box_height": "177.8 mm",
+                        "contents_load_lb": 40,
+                    },
+                    {
+                        "id": "bottom",
+                        "front_height": "354.95 mm",
+                        "box_height": "254 mm",
+                        "contents_load_lb": 40,
+                    },
+                ],
+            },
+            "conditions": copy.deepcopy(raw["conditions"]),
+            "countertop": {
+                "type": "field_installed",
+                "support": "cabinet_stretchers",
+            },
+            # Retained only on this new normalized record so replay preserves
+            # the drawer archetype provenance without changing existing B30
+            # expanded payloads.
+            "source_archetype": archetype,
+        }
+        _length(result["width"], units, f"{ctx}.width", positive=True)
+        return result, archetype
     if archetype == "base_two_door_30@1":
         if "width" in raw:
             raise ProjectSchemaError(
@@ -284,4 +339,3 @@ def expand_vanity_project(doc):
     sections = copy.deepcopy(doc.sections)
     sections["vanity"] = section
     return replace(doc, sections=sections), archetype
-

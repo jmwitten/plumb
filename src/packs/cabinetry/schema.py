@@ -165,12 +165,49 @@ class BaseCabinetDecl:
 
 
 @dataclass(frozen=True)
+class DrawerCellDecl:
+    cell_id: str
+    front_height_mm: float
+    box_height_mm: float
+    contents_load_lb: float
+
+
+@dataclass(frozen=True)
+class DrawerBankDecl:
+    sizing_policy_id: str
+    runner_product_id: str
+    locking_device_product_id: str
+    stabilizer_product_id: str
+    pull_product_id: str
+    cells: tuple[DrawerCellDecl, ...]
+
+
+@dataclass(frozen=True)
+class DrawerBaseDecl:
+    cabinet_id: str
+    kind: str
+    width_mm: float
+    height_mm: float
+    depth_mm: float
+    toe_kick_height_mm: float
+    toe_kick_setback_mm: float
+    wall_id: str
+    from_left_datum_mm: float
+    drawer_bank: DrawerBankDecl
+    left_end: str
+    right_end: str
+    countertop_type: str
+    countertop_support: str
+    source_archetype: str = ""
+
+
+@dataclass(frozen=True)
 class CabinetrySection:
     mode: str
     profile_id: str
     material_evidence: MaterialEvidence
     site: SiteSurvey
-    cabinets: tuple[BaseCabinetDecl, ...]
+    cabinets: tuple[BaseCabinetDecl | DrawerBaseDecl, ...]
 
 
 def _parse_wall(raw, units: str) -> StudWallSurvey:
@@ -284,8 +321,8 @@ def _parse_site(raw, units: str) -> SiteSurvey:
     )
 
 
-def _parse_cabinet(raw, units: str, profile, wall: StudWallSurvey,
-                   index: int, source_archetype: str = "") -> BaseCabinetDecl:
+def _parse_door_cabinet(raw, units: str, profile, wall: StudWallSurvey,
+                        index: int, source_archetype: str = "") -> BaseCabinetDecl:
     ctx = f"cabinetry.cabinets[{index}]"
     f = _take(
         raw,
@@ -382,6 +419,190 @@ def _parse_cabinet(raw, units: str, profile, wall: StudWallSurvey,
         countertop_type=str(countertop["type"]),
         countertop_support=str(countertop["support"]),
         source_archetype=source_archetype,
+    )
+
+
+def _parse_drawer_cabinet(raw, units: str, profile, wall: StudWallSurvey,
+                          index: int, source_archetype: str = "") -> DrawerBaseDecl:
+    ctx = f"cabinetry.cabinets[{index}]"
+    f = _take(
+        raw,
+        {"id", "type", "width", "placement", "drawer_bank", "conditions",
+         "countertop"},
+        {"height", "depth", "toe_kick_height", "toe_kick_setback",
+         "source_archetype"},
+        ctx,
+    )
+    cabinet_id = str(f["id"]).strip()
+    if not cabinet_id:
+        raise ProjectSchemaError(f"{ctx}.id must be non-empty")
+    if f["type"] != "drawer_base":
+        raise ProjectSchemaError(
+            f"{ctx}.type: expected 'drawer_base', got {f['type']!r}"
+        )
+    pf = _take(f["placement"], {"against", "from_left_datum"}, set(),
+               f"{ctx}.placement")
+    if pf["against"] != wall.wall_id:
+        raise ProjectSchemaError(
+            f"{ctx}.placement.against: unknown wall {pf['against']!r}; "
+            f"known wall: {wall.wall_id!r}"
+        )
+    conditions = _take(f["conditions"], {"left_end", "right_end"}, set(),
+                       f"{ctx}.conditions")
+    allowed_conditions = {"exposed", "adjacent_cabinet", "wall_filler"}
+    for key in ("left_end", "right_end"):
+        if conditions[key] not in allowed_conditions:
+            raise ProjectSchemaError(
+                f"{ctx}.conditions.{key}: expected one of "
+                f"{sorted(allowed_conditions)}, got {conditions[key]!r}"
+            )
+    countertop = _take(f["countertop"], {"type", "support"}, set(),
+                       f"{ctx}.countertop")
+    if countertop["type"] != "field_installed":
+        raise ProjectSchemaError(
+            f"{ctx}.countertop.type: drawer base supports only "
+            f"field_installed; got {countertop['type']!r}"
+        )
+    if countertop["support"] != "cabinet_stretchers":
+        raise ProjectSchemaError(
+            f"{ctx}.countertop.support: drawer base supports only "
+            f"cabinet_stretchers; got {countertop['support']!r}"
+        )
+
+    bank_ctx = f"{ctx}.drawer_bank"
+    bank = _take(
+        f["drawer_bank"],
+        {"sizing_policy", "runner_product", "locking_device_product",
+         "stabilizer_product", "pull_product", "cells"},
+        set(), bank_ctx,
+    )
+    expected_products = {
+        "sizing_policy": "progressive_clothing_3@1",
+        "runner_product": "blum_movento_763_5330s@2026.1",
+        "locking_device_product": "blum_t51_7601_pair@2026.1",
+        "stabilizer_product": "blum_zs7m686mu@2026.1",
+        "pull_product": "hafele_vogue_155_01_613@2026.1",
+    }
+    for key, expected in expected_products.items():
+        if bank[key] != expected:
+            raise ProjectSchemaError(
+                f"{bank_ctx}.{key}: drawer_base_three@1 requires "
+                f"{expected!r}, got {bank[key]!r}"
+            )
+    raw_cells = _list(bank["cells"], f"{bank_ctx}.cells")
+    if len(raw_cells) != 3:
+        raise ProjectSchemaError(
+            f"{bank_ctx}.cells: progressive_clothing_3@1 requires exactly "
+            f"three cells, got {len(raw_cells)}"
+        )
+    expected_cells = (
+        ("top", 158.75, 101.6),
+        ("middle", 254.0, 177.8),
+        ("bottom", 354.95, 254.0),
+    )
+    cells: list[DrawerCellDecl] = []
+    for cell_index, (raw_cell, expected) in enumerate(zip(raw_cells, expected_cells)):
+        cell_ctx = f"{bank_ctx}.cells[{cell_index}]"
+        cf = _take(
+            raw_cell,
+            {"id", "front_height", "box_height", "contents_load_lb"},
+            set(), cell_ctx,
+        )
+        cell_id = str(cf["id"]).strip()
+        front_height = _length(
+            cf["front_height"], units, f"{cell_ctx}.front_height", positive=True
+        )
+        box_height = _length(
+            cf["box_height"], units, f"{cell_ctx}.box_height", positive=True
+        )
+        contents_load = _finite_number(
+            cf["contents_load_lb"], f"{cell_ctx}.contents_load_lb", positive=True
+        )
+        expected_id, expected_front, expected_box = expected
+        if cell_id != expected_id:
+            raise ProjectSchemaError(
+                f"{cell_ctx}.id: expected {expected_id!r}, got {cell_id!r}"
+            )
+        if not math.isclose(front_height, expected_front, abs_tol=1e-6):
+            raise ProjectSchemaError(
+                f"{cell_ctx}.front_height: progressive_clothing_3@1 requires "
+                f"{expected_front:g} mm, got {front_height:g} mm"
+            )
+        if not math.isclose(box_height, expected_box, abs_tol=1e-6):
+            raise ProjectSchemaError(
+                f"{cell_ctx}.box_height: progressive_clothing_3@1 requires "
+                f"{expected_box:g} mm, got {box_height:g} mm"
+            )
+        if not math.isclose(contents_load, 40.0, abs_tol=1e-9):
+            raise ProjectSchemaError(
+                f"{cell_ctx}.contents_load_lb: clothing v1 requires 40 lb, "
+                f"got {contents_load:g}"
+            )
+        cells.append(DrawerCellDecl(
+            cell_id, front_height, box_height, float(contents_load)
+        ))
+
+    def optional_length(key: str, default: float) -> float:
+        return default if f[key] is _MISSING else _length(
+            f[key], units, f"{ctx}.{key}", positive=True
+        )
+
+    width = _length(f["width"], units, f"{ctx}.width", positive=True)
+    from_left = _length(
+        pf["from_left_datum"], units, f"{ctx}.placement.from_left_datum"
+    )
+    if from_left < 0 or from_left + width > wall.length_mm:
+        raise ProjectSchemaError(
+            f"{ctx}: cabinet span [{from_left:.2f}, {from_left + width:.2f}] mm "
+            f"lies outside surveyed wall [0, {wall.length_mm:.2f}] mm"
+        )
+    retained_source = (
+        source_archetype if f["source_archetype"] is _MISSING
+        else str(f["source_archetype"]).strip()
+    )
+    if source_archetype and retained_source != source_archetype:
+        raise ProjectSchemaError(
+            f"{ctx}.source_archetype: expanded value {retained_source!r} "
+            f"does not match compact source {source_archetype!r}"
+        )
+    return DrawerBaseDecl(
+        cabinet_id=cabinet_id,
+        kind="drawer_base",
+        width_mm=width,
+        height_mm=optional_length("height", profile.default_height_mm),
+        depth_mm=optional_length("depth", profile.default_depth_mm),
+        toe_kick_height_mm=optional_length(
+            "toe_kick_height", profile.toe_kick_height_mm
+        ),
+        toe_kick_setback_mm=optional_length(
+            "toe_kick_setback", profile.toe_kick_setback_mm
+        ),
+        wall_id=wall.wall_id,
+        from_left_datum_mm=from_left,
+        drawer_bank=DrawerBankDecl(
+            sizing_policy_id=str(bank["sizing_policy"]),
+            runner_product_id=str(bank["runner_product"]),
+            locking_device_product_id=str(bank["locking_device_product"]),
+            stabilizer_product_id=str(bank["stabilizer_product"]),
+            pull_product_id=str(bank["pull_product"]),
+            cells=tuple(cells),
+        ),
+        left_end=str(conditions["left_end"]),
+        right_end=str(conditions["right_end"]),
+        countertop_type=str(countertop["type"]),
+        countertop_support=str(countertop["support"]),
+        source_archetype=retained_source,
+    )
+
+
+def _parse_cabinet(raw, units: str, profile, wall: StudWallSurvey,
+                   index: int, source_archetype: str = ""):
+    if isinstance(raw, dict) and raw.get("type") == "drawer_base":
+        return _parse_drawer_cabinet(
+            raw, units, profile, wall, index, source_archetype
+        )
+    return _parse_door_cabinet(
+        raw, units, profile, wall, index, source_archetype
     )
 
 
