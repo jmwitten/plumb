@@ -237,6 +237,8 @@ def _component_to_dict(c) -> dict:
     else:
         d["type"] = c.type
     d["name"] = c.name
+    if c.reader_name:
+        d["reader_name"] = c.reader_name
     if c.was:
         d["was"] = c.was
     if c.params:

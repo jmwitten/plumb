@@ -89,6 +89,7 @@ class Placed:
     at: tuple[float, float, float] = (0.0, 0.0, 0.0)
     rotate: list[tuple[str, float]] = field(default_factory=list)
     id: str = ""
+    reader_name: str = ""
 
     @property
     def name(self) -> str:

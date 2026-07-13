@@ -294,6 +294,7 @@ class ComponentSpec:
     type: str = ""
     imperative: str = ""
     name: str = ""
+    reader_name: str = ""
     params: dict = field(default_factory=dict)
     place: object = None  # MateSpec | RawSpec | None
     #: subtractive FEATUREs on this part (CL-2) — a tuple of :class:`FeatureSpec`,

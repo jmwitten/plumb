@@ -717,7 +717,7 @@ def _build_component(raw: dict, index: int) -> ComponentSpec:
     ctx = f"components[{index}]"
     f = _take(raw, {
         "id": True, "type": False, "imperative": False,
-        "name": False, "params": False, "place": False,
+        "name": False, "reader_name": False, "params": False, "place": False,
         "features": False, "was": False,
     }, ctx)
     cid = f["id"]
@@ -739,6 +739,13 @@ def _build_component(raw: dict, index: int) -> ComponentSpec:
         )
     name_defaulted = f["name"] is _MISSING
     name = cid if name_defaulted else f["name"]
+    reader_name = "" if f["reader_name"] is _MISSING else f["reader_name"]
+    if (f["reader_name"] is not _MISSING
+            and not (isinstance(reader_name, str) and reader_name.strip())):
+        raise SpecSchemaError(
+            f"{ctx} ({cid!r}): 'reader_name' must be a non-empty string when "
+            f"authored, got {reader_name!r}"
+        )
     place = None if f["place"] is _MISSING else _build_placement(f["place"], f"{ctx} ({cid!r}) place")
     features = tuple(
         _build_feature(feat, f"{ctx} ({cid!r}) features[{i}]")
@@ -749,6 +756,7 @@ def _build_component(raw: dict, index: int) -> ComponentSpec:
         type=_default(f["type"], ""),
         imperative=_default(f["imperative"], ""),
         name=name,
+        reader_name=reader_name,
         params=dict(_default(f["params"], {})),
         place=place, features=features, name_defaulted=name_defaulted, was=was,
     )

@@ -386,6 +386,10 @@ class SpecDetail(Detail):
                          resolver: Resolver, bindings: dict) -> None:
         cid = _interp(cspec.id, bindings, f"component id {cspec.id!r}")
         name = _interp(cspec.name, bindings, f"component {cid!r} name")
+        reader_name = ""
+        if cspec.reader_name:
+            reader_name = _interp(
+                cspec.reader_name, bindings, f"component {cid!r} reader_name")
         if cid in self._by_id:
             raise SpecCompileError(
                 f"duplicate component id {cid!r} — ids must be unique so "
@@ -398,6 +402,7 @@ class SpecDetail(Detail):
         else:
             component = self._build_registered(cspec, kwargs, cid, name)
         placed = self._apply_placement(d, cspec, component, resolver, bindings, cid, name)
+        placed.reader_name = reader_name
         self._by_id[cid] = placed
         self._cid_instances.setdefault(cspec.id, []).append(cid)
         if bindings:
