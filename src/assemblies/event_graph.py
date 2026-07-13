@@ -186,6 +186,34 @@ class ResolvedStage:
 
 
 @dataclass(frozen=True)
+class ResolvedProcessRef:
+    """One typed process reference resolved to a compiled connection label.
+
+    This is an inert compiler bridge in +process Task 1. Task 2 consumes it
+    while adding process events; keeping it beside :class:`ResolvedStage`
+    follows the existing authored-to-event-graph boundary without prematurely
+    changing graph behavior.
+    """
+
+    kind: str
+    connection: str
+
+
+@dataclass(frozen=True)
+class ResolvedAfter:
+    """One resolved process -> target connection point constraint.
+
+    ``chain`` isolates fragment-local claims in a composed site exactly as it
+    does for :class:`ResolvedStage`; no cross-fragment order is invented.
+    """
+
+    connection: str
+    after: tuple[ResolvedProcessRef, ...]
+    why: str
+    chain: str = ""
+
+
+@dataclass(frozen=True)
 class ResolvedUnit:
     """One authored bench unit resolved to built ``Placed.id`` values."""
 

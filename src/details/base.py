@@ -263,6 +263,16 @@ class Detail(ABC):
         no cross-fragment order is ever invented (design §3.2)."""
         return self.sequence()
 
+    def resolved_after(self) -> tuple:
+        """Typed process point constraints resolved to compiled labels.
+
+        Imperative details author none by default. ``SpecDetail`` resolves
+        authored labels (and rejects ambiguous repeat expansion); composed
+        sites replay each fragment under its own chain. Task 2 threads this
+        inert bridge into the event graph.
+        """
+        return ()
+
     def resolved_staging(self):
         """The detail's staging claim resolved to built ids.
 

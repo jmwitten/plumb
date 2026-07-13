@@ -596,6 +596,25 @@ class SiteDetail(Detail):
                     connections=st.connections, parts=st.parts))
         return tuple(out)
 
+    def resolved_after(self) -> tuple:
+        """Replay fragment-local process point constraints without crossing.
+
+        The constraint's compiled connection labels remain the fragment's real
+        labels, while ``chain`` is replaced with its subsystem id. Consumers
+        can therefore merge them into one site surface without inferring any
+        order between fragments (the same rule as :meth:`resolved_sequence`).
+        """
+        from ..assemblies.event_graph import ResolvedAfter
+
+        self.build()
+        out = []
+        for sid in self._order:
+            for claim in self._frags[sid].resolved_after():
+                out.append(ResolvedAfter(
+                    connection=claim.connection, after=claim.after,
+                    why=claim.why, chain=sid))
+        return tuple(out)
+
     def validation_spec(self) -> dict:
         self.build()
         bearings: list = []

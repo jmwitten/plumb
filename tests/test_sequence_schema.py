@@ -9,17 +9,22 @@ fixture here is test-local, mirroring ``test_install_spec_surface.py``."""
 
 from __future__ import annotations
 
+import copy
+import json
+
 import pytest
 import yaml
 
-from detailgen.spec.compiler import compile_spec
+from detailgen.spec.compiler import SpecCompileError, compile_spec
 from detailgen.spec.loader import load_spec_text
+from detailgen.spec import schema
 from detailgen.spec.schema import (
     AuthoredAssembly, AuthoredStage, AuthoredSubassembly, SequenceSpec,
     SpecSchemaError,
 )
 from detailgen.spec.semantics import SemanticError
 from detailgen.spec.serialize import spec_to_dict
+from detailgen.assemblies.event_graph import ResolvedAfter, ResolvedProcessRef
 
 
 # -- fixtures -----------------------------------------------------------------
@@ -277,14 +282,152 @@ def test_unknown_key_in_a_stage_entry_is_a_loud_load_error():
     assert "unknown key 'note'" in str(e.value)
 
 
-def test_future_after_key_is_not_special_cased():
-    """Point constraints remain outside +staging and stay loud unknown keys."""
-    key, value = "after", ["cure(leg a to rail)"]
-    seq = {"stages": [{"name": "s0", "connections": ["leg a to rail"],
-                       "why": "x"}], key: value}
+_AFTER = {
+    "after": [
+        {
+            "connection": "leg b to rail",
+            "after": [{"cure": "leg a to rail"}],
+            "why": "The cured first joint preserves the registration datum "
+                   "while the second joint is installed.",
+        },
+    ],
+}
+
+
+def _after_doc(sequence=_AFTER):
+    doc = _base_doc(copy.deepcopy(sequence))
+    doc["connections"][0]["type"] = "glued"
+    return doc
+
+
+def test_after_loads_as_typed_nested_process_reference():
+    doc = _load(_after_doc())
+    assert len(doc.sequence.after) == 1
+    authored = doc.sequence.after[0]
+    assert isinstance(authored, schema.AuthoredAfter)
+    assert authored.connection == "leg b to rail"
+    assert authored.why.startswith("The cured first joint")
+    assert len(authored.after) == 1
+    ref = authored.after[0]
+    assert isinstance(ref, schema.AuthoredProcessRef)
+    assert (ref.kind, ref.connection) == ("cure", "leg a to rail")
+
+
+def test_after_round_trips_exactly_through_yaml_and_json_surfaces():
+    doc = _load(_after_doc())
+    emitted = spec_to_dict(doc)
+    assert emitted["sequence"] == _AFTER
+    assert load_spec_text(yaml.safe_dump(emitted)) == doc
+    assert load_spec_text(json.dumps(emitted), fmt="json") == doc
+
+
+def test_after_keeps_connection_labels_verbatim_without_parsing_or_trimming():
+    raw = _after_doc()
+    raw["connections"][0]["label"] = "  leg a to rail  "
+    raw["connections"][1]["label"] = "  leg b to rail  "
+    raw["sequence"]["after"][0]["connection"] = "  leg b to rail  "
+    raw["sequence"]["after"][0]["after"][0]["cure"] = "  leg a to rail  "
+    doc = _load(raw)
+    claim = doc.sequence.after[0]
+    assert claim.connection == "  leg b to rail  "
+    assert claim.after[0].connection == "  leg a to rail  "
+    compile_spec(doc)  # exact labels still resolve semantically
+
+
+@pytest.mark.parametrize("bad", [
+    "cure(leg a to rail)",
+    ["cure(leg a to rail)"],
+    {"connection": "leg b to rail", "after": [{"cure": "leg a to rail"}],
+     "why": "not wrapped in the outer list"},
+])
+def test_after_rejects_scalar_string_and_mini_language_shapes(bad):
     with pytest.raises(SpecSchemaError) as e:
-        _load(_base_doc(seq))
-    assert f"unknown key {key!r}" in str(e.value)
+        _load(_after_doc({"after": bad}))
+    assert "after" in str(e.value)
+    assert "mapping" in str(e.value) or "list" in str(e.value)
+
+
+@pytest.mark.parametrize("rule", [
+    {"connection": "leg b to rail", "after": [{"cure": "leg a to rail"}]},
+    {"connection": "leg b to rail", "after": [{"cure": "leg a to rail"}],
+     "why": "   "},
+])
+def test_after_requires_nonblank_why(rule):
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_after_doc({"after": [rule]}))
+    assert "why" in str(e.value) and "required" in str(e.value)
+
+
+@pytest.mark.parametrize("sequence", [
+    {"after": []},
+    {"after": [{"connection": "leg b to rail", "after": [],
+                "why": "nothing referenced"}]},
+])
+def test_after_rejects_empty_outer_or_nested_lists(sequence):
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_after_doc(sequence))
+    assert "empty" in str(e.value)
+
+
+@pytest.mark.parametrize("rule,unknown", [
+    ({"connection": "leg b to rail", "after": [{"cure": "leg a to rail"}],
+      "why": "x", "note": "not provenance"}, "note"),
+    ({"connection": "leg b to rail", "after": [
+        {"cure": "leg a to rail", "kind": "wait"}], "why": "x"}, "kind"),
+])
+def test_after_rejects_unknown_keys_at_both_nested_levels(rule, unknown):
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_after_doc({"after": [rule]}))
+    assert f"unknown key {unknown!r}" in str(e.value)
+
+
+@pytest.mark.parametrize("rule,needle", [
+    ({"connection": "", "after": [{"cure": "leg a to rail"}], "why": "x"},
+     "connection"),
+    ({"connection": "leg b to rail", "after": [{"cure": "   "}], "why": "x"},
+     "cure"),
+])
+def test_after_rejects_blank_connection_labels(rule, needle):
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_after_doc({"after": [rule]}))
+    assert needle in str(e.value) and "non-empty" in str(e.value)
+
+
+def test_after_rejects_duplicate_process_reference_for_one_target():
+    rule = {"connection": "leg b to rail", "after": [
+        {"cure": "leg a to rail"}, {"cure": "leg a to rail"}], "why": "x"}
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_after_doc({"after": [rule]}))
+    assert "duplicate" in str(e.value) and "cure" in str(e.value)
+
+
+def test_after_rejects_duplicate_target_declaration():
+    rule = {"connection": "leg b to rail",
+            "after": [{"cure": "leg a to rail"}], "why": "x"}
+    with pytest.raises(SpecSchemaError) as e:
+        _load(_after_doc({"after": [rule, dict(rule)]}))
+    assert "leg b to rail" in str(e.value) and "exactly one" in str(e.value)
+
+
+@pytest.mark.parametrize("target,source", [
+    ("leg z to rail", "leg a to rail"),
+    ("leg b to rail", "leg z to rail"),
+])
+def test_after_target_and_source_must_name_declared_connections(target, source):
+    seq = {"after": [{"connection": target, "after": [{"cure": source}],
+                      "why": "typo probe"}]}
+    with pytest.raises(SemanticError) as e:
+        compile_spec(_load(_after_doc(seq)))
+    msg = str(e.value)
+    missing = target if target.startswith("leg z") else source
+    assert missing in msg and "no declared connection" in msg
+
+
+def test_cure_source_must_name_a_glued_connection():
+    with pytest.raises(SemanticError) as e:
+        compile_spec(_load(_base_doc(_AFTER)))
+    msg = str(e.value)
+    assert "leg a to rail" in msg and "cure" in msg and "glued" in msg
 
 
 def test_after_key_on_a_stage_entry_is_also_not_special_cased():
@@ -518,3 +661,212 @@ def test_compile_connections_default_sequence_is_empty():
 
     checks = compile_connections(DetailAssembly("empty"), [])
     assert checks.sequence == ()
+
+
+# -- +process: connection-local typed cure facts -----------------------------
+
+
+_CURE = {
+    "cure": {
+        "instructions": [
+            "Spread the selected wood adhesive on both prepared mating faces.",
+            "Clamp the joint in the label-required fixture state.",
+        ],
+        "completion": "selected_label_full_cure",
+        "why": "The adhesive bond is the represented joining mechanism; the "
+               "selected product label governs the actual cure conditions.",
+    },
+}
+
+
+def test_connection_process_cure_loads_as_a_typed_fact():
+    raw = _after_doc()
+    raw["connections"][0]["process"] = _CURE
+    doc = _load(raw)
+    fact = doc.connections[0].process
+    assert isinstance(fact, schema.ProcessFactSpec)
+    assert isinstance(fact.cure, schema.CureProcessSpec)
+    assert fact.cure.instructions == tuple(_CURE["cure"]["instructions"])
+    assert fact.cure.completion == "selected_label_full_cure"
+    assert fact.cure.why.startswith("The adhesive bond")
+
+
+def test_connection_process_cure_round_trips_exactly():
+    raw = _after_doc()
+    raw["connections"][0]["process"] = _CURE
+    doc = _load(raw)
+    emitted = spec_to_dict(doc)
+    assert emitted["connections"][0]["process"] == _CURE
+    assert load_spec_text(yaml.safe_dump(emitted)) == doc
+    assert load_spec_text(json.dumps(emitted), fmt="json") == doc
+
+
+def test_connection_without_process_uses_empty_typed_default_and_omits_it():
+    doc = _load(_after_doc())
+    assert doc.connections[0].process == schema.ProcessFactSpec()
+    assert "process" not in spec_to_dict(doc)["connections"][0]
+
+
+def test_connection_local_cure_fact_requires_glued_connection_type():
+    raw = _base_doc()
+    raw["connections"][0]["process"] = _CURE
+    with pytest.raises(SemanticError) as e:
+        compile_spec(_load(raw))
+    msg = str(e.value)
+    assert "leg a to rail" in msg and "process.cure" in msg and "glued" in msg
+
+
+@pytest.mark.parametrize("process,needle", [
+    ({}, "declares no process"),
+    ("cure", "mapping"),
+    ({"wait": {}}, "unknown key 'wait'"),
+    ({"cure": "follow label"}, "mapping"),
+    ({"cure": {"instructions": ["prepare"],
+               "completion": "selected_label_full_cure", "why": "x",
+               "duration": "24 h"}}, "unknown key 'duration'"),
+])
+def test_connection_process_rejects_empty_scalar_and_unknown_shapes(process, needle):
+    raw = _after_doc()
+    raw["connections"][0]["process"] = process
+    with pytest.raises(SpecSchemaError) as e:
+        _load(raw)
+    assert needle in str(e.value)
+
+
+@pytest.mark.parametrize("cure,needle", [
+    ({"completion": "selected_label_full_cure", "why": "x"}, "instructions"),
+    ({"instructions": [], "completion": "selected_label_full_cure", "why": "x"},
+     "at least one"),
+    ({"instructions": ["   "], "completion": "selected_label_full_cure",
+      "why": "x"}, "non-empty"),
+    ({"instructions": ["prepare", 7],
+      "completion": "selected_label_full_cure", "why": "x"}, "string"),
+    ({"instructions": ["prepare"], "why": "x"}, "completion"),
+    ({"instructions": ["prepare"], "completion": "24_hours", "why": "x"},
+     "selected_label_full_cure"),
+    ({"instructions": ["prepare"], "completion": "selected_label_full_cure"},
+     "why"),
+    ({"instructions": ["prepare"], "completion": "selected_label_full_cure",
+      "why": "   "}, "non-empty"),
+])
+def test_cure_fact_requires_instructions_closed_completion_and_why(cure, needle):
+    raw = _after_doc()
+    raw["connections"][0]["process"] = {"cure": cure}
+    with pytest.raises(SpecSchemaError) as e:
+        _load(raw)
+    assert needle in str(e.value)
+
+
+# -- +process: resolved connection/process point-constraint bridge -----------
+
+
+def _buildable_after_doc(*, target_entry=None, source_entry=None, sequence=None,
+                         prefix=""):
+    components = [
+        {"id": cid, "type": "lumber", "name": cid,
+         "params": {"nominal": "2x4", "length": "12 in"},
+         "place": {"raw": {"at": [0, 0, z]}}}
+        for cid, z in (("a", 0), ("b", "3.5 in"), ("c", "7 in"))
+    ]
+    source = source_entry or {
+        "type": "glued", "label": f"{prefix}source glue", "parts": ["a", "b"]}
+    target = target_entry or {
+        "type": "glued", "label": f"{prefix}target joint", "parts": ["b", "c"]}
+    seq = sequence or {"after": [{
+        "connection": f"{prefix}target joint",
+        "after": [{"cure": f"{prefix}source glue"}],
+        "why": "Keep the source registration fixed while installing target.",
+    }]}
+    return {
+        "name": "resolved after", "units": "in", "components": components,
+        "connections": [source, target], "sequence": seq,
+    }
+
+
+def test_specdetail_resolved_after_maps_both_labels_to_exact_built_instances():
+    detail = compile_spec(_load(_buildable_after_doc()))
+    rules = detail.resolved_after()
+    assert len(rules) == 1
+    rule = rules[0]
+    assert isinstance(rule, ResolvedAfter)
+    assert (rule.connection, rule.why, rule.chain) == (
+        "target joint",
+        "Keep the source registration fixed while installing target.", "")
+    assert rule.after == (
+        ResolvedProcessRef(kind="cure", connection="source glue"),)
+
+
+@pytest.mark.parametrize("repeat_side", ["target", "source"])
+def test_resolved_after_rejects_multi_instance_repeat_refs(repeat_side):
+    repeat = {"repeat": {"var": "i", "count": 2}, "body": [{
+        "type": "glued", "label": f"{repeat_side} {{i}}",
+        "parts": ["a", "b"] if repeat_side == "source" else ["b", "c"],
+    }]}
+    if repeat_side == "target":
+        raw = _buildable_after_doc(
+            target_entry=repeat,
+            sequence={"after": [{"connection": "target {i}",
+                                  "after": [{"cure": "source glue"}],
+                                  "why": "ambiguity probe"}]})
+    else:
+        raw = _buildable_after_doc(
+            source_entry=repeat,
+            sequence={"after": [{"connection": "target joint",
+                                  "after": [{"cure": "source {i}"}],
+                                  "why": "ambiguity probe"}]})
+    with pytest.raises(SpecCompileError) as e:
+        compile_spec(_load(raw)).resolved_after()
+    msg = str(e.value)
+    assert "2 built instances" in msg and "v1" in msg and "exactly one" in msg
+
+
+@pytest.mark.parametrize("count,retire,needle", [
+    (0, None, "zero times"),
+    (1, "target {i}", "retired"),
+])
+def test_resolved_after_rejects_zero_instance_and_retired_target(count, retire, needle):
+    repeated_target = {"repeat": {"var": "i", "count": count}, "body": [{
+        "type": "glued", "label": "target {i}", "parts": ["b", "c"]}]}
+    raw = _buildable_after_doc(
+        target_entry=repeated_target,
+        sequence={"after": [{"connection": "target {i}",
+                              "after": [{"cure": "source glue"}],
+                              "why": "absence probe"}]})
+    if retire is not None:
+        raw["retire"] = [{"connection": retire, "reason": "test retirement"}]
+    with pytest.raises(SpecCompileError) as e:
+        compile_spec(_load(raw)).resolved_after()
+    msg = str(e.value)
+    assert "built no instance" in msg and needle in msg
+
+
+def test_base_detail_resolved_after_default_is_empty():
+    from detailgen.details.base import Detail
+    assert Detail.resolved_after(object()) == ()
+
+
+def test_site_replays_fragment_after_constraints_in_separate_chains(tmp_path):
+    from detailgen.spec.site import SiteDetail, load_site_text
+
+    for sid in ("left", "right"):
+        raw = _buildable_after_doc(prefix=f"{sid} ")
+        raw["name"] = sid
+        (tmp_path / f"{sid}.yaml").write_text(
+            yaml.safe_dump(raw, sort_keys=False))
+    site_doc = load_site_text(yaml.safe_dump({
+        "name": "two fragment process",
+        "kind": "site",
+        "units": "in",
+        "subsystems": [
+            {"id": "left", "fragment": "left.yaml", "place": "identity"},
+            {"id": "right", "fragment": "right.yaml", "place": "identity"},
+        ],
+    }))
+    site = SiteDetail(site_doc, base_dir=tmp_path)
+    rules = site.resolved_after()
+    assert len(rules) == 2
+    assert [r.chain for r in rules] == ["left", "right"]
+    assert {(r.chain, r.connection, r.after[0].connection) for r in rules} == {
+        ("left", "left target joint", "left source glue"),
+        ("right", "right target joint", "right source glue"),
+    }
