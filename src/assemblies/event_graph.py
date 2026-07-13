@@ -100,12 +100,14 @@ from dataclasses import dataclass
 FAMILY_TECHNIQUE = "technique_default"
 FAMILY_NECESSITY = "structural_necessity"
 FAMILY_AUTHORED = "authored_sequence"
+FAMILY_STAGING = "staging"
 
 #: Families whose facts are DECLARED claims (authored or type-declared
 #: technique knowledge) vs DERIVED. Structural necessity is the one derived
 #: family in v1-core; the split is what the epistemic-contract table and the
 #: §4.3 rung wording print.
-DECLARED_FAMILIES = frozenset({FAMILY_TECHNIQUE, FAMILY_AUTHORED})
+DECLARED_FAMILIES = frozenset({
+    FAMILY_TECHNIQUE, FAMILY_AUTHORED, FAMILY_STAGING})
 
 
 @dataclass(frozen=True)
@@ -114,8 +116,8 @@ class Event:
     id, ``drive`` keyed by ``(connection label, role-group key)``. ``kind``
     is an open tag — ``cure``/``join`` are later increments."""
 
-    kind: str          # "place" | "drive"
-    subject: str       # place: the part id; drive: the connection label
+    kind: str          # "place" | "drive" | "join"
+    subject: str       # place: part id; drive: connection label; join: unit
     group: str = ""    # drive only: the role-group key ("" = the single
                        # install unit of a group-less connection)
 
@@ -131,6 +133,30 @@ class EventEdge:
     b: Event
     family: str
     source: str
+
+
+@dataclass(frozen=True)
+class PresenceFact:
+    """A frame-presence proof that is not itself a graph-order edge.
+
+    Bench-frame exclusion and explicit in-situ context are presence rules of
+    the authored staging declaration, not invented cross-unit precedence.
+    They still carry the same family/source interface as :class:`EventEdge`
+    so verdicts can print one provenance vocabulary.
+    """
+
+    family: str
+    source: str
+
+
+@dataclass(frozen=True)
+class PresenceDecision:
+    """Presence of one occupant at one drive event."""
+
+    state: str  # present | absent | unordered | coincident
+    event: Event | None
+    facts: tuple = ()
+    declared_trust: bool = False
 
 
 @dataclass(frozen=True)
@@ -203,7 +229,8 @@ class EventGraph:
     order everywhere)."""
 
     def __init__(self, events, edges, event_of, part_names, conn_labels,
-                 drives_of, members_of, stages, staging=None):
+                 drives_of, members_of, stages, staging=None, frame_of=None,
+                 unit_of=None, join_of=None):
         self.events: tuple[Event, ...] = tuple(events)
         self.edges: tuple[EventEdge, ...] = tuple(edges)
         #: part id -> its governing event (fastener/stack hardware -> its
@@ -217,6 +244,20 @@ class EventGraph:
         self.members_of: dict[str, tuple[str, ...]] = members_of
         self.stages: tuple[ResolvedStage, ...] = tuple(stages)
         self.staging: ResolvedStaging | None = staging
+        #: Event -> frame name. ``root`` is the assembled detail; every other
+        #: value is a declared bench-unit name.
+        self.frame_of: dict[Event, str] = dict(frame_of or {})
+        #: Built part id -> declared bench unit (constructed parts only).
+        self.unit_of: dict[str, str] = dict(unit_of or {})
+        self.join_of: dict[str, Event] = dict(join_of or {})
+        self.units: dict[str, ResolvedUnit] = {
+            u.name: u for u in (staging.units if staging is not None else ())}
+        self.context_parts = frozenset(
+            staging.context_parts if staging is not None else ())
+        connected = set()
+        for mids in self.members_of.values():
+            connected.update(mids)
+        self._connected_parts = frozenset(connected)
         self._out: dict[Event, list[tuple[Event, EventEdge]]] = {}
         for ev in self.events:
             self._out.setdefault(ev, [])
@@ -229,8 +270,77 @@ class EventGraph:
     def describe(self, ev: Event) -> str:
         if ev.kind == "place":
             return f"place({self.part_names.get(ev.subject, ev.subject)})"
+        if ev.kind == "join":
+            return f"join({ev.subject})"
         grp = ev.group or "install"
         return f"drive({ev.subject}, {grp})"
+
+    def _presence_event(self, part_id: str, at_frame: str) -> Event | None:
+        """The event governing ``part_id`` in ``at_frame``.
+
+        Inside its own bench frame a unit part is governed by its internal
+        place/drive event. At root, the whole unit is governed by its join.
+        """
+        if at_frame == "root" and part_id in self.unit_of:
+            return self.join_of[self.unit_of[part_id]]
+        return self.event_of.get(part_id)
+
+    def presence_at(self, drive: Event, part_id: str) -> PresenceDecision:
+        """Classify one occupant at ``drive`` using graph + frame semantics.
+
+        No linearization is selected. A bench frame excludes every non-member
+        by the declaration's meaning, without inventing order between units.
+        Root presence uses place/join reachability; undeclared context remains
+        unordered, while explicit ``in_situ`` is the authored present mirror.
+        """
+        if drive not in self.frame_of:
+            raise ValueError(
+                f"presence query names unknown event {drive!r}")
+        frame = self.frame_of[drive]
+        own_event = self.event_of.get(part_id)
+        if own_event == drive:
+            return PresenceDecision("coincident", own_event)
+
+        staging = self.staging
+        if frame != "root" and self.unit_of.get(part_id) != frame:
+            unit = self.units[frame]
+            governed = self._presence_event(part_id, "root")
+            trust = (part_id in self.context_parts
+                     and part_id not in self._connected_parts)
+            marker = " DECLARED TRUST:" if trust else ""
+            src = (
+                f"{marker} staging claim for subassembly {unit.name!r}: its "
+                f"bench frame contains only that unit's parts, so "
+                f"{self.part_names.get(part_id, part_id)} is absent while "
+                f"this unit is assembled (why: {unit.why}); insertion travel "
+                f"is not analyzed (P1)")
+            return PresenceDecision(
+                "absent", governed,
+                (PresenceFact(FAMILY_STAGING, src),),
+                declared_trust=trust)
+
+        if (frame == "root" and part_id in self.context_parts
+                and staging is not None and staging.mode == "in_situ"):
+            src = (
+                f"staging claim assembly mode 'in_situ': context body "
+                f"{self.part_names.get(part_id, part_id)} is present from "
+                f"the root build (why: {staging.why})")
+            return PresenceDecision(
+                "present", own_event,
+                (PresenceFact(FAMILY_STAGING, src),))
+
+        governed = self._presence_event(part_id, frame)
+        if governed is None:
+            return PresenceDecision("unordered", None)
+        if governed == drive:
+            return PresenceDecision("coincident", governed)
+        if self.precedes(governed, drive):
+            return PresenceDecision(
+                "present", governed, self.path_edges(governed, drive))
+        if self.precedes(drive, governed):
+            return PresenceDecision(
+                "absent", governed, self.path_edges(drive, governed))
+        return PresenceDecision("unordered", governed)
 
     def descendants(self, ev: Event) -> frozenset:
         """Every event strictly reachable FROM ``ev`` (memoized BFS)."""
@@ -336,8 +446,8 @@ def build_event_graph(assembly, connections, edges, installs,
     # Defense below the loader/compiler: direct Python callers must not be
     # able to place one built part in two units or name an unbuilt/context
     # part as a unit member. The event graph is the semantic trust boundary.
+    unit_of: dict[str, str] = {}
     if staging is not None:
-        member_of: dict[str, str] = {}
         for unit in staging.units:
             for pid in unit.parts:
                 if pid not in part_names:
@@ -345,7 +455,7 @@ def build_event_graph(assembly, connections, edges, installs,
                         f"staging subassembly {unit.name!r}: part {pid!r} "
                         f"names no built part; a bench unit can contain only "
                         f"parts in this compiled assembly.")
-                prior = member_of.get(pid)
+                prior = unit_of.get(pid)
                 if prior is not None:
                     raise ValueError(
                         f"staging: part {part_names[pid]!r} belongs to both "
@@ -357,7 +467,7 @@ def build_event_graph(assembly, connections, edges, installs,
                         f"staging subassembly {unit.name!r}: context part "
                         f"{part_names[pid]!r} cannot be a constructed bench-"
                         f"unit member.")
-                member_of[pid] = unit.name
+                unit_of[pid] = unit.name
         unknown_context = set(staging.context_parts) - set(part_names)
         if unknown_context:
             raise ValueError(
@@ -445,6 +555,30 @@ def build_event_graph(assembly, connections, edges, installs,
         if p.id not in event_of:
             event_of[p.id] = Event("place", p.id)
 
+    # -- frames + join events -------------------------------------------------
+    # A connection is bench-scoped iff ALL its structural members belong to
+    # the SAME declared unit. Anything crossing a unit boundary (or touching a
+    # root part) is root-scoped. Hardware inherits its drive event's frame.
+    connection_frame: dict[str, str] = {}
+    for label, mids in members_of.items():
+        units = {unit_of[mid] for mid in mids if mid in unit_of}
+        if mids and len(units) == 1 and all(mid in unit_of for mid in mids):
+            connection_frame[label] = next(iter(units))
+        else:
+            connection_frame[label] = "root"
+    join_of: dict[str, Event] = {
+        unit.name: Event("join", unit.name)
+        for unit in (staging.units if staging is not None else ())}
+    frame_of: dict[Event, str] = {}
+    for pid, ev in event_of.items():
+        if ev.kind == "place":
+            frame_of[ev] = unit_of.get(pid, "root")
+    for label, drives in drives_of.items():
+        for dev in drives:
+            frame_of[dev] = connection_frame[label]
+    for join in join_of.values():
+        frame_of[join] = "root"
+
     events: list[Event] = []
     seen_ev: set[Event] = set()
     for p in parts:
@@ -457,13 +591,27 @@ def build_event_graph(assembly, connections, edges, installs,
             if ev not in seen_ev:
                 seen_ev.add(ev)
                 events.append(ev)
+    for unit in (staging.units if staging is not None else ()):
+        ev = join_of[unit.name]
+        if ev not in seen_ev:
+            seen_ev.add(ev)
+            events.append(ev)
 
     # -- family 1: technique_default (lifted, F-5 same-event drop) --------
     lifted: list[tuple[Event, Event, str, EventEdge]] = []
+    def _edge_event(pid: str, connection: str) -> Event | None:
+        """Lift a part edge in the frame of its owning connection."""
+        ev = event_of.get(pid)
+        if (connection_frame.get(connection) == "root"
+                and pid in members_of.get(connection, ())
+                and pid in unit_of):
+            return join_of[unit_of[pid]]
+        return ev
+
     for e in edges:
         if e.kind != "installed_before":
             continue
-        ea, eb = event_of.get(e.a), event_of.get(e.b)
+        ea, eb = _edge_event(e.a, e.connection), _edge_event(e.b, e.connection)
         if ea is None or eb is None:
             # An installed_before edge naming a never-placed part: the
             # hardware-presence finding already blocks it; no event exists
@@ -555,7 +703,13 @@ def build_event_graph(assembly, connections, edges, installs,
 
     for c in connections:
         for mid in members_of[c.label]:
-            mev = event_of.get(mid)
+            # In a root-scoped connection, a member already assembled inside
+            # a unit becomes present at the unit's JOIN, not at its internal
+            # bench-frame place event. Bench/root members keep their own place.
+            if connection_frame[c.label] == "root" and mid in unit_of:
+                mev = join_of[unit_of[mid]]
+            else:
+                mev = event_of.get(mid)
             if mev is None:
                 continue
             for dev in drives_of[c.label]:
@@ -573,9 +727,24 @@ def build_event_graph(assembly, connections, edges, installs,
                 graph_edges.append(
                     EventEdge(mev, dev, FAMILY_NECESSITY, src))
 
+    # -- family 4: staging (R-1 bench-events-before-join) ---------------------
+    # This edge rule is derived from the staging declaration's own content:
+    # "assembled apart" means every internal place/drive happens BEFORE the
+    # unit enters root. It deliberately emits no cross-unit order.
+    for unit in (staging.units if staging is not None else ()):
+        join = join_of[unit.name]
+        src = (
+            f"bench events precede join for subassembly {unit.name!r} — "
+            f"derived from the staging claim (why: {unit.why})")
+        for ev in events:
+            if frame_of.get(ev) == unit.name:
+                graph_edges.append(
+                    EventEdge(ev, join, FAMILY_STAGING, src))
+
     graph = EventGraph(events, graph_edges, event_of, part_names,
                        conn_labels, drives_of, members_of, norm_stages,
-                       staging=staging)
+                       staging=staging, frame_of=frame_of,
+                       unit_of=unit_of, join_of=join_of)
     _check_event_order(graph)
     return graph
 

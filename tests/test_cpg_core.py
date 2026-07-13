@@ -21,7 +21,7 @@ from detailgen.assemblies import (
 )
 from detailgen.assemblies.connection import Edge
 from detailgen.assemblies.event_graph import (
-    FAMILY_AUTHORED, FAMILY_NECESSITY, FAMILY_TECHNIQUE, Event,
+    FAMILY_AUTHORED, FAMILY_NECESSITY, FAMILY_STAGING, FAMILY_TECHNIQUE, Event,
     EventOrderCycleError, ResolvedStage, ResolvedStaging, ResolvedUnit,
     build_event_graph,
     derive_reader_steps, linearize, unordered_parts,
@@ -506,6 +506,119 @@ def test_event_graph_defends_against_multi_membership_if_loader_is_bypassed():
     with pytest.raises(ValueError, match="at most one subassembly") as err:
         _graph(a, [c1], staging=staging)
     assert "side a" in str(err.value) and "side b" in str(err.value)
+
+
+def _two_bench_units_with_root_joint():
+    a, c1, c2 = _two_screwed_plates()
+    bridge_screw = a.add(
+        StructuralScrew(0.19 * IN, 1.5 * IN, name="bridge screw"),
+        at=(50, 100, 88.9))
+    bridge = Connection(
+        kind=connection_types.get("cleat_screwed")(n_screws=1),
+        parts=[c1.parts[0], c2.parts[0]], hardware=[bridge_screw],
+        label="root bridge")
+    staging = ResolvedStaging(
+        mode="subassemblies", context_parts=frozenset(),
+        units=(
+            ResolvedUnit("side a", "bench side A flat",
+                         tuple(p.id for p in c1.parts)),
+            ResolvedUnit("side b", "bench side B flat",
+                         tuple(p.id for p in c2.parts)),
+        ))
+    return a, c1, c2, bridge, staging
+
+
+def test_connections_scope_to_bench_only_when_all_members_share_one_unit():
+    a, c1, c2, bridge, staging = _two_bench_units_with_root_joint()
+    g = _graph(a, [c1, c2, bridge], staging=staging)
+    d1 = Event("drive", "joint one", "cleat_screws")
+    d2 = Event("drive", "joint two", "cleat_screws")
+    root_drive = Event("drive", "root bridge", "cleat_screws")
+    assert g.frame_of[d1] == "side a"
+    assert g.frame_of[d2] == "side b"
+    assert g.frame_of[root_drive] == "root"
+    for pid in staging.units[0].parts:
+        ev = g.event_of[pid]
+        if ev.kind == "place":
+            assert g.frame_of[ev] == "side a"
+
+
+def test_r1_every_bench_event_precedes_its_join_without_ordering_other_units():
+    a, c1, c2, bridge, staging = _two_bench_units_with_root_joint()
+    g = _graph(a, [c1, c2, bridge], staging=staging)
+    d1 = Event("drive", "joint one", "cleat_screws")
+    d2 = Event("drive", "joint two", "cleat_screws")
+    j1, j2 = Event("join", "side a"), Event("join", "side b")
+    assert j1 in g.events and j2 in g.events
+    assert g.precedes(d1, j1) and g.precedes(d2, j2)
+    assert all(g.precedes(ev, j1) for ev in g.events
+               if g.frame_of[ev] == "side a")
+    assert all(g.precedes(ev, j2) for ev in g.events
+               if g.frame_of[ev] == "side b")
+    # Frame semantics do not invent a construction order between independent
+    # bench units; declaration order is a presentation tie-breaker only.
+    assert not g.precedes(d1, d2) and not g.precedes(d2, d1)
+    r1 = [e for e in g.edges if e.family == FAMILY_STAGING and e.b == j1]
+    assert r1 and all("bench events precede join" in e.source for e in r1)
+
+
+def test_root_connection_uses_joins_as_member_presence_events():
+    a, c1, c2, bridge, staging = _two_bench_units_with_root_joint()
+    g = _graph(a, [c1, c2, bridge], staging=staging)
+    root_drive = Event("drive", "root bridge", "cleat_screws")
+    for unit in staging.units:
+        join = Event("join", unit.name)
+        assert g.precedes(join, root_drive)
+        assert (join, root_drive) in {
+            (e.a, e.b) for e in g.edges if e.family == FAMILY_NECESSITY}
+
+
+def test_bench_frame_presence_excludes_every_nonmember_without_cross_order():
+    a, c1, c2, bridge, staging = _two_bench_units_with_root_joint()
+    g = _graph(a, [c1, c2, bridge], staging=staging)
+    d1 = Event("drive", "joint one", "cleat_screws")
+    opposite = c2.parts[0]
+    decision = g.presence_at(d1, opposite.id)
+    assert decision.state == "absent"
+    assert decision.event == Event("join", "side b")
+    assert decision.facts and decision.facts[0].family == FAMILY_STAGING
+    assert "bench side A flat" in decision.facts[0].source
+    assert not decision.declared_trust
+
+
+def test_bench_then_set_context_absence_is_explicit_declared_trust():
+    a, c1, _c2 = _two_screwed_plates()
+    context = a.add(Lumber("2x4", 4 * IN, name="sofa context"),
+                    at=(0, 500, 0))
+    unit_parts = tuple(p.id for p in a.parts if p.id != context.id)
+    staging = ResolvedStaging(
+        mode="bench_then_set", why="build away from the sofa",
+        context_parts=frozenset({context.id}),
+        units=(ResolvedUnit("whole detail", "build away from the sofa",
+                            unit_parts),))
+    g = _graph(a, [c1], staging=staging)
+    drive = Event("drive", "joint one", "cleat_screws")
+    decision = g.presence_at(drive, context.id)
+    assert decision.state == "absent" and decision.declared_trust
+    assert "DECLARED TRUST" in decision.facts[0].source
+    assert "build away from the sofa" in decision.facts[0].source
+
+
+def test_explicit_in_situ_context_is_present_and_undeclared_is_unordered():
+    a, c1, _c2 = _two_screwed_plates()
+    context = a.add(Lumber("2x4", 4 * IN, name="context"), at=(0, 500, 0))
+    drive = Event("drive", "joint one", "cleat_screws")
+    in_situ = ResolvedStaging(
+        mode="in_situ", why="build on the context",
+        context_parts=frozenset({context.id}))
+    declared_graph = _graph(a, [c1], staging=in_situ)
+    decision = declared_graph.presence_at(drive, context.id)
+    assert decision.state == "present"
+    assert decision.facts[0].family == FAMILY_STAGING
+    assert "build on the context" in decision.facts[0].source
+
+    undeclared_graph = _graph(a, [c1])
+    assert undeclared_graph.presence_at(drive, context.id).state == "unordered"
 
 
 # -- canonical linearization + reader steps (§5.1; amendment 5 vocabulary) -----
