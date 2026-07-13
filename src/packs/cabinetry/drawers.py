@@ -378,6 +378,27 @@ def build_drawer_bank(
                 source=pull.product_id,
                 face="front",
             ))
+        cell_machining.extend((
+            MachiningFeature(
+                feature_id=f"{bottom.part_id}.stabilizer_gear_rack_cut",
+                kind="stabilizer_gear_rack_cut",
+                part_id=bottom.part_id,
+                location_mm=(0.0,),
+                length_mm=stabilizer.gear_rack_length_mm,
+                source=stabilizer.product_id,
+                face="hardware_stock",
+            ),
+            MachiningFeature(
+                feature_id=f"{bottom.part_id}.stabilizer_linkage_rod_cut",
+                kind="stabilizer_linkage_rod_cut",
+                part_id=bottom.part_id,
+                location_mm=(0.0,),
+                length_mm=(opening_width_mm
+                           - stabilizer.linkage_rod_cut_deduction_mm),
+                source=stabilizer.product_id,
+                face="hardware_stock",
+            ),
+        ))
 
         related_box_parts = tuple(part.part_id for part in cell_parts[:5])
         cell_hardware.extend((

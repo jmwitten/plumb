@@ -129,6 +129,8 @@ class LateralStabilizerProduct:
     recommended_from_opening_mm: float
     maximum_opening_mm: float
     linkage_rod_length_mm: float
+    linkage_rod_cut_deduction_mm: float
+    gear_rack_length_mm: float
     capacity_increase_lb: float
     quantity_per_drawer: int
     source_url: str
@@ -327,6 +329,8 @@ BLUM_ZS7M686MU = LateralStabilizerProduct(
     recommended_from_opening_mm=610.0,
     maximum_opening_mm=1369.0,
     linkage_rod_length_mm=1051.0,
+    linkage_rod_cut_deduction_mm=318.0,
+    gear_rack_length_mm=560.0,
     capacity_increase_lb=0.0,
     quantity_per_drawer=1,
     source_url=(

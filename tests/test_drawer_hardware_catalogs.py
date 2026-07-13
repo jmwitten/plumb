@@ -56,6 +56,8 @@ def test_lateral_stabilizer_is_required_by_width_but_adds_no_capacity():
     assert stabilizer.recommended_from_opening_mm == pytest.approx(610)
     assert stabilizer.maximum_opening_mm == pytest.approx(1369)
     assert stabilizer.linkage_rod_length_mm == pytest.approx(1051)
+    assert stabilizer.linkage_rod_cut_deduction_mm == pytest.approx(318)
+    assert stabilizer.gear_rack_length_mm == pytest.approx(560)
     assert stabilizer.capacity_increase_lb == 0
     assert stabilizer.quantity_per_drawer == 1
     assert stabilizer.source_url.startswith("https://d2.blum.com/")
