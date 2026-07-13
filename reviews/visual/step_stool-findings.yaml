@@ -1,0 +1,139 @@
+# Visual-review findings store — kids' two-step step stool (task STOOLBUILD).
+#
+# The stool's own store under the per-detail naming convention
+# (<name>-findings.yaml; task VISREVSTORES), a sibling of the caddy + zipline
+# stores that does not churn them. Loaded by the SAME strict loader
+# (detailgen.review.load_findings_file): every field validated, resolutions
+# require evidence, unresolved is a legal persistent open state.
+#
+# Renders reviewed BY LOOKING: the shaded matplotlib views the stool renderer
+# emits (scripts/render_stool_views.py -> outputs/step_stool/views/*.png). No
+# Blender/GPU path here, so views are rasterized from the tessellated world solids
+# — the same geometry the GLB carries. Render refs carry no content_hash (no live
+# review manifest yet), so their staleness is honestly "unverifiable" until
+# re-reviewed against one.
+#
+# BINDING: findings are SUSPICIONS, never proof. Nothing here relaxes or gates an
+# invariant verdict; V3's honest resolution is the coverage matrix's existing
+# UNKNOWN, not a new clean claim.
+
+version: 1
+findings:
+  - id: V1
+    subject: step-stool overview render — solid side panels occlude the two-step interior
+    suspected_issue: >-
+      In the plain SIDE and oblique primary views the solid 2x10 side panel nearest
+      the camera fills the frame and OCCLUDES the two staggered treads, the cleats,
+      and the toe room — the two-step form that is the whole point of the piece does
+      not read. A doc built on those primaries would under-communicate the built work.
+    severity: MEDIUM
+    visual_evidence: >-
+      v3_side.png — the near panel is a solid brown wall; only a sliver of the two
+      treads shows at the very top. g1_iso.png, rendered with the FLOOR hidden (and
+      the near panel out of the way at that angle), shows both panels, both staggered
+      treads and the cleats clearly, confirming the occluder is the solid panel, not
+      missing geometry.
+    renders:
+      - path: outputs/step_stool/views/v3_side.png
+      - path: outputs/step_stool/views/g1_iso.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Lead the document with the floor-hidden ISO (g1_iso) as the HERO, and ship
+      floor-hidden / near-panel-hidden zoom variants for any joint a solid panel
+      occludes (the view-coverage table does exactly this). The render-level fix
+      (auto-ghost occluding solid members, ultimately a Presentation-Graph-derived
+      rule) is not built.
+    resolution:
+      status: unresolved
+      note: >-
+        Same honest state as the caddy's C1: a presentation concern, not a model
+        defect (the panels are correctly solid). The view-coverage table WORKS
+        AROUND it (hero = g1_iso; z_cleat/z_upper hide the near panel), but the
+        general render-level auto-ghost rule is not built, so this stays an honest
+        OPEN work item.
+  - id: V2
+    subject: lower-tread cleat joint — cleat + screws unreadable at the default zoom angle
+    suspected_issue: >-
+      At an outside oblique zoom the 1x2 cleat reads as MERGED with the lower tread
+      (same wood tone, tucked directly under it) and its two face screws are hidden
+      behind the tread edge — the cleat_screwed joint and its separately-declared
+      tread-on-cleat bearing do not visually read.
+    severity: LOW
+    visual_evidence: >-
+      The first z_cleat render (outside oblique) showed the tread and cleat as one
+      brown mass with no visible screws. Re-aimed from BELOW and INSIDE, with the
+      near panel and far cleat hidden, z_cleat.png now shows the tread on top, the
+      cleat as a distinct block against the panel inner face, and the two screw
+      heads on the cleat's inner face.
+    renders:
+      - path: outputs/step_stool/views/z_cleat.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Keep the below/inside camera for the cleat zoom; it is the angle at which the
+      hidden-under-the-tread joint reads.
+    resolution:
+      status: fixed-by-revision
+      note: >-
+        Fixed at the render level by re-aiming the z_cleat camera (elev -18, azim
+        -108, near panel + far cleat hidden). The cleat and its screw heads now
+        read; committed in the render script. No model change — a camera choice.
+  - id: V3
+    subject: step-stool stability — could it tip under an off-centre load on the upper step?
+    suspected_issue: >-
+      A child stands 10.25in up on the upper tread and may lean or step to an edge;
+      the render looks like a piece that could tip forward or rack. Is tip-over
+      resistance represented, or silently assumed OK?
+    severity: MEDIUM
+    visual_evidence: >-
+      v2_front.png and g1_iso.png show a tall-ish two-step whose upper surface is
+      well above the base; nothing in the geometry proves it will not tip under an
+      off-centre load.
+    invariant_family: Support/Stability representation
+    renders:
+      - path: outputs/step_stool/views/v2_front.png
+      - path: outputs/step_stool/views/g1_iso.png
+    recommended_action: >-
+      Confirm the compiler does NOT silently pass stability: the coverage matrix
+      must show Support/Stability representation AND Structural capacity as UNKNOWN
+      — NOT ANALYZED, so the apparent tip risk is an honest non-claim, not a hidden
+      CLEAN. Tip-over is the named ANALYSIS-v1 acceptance material.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Verified in the rendered validation_report.md / coverage_matrix.json:
+        Support/Stability representation, Load-path representation and Structural
+        capacity all read "UNKNOWN — NOT ANALYZED". The stool declares no
+        walking-surface rung (detailgen has none for a loose floor-standing
+        object), so no support obligation is generated and no capacity/tip-over
+        number is claimed. The governing footprint-depth >= upper-height ratio is
+        PINNED and guarded, but a ratio is a design heuristic, not a proof — the
+        honest tip-over analysis is ANALYSIS-v1 work, deferred, and the coverage
+        UNKNOWN IS its representation here. Nothing claims it stable.
+  - id: V4
+    subject: fastening reads structurally more than visually — #10 screw heads are tiny
+    suspected_issue: >-
+      The eight #10-class screws (four capping the upper tread, four through the
+      cleats) are physically small; on the tread top faces the heads are barely
+      visible at model scale, so a reader may not SEE the fastening even though it
+      is real and load-bearing.
+    severity: LOW
+    visual_evidence: >-
+      z_upper.png — the tread caps the panel top cleanly but the two screw heads on
+      the tread surface are just small marks; v4_top.png shows the screw stations
+      only faintly.
+    invariant_family: UNKNOWN
+    renders:
+      - path: outputs/step_stool/views/z_upper.png
+      - path: outputs/step_stool/views/v4_top.png
+    recommended_action: >-
+      Rely on the derivation log + hardware-presence table (which enumerate every
+      screw and its joint) to communicate the fastening; the render shows placement,
+      the tables prove presence.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Accepted with rationale. The register is functional-dominant — visible
+        screws are fine and the screws are REAL (listed in the BOM, proven present
+        by the hardware-presence check, and derived in the per-connection log).
+        Their small visual footprint is a property of #10 hardware at scale, not a
+        defect; the tables carry the fastening story the render under-shows.

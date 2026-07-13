@@ -1,0 +1,133 @@
+# Design-review findings store — 3-foot backyard trebuchet (v2 design pass, Form A).
+#
+# A SIBLING of trebuchet-findings.yaml (the visual store), loaded by the SAME
+# strict loader. These are DESIGN findings: each judges a construction choice
+# against the v2 design pass's INTENT RULING for this piece (FUNCTIONAL-DOMINANT —
+# a working MACHINE; the deciding canon is the mechanism: axle height, arm ratio,
+# counterweight swing, tunable rigging — not furniture joinery or show surfaces).
+# They do NOT duplicate V1-V4 (render salience / hardware scale / pose pixel
+# limits / stability), which the visual pass carries.
+#
+# invariant_family is UNKNOWN for all: design/register quality maps to NO existing
+# invariant family. The full survey + function brief + candidate scorecard live in
+# .superpowers/sdd/task-trebuchet-report.md.
+#
+# resolution: the OWNER picks the fix; the owner's request pinned the contract
+# (~3ft, one-day, water balloons + tennis balls) and the finalist pick was
+# DELEGATED on merit (sitreach precedent).
+#
+# BINDING: findings are SUSPICIONS/RECOMMENDATIONS, never proof; nothing here
+# relaxes or gates an invariant verdict.
+
+version: 1
+findings:
+  - id: DS1
+    subject: "half the machine is rigging the model cannot hold — sling, pouch, counterweight, trigger"
+    suspected_issue: >-
+      A trebuchet without its sling, pouch, counterweight and trigger is a
+      frame, not a machine. None of them are modelable (no soft-goods /
+      flexible-element vocabulary), so the geometry alone under-describes the
+      deliverable: a reader building only what is drawn gets something that
+      cannot throw.
+    severity: HIGH
+    visual_evidence: >-
+      g1_iso.png — the complete MODELED machine: no bucket, no sling, no
+      trigger anywhere in the image, exactly because none can be declared
+      honestly.
+    renders:
+      - path: outputs/trebuchet/views/g1_iso.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Ship the rigging as a first-class DOC SECTION (buy list + step-by-step
+      recipe + tuning knobs + safety), clearly marked not-modeled; record the
+      flexible/rigged-element vocabulary as a work order. Never fake rigid
+      geometry for soft goods.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        The build document carries a dedicated "Rigging" section (counterweight
+        recipe with the derived clearance arithmetic, sling/pouch dimensions,
+        release pin, trigger, wax note) plus the safety block; the honest-limits
+        prose names the vocabulary work order. The BOM's modeled hardware is
+        complete; rigging purchases ride the rigging section's list.
+  - id: DS2
+    subject: "the pivot is declared through escape hatches, not a Connection — is that honest enough to ship?"
+    suspected_issue: >-
+      The machine's defining joint (arm on axle) exists in the Construction
+      Graph only as bonds/contacts/expected_overlaps/through-hole probes plus
+      clamp-stack bearings — no ConnectionType derives its facts, so install
+      order and load-path claims for the pivot are authored, not generated.
+    severity: MEDIUM
+    visual_evidence: >-
+      z_pivot.png / z_arm.png — the eight-piece hardware stack whose relations
+      are hand-declared where every wood joint's are compiler-derived.
+    renders:
+      - path: outputs/trebuchet/views/z_pivot.png
+      - path: outputs/trebuchet/views/z_arm.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Ship with the escape hatches (the trolley-launch precedent for exactly
+      this class) + loud disclosure in the doc; record the pivot/journal
+      ConnectionType as the work order this build's residual list leads with.
+      A rotating joint word would generate: the bore-fit invariant, the thrust
+      stack's bearing chain, install order (rod after arm between uprights),
+      and the free-rotation non-claim.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Adopted: escape hatches + disclosure ("The pivot is not a Connection"
+        leads the honest-limits block); pivot/journal vocabulary recorded as a
+        work order in the task report.
+  - id: DS3
+    subject: "gusset knees are screwed to the uprights but not tied to the base — racking path is knee-on-ground"
+    suspected_issue: >-
+      The fore-aft stiffeners lap the uprights and FOOT on the ground, but
+      nothing fastens them to the rails/crosses (the coplanar lap surface the
+      knee would need is occupied by the rail itself). Under racking the knee
+      works as a compression strut against the ground only; on a soft lawn its
+      edge can dig in and the frame can still work loose.
+    severity: MEDIUM
+    visual_evidence: >-
+      z_lap.png — the knee's bottom edge on the ground plane beside the rail,
+      visibly unfastened to the base; v2_side.png — the knee's fore-aft reach
+      relative to the 35in mast it braces.
+    renders:
+      - path: outputs/trebuchet/views/z_lap.png
+      - path: outputs/trebuchet/views/v2_side.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Accept for a ~25lb-counterweight backyard machine (the prior art at this
+      scale braces far less), with a FIELD NOTE: if the mast works loose,
+      add a 2x4 shoe under each knee screwed to both the knee and the nearest
+      cross member. A mitered diagonal to the rail — the classic form — waits
+      on the miter vocabulary (#22, the waterfall work order).
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Accepted with the field note in the doc's safety/tuning prose; racking
+        capacity stays honestly NOT ANALYZED (ANALYSIS-v1). The miter-brace
+        alternative is recorded, sequenced behind vocabulary #22.
+  - id: DS4
+    subject: "cleat_screwed carries two joints that are not cleats — the word stretches to face-laps"
+    suspected_issue: >-
+      The upright-to-rail and knee-to-upright joints are generic face-laps;
+      the nearest honest word is cleat_screwed (face-to-face screws, pull_out
+      + shear claims, no gravity seat). The CLAIMS fit exactly, but the NOUN
+      says cleat, so the derivation log narrates an upright as a cleat block —
+      readable but off-register.
+    severity: LOW
+    visual_evidence: >-
+      z_lap.png — the lap stack the log narrates in cleat language.
+    renders:
+      - path: outputs/trebuchet/views/z_lap.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Use cleat_screwed (merit: its claims are the joint's exact truth; the
+      alternatives smuggle a seat or say edge-grain) and disclose the noun
+      stretch on each Connection's assumptions; record a generic face_lap /
+      post-to-rail word as CL v2 vocabulary material.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Adopted: both connections carry the disclosure in their assumptions;
+        the face-lap word is in the task report's residual list.

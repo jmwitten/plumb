@@ -1,0 +1,135 @@
+# Design-review findings store — sit-and-reach test box (v2 design pass, Form A).
+#
+# A SIBLING of sit_reach_box-findings.yaml (the visual store), loaded by the SAME
+# strict loader. These are DESIGN findings: each judges a construction choice
+# against the v2 design pass's INTENT RULING for this piece (FUNCTIONAL-DOMINANT —
+# a MEASUREMENT INSTRUMENT; the deciding canon is protocol fidelity + a smooth,
+# continuous reach surface; visible fasteners are fine, show-surface finish is
+# not the register). They do NOT duplicate V1-V4 (render salience / floor sizing /
+# stability / screw scale), which the visual pass carries.
+#
+# invariant_family is UNKNOWN for all: design/register quality maps to NO existing
+# invariant family (the missing family a future Design Exploration Graph would
+# add). The full survey + function brief + candidate scorecard live in
+# .superpowers/sdd/task-sitreach-report.md.
+#
+# resolution: the OWNER picks the fix; the owner DELEGATED the finalist pick for
+# this build (merit pick: Form A) and approved OFFICIAL-SPEC fidelity, which
+# settles DS1. DS2 (slide/tip) is deferred to ANALYSIS-v1. DS3 (slider) and DS4
+# (adhesive) are open design + vocabulary residuals.
+#
+# BINDING: findings are SUSPICIONS/RECOMMENDATIONS, never proof; nothing here
+# relaxes or gates an invariant verdict.
+
+version: 1
+findings:
+  - id: DS1
+    subject: "intent register — protocol fidelity IS the design; the reach surface must stay unbroken"
+    suspected_issue: >-
+      The prior-art DIY spec cuts a 1x3in handle slot in the top plate, and the
+      classic plan's 9in overhang quietly rounds the 23cm protocol offset
+      (23cm = 9.055in, a 1.4mm foot-line error). Should this build copy either?
+      Both trade metrology for convenience on a piece whose entire job is
+      metrology.
+    severity: MEDIUM
+    visual_evidence: >-
+      v4_top.png — the top plate is the instrument: the fingertip slide lane
+      runs its full 21.06in, and an excellent adult reach lands past 40cm of
+      the 53cm surface, exactly where a top slot would sit.
+    renders:
+      - path: outputs/sit_reach_box/views/v4_top.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Rule the register FIRST: FUNCTIONAL-DOMINANT measurement instrument. Then
+      both prior-art conveniences lose on the scorecard: the handle slot is
+      REJECTED (it interrupts the slide lane; the box is light enough to carry
+      by the overhang), and the overhang is DERIVED from the protocol constant
+      (foot_line_cm / 2.54 = 9.055in), never rounded to 9in.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Adopted as the design's contract: the overhang derives from 23cm
+        exactly (dimension-checked in-model, guarded by the e2e test) and no
+        top slot is authored. Owner approved OFFICIAL-SPEC fidelity and
+        delegated the pick; a slot-wanting revision would need the edge-slot
+        FEATURE verb that does not exist (routed as vocabulary, not a raw cut).
+  - id: DS2
+    subject: "slide/tip under test loads is the governing use-safety property but detailgen has no rung"
+    suspected_issue: >-
+      The properties that most determine whether the box works as an instrument
+      in use — sliding backward under heel push and tipping toward the sitter
+      under hand pressure on the 23cm cantilever — are analyzed by no invariant.
+    severity: MEDIUM
+    visual_evidence: >-
+      z_overhang.png — the unsupported 9.055in cantilever with the hand-pressure
+      zone at its tip; v2_side.png — the 12in wall footprint the heel push acts on.
+    renders:
+      - path: outputs/sit_reach_box/views/z_overhang.png
+      - path: outputs/sit_reach_box/views/v2_side.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Pin the governing protocol dims and GUARD them (done); state the honest
+      mitigation as PROSE (in normal protocol use the sitter's own soles brace
+      the foot face — the pushing agent and the bracing agent are the same
+      person), and route the slide/tip proof to ANALYSIS-v1 as acceptance
+      material alongside the stool's tip-over and the caddy's rock-stability.
+    resolution:
+      status: unresolved
+      note: >-
+        Deferred to ANALYSIS-v1 (no stability rung exists; honest UNKNOWN in
+        the coverage matrix, mirrored by visual finding V3). MITIGATED in this
+        build: governing dims pinned + guarded, and the doc's honest-limits
+        prose names the load cases without claiming numbers.
+  - id: DS3
+    subject: "max-reach slider — commercial boxes have one; the vocabulary cannot say a captive slide"
+    suspected_issue: >-
+      Every commercial box (Baseline et al.) carries a sliding indicator that
+      holds the max reach until reset; this build models none. Is that a design
+      miss, and can the language even express one?
+    severity: LOW
+    visual_evidence: >-
+      v4_top.png — the plain reach surface where a slider track would run.
+    renders:
+      - path: outputs/sit_reach_box/views/v4_top.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Decide against a CAPTIVE slider for v1 on merit (it needs a track — rails
+      or a routed groove — that today's vocabulary cannot state honestly: no
+      edge-groove FEATURE verb, no sliding-fit ConnectionType; and the classic
+      protocol works with any loose block pushed along the top). Record the
+      captive-slide vocabulary as the work order it is.
+    resolution:
+      status: unresolved
+      note: >-
+        Open design + vocabulary residual (the SITREACH report's residual list):
+        a loose block serves the protocol today (finishing note in the doc); a
+        captive slider needs new FEATURE (groove) + connection (sliding fit)
+        vocabulary — routed per the vocabulary-gap directive, never faked.
+  - id: DS4
+    subject: "glue is structurally load-bearing prior art but only advisory prose here"
+    suspected_issue: >-
+      The prior-art construction is GLUE AND screws; ply-edge screw withdrawal
+      alone is the joint's weak axis (butt_screwed says so). The model declares
+      only the screws — the adhesive exists nowhere in the Construction Graph,
+      so the built box's real joint is stronger than the declared one.
+    severity: LOW
+    visual_evidence: >-
+      z_corner.png — the butt joint whose declared fasteners are two screws;
+      the glue plane between the side face and the panel edge is not a
+      declarable fact today.
+    renders:
+      - path: outputs/sit_reach_box/views/z_corner.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Keep the honest asymmetry (declare only what the vocabulary can state:
+      screws; carry glue as a fabrication note) rather than inventing an
+      adhesive claim. The adhesive-as-hardware ConnectionType is already the
+      waterfall arc's work order (task #22) — this finding is a second consumer
+      for it, not a new route.
+    resolution:
+      status: unresolved
+      note: >-
+        Open vocabulary residual, shared with the waterfall/caddy arc (glued
+        miter). When the adhesive ConnectionType lands, this spec's four
+        butt_screwed joints gain their glue declaration and the fabrication
+        note is retired into the Construction Graph.

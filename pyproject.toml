@@ -1,0 +1,56 @@
+[project]
+name = "construction-detail-generator"
+version = "0.1.0"
+description = "Parametric 3D construction details (lumber, concrete, fasteners, connectors) built on CadQuery, with STEP/STL/PNG export and geometric validation."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    # Pinned to a minor range: OCCT's boolean/tessellation results are
+    # version-sensitive, so a wider range risks silent geometric drift
+    # between installs. See constraints.txt for the full reproducible
+    # environment.
+    "cadquery>=2.8,<2.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    # Parallel test runs: `pytest -n auto`. Not wired into addopts (see
+    # README's Tests section) so `pytest --pdb`/`-s` on a single test stays
+    # simple — xdist doesn't support interactive debugging under -n.
+    "pytest-xdist>=3.8,<4",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# The src/ tree is exposed as a single package named `detailgen`:
+#   src/components/lumber.py  ->  from detailgen.components.lumber import Lumber
+[tool.setuptools]
+packages = [
+    "detailgen",
+    "detailgen.core",
+    "detailgen.components",
+    "detailgen.assemblies",
+    "detailgen.details",
+    "detailgen.spec",
+    "detailgen.validation",
+    "detailgen.rendering",
+    "detailgen.rendering.web_viewer",
+    "detailgen.packs",
+    "detailgen.packs.cabinetry",
+]
+
+[tool.setuptools.package-dir]
+detailgen = "src"
+
+# The interactive viewer is Python + vendored front-end assets; the wheel must
+# carry the .js/.css alongside the module or ``build_viewer_payload``'s output
+# has nothing to render. (These are data files, not importable modules, so they
+# need an explicit package-data entry — the packages list above only ships .py.)
+[tool.setuptools.package-data]
+"detailgen.rendering.web_viewer" = ["viewer.js", "viewer.css", "vendor/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

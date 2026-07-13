@@ -1,0 +1,38 @@
+{
+  "detail": "step_stool",
+  "directive": "view-coverage-directive.md",
+  "note": "Auditable view-coverage decision table for the kids' two-step step stool (task STOOLBUILD). Each candidate area is scored on (1) installation/fabrication complexity and (2) difficulty of seeing it from the primary whole-model views, then decided ZOOM or a recorded WHY-NOT. Audited BOTH directions: a high-complexity, poorly-visible area with no zoom and no why-not is a finding; a redundant zoom (mirror/simple/well-visible) is over-generation and is a why-not here. Renders: scripts/render_stool_views.py -> outputs/step_stool/views/.",
+  "context_treatment": "The floor is a role:existing context body; more importantly the SOLID side panels occlude the two-step interior in plain side/oblique views (finding V1). The hero + zoom variants are rendered with the floor (and where needed the near panel) HIDDEN so the treads, cleats and joinery read.",
+  "primary_views": [
+    {"id": "iso",   "file": "v1_iso.png",   "shows": "whole stool on the floor (solid panels occlude the interior; see g1_iso floor-hidden hero)"},
+    {"id": "front", "file": "v2_front.png", "shows": "both step surfaces (5.5in lower + 10.25in upper) and the footprint width"},
+    {"id": "side",  "file": "v3_side.png",  "shows": "depth + front/back tread stagger (near panel occludes; see g1_iso)"},
+    {"id": "top",   "file": "v4_top.png",   "shows": "both treads and the screw pattern from above"}
+  ],
+  "candidate_areas": [
+    {"area": "two-step interior (tread stagger, toe room, both heights)", "install": "MEDIUM", "primary_visibility": "LOW",
+     "decision": "ZOOM", "view": "g1_iso.png (floor hidden — the HERO view)",
+     "rationale": "the solid side panels occlude the staggered treads in every plain oblique/side primary (finding V1); the floor-hidden iso is the one view where the whole two-step form reads, so it is the document hero."},
+    {"area": "lower-tread cleat joint (1x2 cleat_screwed to the panel face; tread on cleat top)", "install": "HIGH", "primary_visibility": "LOW",
+     "decision": "ZOOM", "view": "z_cleat.png (from below, near panel + far cleat hidden)",
+     "rationale": "highest local density — a fastening spot (cleat_screwed, 2 screws) AND a separate declared tread-on-cleat bearing — and fully tucked under the tread against the inner face; only an interior/below angle with the near panel hidden makes the cleat and its screw heads read."},
+    {"area": "-X lower-tread cleat joint", "install": "HIGH", "primary_visibility": "LOW",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "mirror-identical to the +X cleat joint about the Y-Z plane; one representative zoom suffices. A second identical zoom would be over-generation."},
+    {"area": "upper-tread rail_cap joint (tread capping the panel top, screwed down)", "install": "MEDIUM", "primary_visibility": "MEDIUM",
+     "decision": "ZOOM", "view": "z_upper.png (floor hidden)",
+     "rationale": "the load-bearing gravity seat + the child's-grab lateral path; the top primary shows the screw stations but the seat of the tread on the panel end reads best in the corner zoom."},
+    {"area": "governing step-height callouts (5.5in lower, 10.25in upper) + footprint depth", "install": "LOW", "primary_visibility": "HIGH",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "the two heights are the pick's contract and are dimensioned by the derived callouts overlaid on the FRONT/SIDE primaries + asserted in the model's dimension checks; a dedicated zoom would add nothing the callouts do not."},
+    {"area": "panel-to-floor bearing (each panel foot flat on the floor)", "install": "LOW", "primary_visibility": "MEDIUM",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "a single flush bearing plane per panel, no fabrication; the FRONT/ISO primaries show the panels standing on the floor. A dedicated zoom would add nothing."},
+    {"area": "front toe-kick region", "install": "LOW", "primary_visibility": "HIGH",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "no toe-kick FEATURE is authored (residual R2 — no edge-rebate FEATURE verb; the open front already gives toe room), so there is no fabricated geometry to zoom; the absence is the fact, recorded here rather than drawn."},
+    {"area": "screw-tip embedment into the panel (interior)", "install": "MEDIUM", "primary_visibility": "LOW",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "interior geometry with no section/cutaway in this render path; the embedment is VALIDATED (hardware-presence PASS + allowlisted screw-into-wood overlaps), not drawn. An honest render limitation, not a fabricated cutaway."}
+  ]
+}

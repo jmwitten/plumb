@@ -1,0 +1,118 @@
+# Visual-review findings store — sit-and-reach 2x4 FRAME variant (task SITFRAME).
+#
+# Per-detail store under the naming convention, loaded by the strict loader.
+# Renders reviewed BY LOOKING: scripts/render_sitframe_views.py ->
+# outputs/sit_reach_frame/views/*.png (matplotlib, no Blender; same geometry the
+# GLB carries). Render refs carry no content_hash; staleness honestly
+# "unverifiable" until re-reviewed against a manifest.
+#
+# BINDING: findings are SUSPICIONS, never proof. Nothing here relaxes or gates
+# an invariant verdict.
+
+version: 1
+findings:
+  - id: V1
+    subject: hidden-side screws float in the rail-corner x-ray zoom
+    suspected_issue: >-
+      z_rail hides the entire -X side so the +X rail corners read; the -X
+      corners' eight... four rail screws remain drawn and float in the open
+      frame with no wood around them — a reader could misread floating
+      hardware as a modeling error rather than a hidden-part convention.
+    severity: LOW
+    visual_evidence: >-
+      z_rail.png — left of frame: two dark screws in open air (the -X corner
+      screws whose rail and legs are hidden); right: the +X rail band with its
+      screw heads reading correctly against wood.
+    renders:
+      - path: outputs/sit_reach_frame/views/z_rail.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Keep the x-ray convention (it is what makes the joint read; ply-box V1
+      precedent) and say so in the caption. The doc caption for this view
+      names the hidden parts. A render-level rule that also hides hardware
+      belonging to hidden parts would close the class — Presentation-Graph
+      material, not built.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Accepted with rationale: the caption states the -X side is hidden;
+        the floating screws are the hidden side's hardware, drawn true to the
+        model. The general hide-hardware-with-its-part render rule is recorded
+        as the closing fix, not built (same family as the unbuilt auto-ghost
+        rule from stool V1 / caddy C1).
+  - id: V2
+    subject: is the foot bearing REALLY at stance width — and what about narrow stances?
+    suspected_issue: >-
+      The design's whole idea is that the front legs are the footplates. The
+      renders show two 3.5in strips whose centers sit ~8.5in apart
+      (x = +/-4.25): a tester with a narrower stance (feet nearly touching)
+      would land partly in the open center where there is nothing to press.
+    severity: MEDIUM
+    visual_evidence: >-
+      v3_front.png / z_foot.png — the strips span x [2.5, 6] and [-6, -2.5];
+      the center 5in (x [-2.5, 2.5]) is open from the floor to the rail band
+      at 7.75in (the rail end grain fills [1.0, 2.5] only above that).
+    renders:
+      - path: outputs/sit_reach_frame/views/v3_front.png
+      - path: outputs/sit_reach_frame/views/z_foot.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      State the stance assumption in the doc (protocol testing uses a
+      roughly hip-width stance; the strips cover it), and give the one-board
+      revision (a 1x4 screwed across the legs' faces) for narrow-stance
+      users. Do not claim the frame serves every stance.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Disclosed in the doc's honest-limits prose exactly as recommended:
+        the footplate strips serve the protocol stance; a continuous face is
+        a stated one-board revision, not modeled. No fidelity claim is made
+        for stances narrower than the strips.
+  - id: V3
+    subject: frame stability/racking under test loads — could it slide, tip, or rack?
+    suspected_issue: >-
+      An open frame on four 2x4 feet, heel push on the front legs, hand
+      pressure on the 23cm cantilever, and only eight screws of lateral
+      joinery: nothing in the geometry proves slide/tip/rack margins.
+    severity: MEDIUM
+    visual_evidence: >-
+      v2_side.png / g1_iso.png — the open frame and the unsupported
+      cantilever; the only lateral ties are the two rail bands.
+    invariant_family: Support/Stability representation
+    renders:
+      - path: outputs/sit_reach_frame/views/v2_side.png
+      - path: outputs/sit_reach_frame/views/g1_iso.png
+    recommended_action: >-
+      Confirm the coverage matrix shows Support/Stability + Structural
+      capacity as UNKNOWN — NOT ANALYZED (honest non-claim); frame racking
+      joins slide/tip as ANALYSIS-v1 acceptance material; the doc tells the
+      builder to glue the rail joints and hand-check for wobble.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Verified in the coverage matrix: Support/Stability representation,
+        Load-path representation and Structural capacity all read "UNKNOWN —
+        NOT ANALYZED". No slide/tip/rack number is claimed anywhere; the
+        honest-limits prose names racking explicitly and routes the proof to
+        ANALYSIS-v1.
+  - id: V4
+    subject: fastening reads structurally more than visually — #10 heads are tiny
+    suspected_issue: >-
+      Twelve #10-class screws (four cap, eight rail) are physically small; the
+      cap-screw stations in the TOP primary are faint marks.
+    severity: LOW
+    visual_evidence: >-
+      v4_top.png — four faint stations; z_rail.png shows the rail screws
+      legibly only in the zoom.
+    invariant_family: UNKNOWN
+    renders:
+      - path: outputs/sit_reach_frame/views/v4_top.png
+      - path: outputs/sit_reach_frame/views/z_rail.png
+    recommended_action: >-
+      Rely on the derivation log + hardware-presence table; the render shows
+      placement, the tables prove presence (stool/ply-box V4 precedent).
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Accepted with rationale — property of #10 hardware at model scale,
+        not a defect; the tables carry the fastening story.

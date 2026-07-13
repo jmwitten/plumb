@@ -1,0 +1,23 @@
+{
+  "_doc": "Whole-model counts of the shipped details. Regenerated from the live model; run `python scripts/regen_baselines.py` and review the git diff.",
+  "platform": {
+    "derivation_log": 762,
+    "parts": 148
+  },
+  "rock_anchor": {
+    "derivation_log": 104,
+    "parts": 26
+  },
+  "site": {
+    "parts": 180
+  },
+  "tree_attachment": {
+    "bom_rows": 2,
+    "parts": 3
+  },
+  "trolley_launch": {
+    "bom_rows": 9,
+    "formalized_stubs": 2,
+    "parts": 11
+  }
+}

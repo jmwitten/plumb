@@ -1,0 +1,41 @@
+{
+  "detail": "sit_reach_box",
+  "directive": "view-coverage-directive.md",
+  "note": "Auditable view-coverage decision table for the sit-and-reach test box (task SITREACH). Each candidate area is scored on (1) installation/fabrication complexity and (2) difficulty of seeing it from the primary whole-model views, then decided ZOOM or a recorded WHY-NOT. Audited BOTH directions: a high-complexity, poorly-visible area with no zoom and no why-not is a finding; a redundant zoom (mirror/simple/well-visible) is over-generation and is a why-not here. Renders: scripts/render_sitreach_views.py -> outputs/sit_reach_box/views/.",
+  "context_treatment": "The floor is a role:existing context body, resized (finding V2) so it stops dominating the iso. The box is CLOSED: every outside primary shows panels, so the joinery zooms hide the occluding panel (finding V1) the way the stool's z_cleat does.",
+  "primary_views": [
+    {"id": "iso",   "file": "v1_iso.png",   "shows": "whole box on the floor from the sitter's side — the 23cm overhang over the sitter's legs"},
+    {"id": "side",  "file": "v2_side.png",  "shows": "THE protocol elevation: 12in reach surface height + the 23cm foot-line overhang past the foot face"},
+    {"id": "front", "file": "v3_front.png", "shows": "the foot face — the 12in-wide plane the soles press"},
+    {"id": "top",   "file": "v4_top.png",   "shows": "the reach/scale surface and the screw stations from above"}
+  ],
+  "candidate_areas": [
+    {"area": "whole five-panel form (sides, captured front/back, capping top)", "install": "MEDIUM", "primary_visibility": "MEDIUM",
+     "decision": "ZOOM", "view": "g1_iso.png (floor hidden — the HERO view)",
+     "rationale": "the closed box reads as one mass in the primaries with the floor's bulk around it; the floor-hidden iso is the one view where the five-panel construction (capture lines, top flush at the back) reads, so it leads the document."},
+    {"area": "butt_screwed box corner (side face screwed into front/back panel ply edge) — the NEW WORD's joint", "install": "HIGH", "primary_visibility": "LOW",
+     "decision": "ZOOM", "view": "z_corner.png (floor, top + near side hidden)",
+     "rationale": "the joint this build adds vocabulary for, and fully invisible from outside: the #10 heads under-read against the big panel face (finding V1). With the near side hidden, the screw's head hangs where the side's outside face was and its shank visibly bites the front panel's ply edge — the honest x-ray of the joint."},
+    {"area": "the other three butt corners", "install": "HIGH", "primary_visibility": "LOW",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "mirror-identical joints (left/right about Y-Z, front/back about the X-Z mid-plane); one representative zoom suffices. Three more identical zooms would be over-generation."},
+    {"area": "23cm overhang cantilever (the metrological feature + the hand-pressure zone)", "install": "MEDIUM", "primary_visibility": "MEDIUM",
+     "decision": "ZOOM", "view": "z_overhang.png (floor hidden)",
+     "rationale": "the design's entire purpose concentrated in one region: the top plate cantilevers 9.055in past the foot face with no support beneath (that absence IS the design — the sitter's legs go there). The side primary shows it at distance; the zoom makes the unsupported run and the foot-face plane relationship read."},
+    {"area": "top plate -> wall-top rail_cap joints (screwed down into ply edges)", "install": "MEDIUM", "primary_visibility": "MEDIUM",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "the screw stations read in the TOP primary and one full joint (screw entering the front panel's top edge) reads in z_corner already; a dedicated zoom would repeat what two shipped views show. The embedment itself is VALIDATED (hardware presence + allowlisted overlaps), not drawn."},
+    {"area": "governing protocol dims (12in height, 23cm foot line, 12in depth)", "install": "LOW", "primary_visibility": "HIGH",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "dimensioned by the derived callouts on the SIDE primary + asserted in the model's dimension checks + guarded by the e2e test; a dedicated zoom adds nothing the callouts do not."},
+    {"area": "wall-to-floor bearing (four walls flat on the floor, open bottom)", "install": "LOW", "primary_visibility": "MEDIUM",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "four flush bearing planes, no fabrication; the FRONT/ISO primaries show the box standing on the floor and the bearing proof is in the findings table. A dedicated zoom would add nothing."},
+    {"area": "scale/gradation zone on the top plate", "install": "LOW", "primary_visibility": "HIGH",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "the scale is a FINISHING step, not modeled geometry (disclosed in the doc's honest limits): there is nothing fabricated to draw. The TOP primary shows the surface; the doc's finishing note carries the 23cm-at-the-foot-face instruction and its post-assembly verification."},
+    {"area": "screw-tip embedment into panel edges (interior)", "install": "MEDIUM", "primary_visibility": "LOW",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "interior geometry with no section/cutaway in this render path; z_corner's hidden-panel x-ray already shows one representative embedment, and presence is VALIDATED (hardware-presence PASS + allowlisted screw-into-wood overlaps). An honest render limitation, not a fabricated cutaway."}
+  ]
+}

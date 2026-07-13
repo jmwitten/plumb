@@ -1,0 +1,351 @@
+# DetailSpec — SIT-AND-REACH flexibility test box (task SITREACH; v2 design pass,
+# Form A: the prior-art classic five-panel plywood box).
+#
+# An adult fitness-testing instrument: the standard sit-and-reach box every
+# published flexibility norm assumes. The tester sits on the floor, legs extended,
+# soles FLAT against the box's front (foot) face, and reaches forward along the top
+# surface. The box's whole job is METROLOGY: the reach surface sits at 12in, and the
+# top plate overhangs the foot face toward the sitter by EXACTLY 23cm (9.055in), so
+# a centimeter scale laid from the top plate's sitter edge reads 23.0cm exactly at
+# the plane the feet press — the President's Challenge / FitnessGram convention that
+# makes scores comparable to published norms. Those two numbers ARE the design.
+#
+# Register (v2 design pass ruling): FUNCTIONAL-DOMINANT — a measurement instrument.
+# Protocol fidelity and a smooth, continuous reach surface are the canon; visible
+# fasteners are fine. The classic top handle slot is deliberately OMITTED: the whole
+# top is the fingertip slide lane (an excellent adult reach runs past 40cm of the
+# 53cm surface) and a slot would interrupt it.
+#
+# Construction (prior art: the published DIY spec, e.g. topendsports): five 3/4in
+# plywood panels. Two SIDE panels stand on edge; FRONT and BACK panels are captured
+# BETWEEN them, screwed through the sides' outside faces into the panels' ply edges
+# (butt_screwed — the new word this build adds, stating the EDGE-grain bite
+# honestly); the TOP plate caps all four walls, screwed straight down into their top
+# edges (rail_cap_screwed). Open bottom, like the prior art: the four walls bear on
+# the floor. Glue at every joint is a fabrication note — adhesive is not yet a
+# ConnectionType (the waterfall arc's work order), so the SCREWS are the declared
+# fasteners and the glue is advisory prose.
+#
+# CL-FIRST authoring notes (residuals are deliverables, stool-report pattern):
+#   - DERIVED fit: the overhang is DERIVED from the 23cm protocol constant
+#     (foot_line_cm / 2.54); the top length, panel heights and widths all derive
+#     from the four governing dims. Pressure anywhere moves everything together.
+#   - MOUNT relations: NOT used — same in-plane-offset forms the stool named as
+#     residual R1; placement is `raw`.
+#   - FEATURE verbs: none authored (no member to clear; the handle slot is REJECTED
+#     by design, and would need the edge-slot verb that doesn't exist anyway).
+#   - NEW MODEL VOCABULARY this build adds (route-by-class, merit-first):
+#     `plywood_panel` component + `butt_screwed` connection. Sheet-level nesting
+#     (which panels come from which project panel) has NO vocabulary — panels are
+#     honestly billed as ripped strips, and the one-project-panel plan is disclosed
+#     prose, not a derived fact. Recorded as a work order (rip/sheet-form).
+#
+# GOVERNING dims are PINNED (protocol contract, owner-approved fidelity: OFFICIAL
+# SPEC) and guarded by tests/test_sit_reach_e2e.py: reach-surface height 12in,
+# foot-line offset 23cm, box depth 12in, box width 12in (>= two adult heels).
+#
+# Datum: FLOOR top is Z=0 (existing context, Boulder). X = width across the box,
+# Y = depth — the FOOT FACE is the plane Y=0, the box body extends +Y, the SITTER
+# is at -Y (the top plate overhangs to -Y). Z up.
+
+name: sit reach box
+type: armchair_caddy
+units: in
+
+# --- GOVERNING dimensions (PINNED — the protocol contract) --------------------------
+params:
+  # The reach surface height: 12in / 30.5cm — universal across protocols. PINNED.
+  top_surface_h: 12.0
+  # The foot-line offset, IN CENTIMETERS (a protocol constant, not a length in spec
+  # units): the top plate overhangs the foot face by exactly this, so the scale's
+  # 23cm graduation lands at the foot plane. President's Challenge / FitnessGram.
+  foot_line_cm: 23.0
+  # Box body outer depth (front face to back face) — the classic 12in cube body.
+  box_depth: 12.0
+  # Box outer width: 12in — two adult heels press the front face side by side.
+  box_width: 12.0
+
+  # --- DETAILING dimensions (free to tune) -------------------------------------
+  floor_x: 22.0
+  floor_y: 32.0
+  floor_h: 2.0
+  ply_thk: 0.75           # sanded plywood, 3/4in
+  # Representative structural screws (#10-class). Capacity NOT analyzed (ANALYSIS-v1).
+  screw_dia: 0.19
+  screw_len: 1.5          # every joint: through 3/4 ply + 3/4 embed
+
+# --- derived: every fit relationship, from the four governing dims ------------------
+derived:
+  foot_line_offset: "= foot_line_cm / 2.54"        # 9.0551 in — the derived overhang
+  side_h: "= top_surface_h - ply_thk"              # 11.25 — walls under the top plate
+  inner_w: "= box_width - 2 * ply_thk"             # 10.5 — front/back panel length
+  inner_x: "= inner_w / 2"                         # 5.25
+  outer_x: "= box_width / 2"                       # 6.0
+  top_len: "= box_depth + foot_line_offset"        # 21.055 — the top plate cut
+  side_mid_x: "= inner_x + ply_thk / 2"            # 5.625 — top-screw line over sides
+  front_mid_y: "= ply_thk / 2"                     # 0.375 — screw line into front edge
+  back_mid_y: "= box_depth - ply_thk / 2"          # 11.625
+  scale_run_cm: "= top_len * 2.54"                 # 53.5 — full scale length, cm
+
+components:
+  # EXISTING floor — plain slab, top at Z=0, body into -Z (stool/caddy pattern).
+  - id: floor
+    type: boulder
+    name: floor
+    params: {width: "$floor_y", length: "$floor_x", depth: "$floor_h"}
+
+  # SIDE panels stand on edge: length(12)->Y, width(11.25)->Z, thickness->X
+  # (rotate [X,90] then [Z,90]). RAW placement (residual R1 forms). +X side
+  # occupies X[5.25, 6.0].
+  - id: side_pos
+    type: plywood_panel
+    name: side panel +X
+    params: {length: "$box_depth", width: "$side_h", thickness: "$ply_thk"}
+    place: {raw: {at: ["$inner_x", "0 in", "0 in"], rotate: [["X", 90], ["Z", 90]]}}
+  - id: side_neg
+    type: plywood_panel
+    name: side panel -X
+    params: {length: "$box_depth", width: "$side_h", thickness: "$ply_thk"}
+    place: {raw: {at: ["= -outer_x", "0 in", "0 in"], rotate: [["X", 90], ["Z", 90]]}}
+
+  # FRONT panel — THE FOOT FACE. Captured between the sides; outer face is the
+  # plane Y=0 the soles press. length(10.5)->X, width(11.25)->Z (rotate [X,90]).
+  - id: front
+    type: plywood_panel
+    name: front (foot) panel
+    params: {length: "$inner_w", width: "$side_h", thickness: "$ply_thk"}
+    place: {raw: {at: ["= -inner_x", "$ply_thk", "0 in"], rotate: [["X", 90]]}}
+  - id: back
+    type: plywood_panel
+    name: back panel
+    params: {length: "$inner_w", width: "$side_h", thickness: "$ply_thk"}
+    place: {raw: {at: ["= -inner_x", "$box_depth", "0 in"], rotate: [["X", 90]]}}
+
+  # TOP plate — the reach/scale surface. Laid flat, flush with the back face,
+  # overhanging the foot face by the derived 23cm toward the sitter.
+  # length(21.055)->Y, width(12)->-X (rotate [Z,90]).
+  - id: top
+    type: plywood_panel
+    name: top plate (reach surface)
+    params: {length: "$top_len", width: "$box_width", thickness: "$ply_thk"}
+    place: {raw: {at: ["$outer_x", "= -foot_line_offset", "$side_h"], rotate: [["Z", 90]]}}
+
+  # TOP screws: driven straight DOWN through the top plate into the walls' top
+  # edges (default shank -Z, head at the reach surface). Two per side, two into
+  # the front edge, two into the back edge.
+  - id: tscrew_p0
+    type: structural_screw
+    name: top screw +X 0
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["$side_mid_x", "2.5 in", "$top_surface_h"]}}
+  - id: tscrew_p1
+    type: structural_screw
+    name: top screw +X 1
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["$side_mid_x", "9.5 in", "$top_surface_h"]}}
+  - id: tscrew_m0
+    type: structural_screw
+    name: top screw -X 0
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["= -side_mid_x", "2.5 in", "$top_surface_h"]}}
+  - id: tscrew_m1
+    type: structural_screw
+    name: top screw -X 1
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["= -side_mid_x", "9.5 in", "$top_surface_h"]}}
+  - id: tscrew_f0
+    type: structural_screw
+    name: top screw front 0
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["-2.5 in", "$front_mid_y", "$top_surface_h"]}}
+  - id: tscrew_f1
+    type: structural_screw
+    name: top screw front 1
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["2.5 in", "$front_mid_y", "$top_surface_h"]}}
+  - id: tscrew_b0
+    type: structural_screw
+    name: top screw back 0
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["-2.5 in", "$back_mid_y", "$top_surface_h"]}}
+  - id: tscrew_b1
+    type: structural_screw
+    name: top screw back 1
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["2.5 in", "$back_mid_y", "$top_surface_h"]}}
+
+  # BUTT screws: driven horizontally through each side's OUTSIDE face into the
+  # front/back panels' ply edges. Head at the outside face (x = +/-6), shank
+  # inward through the 3/4 side + 3/4 embed into the panel edge.
+  # +X side points -X: rotate [Y,90]; -X side points +X: rotate [Y,-90].
+  - id: bscrew_pf0
+    type: structural_screw
+    name: butt screw +X front 0
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["$outer_x", "$front_mid_y", "3 in"], rotate: [["Y", 90]]}}
+  - id: bscrew_pf1
+    type: structural_screw
+    name: butt screw +X front 1
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["$outer_x", "$front_mid_y", "8 in"], rotate: [["Y", 90]]}}
+  - id: bscrew_pb0
+    type: structural_screw
+    name: butt screw +X back 0
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["$outer_x", "$back_mid_y", "3 in"], rotate: [["Y", 90]]}}
+  - id: bscrew_pb1
+    type: structural_screw
+    name: butt screw +X back 1
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["$outer_x", "$back_mid_y", "8 in"], rotate: [["Y", 90]]}}
+  - id: bscrew_mf0
+    type: structural_screw
+    name: butt screw -X front 0
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["= -outer_x", "$front_mid_y", "3 in"], rotate: [["Y", -90]]}}
+  - id: bscrew_mf1
+    type: structural_screw
+    name: butt screw -X front 1
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["= -outer_x", "$front_mid_y", "8 in"], rotate: [["Y", -90]]}}
+  - id: bscrew_mb0
+    type: structural_screw
+    name: butt screw -X back 0
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["= -outer_x", "$back_mid_y", "3 in"], rotate: [["Y", -90]]}}
+  - id: bscrew_mb1
+    type: structural_screw
+    name: butt screw -X back 1
+    params: {diameter: "$screw_dia", length: "$screw_len"}
+    place: {raw: {at: ["= -outer_x", "$back_mid_y", "8 in"], rotate: [["Y", -90]]}}
+
+# --- connections: the honest joinery (Construction-Graph edges) ---------------------
+connections:
+  # The top plate caps each standing wall's top edge, screwed straight down.
+  # rail_cap_screwed states exactly this: a cap on a standing support's top,
+  # screwed down — the gravity seat plus the lateral/downward hand pressure a
+  # reaching tester applies to the surface.
+  - type: rail_cap_screwed
+    label: "top plate -> +X side top edge (screwed down)"
+    params: {n_screws: 2}
+    parts: [side_pos, top]
+    hardware: [tscrew_p0, tscrew_p1]
+    assumptions: ["Screws bite the side panel's top PLY EDGE; edge-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
+  - type: rail_cap_screwed
+    label: "top plate -> -X side top edge (screwed down)"
+    params: {n_screws: 2}
+    parts: [side_neg, top]
+    hardware: [tscrew_m0, tscrew_m1]
+    assumptions: ["Screws bite the side panel's top PLY EDGE; edge-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
+  - type: rail_cap_screwed
+    label: "top plate -> front panel top edge (screwed down)"
+    params: {n_screws: 2}
+    parts: [front, top]
+    hardware: [tscrew_f0, tscrew_f1]
+    assumptions: ["Screws bite the front panel's top PLY EDGE; edge-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
+  - type: rail_cap_screwed
+    label: "top plate -> back panel top edge (screwed down)"
+    params: {n_screws: 2}
+    parts: [back, top]
+    hardware: [tscrew_b0, tscrew_b1]
+    assumptions: ["Screws bite the back panel's top PLY EDGE; edge-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
+  # Each front/back panel is captured between the sides and screwed through the
+  # side's outside face into the panel's ply edge. butt_screwed (NEW WORD, this
+  # build) states the EDGE-grain bite honestly — no gravity seat is claimed; the
+  # walls' rest on the floor is the separately-declared bearing story below.
+  - type: butt_screwed
+    label: "+X side -> front panel edge (screwed butt corner)"
+    params: {n_screws: 2}
+    parts: [side_pos, front]
+    hardware: [bscrew_pf0, bscrew_pf1]
+    assumptions: ["Screws bite the front panel's PLY EDGE — weaker in withdrawal than face grain, NOT analyzed to a number; glue the joint (fabrication note)."]
+  - type: butt_screwed
+    label: "+X side -> back panel edge (screwed butt corner)"
+    params: {n_screws: 2}
+    parts: [side_pos, back]
+    hardware: [bscrew_pb0, bscrew_pb1]
+    assumptions: ["Screws bite the back panel's PLY EDGE — weaker in withdrawal than face grain, NOT analyzed to a number; glue the joint (fabrication note)."]
+  - type: butt_screwed
+    label: "-X side -> front panel edge (screwed butt corner)"
+    params: {n_screws: 2}
+    parts: [side_neg, front]
+    hardware: [bscrew_mf0, bscrew_mf1]
+    assumptions: ["Screws bite the front panel's PLY EDGE — weaker in withdrawal than face grain, NOT analyzed to a number; glue the joint (fabrication note)."]
+  - type: butt_screwed
+    label: "-X side -> back panel edge (screwed butt corner)"
+    params: {n_screws: 2}
+    parts: [side_neg, back]
+    hardware: [bscrew_mb0, bscrew_mb1]
+    assumptions: ["Screws bite the back panel's PLY EDGE — weaker in withdrawal than face grain, NOT analyzed to a number; glue the joint (fabrication note)."]
+
+# --- roles ---------------------------------------------------------------------------
+# The floor is a pre-existing site body: it self-grounds. The box is a loose
+# object resting on it — nothing fastens to the room. detailgen has no rung for a
+# loose floor-standing object's slide/tip under a tester's heel push, so no support
+# obligation is generated; that honest UNKNOWN is ANALYSIS-v1 material.
+roles:
+  floor: {role: existing, grounded_by: site}
+
+# --- validation ----------------------------------------------------------------------
+# NO `ground:` terminal — loose object. The four walls' rest on the floor is the
+# declared bearing story (open-bottom box, prior-art construction); the top plate's
+# seat on the walls is carried by the four rail_cap_screwed connections.
+validation:
+  bearings:
+    - {a: side_pos, b: floor, axis: Z, area: 400}
+    - {a: side_neg, b: floor, axis: Z, area: 400}
+    - {a: front, b: floor, axis: Z, area: 300}
+    - {a: back, b: floor, axis: Z, area: 300}
+  dimensions:
+    # GOVERNING protocol assertions, measured off the COMPILED model (mirrored by
+    # the guard test). Expecteds are LITERAL protocol constants, NOT the params
+    # (review-sitreach MINOR-1): a check that read "$top_surface_h" would assert
+    # only geometry-matches-parameter and stay green if the parameter itself
+    # drifted off the protocol. These pin the protocol; changing a governing
+    # param without updating them (and the e2e guard) goes RED — returns to the
+    # owner by mechanism, not by convention.
+    - {name: "GOVERNING reach surface height = 12in", part: top, measure: zmax, expected: "12 in", tolerance: "0.02 in"}
+    - {name: "GOVERNING foot-line offset: top plate sitter edge 23cm (9.055in) forward of the foot face", part: top, measure: ymin, expected: "= -(23 / 2.54)", tolerance: "0.02 in"}
+    - {name: "foot face plane at Y=0 (front panel outer face)", part: front, measure: ymin, expected: "0 in", tolerance: "0.02 in"}
+    - {name: "side front edges coplanar with the foot face", part: side_pos, measure: ymin, expected: "0 in", tolerance: "0.02 in"}
+    - {name: "GOVERNING box outer width (heel face width) = 12in", part: top, measure: xlen, expected: "12 in", tolerance: "0.02 in"}
+    - {name: "top plate length = box depth + foot-line offset", part: top, measure: ylen, expected: "= 12 + 23 / 2.54", tolerance: "0.02 in"}
+    - {name: "walls foot on the floor (Z=0)", part: front, measure: zmin, expected: "0 in", tolerance: "0.02 in"}
+
+# --- presentation ---------------------------------------------------------------------
+callouts:
+  - {param: top_surface_h, label: "HEIGHT {v}", p0: ["= outer_x + 1", "= box_depth / 2", 0], p1: ["= outer_x + 1", "= box_depth / 2", "$top_surface_h"]}
+  - {param: foot_line_offset, label: "FOOT LINE 23cm = {v}", p0: ["= outer_x + 1", 0, "$top_surface_h"], p1: ["= outer_x + 1", "= -foot_line_offset", "$top_surface_h"]}
+  - {param: box_depth, label: "DEPTH {v}", p0: ["= outer_x + 1", 0, 0], p1: ["= outer_x + 1", "$box_depth", 0]}
+
+export: {glb_tolerance: 0.1, glb_angular_tolerance: 0.15}
+
+doc:
+  sections:
+    - prose: |
+        # Sit-and-Reach Test Box — Validation Report
+
+        The standard adult sit-and-reach flexibility testing box, generated by the `detailgen` parametric library. Five 3/4in plywood panels: two sides, a front and a back captured between them, and a top plate that caps the walls and overhangs the front (foot) face by exactly 23cm toward the sitter — so a centimeter scale laid from the top plate's sitter edge reads **23.0cm at the plane the feet press**, the President's Challenge / FitnessGram convention that makes scores comparable to published norms. The reach surface sits at {top_surface_h:g}in. The box rests on the floor by gravity and lifts straight off; nothing fastens to the room. Register is functional-dominant — a measurement instrument; protocol fidelity and a smooth continuous reach surface are the canon. Deterministic computed placement is canonical.
+
+        ## Collision / interference
+        - Pairwise interference checks run: **{interference_checks}**
+        - Unintended collisions detected: **{interference_failures}**
+        - Screw-into-panel overlaps at the joints are expected and allowlisted.
+    - findings: {header: "## Flush-bearing contacts (min-distance + bearing-area proof)", check: bearing}
+    - hardware_presence: {header: "## Connection hardware presence", cap: 8}
+    - derivation_log:
+        header: "## Construction Graph — derivation log"
+        preamble: "Every overlap/bond/hardware-presence/load-path fact for the eight joints (four rail_cap_screwed capping the walls, four butt_screwed box corners) is generated from a declared Connection, recorded here with its source rule and confidence:"
+        mode: per_connection
+        cap: 8
+    - findings: {header: "## Dimension checks (governing protocol dims asserted in-model)", check: dimension}
+    - prose: "## Result: **{result_verdict}**"
+    - bom_table: {header: "## Bill of materials"}
+    - prose: |
+        ## Modeling assumptions & honest limits
+        - **The protocol geometry is the contract.** Reach surface at {top_surface_h:g}in and the foot line at 23cm ({foot_line_cm:g}cm / 2.54 = 9.055in of top-plate overhang) are PINNED governing dims, asserted in the dimension checks and guarded by the e2e test. If detailing ever pressures one, the guard goes red and the question returns to the owner.
+        - **The measuring scale is a finishing step, not modeled geometry.** After assembly, lay a centimeter tape (or draw 1cm gradations) along the top's centerline starting 0 at the SITTER edge of the top plate; the geometry guarantees the foot-face plane falls at 23.0cm. **Verify with a square after assembly** — the scale, not the wood, is the instrument. Add an inch row alongside if wanted. Two coats of polyurethane make the surface slide-friendly; apply the scale (or re-mark it) after finishing.
+        - **The max-reach slider is a loose accessory, not modeled.** Commercial boxes carry a captive sliding indicator; the vocabulary for a captive slide does not exist and a loose block needs none — use any small flat block pushed along the top. Recorded as an open vocabulary/design item, not faked.
+        - **Loose object; slide/tip under test loads NOT ANALYZED.** A tester's heels push the foot face (the box is braced by the sitter's own feet in normal use) and hands press the 23cm overhang. detailgen has no rung for a loose object's slide/tip behavior — Support/Stability, Load-path capacity and Structural capacity are honestly NOT ANALYZED (ANALYSIS-v1). No stability number is claimed.
+        - **Sheet nesting is disclosed, not derived.** The BOM bills each panel from a ripped strip of its width (the fabrication vocabulary has no rip/sheet-form yet — a recorded work order). All five panels nest comfortably in ONE 3/4in 24x48in sanded-ply project panel (sides 12x11.25 x2, front/back 10.5x11.25 x2, top 21.06x12); the nesting plan is this prose, not a derived fact.
+        - **Honest joinery, functional register.** The top plate is `rail_cap_screwed` down into the walls' top ply edges (the real gravity seat plus the tester's hand pressure, screws visible on the reach surface — countersink them FLUSH so the slide lane stays smooth). The box corners are `butt_screwed` — the new word this build adds: screws through the sides' outside faces into the front/back panels' PLY EDGES, stated as the weaker edge-grain bite it is, with no gravity seat smuggled in. Glue every joint (adhesive is not yet a ConnectionType — advisory prose, not a declared fastener). The floor is EXISTING context, excluded from the buy list.

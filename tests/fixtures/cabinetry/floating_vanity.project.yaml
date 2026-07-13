@@ -1,0 +1,73 @@
+name: V36 floating vanity
+units: in
+packs: [vanity.frameless@1]
+
+site:
+  wall:
+    id: north_wall
+    type: stud_wall
+    plane:
+      origin: [0, 21, 0]
+      normal: [0, -1, 0]
+    length: 120
+    height: 96
+    finish_thickness: 0.5
+    studs:
+      - {id: stud_16, position: 16, verified: true}
+      - {id: stud_32, position: 32, verified: true}
+      - {id: stud_48, position: 48, verified: true}
+      - {id: stud_64, position: 64, verified: true}
+  floor:
+    high_point_elevation: 0
+    verified: true
+  environment:
+    building_enclosed: true
+    wet_work_complete: true
+    hvac_operating: true
+    acclimation_hours: 72
+
+vanity:
+  mode: draft
+  profile: frameless_plywood_shop_v1@1.0.0
+  material_evidence:
+    tsca_title_vi: verified
+    reference: supplier label and lot record
+    product: Garnica Duraply 3/4 in
+    density_kg_m3: 500
+    modulus_elasticity_mpa: 3400
+    property_reference: https://www.garnica.one/uploads/e9dd76f2-b4b1-4f84-99fb-b161676c98cc/e9dd76f2-b4b1-4f84-99fb-b161676c98cc.pdf
+  cabinet:
+    id: V36
+    type: floating
+    width: 36
+    height: 24
+    depth: 21
+    bottom_elevation: 10
+    placement: {against: north_wall, from_left_datum: 24}
+    front: {doors: 2}
+    top: {type: field_installed, sink: field_installed}
+  plumbing:
+    keepout:
+      from_cabinet_left: 12
+      width: 12
+      bottom_elevation: 14
+      height: 12
+  loads:
+    top_and_sink_dead_load_lb: 120
+    service_load_lb: 250
+  mounting:
+    rear_rail_height: 6
+    backing:
+      type: blocking_2x8
+      from_left_datum: 16.75
+      width: 46.5
+      bottom_elevation: 26.75
+      flush_with_stud_face: true
+      verified: true
+    fastener:
+      product: grk_rss_5_16x4@2026.1
+      pilot_diameter: 0.1875
+    engineering:
+      status: required
+      reference: ""
+

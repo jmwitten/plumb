@@ -1,0 +1,126 @@
+{
+  "_doc": "CURRENT-DESIGN determinism baseline for details/tree_attachment.spec.yaml, re-frozen from the SPEC path at base SHA 35e1a3693cc737bdd6b1bd1e18f75aea5e5a8d3f by scripts/refreeze_from_spec.py (task STRUCT #19 / addendum A2). The imperative path is gone (milestone 4B); this corpus IS the canonical record the compiled spec must reproduce byte-for-byte. The imperative-era testimony is retrievable at b52626b. Regenerate only with a justified, reviewed diff: python scripts/refreeze_from_spec.py.",
+  "bom": [
+    {
+      "assumptions": "Existing live tree — not cut, notched or purchased. Modeled as an exact cylinder (clean validation/ground body); the real trunk is irregular and grows, which the per-side growth gap (the beams clear the trunk, platform detail) accommodates. Bark and surface irregularity are field concerns, not modeled.",
+      "dimensions": "~20.00\" dia x 96.0\" live trunk (attach zone)",
+      "ids": [
+        "tree_trunk-0"
+      ],
+      "item": "Tree trunk (existing)",
+      "length_mm": null,
+      "material": "SPF lumber",
+      "qty": 1,
+      "source": "existing (not purchased)",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Actual dressed dimensions (PS 20). Long edges eased r=0.12\"; end grain square.",
+      "dimensions": "2x6 x 24.0\"",
+      "ids": [
+        "lumber-0",
+        "lumber-1"
+      ],
+      "item": "PT 2x6 lumber",
+      "length_mm": 609.5999999999999,
+      "material": "Pressure-treated lumber",
+      "qty": 2,
+      "source": "generated",
+      "stub_of": {
+        "full_dims": "2x6 x 60.0\" (continuous run)",
+        "modeled_dims": "2x6 x 24.0\"",
+        "note": "shown: 24.0\" modeled portion — full run in the platform detail"
+      }
+    }
+  ],
+  "by_kind": {
+    "dimension": 1,
+    "interference": 3
+  },
+  "captured_at_sha": "35e1a3693cc737bdd6b1bd1e18f75aea5e5a8d3f",
+  "connection_kind_types": [],
+  "content_fp": "71cb0cf4e47c992af9ec3c0a520ad27d8e4fe92c80a2dd19167964de293e4854",
+  "content_fp_divergence": {},
+  "content_fp_spec": "71cb0cf4e47c992af9ec3c0a520ad27d8e4fe92c80a2dd19167964de293e4854",
+  "counts": {
+    "bom_rows": 2,
+    "derivation_log": 0,
+    "formalized_stubs": 1,
+    "parts": 3
+  },
+  "findings": [
+    [
+      "dimension",
+      "trunk diameter: trunk",
+      true
+    ],
+    [
+      "interference",
+      "beam +Y <-> beam -Y",
+      true
+    ],
+    [
+      "interference",
+      "trunk <-> beam +Y",
+      true
+    ],
+    [
+      "interference",
+      "trunk <-> beam -Y",
+      true
+    ]
+  ],
+  "findings_fp": "efb560de8a549347d44409af2b003d610a7cb1589bae3a46b1e76e1d785ca448",
+  "geom_fingerprint": {
+    "beam +Y": [
+      [
+        -304.79999999999995,
+        381.0,
+        571.5
+      ],
+      3239363.630953615,
+      [
+        -304.79999999999995,
+        381.0,
+        571.5,
+        304.80000000000007,
+        419.1,
+        711.2
+      ]
+    ],
+    "beam -Y": [
+      [
+        304.79999999999995,
+        -381.0,
+        571.5
+      ],
+      3239363.630953614,
+      [
+        -304.80000000000007,
+        -419.1,
+        571.5,
+        304.79999999999995,
+        -380.9999999999999,
+        711.2
+      ]
+    ],
+    "trunk": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      494222206.8125357,
+      [
+        -254.0,
+        -254.0,
+        0.0,
+        254.0,
+        254.0,
+        2438.4
+      ]
+    ]
+  },
+  "name": "tree attachment",
+  "ok": true
+}

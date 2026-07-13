@@ -1,0 +1,7 @@
+{
+  "_doc": "Site view slice-completeness accounting. run `python scripts/regen_baselines.py` and review the git diff.",
+  "named_unscoped": 0,
+  "no_part": 0,
+  "scoped": 0,
+  "total_failures": 0
+}

@@ -1,0 +1,376 @@
+# DetailSpec — trolley/launch-edge (Witten dacha zipline platform).
+#
+# The same detail as details/trolley_launch.py, authored declaratively (task
+# SM3a). The pre-existing cable/trolley/hanger/grab-bar (context geometry that
+# sets the platform's key height) plus the launch-edge structure this build adds:
+# two corner posts, a deck-edge rim, a strap gate, a grab handle, mounting screws.
+# World frame: Z up, open launch edge line at Y=0, deck interior +Y, X across the
+# deck width (0..deck_width) with the two posts flush at X=0 and X=deck_width; the
+# cable/trolley cluster travels along Y over the deck.
+#
+# Value language: see details/rock_anchor.spec.yaml + detailgen/spec/values.py.
+# Bearing areas are bare mm^2 (a resolved area, not a length).
+#
+# GEOMETRY + BOM equivalence to trolley_launch.py is byte-identical (see
+# tests/test_trolley_launch_spec.py: 11 parts, transforms <=1e-6, BOM identical).
+#
+# VALIDATION-intent gaps (honest, per SM3a report — the current spec schema,
+# frozen for SM3a while SM1 owns src/spec/**, cannot yet express these; NOT
+# geometry gaps):
+#   1. expected_overlaps — the wheel-bore/cable and two handle-screw/post
+#      overlaps the imperative allowlists. No `expected_overlaps:` block exists
+#      and a Connection would emit `connection_hardware` findings the canonical
+#      imperative has none of; so standalone the spec reports those 3 pairs as
+#      FAIL "unexpected overlap" (the SM1 seam).
+#   2. the two CROSS-PART dimension checks ("grab bar height above deck" = bar
+#      zmid - rim zmax; "hanger length" = cable zmid - bar zmid). DimensionSpec
+#      measures ONE part's bbox, so a difference between two parts' measures is
+#      inexpressible. Two missing dimension findings.
+#   3. the seven per-joint `contacts` (wheel<->cable, hanger<->wheel/bar, strap
+#      <->posts, screws<->post). ValidationSpec has no `contacts:` block (the
+#      pipeline's contact stage exists but isn't spec-reachable). Seven missing
+#      contact findings.
+# This fragment declares no `ground` (it has no earth terminal of its own — the
+# posts/rim are stubs of platform members). TREEFREE task #19: the hanging chain is
+# bonded end-to-end (cable -> wheel -> hanger -> grab bar) to record real touching
+# adjacency, and each of the 4 hanging parts is declared `existing`+`grounded_by:
+# site` (roles below), so it SELF-GROUNDS as pre-existing demonstration context —
+# exempt from the floating check. There is NO cable<->trunk bond; the island does
+# not ground "through the tree". Standalone (no ground) the bonds are inert anyway.
+
+name: trolley launch
+type: trolley_launch
+units: in
+
+# --- author intent: the dimensions of the detail (inches) --------------------
+params:
+  # -- pre-existing zipline hardware (context only) ------------------------
+  bar_height_ground: 75.0      # grab bar height above ground (drawing-vetted)
+  hanger_length: 9.0           # overall cable-to-bar-center drop (see rod_length)
+  cable_dia: 0.3125            # ASSUMED (typical 5/16" zipline cable)
+  # TREEFREE task #19: the modeled cable RUN reaches back toward the tree anchor. In
+  # site coordinates the cable centre sits over the deck at world X=36 (unchanged,
+  # so the trolley/bar mate is untouched); at 52" the run's tree-end reaches the
+  # 20"-dia trunk surface (world X=10) — DEMONSTRATION geometry showing where the
+  # real (separate, non-engineered) cable anchors. The model does NOT bond it to
+  # the trunk: the cable self-grounds as `existing` context (roles below). P1: the
+  # exact tree lag/tree-saver anchor hardware + height are field details.
+  cable_seg_length: 52.0       # modeled run: over-deck centre back to the tree anchor
+  trolley_dia: 3.0             # ASSUMED schematic
+  trolley_width: 1.5           # ASSUMED
+  hanger_dia: 0.375            # ASSUMED rod diameter
+  bar_length: 17.0             # ASSUMED
+  bar_dia: 1.0                 # ASSUMED
+  hang_y_offset: 12.0          # ASSUMED position over the deck
+  # -- launch-edge context, cross-referenced from the platform ------------
+  deck_height: 29.0            # matches the platform (ground to deck SURFACE)
+  deck_thk: 1.0                # 5/4 decking thickness — the end-joist TOP (deck
+                               #   underside) is deck_height - deck_thk (matches platform)
+  deck_width: 33.0             # leg-inner-face to leg-inner-face (2 x outer_y)
+  # TREEFREE refit (TF-B): the two "posts" ARE the platform's real launch legs,
+  # modeled at their TRUE 63.5" length + orientation (see the .py assemble
+  # docstring). leg_edge_setback = platform beam_len 48 - leg_x_far 47.75.
+  leg_height: 63.5
+  leg_edge_setback: 0.25
+  # -- strap gate (NEW, fabricated) ---------------------------------------
+  strap_height_above_deck: 33.0  # capped by the 63.5" leg (no top rail); ~2" below the 65" guard line — field-verify
+  strap_width: 1.0
+  strap_thickness: 0.08
+  strap_ring_od: 1.5
+  strap_ring_tube_dia: 0.25
+  # -- grab handle (NEW, fabricated) --------------------------------------
+  handle_height_above_deck: 26.0
+  handle_grip_length: 10.0
+  handle_dia: 1.0
+  handle_standoff: 2.25
+  handle_screw_dia: 0.25
+  handle_screw_length: 1.75
+  # Dressed 2x6 actuals (the imperative reads these from Lumber.depth/.thickness;
+  # re-declared here — SPECPLAT Gap-5 missing-inference, a component-actuals
+  # accessor would derive them).
+  post_depth: 5.5
+  post_thickness: 1.5
+
+# --- derived dimensions ------------------------------------------------------
+# The continuous members these stubs retire onto in-site (presentation metadata
+# only, via stub_of — the site's bind mechanism resolves them to the platform's
+# real launch legs + end joist). DERIVED (task 4B-2 stub fix), so a re-sized
+# leg_height / deck_width moves the stub's full-run figure with it instead of
+# staying pinned at the default — the imperative trolley now derives the SAME
+# full_length, so the two paths' stub_of is byte-identical under overrides:
+#   leg full run  = the finished launch leg (leg_height; 63.5" at default)
+#   rim full run  = the launch-end joist span (deck_width - 2 x post thickness;
+#                   2 x inner_y = 30" at default)
+derived:
+  leg_full_len: "= leg_height"
+  rim_full_len: "= deck_width - 2*post_thickness"
+
+# --- components + placement --------------------------------------------------
+# Build order. The launch structure (posts, rim, strap, handle, screws) is placed
+# by global design measurements -> RAW placements (per the framework's own rule: a
+# part positioned by a global measurement uses a raw transform, not a mate). The
+# hanging chain places the cable RAW (a global height, centered over the deck),
+# then trolley -> hanger -> grab bar mate onto their neighbor with zero rotation
+# (the hardware datums are pre-aligned to this frame; see zipline_hardware.py).
+# Posts rotate local +X -> world +Z (Y -90) to stand up; screws rotate to drive
+# along -Y into the post face.
+components:
+  # posts = the platform's REAL launch legs (TF-B refit) ---------------------
+  # Modeled at the legs' true 63.5" length + orientation: a 2x6 whose 5.5" wide
+  # face is normal to local X (deck-width axis), inner faces at X=0 (leg_mY) and
+  # X=deck_width (leg_pY), extending outward. The ("Z", 90) after ("Y", -90)
+  # compensates for the trolley frame's own 90deg Z spin so the cross-section
+  # matches the real leg (without it: the SM3b perpendicular-registration bug).
+  - id: launch_post
+    type: lumber
+    name: "launch post"
+    params: {nominal: "2x6", length: "$leg_height", treated: true, ease_radius: "0.06 in", full_length: "$leg_full_len"}
+    place: {raw: {at: ["0 in", "= leg_edge_setback + post_depth", "0 in"], rotate: [["Y", -90], ["Z", 90]]}}
+  - id: far_post
+    type: lumber
+    name: "far post"
+    params: {nominal: "2x6", length: "$leg_height", treated: true, ease_radius: "0.06 in", full_length: "$leg_full_len"}
+    place: {raw: {at: ["= deck_width + post_thickness", "= leg_edge_setback + post_depth", "0 in"], rotate: [["Y", -90], ["Z", 90]]}}
+
+  # deck-edge rim = the platform's end joist (stub): spans leg-inner to
+  # leg-inner (X=0..deck_width) at the real end-joist height. TREEFREE task #19:
+  # placed with its TOP at the deck underside (deck_height - deck_thk = 28"), the
+  # real end-joist top — was 1" high (top at the deck SURFACE), which made the
+  # standalone grab-bar-above-rim read 46" while the site (bound to the real end
+  # joist) read the honest 47". Now both read 47" above the joist top.
+  - id: deck_rim
+    type: lumber
+    name: "deck edge rim"
+    params: {nominal: "2x6", length: "$deck_width", treated: true, full_length: "$rim_full_len"}
+    place: {raw: {at: ["0 in", "0 in", "= deck_height - deck_thk - post_depth"]}}
+
+  # strap gate (fabricated; rings tangent to the real leg inner faces) --------
+  - id: strap_gate
+    type: strap_gate
+    name: "strap gate"
+    params:
+      span: "= deck_width - strap_ring_tube_dia"
+      width: "$strap_width"
+      thickness: "$strap_thickness"
+      ring_od: "$strap_ring_od"
+      ring_tube_dia: "$strap_ring_tube_dia"
+    place: {raw: {at: ["= strap_ring_tube_dia/2", "= leg_edge_setback + strap_ring_od/2", "= deck_height + strap_height_above_deck"]}}
+
+  # grab handle (fabricated; on leg_mY's inner, X-normal wide face) -----------
+  # ("Z", -90) turns its +Y standoff to +X so it presses flat on the leg face.
+  # Kept to the launch-end of the leg depth (Y near the edge) + low, clearing
+  # the -Y railing mesh, the leg-top rail fasteners, and the strap gate.
+  - id: grab_handle
+    type: grab_handle
+    name: "grab handle"
+    params: {grip_length: "$handle_grip_length", diameter: "$handle_dia", standoff: "$handle_standoff"}
+    place: {raw: {at: ["0 in", "= leg_edge_setback + handle_dia/2", "= deck_height + handle_height_above_deck - handle_grip_length/2"], rotate: [["Z", -90]]}}
+
+  # handle mounting screws (driven -X from the leg's inner face INTO the leg) -
+  - id: handle_screw_0
+    type: structural_screw
+    name: "handle screw 0"
+    params: {diameter: "$handle_screw_dia", length: "$handle_screw_length"}
+    place: {raw: {at: ["0 in", "= leg_edge_setback + handle_dia/2 + handle_dia*0.9", "= deck_height + handle_height_above_deck - handle_grip_length/2"], rotate: [["Y", 90]]}}
+  - id: handle_screw_1
+    type: structural_screw
+    name: "handle screw 1"
+    params: {diameter: "$handle_screw_dia", length: "$handle_screw_length"}
+    place: {raw: {at: ["0 in", "= leg_edge_setback + handle_dia/2 + handle_dia*0.9", "= deck_height + handle_height_above_deck + handle_grip_length/2"], rotate: [["Y", 90]]}}
+
+  # hanging chain: cable (raw) -> trolley -> hanger -> grab bar (mates) -------
+  - id: cable
+    type: cable
+    name: "zipline cable"
+    params: {diameter: "$cable_dia", length: "$cable_seg_length"}
+    place: {raw: {at: ["= deck_width/2", "$hang_y_offset", "= bar_height_ground + hanger_length"]}}
+  - id: trolley_wheel
+    type: trolley_wheel
+    name: "trolley wheel"
+    # bore intentionally < cable dia (see TrolleyWheel.assumptions) -> an
+    # allowlisted overlap in the imperative (an expected_overlaps GAP here).
+    params: {diameter: "$trolley_dia", width: "$trolley_width", bore_diameter: "= 0.6 * cable_dia"}
+    place: {datum: grip, to: cable, to_datum: mid}
+  - id: hanger
+    type: hanger
+    name: "hanger"
+    # rod spans the drop NET of the trolley's and bar's own radii (it mates
+    # trolley-bottom to bar-top, not center to center).
+    params: {diameter: "$hanger_dia", length: "= hanger_length - trolley_dia/2 - bar_dia/2"}
+    place: {datum: top, to: trolley_wheel, to_datum: bottom}
+  - id: grab_bar
+    type: grab_bar
+    name: "grab bar"
+    params: {diameter: "$bar_dia", length: "$bar_length"}
+    place: {datum: top_mid, to: hanger, to_datum: bottom}
+
+# --- roles: the zipline hardware is pre-EXISTING demonstration context ---------
+# A3 (owner) + CTXGROUND: the wire, trolley wheel, hanger and grab bar are Joel's
+# pre-existing zipline hardware, rendered to show how the platform is used — NOT a
+# constructed part of this build and OUTSIDE the platform's load path. Each is an
+# `existing` site body that self-grounds (the ride hangs from the tree in reality),
+# so each is exempt from the constructed-connectivity floating check. This is the
+# HONEST resolution of the old floating-island pin: the island is demonstration
+# context, not something the platform grounds. (An `existing` body is never a
+# grounding conduit, so all four are declared independently; none is a foundation.)
+roles:
+  cable: {role: existing, grounded_by: site}
+  trolley_wheel: {role: existing, grounded_by: site}
+  hanger: {role: existing, grounded_by: site}
+  grab_bar: {role: existing, grounded_by: site}
+
+# --- validation: the escape-hatch checks the language expresses today --------
+# The three flush bearings (each post on the deck-edge rim; the launch post on the
+# grab handle) and the single-part grab-bar height. The 3 expected_overlaps, the
+# 2 cross-part dimensions and the 7 per-joint contacts are the documented SM1 gaps
+# above. No `ground` (two disconnected islands, as in the imperative).
+validation:
+  bearings:
+    # TREEFREE task #19 — PIN RESOLVED (two leg<->end-joist bearing claims): the
+    # two launch-post<->rim bearings here were REMOVED. They retired in-site onto
+    # platform/leg_{mY,pY} <-> platform/end_joist, which are 1.5" apart in Y and
+    # do NOT bear — a claim the built structure never makes. What actually carries
+    # the end joist is its two toe-screwed bearings on the BEAM inner faces
+    # (platform: end_joist <-> beam_{pY,mY}), which pass; the legs bear on the
+    # beams, not the joist. Removing an unintended bearing is the design fix, not
+    # a loosened check (the real bearing story is fully declared in the platform).
+    # Grab handle bears flat on leg_mY's inner X-normal face (axis X, was Y —
+    # the handle now mounts on the wide X-normal leg face; in-site the 90deg Z
+    # rotation remaps X->Y, matching the real leg's world inner face).
+    - {a: launch_post, b: grab_handle, axis: X, area: 322.58} # 0.5 in^2
+  # Ground path for the BUILT launch hardware: each fabricated part bonds to the
+  # leg it fastens to (carabiner clip / driven screw), so in-site (posts bound to
+  # the real legs) the strap, handle and screws reach ground through the platform
+  # legs. The floating sweep links only bearings+bonds, not contacts — the grab
+  # handle grounds via its leg bearing above; strap + screws need these bonds.
+  bonds:
+    - {a: strap_gate, b: launch_post}
+    - {a: strap_gate, b: far_post}
+    - {a: handle_screw_0, b: launch_post}
+    - {a: handle_screw_1, b: launch_post}
+    # TREEFREE task #19 — PIN RESOLVED (floating hardware island): the hanging chain
+    # is bonded end-to-end (cable -> trolley wheel -> hanger -> grab bar) to record
+    # the real touching adjacency of the pre-existing hanging hardware. The island
+    # is NOT grounded through the tree and there is NO cable<->trunk bond: each of
+    # these 4 parts is declared `existing`+`grounded_by: site` (roles above), so it
+    # SELF-GROUNDS as demonstration context and is exempt from the floating check.
+    # These bonds are honest touch facts, not a grounding path.
+    - {a: cable, b: trolley_wheel}
+    - {a: trolley_wheel, b: hanger}
+    - {a: hanger, b: grab_bar}
+  # Designed interferences: the trolley wheel's bore is intentionally < the cable
+  # dia (it grips), and each handle screw is driven into the leg. Allowlisted so
+  # they report PASS, not collisions.
+  expected_overlaps:
+    - {a: trolley_wheel, b: cable}
+    - {a: handle_screw_0, b: launch_post}
+    - {a: handle_screw_1, b: launch_post}
+  # Per-joint touch proofs (the two disconnected islands: hanging hardware +
+  # built structure). Order (a, b) matches the imperative's check_contact calls
+  # so the finding subjects are byte-identical.
+  contacts:
+    - {a: trolley_wheel, b: cable}
+    - {a: hanger, b: trolley_wheel}
+    - {a: hanger, b: grab_bar}
+    - {a: strap_gate, b: launch_post}
+    - {a: strap_gate, b: far_post}
+    - {a: handle_screw_0, b: launch_post}
+    - {a: handle_screw_1, b: launch_post}
+  dimensions:
+    - name: "grab bar height above ground (~75in, drawing-vetted)"
+      part: grab_bar
+      measure: zmid
+      expected: "$bar_height_ground"
+    # Cross-part: a distance between two members' bbox measures (SM3b).
+    # TREEFREE task #19 — PIN RESOLVED (grab-bar 47 vs 46): re-derived against the
+    # REAL end-joist TOP (deck underside = deck_height - deck_thk = 28"), not an
+    # imagined rim at the deck surface. The honest height is 47" above the joist
+    # top (= 46" above the deck SURFACE — the kid-reach number). Now that deck_rim
+    # is modeled at the real end-joist height, standalone and in-site both read
+    # 47", so this passes without loosening it. P1: field-verify the LOADED height.
+    - name: "grab bar height above end-joist top (~47in above joist / 46in above deck)"
+      part: grab_bar
+      measure: zmid
+      minus_part: deck_rim
+      minus_measure: zmax
+      expected: "= bar_height_ground - deck_height + deck_thk"
+    - name: "hanger length (cable height minus bar height)"
+      part: cable
+      measure: zmid
+      minus_part: grab_bar
+      minus_measure: zmid
+      expected: "$hanger_length"
+
+# --- presentation surfaces (task 4B-2) ---------------------------------------
+# Callout endpoints are internal mm (= expr -> * IN). Explode offsets are authored
+# in AUTHORING UNITS (inches) and scaled at manifest injection — the trolley's own
+# convention (export.explode_authoring_units), reproduced so explode_vectors() and
+# the injected manifest are both byte-equal. The doc is the same report
+# trolley_launch.py wrote; the two disconnected islands mean no floating sweep.
+callouts:
+  - {param: bar_height_ground, label: "{v} GRAB BAR (ABOVE GROUND) = 46in ABOVE DECK / 47in ABOVE JOIST — FIELD-VERIFY LOADED", p0: ["= -40", 0, 0], p1: ["= -40", 0, "= bar_height_ground"]}
+  - {param: deck_height, label: "{v} DECK HT", p0: ["= -30", 0, 0], p1: ["= -30", 0, "= deck_height"]}
+  - {param: handle_height_above_deck, label: "{v} HANDLE HT (ABOVE DECK)", p0: ["= -20", 0, "= deck_height"], p1: ["= -20", 0, "= deck_height + handle_height_above_deck"]}
+  - {param: deck_width, label: "{v} DECK WIDTH", p0: [0, "= -10", 0], p1: ["= deck_width", "= -10", 0]}
+
+explode:
+  - {id: launch_post, vector: [0, 0, 0]}
+  - {id: far_post, vector: [0, 0, 0]}
+  - {id: deck_rim, vector: [0, -4, 0]}
+  - {id: strap_gate, vector: [0, 6, 0]}
+  - {id: grab_handle, vector: [0, 10, 0]}
+  - {id: handle_screw_0, vector: [0, 14, 0]}
+  - {id: handle_screw_1, vector: [0, 14, 0]}
+  - {id: cable, vector: [0, 0, 6]}
+  - {id: trolley_wheel, vector: [0, 0, 3]}
+  - {id: hanger, vector: [0, 0, 0]}
+  - {id: grab_bar, vector: [0, 0, -4]}
+
+export: {glb_tolerance: 0.08, glb_angular_tolerance: 0.12, inject_explode: true, explode_authoring_units: true}
+
+doc:
+  sections:
+    - prose: |
+        # Trolley / Launch Edge — Validation Report
+
+        Cable/trolley/hanger/grab-bar (pre-existing, context geometry) plus
+        the launch edge's own strap gate and grab handle, generated by the
+        `detailgen` parametric component library.
+
+        ## Two separate systems (TREEFREE task #19)
+        The built launch structure (legs, rim, strap gate, grab handle,
+        screws) is the one ENGINEERED load path — the hardware bonds/bears on
+        the platform legs and grounds through them. The hanging zipline
+        hardware (cable, trolley, hanger, grab bar) is a SEPARATE, PRE-EXISTING
+        system, shown for demonstration only: it hangs from the live tree
+        (~8ft up) outside this build, is not fabricated here, and does not
+        bear on or ground through the platform. In the model it is declared
+        `existing` context that self-grounds (rooted in the tree in reality),
+        so it is exempt from the connectivity check — it is NOT anchored to the
+        structure and there is no cable-to-trunk bond in the model. The 96"
+        trunk is drawn only to show where that separate cable anchors; sizing
+        and anchorage of the real cable are an engineer-of-record item, NOT
+        evaluated here.
+
+        ## Collision / interference
+        - Pairwise interference checks run: **{interference_checks}**
+        - Unintended collisions detected: **{interference_failures}**
+        - Expected overlaps: trolley wheel bore vs. cable (intentional undersized-bore simplification); handle screws vs. the launch post (driven fastener).
+    - findings: {header: "## Flush-bearing contacts (true min-distance + bearing-area proof)", check: bearing}
+    - findings: {header: "## Per-joint contact proofs (touching, no area requirement)", check: contact}
+    - findings: {header: "## Dimension checks", check: dimension}
+    - prose: "## Result: **{result_verdict}**"
+    - bom_table: {header: "## Bill of materials"}
+    - prose: |
+        ## Modeling assumptions & known limitations
+        - Cable/trolley/hanger/grab bar are pre-existing zipline hardware — not purchased or fabricated here, and excluded from buy-list semantics via each part's `source` metadata (still modeled as real geometry so the launch-edge structure is positioned correctly relative to them).
+        - Trolley wheel diameter/width, hanger length, and grab bar dimensions are all ASSUMED representative sizes (the source drawing gives no callouts for this pre-existing hardware).
+        - **The two posts ARE the platform's real launch legs** (TF-B refit): modeled at their true {leg_height:.1f}in length (rock-anchor plane Z=0 to the top-rail underside) and true orientation — a 2x6 whose 5.5in wide face is normal to the deck-width axis. In-site each retires (stub_of) onto platform/leg_{{mY,pY}}; the launch hardware below mounts on those faces so it registers with the real members.
+        - **GRAB-BAR HEIGHT (kid-reach, FIELD-VERIFY)**: the bar sits {bar_height_ground:.0f}in above ground = {bar_height_ground - deck_height:.0f}in above the deck SURFACE (the walking plane), which is the number the deck was sized to for Zach's reach. Measured against the real end-joist top (the deck UNDERSIDE, 1in lower) it reads 47in — the honest figure the site model surfaces vs the drawing's 46in, which measured from an imagined rim. Before cutting lumber, have a kid hang on the bar and measure the LOADED height (sag matters); plug that into the deck-height formula.
+        - **Combined-BOM note**: the two legs + deck-edge rim are stubs of platform.py's launch legs + end joist (retired in-site), so they must NOT be double-counted against the platform BOM — platform.py owns those members (launch legs = 2x 2x6 x 63.5in). Only the strap gate, grab handle and handle screws here are new purchases.
+        - Handle mount height ({handle_height_above_deck:.0f}in above deck) is this detail's own assumption: the handle sits low on leg_mY's launch-end corner (deck-facing face), where its grip + both screws (upper at {handle_height_above_deck + handle_grip_length / 2:.0f}in above deck) clear the -Y railing infill mesh, the leg-top rail fasteners, and the strap gate — all conflicts the site model caught. A kid grabs it first, while low, before reaching the bar above.
+        - **Launch-edge decking cantilever (cross-detail)**: platform.py's 5/4 decking cantilevers ~12.25in past the last joist (at 35.75in) to this open launch edge — the highest-load zone; within 16in residential norms (see the platform report). This detail's strap gate closes that open edge.
+        - Strap height ({strap_height_above_deck:.0f}in above deck) is capped by the 63.5in launch legs (which carry no top rail): the gate clips ~2in below the 65in closed-side guard line so both rings land on the legs. Field-verify the final clip height.
+        - Strap gate and grab handle are simplified solids (a webbing strap + torus rings; a bent-tube handle with spherical corner blends) per the framework's representation-level convention — not literal buckle/carabiner mechanisms or a manufacturer SKU.
+        - The deck-edge rim is a stub of the platform's end joist: the beam/joist/decking load path is `platform.py`'s scope.
+        - Handle mounting screws are driven into the leg next to (not coaxially through) the handle's leg tubes — a simplification.

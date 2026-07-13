@@ -1,0 +1,1150 @@
+# DetailSpec — zipline launch PLATFORM deck (Witten dacha).
+#
+# The same 124-part detail as details/platform.py, authored declaratively — the
+# benchmark that stress-tests DetailSpec at ~5x the rock anchor's repetition.
+# Twin PT 2x6 beams that CLEAR the trunk (free-standing — nothing fastens to the
+# tree), 2x6 joists hung in face-mount hangers (+ an end/rim joist), 5/4x6
+# decking, two launch legs that carry up as rail posts, two short tree-end legs,
+# four posts on mixed foundations (rock anchor + three precast pier blocks), a
+# 2x4 top rail + welded-wire mesh guard both long sides, tree-end rail posts, and
+# a full-width 2x4-rung ladder hung between the launch legs.
+#
+# What the benchmark forced the compiler to learn (see task-specplat-report.md):
+#   * a REPEAT construct (families of joists / deck boards / rungs / screws /
+#     bolts) whose COUNT is DERIVED (= n_joists) — the author never writes "3";
+#   * authored `bearings:` / `bonds:` validation (a real multi-member detail has
+#     bearings no single Connection owns);
+#   * span/midpoint dimension measures (xlen / xmid / ylen).
+#
+# The +Y / -Y mirror halves are authored explicitly (a future SymmetricAbout
+# spatial invariant — task SPATIAL — would collapse them); repeat stays a
+# minimal index-only construct so the language grows slowly.
+#
+# Value language: bare scalar passes through (a nominal size, an axis letter, a
+# bearing area in mm2, a rotate angle in degrees); "$name" / "= expr" / "8 in"
+# are LENGTHS -> mm. A repeat index binds into the namespace, so "= joist_first
+# + k*joist_oc" and "joist {k}" resolve per iteration.
+
+name: platform
+type: platform
+units: in
+
+# --- author intent: platform dimensions (inches) -----------------------------
+params:
+  beam_len: 48.0          # deck run: tree face (X=0) to launch end
+  tree_overhang: 12.0     # beam continues this far past X=0 at the tree end
+  joist_span: 30.0        # beam inner-face to inner-face
+  deck_height: 29.0       # ground to top of decking
+  rail_height: 36.0       # deck surface to top of rail
+  deck_width: 33.0        # Y overall across the two beams (a 5.5" multiple)
+  joist_oc: 12.0          # joist spacing on center (DRIVES the layout)
+  trunk_dia: 20.0         # live-trunk diameter at the attach zone
+  bark_clear: 1.0         # joist-to-bark clearance past the trunk
+  leg_station: 45.0       # X of the leg centerline (near the launch end)
+  leg_inset: 2.75         # leg half-depth in X (2x6 laid 5.5" along the run)
+  # TREEFREE: the platform is FREE-STANDING (no fasteners into the tree). Every
+  # post bottom is held leg_gap clear of its foundation so end grain never sits
+  # in water — the rock anchor's leveling-standoff convention, now platform-wide.
+  # Leg lengths DERIVE from this + the per-post ground elevations below.
+  leg_gap: 0.5            # leveling standoff: post base above its foundation top
+  # TREEFREE task #19 — per-post ground elevations (P1 placeholder, field-verify
+  # each before setting posts). Grade FALLS tree->launch along the run (X); it is
+  # modeled LEVEL across the deck width (Y), so a +Y/-Y post pair at one station
+  # shares an elevation (no cross-slope was measured — that is the P1 to verify).
+  # The rock (+Y launch) post's foundation top IS the Z=0 datum; every other
+  # elevation is relative to it. Leg lengths DERIVE from these + leg_gap below.
+  ground_z_rock: 0.0      # +Y launch post: on the boulder — THE Z=0 datum
+  ground_z_front: 0.0     # -Y launch post: on a pier block; launch end level in Y
+  ground_z_tree: 12.0     # both tree-end posts: grade ~12" higher than the launch
+                          #   end (the 6-18" fall over the 4ft run — P1, field-verify)
+  tree_leg_station: 18.0  # X of the tree-end legs: in the clear framing bay between
+                          #   interior joists 0 (x12.5) and 1 (x24.5), past the trunk
+                          #   (radius 10 + 1" bark) and inboard of the -12" overhang
+  pier_w: 10.5            # precast pier block plan size (a standard Dek-Block-class
+  pier_l: 10.5            #   footprint; P1 — confirm the actual block bearing on grade)
+  pier_h: 8.0             # precast pier block height
+  anchor_bolt_up: 2.4     # +Y (rock) post cross-bolt height above the leg base
+  anchor_bolt_dx: 0.75    #   and X offset each side of leg_station — mirrors the
+                          #   rock anchor's bolt_up/bolt_dx (P1: field-drill the
+                          #   rock post to the anchor's own jig before setting)
+  bolt_dia: 0.375         # 3/8" leg-to-beam carriage bolts
+  bolt_len: 4.0
+  bolt_dx: 1.75           # bolt offset each side of the leg centerline (X)
+  n_steps: 2              # full-width ladder rungs
+  boulder_depth: 12.0     # context boulder thickness below Z=0 (render only)
+  # TREEFREE: the tree grows PAST the deck; crossing boards are notched around it.
+  growth_gap: 4.0         # min beam-inner-face-to-trunk clearance in Y (as-built 5")
+  # A6 (owner): a REAL screened growth gap around the living trunk — NOT the old
+  # fake-tight 0.004" saw-fit (that was a graph-connectivity hack to keep the
+  # trunk in the deck's contact chain; the trunk now self-grounds as an `existing`
+  # site body, so the deck can carry its true clearance). 2" radial clearance:
+  # room for years of trunk growth, still < the 4" sphere fall-through limit, and
+  # the annular gap is screened (a field collar) so it is not a fall hazard.
+  deck_notch_gap: 2.0     # radial deck-to-trunk growth clearance (screened)
+  post_x: 4.0             # tree-end rail-post station (X)
+  ladder_ring_clearance: 0.0  # extra rung inset for strap-gate ring hardware
+  hanger_reach: 2.5       # a hanger's X reach past its joist centerline
+  # dressed-lumber + hardware nominal constants (the component's own actuals;
+  # duplicated here because the value language can't yet query a component ->
+  # a documented derivation seam in the report)
+  t2x: 1.5                # 2x nominal thickness (2x4/2x6 narrow face)
+  d2x6: 5.5               # 2x6 depth
+  d2x4: 3.5               # 2x4 depth
+  deck_thk: 1.0           # 5/4 decking dressed thickness
+  deck_w: 5.5             # 5/4x6 decking width
+  hanger_play: 0.06       # JoistHanger clearance each side of the joist
+  hanger_screw_dia: 0.157 # Simpson SD9-class Strong-Drive shank
+  hanger_screw_len: 1.5
+  rail_screw_len: 3.5
+
+# --- derived dimensions: relationships (and the DERIVED family counts) --------
+derived:
+  beam_bot: "= deck_height - 1 - d2x6"           # world Z of beam underside
+  beam_top: "= beam_bot + d2x6"
+  deck_bot: "= beam_top"
+  deck_top: "= deck_bot + deck_thk"
+  leg_top: "= deck_height + rail_height - t2x"    # leg/post top = rail underside
+  inner_y: "= joist_span / 2"                     # beam inner face (Y)
+  outer_y: "= inner_y + t2x"                      # beam outer face (Y)
+  beam_x0: "= -tree_overhang"                     # beam tree-end corner (X<0)
+  beam_total_len: "= beam_len + tree_overhang"    # true single-piece 2x6 length
+  leg_x_far: "= leg_station + leg_inset"          # leg's launch-end face (X)
+  bolt_z: "= beam_bot + d2x6/2"                   # bolts at mid-beam height
+  bolt_hole_d: "= bolt_dia + 0.02"
+  hanger_half_width: "= t2x/2 + hanger_play"      # hung-screw head offset
+  joist_first: "= trunk_dia/2 + bark_clear + t2x/2"   # first joist centerline
+  joist_last: "= leg_station - bolt_dx - hanger_reach" # last allowed interior joist
+  n_joists: "= (joist_last - joist_first)//joist_oc + 1"  # DERIVED count (=3)
+  leg_len: "= leg_top - leg_gap"                  # launch legs: base held leg_gap up
+  # TREEFREE task #19 — DERIVED per-post foundation Z and tree-end leg lengths.
+  # A pier post's leg BASE = its ground elevation + the leg_gap standoff, and the
+  # pier's top pad meets that base (the leg bears directly on the pad; the pier is
+  # grounded via the leg, no separate leveling part). The launch bases resolve to
+  # 0.5" (ground_z 0 + leg_gap) — unchanged from the pre-#19 datum, so the launch
+  # legs do NOT move; only the tree-end legs' length derives from the higher grade.
+  leg_base_rock: "= ground_z_rock + leg_gap"      # +Y launch leg base (= 0.5, datum)
+  leg_base_front: "= ground_z_front + leg_gap"    # -Y launch leg base (= 0.5)
+  leg_base_tree: "= ground_z_tree + leg_gap"      # tree-end leg base (= 12.5)
+  leg_tree_top: "= beam_bot + d2x6"               # = beam_top: the tree leg clamps the full beam depth
+  leg_tree_len: "= leg_tree_top - leg_base_tree"  # DERIVED short tree-end leg (= 15.5)
+  leg_tree_x_far: "= tree_leg_station + leg_inset"  # tree leg launch-end face (X)
+  leg_tree_hx: "= bolt_z - leg_base_tree"         # bolt-hole height in the tree leg's frame
+  pier_y: "= outer_y + t2x/2"                     # a leg's Y centreline = its pier's Y centre
+  post_len: "= leg_top - beam_bot"
+  rail_len: "= leg_x_far - (post_x - d2x4)"
+  rail_x0: "= post_x - d2x4"
+  rail_top_z: "= leg_top + t2x"
+  mesh_h: "= leg_top - deck_bot - deck_thk"
+  mesh_len: "= leg_x_far - t2x - post_x"
+  mesh_thk: 0.125
+  n_deck: "= deck_width / deck_w"                 # DERIVED count (=6; width is a 5.5" multiple)
+  deck_y0: "= -deck_width / 2"                    # first board's -Y edge
+  rung_rise: "= deck_height / (n_steps + 1)"      # even riser height
+  rung_len: "= 2*(outer_y - ladder_ring_clearance)"   # full clear leg-to-leg span
+  rung_y0: "= -(outer_y - ladder_ring_clearance)"
+  head_washer_thk: "= 0.1*bolt_dia + 1/25.4"      # matches Washer's default-thk formula
+  bolt_head_y_p: "= outer_y + t2x + head_washer_thk"   # +Y bolt head plane
+  bolt_head_y_m: "= -(outer_y + t2x) - head_washer_thk"
+  # -- report-cited quantities (task 4B-2): named so a number the prose cites
+  # can't drift from the geometry that produced it (AD#5).
+  joist_last_station: "= joist_first + (n_joists - 1)*joist_oc"  # last interior joist X (=35.75)
+  n_joists_oc16: "= (joist_last - joist_first)//16 + 1"          # joist count at 16" O.C. (=2)
+  n_rail_screws: 2                                                # rail-cap screws per joint (report)
+
+# --- components + placement --------------------------------------------------
+components:
+  # -- twin beams (straddle the trunk along Y) --------------------------------
+  - id: beam_pY
+    type: lumber
+    name: beam +Y
+    params:
+      nominal: "2x6"
+      length: "$beam_total_len"
+      treated: true
+      ease_radius: "0.125 in"
+      holes:
+        - ["= leg_station - bolt_dx - beam_x0", "= bolt_z - beam_bot", "$bolt_hole_d"]
+        - ["= leg_station + bolt_dx - beam_x0", "= bolt_z - beam_bot", "$bolt_hole_d"]
+        # TREEFREE task #19: the two tree-end-leg thru-bolts pass here too
+        - ["= tree_leg_station - bolt_dx - beam_x0", "= bolt_z - beam_bot", "$bolt_hole_d"]
+        - ["= tree_leg_station + bolt_dx - beam_x0", "= bolt_z - beam_bot", "$bolt_hole_d"]
+    place: {raw: {at: ["$beam_x0", "$inner_y", "$beam_bot"]}}
+  - id: beam_mY
+    type: lumber
+    name: beam -Y
+    params:
+      nominal: "2x6"
+      length: "$beam_total_len"
+      treated: true
+      ease_radius: "0.125 in"
+      holes:
+        - ["= leg_station - bolt_dx - beam_x0", "= bolt_z - beam_bot", "$bolt_hole_d"]
+        - ["= leg_station + bolt_dx - beam_x0", "= bolt_z - beam_bot", "$bolt_hole_d"]
+        # TREEFREE task #19: the two tree-end-leg thru-bolts pass here too
+        - ["= tree_leg_station - bolt_dx - beam_x0", "= bolt_z - beam_bot", "$bolt_hole_d"]
+        - ["= tree_leg_station + bolt_dx - beam_x0", "= bolt_z - beam_bot", "$bolt_hole_d"]
+    place: {raw: {at: ["$beam_x0", "= -outer_y", "$beam_bot"]}}
+
+  # -- interior joists (count DERIVED = n_joists), each in +Y and -Y hangers ---
+  - repeat: {var: k, count: "= n_joists"}
+    body:
+      - id: "joist_{k}"
+        type: lumber
+        name: "joist {k}"
+        params: {nominal: "2x6", length: "$joist_span", treated: true, ease_radius: "0.125 in"}
+        place: {raw: {at: ["= joist_first + k*joist_oc + t2x/2", "= -inner_y", "$beam_bot"], rotate: [["Z", 90]]}}
+      # +Y hanger + representative Strong-Drive SD screws
+      - id: "jh_pY_{k}"
+        type: joist_hanger
+        name: "joist {k}+Y"
+        params: {joist_thickness: "$t2x", joist_depth: "$d2x6"}
+        place: {raw: {at: ["= joist_first + k*joist_oc", "$inner_y", "$beam_bot"], rotate: [["Z", -90]]}}
+      - repeat: {var: i, count: 4}
+        body:
+          - id: "jhs_pY_{k}_{i}"
+            type: structural_screw
+            name: "joist {k}+Y header screw {i}"
+            params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+            place: {raw: {at: ["= joist_first + k*joist_oc + (i - 1.5)*0.4", "$inner_y", "= beam_bot + 1.5"], rotate: [["X", 90]]}}
+      - id: "jhg_pY_{k}_0"
+        type: structural_screw
+        name: "joist {k}+Y joist screw 0"
+        params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+        place: {raw: {at: ["= joist_first + k*joist_oc + hanger_half_width", "= inner_y - 1", "= beam_bot + 1"], rotate: [["Y", 90]]}}
+      - id: "jhg_pY_{k}_1"
+        type: structural_screw
+        name: "joist {k}+Y joist screw 1"
+        params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+        place: {raw: {at: ["= joist_first + k*joist_oc - hanger_half_width", "= inner_y - 1", "= beam_bot + 1.75"], rotate: [["Y", -90]]}}
+      # -Y hanger (mirror: header face at -inner_y, hanger/screws spun)
+      - id: "jh_mY_{k}"
+        type: joist_hanger
+        name: "joist {k}-Y"
+        params: {joist_thickness: "$t2x", joist_depth: "$d2x6"}
+        place: {raw: {at: ["= joist_first + k*joist_oc", "= -inner_y", "$beam_bot"], rotate: [["Z", 90]]}}
+      - repeat: {var: i, count: 4}
+        body:
+          - id: "jhs_mY_{k}_{i}"
+            type: structural_screw
+            name: "joist {k}-Y header screw {i}"
+            params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+            place: {raw: {at: ["= joist_first + k*joist_oc + (i - 1.5)*0.4", "= -inner_y", "= beam_bot + 1.5"], rotate: [["X", -90]]}}
+      - id: "jhg_mY_{k}_0"
+        type: structural_screw
+        name: "joist {k}-Y joist screw 0"
+        params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+        place: {raw: {at: ["= joist_first + k*joist_oc + hanger_half_width", "= -inner_y + 1", "= beam_bot + 1"], rotate: [["Y", 90]]}}
+      - id: "jhg_mY_{k}_1"
+        type: structural_screw
+        name: "joist {k}-Y joist screw 1"
+        params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+        place: {raw: {at: ["= joist_first + k*joist_oc - hanger_half_width", "= -inner_y + 1", "= beam_bot + 1.75"], rotate: [["Y", -90]]}}
+
+  # -- end/rim joist (toe-screwed, no hanger fits between the leg bolts) -------
+  - id: end_joist
+    type: lumber
+    name: end joist
+    params: {nominal: "2x6", length: "$joist_span", treated: true, ease_radius: "0.125 in"}
+    place: {raw: {at: ["= leg_station + t2x/2", "= -inner_y", "$beam_bot"], rotate: [["Z", 90]]}}
+  - repeat: {var: i, count: 3}
+    body:
+      - id: "toe_pY_{i}"
+        type: structural_screw
+        name: "end joist toe screw +Y {i}"
+        params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+        place: {raw: {at: ["$leg_station", "$inner_y", "= beam_bot + 1 + i"], rotate: [["X", 90]]}}
+  - repeat: {var: i, count: 3}
+    body:
+      - id: "toe_mY_{i}"
+        type: structural_screw
+        name: "end joist toe screw -Y {i}"
+        params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+        place: {raw: {at: ["$leg_station", "= -inner_y", "= beam_bot + 1 + i"], rotate: [["X", -90]]}}
+
+  # -- 5/4x6 decking (count DERIVED = n_deck), run parallel to the beams -------
+  # TREEFREE: the tree grows PAST the deck, so every board is fitted around the
+  # trunk with a `clearance_cut` FEATURE (CL-2). The author names the MEMBER and
+  # the radial gap; the compiler DERIVES the board-local cut center by re-expressing
+  # the trunk's placed axis in each board's frame (the hand `= -(deck_y0 + j*deck_w)`
+  # negation is gone), the notch radius (trunk radius + gap), the cache-key, the
+  # fabrication notch step, and the doc fact — one declaration, all in sync. Boards
+  # whose strip clears the trunk get a geometric no-op (no cut, surfaced as a note).
+  - repeat: {var: j, count: "= n_deck"}
+    body:
+      - id: "deck_{j}"
+        type: deck_board
+        name: "deck {j}"
+        params:
+          length: "$beam_len"
+        place: {raw: {at: [0, "= deck_y0 + j*deck_w", "$deck_bot"]}}
+        features:
+          - clearance_cut: {around: trunk, gap: $deck_notch_gap}
+
+  # -- legs / launch-corner rail posts (thru-bolted to the beam ends) ----------
+  # The +Y (rock) post: base held leg_gap above the boulder (its length derives),
+  # and drilled for BOTH the leg-to-beam bolts AND the rock anchor's two cross-
+  # bolts (hole local-X = height above the leg base; anchor bolts sit anchor_bolt_up
+  # up). The anchor detail's rod line/clamps center on this leg's real centerline.
+  - id: leg_pY
+    type: lumber
+    name: leg +Y
+    params:
+      nominal: "2x6"
+      length: "$leg_len"
+      treated: true
+      ease_radius: "0.125 in"
+      holes:
+        - ["= bolt_z - leg_gap", "= leg_x_far - (leg_station - bolt_dx)", "$bolt_hole_d"]
+        - ["= bolt_z - leg_gap", "= leg_x_far - (leg_station + bolt_dx)", "$bolt_hole_d"]
+        - ["$anchor_bolt_up", "= leg_x_far - (leg_station - anchor_bolt_dx)", "$bolt_hole_d"]
+        - ["$anchor_bolt_up", "= leg_x_far - (leg_station + anchor_bolt_dx)", "$bolt_hole_d"]
+    place: {raw: {at: ["$leg_x_far", "$outer_y", "$leg_gap"], rotate: [["Y", -90]]}}
+  - id: leg_mY
+    type: lumber
+    name: leg -Y
+    params:
+      nominal: "2x6"
+      length: "$leg_len"
+      treated: true
+      ease_radius: "0.125 in"
+      holes:
+        - ["= bolt_z - leg_gap", "= leg_x_far - (leg_station - bolt_dx)", "$bolt_hole_d"]
+        - ["= bolt_z - leg_gap", "= leg_x_far - (leg_station + bolt_dx)", "$bolt_hole_d"]
+    place: {raw: {at: ["$leg_x_far", "= -outer_y - t2x", "$leg_gap"], rotate: [["Y", -90]]}}
+
+  # -- tree-end legs (2x6) — TREEFREE task #19 --------------------------------
+  # The free-standing platform's tree end used to cantilever off the trunk. Now
+  # it lands on two short 2x6 legs at tree_leg_station (x16), thru-bolted flat to
+  # the beam outer faces exactly like the launch legs (2 carriage bolts each), and
+  # bearing down on a precast pier block. Base held leg_gap above the (higher)
+  # tree-end grade, top capping the beam depth (leg_tree_top = beam_top). Length
+  # DERIVES from the grade — short here because the ground is higher at the tree.
+  - id: leg_tree_pY
+    type: lumber
+    name: leg tree +Y
+    params:
+      nominal: "2x6"
+      length: "$leg_tree_len"
+      treated: true
+      ease_radius: "0.125 in"
+      holes:
+        - ["$leg_tree_hx", "= leg_tree_x_far - (tree_leg_station - bolt_dx)", "$bolt_hole_d"]
+        - ["$leg_tree_hx", "= leg_tree_x_far - (tree_leg_station + bolt_dx)", "$bolt_hole_d"]
+    place: {raw: {at: ["$leg_tree_x_far", "$outer_y", "$leg_base_tree"], rotate: [["Y", -90]]}}
+  - id: leg_tree_mY
+    type: lumber
+    name: leg tree -Y
+    params:
+      nominal: "2x6"
+      length: "$leg_tree_len"
+      treated: true
+      ease_radius: "0.125 in"
+      holes:
+        - ["$leg_tree_hx", "= leg_tree_x_far - (tree_leg_station - bolt_dx)", "$bolt_hole_d"]
+        - ["$leg_tree_hx", "= leg_tree_x_far - (tree_leg_station + bolt_dx)", "$bolt_hole_d"]
+    place: {raw: {at: ["$leg_tree_x_far", "= -outer_y - t2x", "$leg_base_tree"], rotate: [["Y", -90]]}}
+
+  # -- precast pier blocks (3) — TREEFREE task #19 ----------------------------
+  # Foundations under the three posts that do NOT land on the rock: the -Y launch
+  # leg and the two tree-end legs. Each block's top pad is set at its leg's base
+  # (leg_gap above grade), so the leg bears directly on it. The +Y launch leg has
+  # the rock anchor instead (no pier), which is why there is no `pier +Y` — the
+  # +Y/-Y mirror selector leaves this -Y-only foundation unpaired by design.
+  - id: pier_mY
+    type: pier_block
+    name: pier -Y
+    params: {width: "$pier_w", length: "$pier_l", height: "$pier_h"}
+    place: {raw: {at: ["$leg_station", "= -pier_y", "$leg_base_front"]}}
+  - id: pier_tree_pY
+    type: pier_block
+    name: pier tree +Y
+    params: {width: "$pier_w", length: "$pier_l", height: "$pier_h"}
+    place: {raw: {at: ["$tree_leg_station", "$pier_y", "$leg_base_tree"]}}
+  - id: pier_tree_mY
+    type: pier_block
+    name: pier tree -Y
+    params: {width: "$pier_w", length: "$pier_l", height: "$pier_h"}
+    place: {raw: {at: ["$tree_leg_station", "= -pier_y", "$leg_base_tree"]}}
+
+  # -- tree-end rail posts (2x4) ----------------------------------------------
+  - id: post_pY
+    type: lumber
+    name: post +Y
+    params: {nominal: "2x4", length: "$post_len", treated: true, ease_radius: "0.125 in"}
+    place: {raw: {at: ["$post_x", "$outer_y", "$beam_bot"], rotate: [["Y", -90]]}}
+  - id: post_mY
+    type: lumber
+    name: post -Y
+    params: {nominal: "2x4", length: "$post_len", treated: true, ease_radius: "0.125 in"}
+    place: {raw: {at: ["$post_x", "= -outer_y - t2x", "$beam_bot"], rotate: [["Y", -90]]}}
+
+  # -- top rails (2x4 laid flat) ----------------------------------------------
+  - id: rail_pY
+    type: lumber
+    name: rail +Y
+    params: {nominal: "2x4", length: "$rail_len", treated: true, ease_radius: "0.125 in"}
+    place: {raw: {at: ["$rail_x0", "= outer_y + t2x", "$leg_top"], rotate: [["X", 90]]}}
+  - id: rail_mY
+    type: lumber
+    name: rail -Y
+    params: {nominal: "2x4", length: "$rail_len", treated: true, ease_radius: "0.125 in"}
+    place: {raw: {at: ["= rail_x0 + rail_len", "= -(outer_y + t2x)", "$leg_top"], rotate: [["X", 90], ["Z", 180]]}}
+
+  # -- rail-to-post/leg fastening (vertical screws into top end grain) --------
+  - repeat: {var: i, count: 2}
+    body:
+      - id: "rf_post_pY_{i}"
+        type: structural_screw
+        name: "post +Y rail fastener screw {i}"
+        params: {diameter: "$hanger_screw_dia", length: "$rail_screw_len"}
+        place: {raw: {at: ["= (post_x - d2x4/2) + (i - 0.5)*1.5", "= outer_y + t2x/2", "$rail_top_z"]}}
+  - repeat: {var: i, count: 2}
+    body:
+      - id: "rf_leg_pY_{i}"
+        type: structural_screw
+        name: "leg +Y rail fastener screw {i}"
+        params: {diameter: "$hanger_screw_dia", length: "$rail_screw_len"}
+        place: {raw: {at: ["= (leg_x_far - d2x6/2) + (i - 0.5)*1.5", "= outer_y + t2x/2", "$rail_top_z"]}}
+  - repeat: {var: i, count: 2}
+    body:
+      - id: "rf_post_mY_{i}"
+        type: structural_screw
+        name: "post -Y rail fastener screw {i}"
+        params: {diameter: "$hanger_screw_dia", length: "$rail_screw_len"}
+        place: {raw: {at: ["= (post_x - d2x4/2) + (i - 0.5)*1.5", "= -(outer_y + t2x/2)", "$rail_top_z"]}}
+  - repeat: {var: i, count: 2}
+    body:
+      - id: "rf_leg_mY_{i}"
+        type: structural_screw
+        name: "leg -Y rail fastener screw {i}"
+        params: {diameter: "$hanger_screw_dia", length: "$rail_screw_len"}
+        place: {raw: {at: ["= (leg_x_far - d2x6/2) + (i - 0.5)*1.5", "= -(outer_y + t2x/2)", "$rail_top_z"]}}
+
+  # -- welded-wire mesh guard, both long sides --------------------------------
+  - id: mesh_pY
+    type: wire_mesh
+    name: mesh +Y
+    params: {length: "$mesh_len", height: "$mesh_h", thickness: "$mesh_thk"}
+    place: {raw: {at: ["$post_x", "= inner_y - mesh_thk", "$deck_top"]}}
+  - id: mesh_mY
+    type: wire_mesh
+    name: mesh -Y
+    params: {length: "$mesh_len", height: "$mesh_h", thickness: "$mesh_thk"}
+    place: {raw: {at: ["$post_x", "= -inner_y", "$deck_top"]}}
+
+  # -- full-width ladder: 2x4 rungs hung between the launch legs ---------------
+  - repeat: {var: s, count: "$n_steps"}
+    body:
+      - id: "rung_{s}"
+        type: lumber
+        name: "rung {s}"
+        params: {nominal: "2x4", length: "$rung_len", treated: true, ease_radius: "0.125 in"}
+        place: {raw: {at: ["= leg_station + t2x/2", "$rung_y0", "= (s + 1)*rung_rise - d2x4"], rotate: [["Z", 90]]}}
+      - id: "rh_pY_{s}"
+        type: joist_hanger
+        name: "rung {s} hanger +Y"
+        params: {joist_thickness: "$t2x", joist_depth: "$d2x4"}
+        place: {raw: {at: ["$leg_station", "$outer_y", "= (s + 1)*rung_rise - d2x4"], rotate: [["Z", -90]]}}
+      - repeat: {var: i, count: 4}
+        body:
+          - id: "rhs_pY_{s}_{i}"
+            type: structural_screw
+            name: "rung {s} hanger +Y header screw {i}"
+            params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+            place: {raw: {at: ["= leg_station + (i - 1.5)*0.4", "$outer_y", "= (s + 1)*rung_rise - d2x4 + 1.5"], rotate: [["X", 90]]}}
+      - id: "rhg_pY_{s}_0"
+        type: structural_screw
+        name: "rung {s} hanger +Y joist screw 0"
+        params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+        place: {raw: {at: ["= leg_station + hanger_half_width", "= outer_y - 1", "= (s + 1)*rung_rise - d2x4 + 1"], rotate: [["Y", 90]]}}
+      - id: "rhg_pY_{s}_1"
+        type: structural_screw
+        name: "rung {s} hanger +Y joist screw 1"
+        params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+        place: {raw: {at: ["= leg_station - hanger_half_width", "= outer_y - 1", "= (s + 1)*rung_rise - d2x4 + 1.75"], rotate: [["Y", -90]]}}
+      - id: "rh_mY_{s}"
+        type: joist_hanger
+        name: "rung {s} hanger -Y"
+        params: {joist_thickness: "$t2x", joist_depth: "$d2x4"}
+        place: {raw: {at: ["$leg_station", "= -outer_y", "= (s + 1)*rung_rise - d2x4"], rotate: [["Z", 90]]}}
+      - repeat: {var: i, count: 4}
+        body:
+          - id: "rhs_mY_{s}_{i}"
+            type: structural_screw
+            name: "rung {s} hanger -Y header screw {i}"
+            params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+            place: {raw: {at: ["= leg_station + (i - 1.5)*0.4", "= -outer_y", "= (s + 1)*rung_rise - d2x4 + 1.5"], rotate: [["X", -90]]}}
+      - id: "rhg_mY_{s}_0"
+        type: structural_screw
+        name: "rung {s} hanger -Y joist screw 0"
+        params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+        place: {raw: {at: ["= leg_station + hanger_half_width", "= -outer_y + 1", "= (s + 1)*rung_rise - d2x4 + 1"], rotate: [["Y", 90]]}}
+      - id: "rhg_mY_{s}_1"
+        type: structural_screw
+        name: "rung {s} hanger -Y joist screw 1"
+        params: {diameter: "$hanger_screw_dia", length: "$hanger_screw_len"}
+        place: {raw: {at: ["= leg_station - hanger_half_width", "= -outer_y + 1", "= (s + 1)*rung_rise - d2x4 + 1.75"], rotate: [["Y", -90]]}}
+
+  # -- context geometry (existing — not purchased) ----------------------------
+  - id: trunk
+    type: tree_trunk
+    name: trunk
+    params: {diameter: "$trunk_dia", height: "$beam_top"}
+    place: {raw: {at: [0, 0, 0]}}
+  # Context boulder pad top sits at the raised rock-post base (leg_gap): its only
+  # in-detail job standalone is to ground the +Y launch post (the tangent bond in
+  # `bonds`). In-site this copy is DROPPED (dedup -> rock_anchor/boulder, whose
+  # pad is at Z=0 with the leg held leg_gap above it by the anchor hardware).
+  # TREEFREE task #19: sized + placed under the +Y (rock) post ONLY, matching the
+  # real rock_anchor boulder footprint — the -Y launch post now bears on pier_mY,
+  # not the rock, so the boulder no longer spans the deck width (it must not
+  # overlap pier_mY under the -Y leg).
+  - id: boulder
+    type: boulder
+    name: boulder
+    params:
+      # Inches (converted like every other dimension). RAW literals here would be
+      # read as MILLIMETRES — the bug that shrank this context boulder to a 0.4"
+      # sliver. Sized to the real rock_anchor footprint (9" x 12"), under the +Y
+      # post only so it never overlaps pier_mY under the -Y leg.
+      width: "= 9"
+      length: "= 12"
+      depth: "$boulder_depth"
+    place: {raw: {at: ["$leg_station", "$pier_y", "$leg_gap"]}}
+
+  # -- leg-to-beam bolts (3/8"x4"), 2 per leg, head washer + nut washer + nut --
+  - repeat: {var: i, count: 2}
+    body:
+      - id: "bolt_pY_{i}"
+        type: hex_bolt
+        name: "bolt +Y{i}"
+        params: {diameter: "$bolt_dia", length: "$bolt_len"}
+        place: {raw: {at: ["= leg_station + (2*i - 1)*bolt_dx", "$bolt_head_y_p", "$bolt_z"], rotate: [["X", -90]]}}
+      - id: "bwh_pY_{i}"
+        type: washer
+        name: "bolt washer head +Y{i}"
+        params: {inner_diameter: "$bolt_dia"}
+        place: {datum: top, to: "bolt_pY_{i}", to_datum: head_bearing}
+      - id: "bwn_pY_{i}"
+        type: washer
+        name: "bolt washer +Y{i}"
+        params: {inner_diameter: "$bolt_dia"}
+        place: {raw: {at: ["= leg_station + (2*i - 1)*bolt_dx", "$inner_y", "$bolt_z"], rotate: [["X", 90]]}}
+      - id: "bn_pY_{i}"
+        type: hex_nut
+        name: "bolt nut +Y{i}"
+        params: {diameter: "$bolt_dia", label: "hex nut"}
+        place: {datum: base, to: "bwn_pY_{i}", to_datum: top}
+  - repeat: {var: i, count: 2}
+    body:
+      - id: "bolt_mY_{i}"
+        type: hex_bolt
+        name: "bolt -Y{i}"
+        params: {diameter: "$bolt_dia", length: "$bolt_len"}
+        place: {raw: {at: ["= leg_station + (2*i - 1)*bolt_dx", "$bolt_head_y_m", "$bolt_z"], rotate: [["X", 90]]}}
+      - id: "bwh_mY_{i}"
+        type: washer
+        name: "bolt washer head -Y{i}"
+        params: {inner_diameter: "$bolt_dia"}
+        place: {datum: top, to: "bolt_mY_{i}", to_datum: head_bearing}
+      - id: "bwn_mY_{i}"
+        type: washer
+        name: "bolt washer -Y{i}"
+        params: {inner_diameter: "$bolt_dia"}
+        place: {raw: {at: ["= leg_station + (2*i - 1)*bolt_dx", "= -inner_y", "$bolt_z"], rotate: [["X", 270]]}}
+      - id: "bn_mY_{i}"
+        type: hex_nut
+        name: "bolt nut -Y{i}"
+        params: {diameter: "$bolt_dia", label: "hex nut"}
+        place: {datum: base, to: "bwn_mY_{i}", to_datum: top}
+
+  # -- tree-end leg-to-beam bolts (3/8"x4"), 2 per leg — TREEFREE task #19 -----
+  # Same BoltedClamp hardware as the launch legs (bolt + head washer + nut washer
+  # + nut), driven in Y through the tree-end leg and the beam at tree_leg_station.
+  - repeat: {var: i, count: 2}
+    body:
+      - id: "bolt_tree_pY_{i}"
+        type: hex_bolt
+        name: "bolt tree +Y{i}"
+        params: {diameter: "$bolt_dia", length: "$bolt_len"}
+        place: {raw: {at: ["= tree_leg_station + (2*i - 1)*bolt_dx", "$bolt_head_y_p", "$bolt_z"], rotate: [["X", -90]]}}
+      - id: "bwh_tree_pY_{i}"
+        type: washer
+        name: "bolt washer head tree +Y{i}"
+        params: {inner_diameter: "$bolt_dia"}
+        place: {datum: top, to: "bolt_tree_pY_{i}", to_datum: head_bearing}
+      - id: "bwn_tree_pY_{i}"
+        type: washer
+        name: "bolt washer tree +Y{i}"
+        params: {inner_diameter: "$bolt_dia"}
+        place: {raw: {at: ["= tree_leg_station + (2*i - 1)*bolt_dx", "$inner_y", "$bolt_z"], rotate: [["X", 90]]}}
+      - id: "bn_tree_pY_{i}"
+        type: hex_nut
+        name: "bolt nut tree +Y{i}"
+        params: {diameter: "$bolt_dia", label: "hex nut"}
+        place: {datum: base, to: "bwn_tree_pY_{i}", to_datum: top}
+  - repeat: {var: i, count: 2}
+    body:
+      - id: "bolt_tree_mY_{i}"
+        type: hex_bolt
+        name: "bolt tree -Y{i}"
+        params: {diameter: "$bolt_dia", length: "$bolt_len"}
+        place: {raw: {at: ["= tree_leg_station + (2*i - 1)*bolt_dx", "$bolt_head_y_m", "$bolt_z"], rotate: [["X", 90]]}}
+      - id: "bwh_tree_mY_{i}"
+        type: washer
+        name: "bolt washer head tree -Y{i}"
+        params: {inner_diameter: "$bolt_dia"}
+        place: {datum: top, to: "bolt_tree_mY_{i}", to_datum: head_bearing}
+      - id: "bwn_tree_mY_{i}"
+        type: washer
+        name: "bolt washer tree -Y{i}"
+        params: {inner_diameter: "$bolt_dia"}
+        place: {raw: {at: ["= tree_leg_station + (2*i - 1)*bolt_dx", "= -inner_y", "$bolt_z"], rotate: [["X", 270]]}}
+      - id: "bn_tree_mY_{i}"
+        type: hex_nut
+        name: "bolt nut tree -Y{i}"
+        params: {diameter: "$bolt_dia", label: "hex nut"}
+        place: {datum: base, to: "bwn_tree_mY_{i}", to_datum: top}
+
+# --- connections: Construction-Graph edges (generate their own validation) ----
+connections:
+  # joist hangers (+Y and -Y per joist) — item 5 fastening
+  - repeat: {var: k, count: "= n_joists"}
+    body:
+      - type: face_mount_hanger
+        label: "joist {k}+Y"
+        params: {seat_axis: Z, seat_area: 60, n_header_screws: 4, n_hung_screws: 2}
+        parts: [beam_pY, "joist_{k}"]
+        hardware: ["jh_pY_{k}", "jhs_pY_{k}_0", "jhs_pY_{k}_1", "jhs_pY_{k}_2", "jhs_pY_{k}_3", "jhg_pY_{k}_0", "jhg_pY_{k}_1"]
+        assumptions: ["Strong-Drive SD Connector screw count is a reduced representative sample of the manufacturer's published LUS-class 2x hanger schedule."]
+      - type: face_mount_hanger
+        label: "joist {k}-Y"
+        params: {seat_axis: Z, seat_area: 60, n_header_screws: 4, n_hung_screws: 2}
+        parts: [beam_mY, "joist_{k}"]
+        hardware: ["jh_mY_{k}", "jhs_mY_{k}_0", "jhs_mY_{k}_1", "jhs_mY_{k}_2", "jhs_mY_{k}_3", "jhg_mY_{k}_0", "jhg_mY_{k}_1"]
+        assumptions: ["Strong-Drive SD Connector screw count is a reduced representative sample of the manufacturer's published LUS-class 2x hanger schedule."]
+  # ladder-rung hangers (item 2) — same mechanism as the joists
+  - repeat: {var: s, count: "$n_steps"}
+    body:
+      - type: face_mount_hanger
+        label: "rung {s} hanger +Y"
+        params: {seat_axis: Z, seat_area: 60, n_header_screws: 4, n_hung_screws: 2}
+        parts: [leg_pY, "rung_{s}"]
+        hardware: ["rh_pY_{s}", "rhs_pY_{s}_0", "rhs_pY_{s}_1", "rhs_pY_{s}_2", "rhs_pY_{s}_3", "rhg_pY_{s}_0", "rhg_pY_{s}_1"]
+        assumptions: ["Ladder rung hung between the launch legs in the same face-mount-hanger mechanism as the joists."]
+      - type: face_mount_hanger
+        label: "rung {s} hanger -Y"
+        params: {seat_axis: Z, seat_area: 60, n_header_screws: 4, n_hung_screws: 2}
+        parts: [leg_mY, "rung_{s}"]
+        hardware: ["rh_mY_{s}", "rhs_mY_{s}_0", "rhs_mY_{s}_1", "rhs_mY_{s}_2", "rhs_mY_{s}_3", "rhg_mY_{s}_0", "rhg_mY_{s}_1"]
+        assumptions: ["Ladder rung hung between the launch legs in the same face-mount-hanger mechanism as the joists."]
+  # leg-to-beam thru-bolts (2 per leg), a BoltedClamp per bolt
+  - repeat: {var: i, count: 2}
+    body:
+      - type: bolted_clamp
+        label: "bolt +Y{i}"
+        params: {axis: Y, hardware_area: 40, end_plate_area: 60}
+        parts: [leg_pY, beam_pY]
+        hardware: ["bolt_pY_{i}", "bwh_pY_{i}", "bwn_pY_{i}", "bn_pY_{i}"]
+  - repeat: {var: i, count: 2}
+    body:
+      - type: bolted_clamp
+        label: "bolt -Y{i}"
+        params: {axis: Y, hardware_area: 40, end_plate_area: 60}
+        parts: [leg_mY, beam_mY]
+        hardware: ["bolt_mY_{i}", "bwh_mY_{i}", "bwn_mY_{i}", "bn_mY_{i}"]
+  # tree-end leg-to-beam thru-bolts (2 per leg) — TREEFREE task #19
+  - repeat: {var: i, count: 2}
+    body:
+      - type: bolted_clamp
+        label: "bolt tree +Y{i}"
+        params: {axis: Y, hardware_area: 40, end_plate_area: 60}
+        parts: [leg_tree_pY, beam_pY]
+        hardware: ["bolt_tree_pY_{i}", "bwh_tree_pY_{i}", "bwn_tree_pY_{i}", "bn_tree_pY_{i}"]
+  - repeat: {var: i, count: 2}
+    body:
+      - type: bolted_clamp
+        label: "bolt tree -Y{i}"
+        params: {axis: Y, hardware_area: 40, end_plate_area: 60}
+        parts: [leg_tree_mY, beam_mY]
+        hardware: ["bolt_tree_mY_{i}", "bwh_tree_mY_{i}", "bwn_tree_mY_{i}", "bn_tree_mY_{i}"]
+  # end/rim joist toe-screwed to each beam. The type's default contract already
+  # declares the REAL technique (30° angled off the joist face; the straight
+  # drawn solid is a flagged display idealization). The authored install: block
+  # declares the TOOL for the tight spot: a stubby/right-angle driver (3" x 1"
+  # envelope) — a full-length 6" driver is not the tool anyone would reach for
+  # between each leg's two thru-bolts.
+  - type: toe_screwed
+    label: "end joist <-> beam +Y (toe-screwed)"
+    params: {n_screws: 3}
+    parts: [beam_pY, end_joist]
+    hardware: [toe_pY_0, toe_pY_1, toe_pY_2]
+    install: {tool: {length: "3 in", dia: "1 in"}}
+    assumptions:
+      - "No face-mount hanger here: its flanges don't fit the ~3.5\" clear gap between the leg's own two thru-bolts."
+      - "Toe screws driven with a stubby/right-angle driver — authored 3\" x 1\" tool envelope. Even so, the TOP screw's 30° corridors cross the leg's thru-bolts/nuts, so its access verdict stays install-order dependent (screw the joist before bolting the legs, or accept the tight drive)."
+  - type: toe_screwed
+    label: "end joist <-> beam -Y (toe-screwed)"
+    params: {n_screws: 3}
+    parts: [beam_mY, end_joist]
+    hardware: [toe_mY_0, toe_mY_1, toe_mY_2]
+    install: {tool: {length: "3 in", dia: "1 in"}}
+    assumptions:
+      - "No face-mount hanger here: its flanges don't fit the ~3.5\" clear gap between the leg's own two thru-bolts."
+      - "Toe screws driven with a stubby/right-angle driver — authored 3\" x 1\" tool envelope. Even so, the TOP screw's 30° corridors cross the leg's thru-bolts/nuts, so its access verdict stays install-order dependent (screw the joist before bolting the legs, or accept the tight drive)."
+  # top-rail-to-support cap screwing (into end grain)
+  - type: rail_cap_screwed
+    label: "rail +Y <-> post +Y (rail cap screwed)"
+    params: {n_screws: 2}
+    parts: [post_pY, rail_pY]
+    hardware: [rf_post_pY_0, rf_post_pY_1]
+    assumptions: ["Screws land in the post's END GRAIN — lower withdrawal capacity, not analyzed to a number here."]
+  - type: rail_cap_screwed
+    label: "rail +Y <-> leg +Y (rail cap screwed)"
+    params: {n_screws: 2}
+    parts: [leg_pY, rail_pY]
+    hardware: [rf_leg_pY_0, rf_leg_pY_1]
+    assumptions: ["Screws land in the leg's END GRAIN — lower withdrawal capacity, not analyzed to a number here."]
+  - type: rail_cap_screwed
+    label: "rail -Y <-> post -Y (rail cap screwed)"
+    params: {n_screws: 2}
+    parts: [post_mY, rail_mY]
+    hardware: [rf_post_mY_0, rf_post_mY_1]
+    assumptions: ["Screws land in the post's END GRAIN — lower withdrawal capacity, not analyzed to a number here."]
+  - type: rail_cap_screwed
+    label: "rail -Y <-> leg -Y (rail cap screwed)"
+    params: {n_screws: 2}
+    parts: [leg_mY, rail_mY]
+    hardware: [rf_leg_mY_0, rf_leg_mY_1]
+    assumptions: ["Screws land in the leg's END GRAIN — lower withdrawal capacity, not analyzed to a number here."]
+
+# --- sequence: the authored build-order claim (task CPGCORE, STEPDOC v1-core) --
+# A DECLARED build strategy (owner amendment 4) — presented as such everywhere,
+# never as a uniquely derived order: the ToeScrewed wedge fact DEFENDS the
+# choice, it does not derive it. Not authored to silence a verdict (the
+# never-silence rule): the two top toe-screw corridor UNKNOWNs resolve because
+# this order is a real technique defense (review F-11), and CAT-I proves the
+# opposite authored order flips them to FAIL — authoring is falsifiable, not a
+# waiver channel.
+sequence:
+  stages:
+    - name: toe-screw the end joist before bolting the launch legs
+      connections:
+        - "end joist <-> beam +Y (toe-screwed)"
+        - "end joist <-> beam -Y (toe-screwed)"
+      why: >-
+        The end joist drops into the ~3.5" clear gap BETWEEN each launch
+        leg's two thru-bolts (the ToeScrewed wedge fact): with the bolts and
+        nuts in place, the top toe screw's 30° corridors are fouled and the
+        joist itself cannot arrive — bolts-first is unbuildable under the
+        model. The same order is also what covers the joist's own insertion
+        between the bolts; insertion travel itself is not analyzed (P1).
+    - name: launch-leg thru-bolts after the end joist
+      connections: ["bolt +Y{i}", "bolt -Y{i}"]
+      why: >-
+        The launch legs' thru-bolts close over the end joist's drop-in gap,
+        so they are driven only after the toe-screwed end joist is in place
+        (stage 1's wedge fact, read from the bolts' side).
+
+# --- roles: load-system roles + the deck's support/stability obligation -------
+# (task SUPPORT + STRUCT task #19). The boulder is a real FOUNDATION (ground); so
+# are the three precast pier blocks. The deck is a walking_surface whose rung-3
+# support obligation the support check proves.
+#
+# STRUCT task #19 supports the tree end BY DESIGN with two tree-end legs (added to
+# `supports` below) bearing on pier blocks — the walking surface now lands on
+# posts near BOTH ends. But the deck's tree apron still overhangs those legs on
+# the −X edge, and that overhang is GEOMETRICALLY UNAVOIDABLE, not a missing leg:
+# the deck runs X 0..48, the live trunk occupies the plan out to its radius + bark
+# (`trunk_dia`/2 + `bark_clear` ≈ X 11), so neither a foundation post NOR a joist
+# can be placed under the tree end. The first joist (`joist 0`) already sits hard
+# against that exclusion line, and the tree-end legs are just outboard of it — so
+# the apron between the trunk and the tree-end legs cantilevers off the joist +
+# beam frame to wrap the living tree. This −X overhang is therefore DECLARED as a
+# cantilever below (measured ~15in at the default station), with its real load
+# path stated; every OTHER deck edge sits over a grounded support, so the check
+# still FAILs if any of +X/±Y drifts off its posts. (This REPLACES the pre-legs
+# comment that said "do not declare a cantilever — the tree end is meant to be
+# supported": that assumption was written before the tree-end legs existed and is
+# falsified by the trunk-exclusion geometry — full support at X 0..11 is
+# physically impossible. Overriding it WITH the declaration visible, and the check
+# passing only because −X is declared, is design truth, not silencing.)
+roles:
+  boulder: ground
+  # A6 (owner) + CTXGROUND: the living trunk is a pre-EXISTING site feature, not a
+  # constructed part — it self-grounds (rooted in the earth), so it is exempt from
+  # the constructed-connectivity floating check. This is what lets the deck carry a
+  # REAL clearance gap around the trunk (deck_notch_gap=2") instead of the old
+  # fake-tight notch that only existed to keep the trunk in the contact graph. NB:
+  # an `existing` body is NOT a foundation — nothing bears on the trunk, and the
+  # deck's support scheme roots at the boulder + pier blocks, never the tree.
+  trunk: {role: existing, grounded_by: site}
+  # TREEFREE task #19 — the three precast pier blocks are FOUNDATIONS too (the
+  # boulder foundations only the +Y launch leg; the -Y launch leg and both
+  # tree-end legs bear on their own pier blocks). Declaring their ground role is
+  # what makes the tree-end legs' bearing chain terminate at a real foundation
+  # directly below them, instead of tracing back to the boulder through the beam.
+  pier_mY: ground
+  pier_tree_pY: ground
+  pier_tree_mY: ground
+  deck_0:
+    role: walking_surface
+    label: deck
+    members: [deck_0, deck_1, deck_2, deck_3, deck_4, deck_5]
+    # STRUCT task #19 — the tree-end legs join the launch legs as the deck's
+    # grounded supports. This is the design change that supports the tree end:
+    # the walking surface now bears on posts near BOTH ends.
+    supports: [leg_pY, leg_mY, leg_tree_pY, leg_tree_mY]
+    # The −X tree apron cantilevers past the tree-end legs to wrap the living
+    # trunk — the ONE intended overhang. It is NOT a relabel to silence a FAIL:
+    # the trunk's exclusion zone (radius + bark, out to X≈11) physically bars any
+    # foundation post or joist under the tree end, so this region CANNOT be
+    # supported from below. The apron bears on `joist 0` + the beams, which carry
+    # to the tree-end legs and on to the pier blocks (launch legs → boulder/pier).
+    # Declaring only −X keeps the claim exactly as narrow as reality: +X and ±Y
+    # remain undeclared, so the support check FAILs if any of them overhangs.
+    # Structural adequacy of the cantilever is NOT evaluated (engineer-of-record,
+    # rung 4).
+    declared_cantilever:
+      - edge: "-X"
+        note: >-
+          tree apron wraps the living trunk; no foundation placeable under the
+          trunk exclusion zone (trunk radius + bark); apron bears on joist 0 +
+          beams -> tree-end legs -> pier blocks. Structural adequacy NOT evaluated
+          (rung 4, engineer-of-record).
+
+# --- foundations: the three pier-block foundation SYSTEMS (task FAB-3) ---------
+# R29 (retro-index.md:66): the -Y launch leg and both tree-end legs RESTED on
+# precast pier blocks with a bearing pair and a `ground` label but NO attachment
+# — uplift/lateral undefined, yet CLEAN. Each system below declares the missing
+# post base (an adjustable galvanized standoff, e.g. a Simpson ABU-class saddle),
+# a purchased part with its own BOM line; the compiler creates + places it on the
+# block's top pad and derives the post->block Connection. The foundation-role
+# obligation pack then reports: attachment REPRESENTED (rung 3), embedment
+# REPRESENTED (rung 3, buried depth stated), and uplift/lateral/soil capacity an
+# HONEST blocking UNKNOWN (rung 4) — so a foundation shown is never a foundation
+# silently called "designed". No frost_depth is declared: these precast blocks
+# are a frost-tolerant free-standing detail (bearing_on_grade: field_verify), so
+# frost adequacy folds into the capacity UNKNOWN rather than a faked pass.
+foundations:
+  - label: "pier -Y"
+    supports: leg_mY
+    block: pier_mY
+    type: precast_pier_block
+    post_base:
+      type: standoff_post_base
+      uplift: declared
+      params: {width: "3.5 in", length: "3.5 in", height: "2 in"}
+    bearing_on_grade: field_verify
+  - label: "pier tree +Y"
+    supports: leg_tree_pY
+    block: pier_tree_pY
+    type: precast_pier_block
+    post_base:
+      type: standoff_post_base
+      uplift: declared
+      params: {width: "3.5 in", length: "3.5 in", height: "2 in"}
+    bearing_on_grade: field_verify
+  - label: "pier tree -Y"
+    supports: leg_tree_mY
+    block: pier_tree_mY
+    type: precast_pier_block
+    post_base:
+      type: standoff_post_base
+      uplift: declared
+      params: {width: "3.5 in", length: "3.5 in", height: "2 in"}
+    bearing_on_grade: field_verify
+
+# --- validation: the checks the Connections above do NOT generate -------------
+validation:
+  # The floating terminal is the real FOUNDATION (boulder), not a leg — the
+  # `ground: leg_pY` degeneracy the RCA traced is fixed here (task SUPPORT req 2).
+  ground: boulder
+  bearings:
+    # legs + tree-end posts clamp flat against the beam outer faces
+    - {a: leg_pY, b: beam_pY, axis: Y, area: 2000}
+    - {a: leg_mY, b: beam_mY, axis: Y, area: 2000}
+    - {a: post_pY, b: beam_pY, axis: Y, area: 800}
+    - {a: post_mY, b: beam_mY, axis: Y, area: 800}
+    # TREEFREE task #19: tree-end legs clamp the beam outer faces the same way,
+    # and each pier post bears end-grain DOWN (axis Z) on its precast pier block.
+    - {a: leg_tree_pY, b: beam_pY, axis: Y, area: 2000}
+    - {a: leg_tree_mY, b: beam_mY, axis: Y, area: 2000}
+    - {a: leg_mY, b: pier_mY, axis: Z, area: 2000}
+    - {a: leg_tree_pY, b: pier_tree_pY, axis: Z, area: 2000}
+    - {a: leg_tree_mY, b: pier_tree_mY, axis: Z, area: 2000}
+    # interior joists: end grain flush to the beam inner faces (hanger transfers)
+    - repeat: {var: k, count: "= n_joists"}
+      body:
+        - {a: "joist_{k}", b: beam_pY, axis: Y, area: 600}
+        - {a: "joist_{k}", b: beam_mY, axis: Y, area: 600}
+    - {a: end_joist, b: beam_pY, axis: Y, area: 600}
+    - {a: end_joist, b: beam_mY, axis: Y, area: 600}
+    # decking bears on the joists (one representative joist grounds each board)
+    - repeat: {var: j, count: "= n_deck"}
+      body:
+        - {a: "deck_{j}", b: joist_0, axis: Z, area: 300}
+    # top rails bear down on the leg tops and post tops
+    - {a: rail_pY, b: leg_pY, axis: Z, area: 200}
+    - {a: rail_pY, b: post_pY, axis: Z, area: 100}
+    - {a: rail_mY, b: leg_mY, axis: Z, area: 200}
+    - {a: rail_mY, b: post_mY, axis: Z, area: 100}
+  bonds:
+    # mesh fastened to top rails + decking
+    - {a: mesh_pY, b: rail_pY}
+    - {a: mesh_pY, b: deck_0}
+    - {a: mesh_mY, b: rail_mY}
+    - {a: mesh_mY, b: deck_0}
+    # A6: the fake-tight trunk<->deck bonds are GONE — the deck now has a real 2"
+    # screened growth gap around the trunk (they no longer touch), and the trunk
+    # self-grounds as an `existing` site body (roles above), so no bond is needed
+    # to keep it in the graph. The +Y launch leg still bonds to the boulder:
+    # TREEFREE task #19: only the +Y (rock) launch leg bonds to the boulder now;
+    # the -Y launch leg bears on pier_mY (a bearing above), not the rock.
+    - {a: boulder, b: leg_pY}
+  through_holes:
+    - part: bolt_pY_0
+      passes_through: [leg_pY, beam_pY]
+      axis: Y
+      center: ["= leg_station - bolt_dx", "$inner_y", "$bolt_z"]
+      r_inner: "= bolt_dia/2 - 0.01"
+      r_outer: "= bolt_dia/2 + 0.03"
+      span: "3 in"
+    - part: bolt_pY_1
+      passes_through: [leg_pY, beam_pY]
+      axis: Y
+      center: ["= leg_station + bolt_dx", "$inner_y", "$bolt_z"]
+      r_inner: "= bolt_dia/2 - 0.01"
+      r_outer: "= bolt_dia/2 + 0.03"
+      span: "3 in"
+    - part: bolt_mY_0
+      passes_through: [leg_mY, beam_mY]
+      axis: Y
+      center: ["= leg_station - bolt_dx", "= -inner_y", "$bolt_z"]
+      r_inner: "= bolt_dia/2 - 0.01"
+      r_outer: "= bolt_dia/2 + 0.03"
+      span: "3 in"
+    - part: bolt_mY_1
+      passes_through: [leg_mY, beam_mY]
+      axis: Y
+      center: ["= leg_station + bolt_dx", "= -inner_y", "$bolt_z"]
+      r_inner: "= bolt_dia/2 - 0.01"
+      r_outer: "= bolt_dia/2 + 0.03"
+      span: "3 in"
+    # TREEFREE task #19: the tree-end leg thru-bolts pass a clear annulus too
+    - part: bolt_tree_pY_0
+      passes_through: [leg_tree_pY, beam_pY]
+      axis: Y
+      center: ["= tree_leg_station - bolt_dx", "$inner_y", "$bolt_z"]
+      r_inner: "= bolt_dia/2 - 0.01"
+      r_outer: "= bolt_dia/2 + 0.03"
+      span: "3 in"
+    - part: bolt_tree_pY_1
+      passes_through: [leg_tree_pY, beam_pY]
+      axis: Y
+      center: ["= tree_leg_station + bolt_dx", "$inner_y", "$bolt_z"]
+      r_inner: "= bolt_dia/2 - 0.01"
+      r_outer: "= bolt_dia/2 + 0.03"
+      span: "3 in"
+    - part: bolt_tree_mY_0
+      passes_through: [leg_tree_mY, beam_mY]
+      axis: Y
+      center: ["= tree_leg_station - bolt_dx", "= -inner_y", "$bolt_z"]
+      r_inner: "= bolt_dia/2 - 0.01"
+      r_outer: "= bolt_dia/2 + 0.03"
+      span: "3 in"
+    - part: bolt_tree_mY_1
+      passes_through: [leg_tree_mY, beam_mY]
+      axis: Y
+      center: ["= tree_leg_station + bolt_dx", "= -inner_y", "$bolt_z"]
+      r_inner: "= bolt_dia/2 - 0.01"
+      r_outer: "= bolt_dia/2 + 0.03"
+      span: "3 in"
+  dimensions:
+    - name: "deck top at deck height"
+      part: deck_0
+      measure: zmax
+      expected: "$deck_height"
+      tolerance: "0.02 in"
+    - name: 'top rail 36" above deck'
+      part: rail_pY
+      measure: zmax
+      expected: "= deck_height + rail_height"
+      tolerance: "0.02 in"
+    - name: "beam member length = deck run + tree overhang (BEAMFIX)"
+      part: beam_pY
+      measure: xlen
+      expected: "$beam_total_len"
+      tolerance: "0.02 in"
+    - name: "beam launch end lands at the deck run (beam_len)"
+      part: beam_pY
+      measure: xmax
+      expected: "$beam_len"
+      tolerance: "0.02 in"
+    - name: "beam tree end reaches tree_overhang past the trunk centerline"
+      part: beam_pY
+      measure: xmin
+      expected: "= -tree_overhang"
+      tolerance: "0.02 in"
+    - name: "end/rim joist centered at leg_station, clear of both leg bolts (architect item 3)"
+      part: end_joist
+      measure: xmid
+      expected: "$leg_station"
+      tolerance: "0.02 in"
+    - name: "ladder rung spans the full launch-edge width (architect item 1)"
+      part: rung_0
+      measure: ylen
+      expected: "$rung_len"
+      tolerance: "0.02 in"
+    # TREEFREE Y-growth-clearance invariant (the beam-Y divergence's design
+    # resolution, now an ordinary in-model check): the beam inner face must CLEAR
+    # the trunk in Y by >= growth_gap. A one-sided threshold (ge), not an equality —
+    # the free-standing beams stand off the trunk, they don't touch. Runs in-site
+    # against the platform's real beam (the tree fragment's stubs bind onto it).
+    - name: "beam inner face clears trunk by growth gap"
+      part: beam_pY
+      measure: ymin
+      op: ge
+      expected: "= trunk_dia/2 + growth_gap"
+    # TREEFREE task #19: the tree-end leg's base is held leg_gap above the (higher)
+    # tree-end grade and its top caps the beam depth — both DERIVED, checked here.
+    - name: "tree-end leg base held leg_gap above the tree grade (derived)"
+      part: leg_tree_pY
+      measure: zmin
+      expected: "$leg_base_tree"
+      tolerance: "0.02 in"
+    - name: "tree-end leg tops out at the beam top (clamps the full beam depth)"
+      part: leg_tree_pY
+      measure: zmax
+      expected: "$leg_tree_top"
+      tolerance: "0.02 in"
+
+# Spatial-intent invariants (task SPATIAL, P6) — validation-only, the first
+# activation of the coverage matrix's Spatial-intent family. See the SPATIAL
+# report for exactly what each proves and does not.
+spatial:
+  symmetric:
+    # mirror symmetry about the deck centerline (XZ plane, Y=0): the +Y/-Y name
+    # selector discovers every mirrored pair and proves each is an AABB
+    # reflection — the in-model generalization of the 20-pair RAILFIX audit
+    # (the -Y rail that overhung outboard would FAIL here).
+    #
+    # TREEFREE task #19: the new members preserve this mirror. The tree-end legs
+    # (leg tree +Y / leg tree -Y) and their piers (pier tree +Y / pier tree -Y)
+    # are each their own mirror pair — grade is modeled LEVEL across the width
+    # (both share leg_base_tree), so their AABBs reflect. The launch legs are
+    # unchanged (both bases 0.5"). The ONE deliberately-unpaired foundation is
+    # pier -Y: the +Y launch post lands on the rock anchor, not a pier, so there
+    # is no `pier +Y` twin. The selector leaves an unmatched -Y part unasserted
+    # (it only checks pairs that EXIST), so the real launch-corner asymmetry
+    # (rock anchor vs pier) is represented honestly rather than faked symmetric.
+    - {plane: XZ, mirror: ["+Y", "-Y"]}
+  faces:
+    # the ladder faces AWAY from the deck interior: rung 0's launch-outboard
+    # access (+X) points away from the beam centroid, so it is mounted at the
+    # launch end. A ladder at the tree end (Wave-1 wrong-end class) reverses
+    # this and FAILS.
+    - {part: rung_0, facing: [1, 0, 0], away: beam_pY}
+
+# --- presentation surfaces (task 4B-2) ---------------------------------------
+# The platform is the benchmark: callouts track the live deck/joist params; NO
+# explode block (the imperative Platform defines none). The report is the same
+# 284-line markdown platform.py wrote — every cited number resolves through the
+# value language over the SAME derived dimensions the geometry uses (a number in
+# the prose can't drift from the member it describes). Hardware-presence and the
+# derivation log are sampled PER CONNECTION (cap 2), the imperative's own sampling.
+callouts:
+  - {param: deck_height, label: "DECK {v} UP", p0: ["= beam_len + 3", 0, 0], p1: ["= beam_len + 3", 0, "= deck_height"]}
+  - {param: rail_height, label: "{v} RAIL", p0: ["= beam_len + 3", 0, "= deck_height"], p1: ["= beam_len + 3", 0, "= deck_height + rail_height"]}
+  - {param: beam_len, label: "DECK RUN {v}", p0: [0, "= -(joist_span/2 + 4)", "= deck_height"], p1: ["= beam_len", "= -(joist_span/2 + 4)", "= deck_height"]}
+  - {param: joist_span, label: "{v} JOIST", p0: ["= -3", "= -joist_span/2", "= deck_height"], p1: ["= -3", "= joist_span/2", "= deck_height"]}
+  - {param: joist_oc, label: "JOISTS @ {v} O.C.", p0: ["= joist_first", "= joist_span/2", "= deck_height"], p1: ["= joist_first + joist_oc", "= joist_span/2", "= deck_height"]}
+
+export: {glb_tolerance: 0.1, glb_angular_tolerance: 0.15}
+
+doc:
+  sections:
+    - prose: |
+        # Zipline Platform — Validation Report
+
+        Free-standing twin-beam deck for the Witten dacha zipline launch, generated by the `detailgen` parametric library. The platform fastens to nothing on the live tree — the beams clear the trunk with a growth gap and the deck stands on four posts (rock anchor + three precast pier blocks). Deterministic computed placement is canonical.
+
+        ## Architect review, round 2 — disposition
+        1. **Ladder full-width** — DONE. Rungs now span the full clear opening between the launch legs (see 'Full-width ladder' below).
+        2. **Ladder-to-platform connection** — DONE. Each rung is hung between the two launch legs in a face-mount hanger (same mechanism as the joists), fastened with declared Strong-Drive SD Connector screws — see 'Connection hardware presence' below.
+        3. **End/rim joist** — DONE. A fourth joist now hangs at `leg_station`, the clear window between the leg's own two thru-bolts (the widest gap available this close to the launch end), substantially closing the decking cantilever — see 'Joist layout' below.
+        4. **16" O.C.** — ANALYZED, default unchanged (12") pending sign-off — see 'Joist spacing (12" vs 16" O.C.)' below.
+        5. **Joist hanger fastening** — DONE. Every hanger (joists AND ladder rungs) now declares header-side + hung-side fasteners via a Connection — see 'Connection hardware presence' below.
+        6. **Vestigial diagonal bracing** — REMOVED, pending sign-off — see 'Diagonal bracing (architect item 6)' below.
+
+        ## Collision / interference
+        - Pairwise interference checks run: **{interference_checks}**
+        - Unintended collisions detected: **{interference_failures}**
+        - Bolt-into-wood/nut and hanger-flange-on-beam overlaps are expected and allowlisted.
+    - findings: {header: "## Flush-bearing contacts (min-distance + bearing-area proof)", check: bearing}
+    - findings: {header: "## Fastener-through-hole probes", check: through_hole}
+    - findings: {header: "## Floating-part connectivity", check: floating}
+    - hardware_presence: {header: "## Connection hardware presence", cap: 2}
+    - derivation_log:
+        header: "## Construction Graph — derivation log (sample)"
+        preamble: "Every bearing/overlap/bond/hardware-presence fact for the joist hangers, the ladder-rung hangers, the leg-to-beam bolts, the end joist's toe-screwed connection, and the top rails' post/leg fastening is generated from a declared `Connection` (`FaceMountHanger` / `BoltedClamp` / `ToeScrewed` / `RailCapScrewed`), recorded here with its source rule and confidence — sampled PER CONNECTION (not first-N overall) so every connection type shows up, not just whichever one was declared first:"
+        mode: per_connection
+        cap: 2
+    - findings: {header: "## Dimension checks", check: dimension}
+    - prose: |
+        ## Joist layout (trunk- and leg-constrained, + end/rim joist)
+        - Interior joists placed at **{joist_oc:g}" O.C.** (the spec value; the `joist_oc` param drives the layout). First joist at {joist_first:.2f}", last interior joist at {joist_last_station:.2f}".
+        - **{n_joists} interior joists** fit the clear run — the count is DERIVED, not fixed. The ~{trunk_dia:g}" trunk (radius {trunk_dia/2:g}", centered at the tree origin X=0, shared with the tree-attachment detail) occupies the plan between the beams out to X=+{trunk_dia/2:g}", so joists start past it (+{bark_clear:g}" bark clearance); the leg lap + bolts close off the launch end. The drawing's "4-5 pcs" do NOT fit at a true {joist_oc:g}" O.C. once both the trunk and the leg are cleared in a {beam_len:g}" run.
+        - **Architect item 3 (end/rim joist): RESOLVED, not perfectly flush.** A fourth joist now hangs at {leg_station:.2f}" (`leg_station`) — NOT flush with the true beam end ({beam_len:.0f}"): the leg-to-beam bolts (each now with a head washer, per the BoltedClamp re-authoring below) occupy the beam's inner-face region at both {leg_station - bolt_dx:.2f}" and {leg_station + bolt_dx:.2f}", so a hung joist can't share either bolt's X band. `leg_station` — dead center between the two bolts — is the widest clear window left, and still lands the joist hard against the launch legs. Net effect: the decking's launch-edge cantilever, previously ~12.25" past the last interior joist (at 35.75"), is now ~{beam_len - (leg_station + t2x/2):.2f}" past this joist — most of it closed, though not to zero. See `_end_joist_x_in`'s docstring for the exact bolt-clearance derivation.
+
+        ## Joist spacing (12" vs 16" O.C.) — architect item 4
+        - This deck uses real 5/4x6 (actual {deck_thk:.2f}" x {deck_w:.2f}") PT decking, perpendicular to the joists. Standard residential prescriptive span tables (e.g. AWC's DCA6, and the IRC decking tables most jurisdictions adopt from it) generally allow up to 16" O.C. joist spacing for radius-edge 5/4 wood decking installed perpendicular to the joists — this detail's default 12" O.C. is already inside that limit with margin (confidence: STANDARD/well-established prescriptive value; confirm against the current locally-adopted IRC edition, not an official source cited in this repo).
+        - Built and validated CLEAN at both `joist_oc=12` (default, {n_joists} interior joists) and `joist_oc=16` ({n_joists_oc16} interior joists) — see `tests/test_platform_detail.py::test_16in_oc_builds_clean`.
+        - **RECOMMENDATION: keep the 12" O.C. default.** Both spacings are code-compliant for this decking, but this is a launch platform for kids (dynamic/impact loading from jumping, not just static foot traffic) over a short 4-ft beam run, where 16" O.C. buys negligible material savings (one fewer joist) for reduced deck stiffness margin. 12" O.C. is the more conservative choice for this specific use and is NOT changed here.
+        - **FLAGGED FOR JOEL/ARCHITECT SIGN-OFF**: confirm the 12" O.C. recommendation (or direct a change to 16") before framing.
+
+        ## Diagonal bracing (architect item 6) — REMOVED
+        - The prior model carried two small (8.5") 2x4 diagonal members, one per beam plane at the launch corner, hanging below the beam underside at an assumed ~45 deg angle to the leg — undimensioned in the source, unconnected by any declared fastener, and geometrically vestigial (a hand-drawing artifact, per the architect's own read).
+        - **Disposition: REMOVED, not rebuilt as real knee braces.** The launch legs are already thru-bolted to the beam ends (2 bolts per leg, now a declared `BoltedClamp` Connection — see 'Connection hardware presence'), which is itself a moment connection at this scale; the new full-width ladder rungs (items 1-2) additionally tie the two legs together at two more elevations below deck height, hung in face-mount hangers. Together these already form a braced frame at the launch corner without a separate diagonal member — a member that reads as structure must BE structure (validated bearing/fastening) or not exist, per the task brief.
+        - **FLAGGED FOR ARCHITECT SIGN-OFF**: confirm removal is acceptable, or specify a sized/fastened knee brace to add back.
+
+        ## Full-width ladder (architect items 1-2)
+        - Rungs span **{rung_len:.2f}"** — the full clear opening between the launch legs' inner faces (leg +Y at Y={outer_y:.2f}", leg -Y at Y={-outer_y:.2f}"), the SAME span the decking and the (out-of-scope-here) strap gate already use — replacing the prior ~7.5" two-post ladder tucked into the -Y half of the gate span.
+        - **No width clearance subtracted for the strap-gate hardware** (`ladder_ring_clearance` defaults to 0): per [[spec-trolley-launch]], the strap gate's ring anchors mount on these SAME legs at the rail line ({deck_height + rail_height:.0f}" above ground = deck_height + rail_height), fully clear of the ladder's climbing envelope (0" to {deck_height:.0f}" above ground — the topmost rung; the final riser is the deck itself). That is a real {rail_height:.0f}" vertical separation, derived from both details' own params, not an assumed number — so the only real width constraint is clearing the legs' own thickness, which the inner-face span already satisfies by construction.
+        - {n_steps} rungs, hung between the legs in face-mount hangers (architect item 2's chosen connection type — see 'Connection hardware presence'), divide `deck_height` into {n_steps + 1} even risers (~{deck_height / (n_steps + 1):.1f}" each); the final riser lands on the deck itself at the strap-gate opening.
+
+        ## Guard system — engineering review
+        - **Rail height**: {rail_height:.0f}" above the deck surface — meets typical residential guard height (code minimum is commonly 36" for a walking surface this high; confirm against the current locally-adopted IRC/IBC edition, not an official source cited in this repo).
+        - **Top rail is a FLAT-LAID 2x4** (thickness vertical, 1.5"; wide face horizontal, 3.5") spanning the ~38" clear opening between each tree-end post and launch-end leg, unsupported mid-span.
+        - **Mid-span bending check, standard 200 lb concentrated top-rail load** (IRC/IBC guard design load; P1 — INFERRED, not a project-specific spec): for a simply-supported ~38" clear span, moment M = PL/4 ≈ 200 lb x 38" / 4 ≈ 1900 in-lb. Laid flat, the 2x4's section modulus about the bending axis is S = 1.31 in³ (thin axis, 1.5" deep x 3.5" wide), giving bending stress ≈ 1900 / 1.31 ≈ 1450 psi — against SPF design bending stress Fb ≈ 875-1400 psi (grade-dependent, P1 — INFERRED, not a project-specific spec): **MARGINAL to over-stressed laid flat.** On edge (3.5" deep x 1.5" wide), S = 3.06 in³ — about 2.3x stronger, well within Fb.
+        - **SITE/DESIGN-VERIFICATION ITEM — FLAGGED FOR ARCHITECT DECISION, not changed here**: the model keeps the rail laid flat as drawn. Before framing, the architect should pick one: (a) turn the rail on edge, (b) add a mid-span post/baluster to halve the effective span, or (c) double the rail (two 2x4s sistered flat). This detail does not redesign the guard; it only surfaces the load check.
+        - **Rail-to-post/leg fastening IS REPRESENTED** (task RAILFASTEN): each top rail was previously gravity-seated only (bearing proven, no fastener declared anywhere) — now each of the 4 rail<->post/leg joints carries {n_rail_screws} vertical structural screws driven straight down through the rail into the support's top end grain (`RailCapScrewed` — see 'Connection hardware presence' below). Fastening CAPACITY IS NOT ANALYZED (end-grain screw withdrawal is markedly weaker than long-grain withdrawal, a separate concern from the bending check above; neither is a calculated number in this repo). **FLAGGED FOR ARCHITECT CONFIRMATION**: the exact screw spec (count, length, drive type) alongside the other sign-offs in this section.
+    - prose: "## Result: **{result_verdict}**"
+    - bom_table: {header: "## Bill of materials"}
+    - prose: |
+        ## Bulk consumables (not modeled as geometry)
+        - Deck screws #8x2-1/2" into joists (~70), #9x3" exterior structural framing screws (1 lb box).
+        - Mesh fasteners: staples/screws with fender washers, as needed.
+        - End-cut preservative (copper naphthenate) on every field-cut end, especially the legs.
+
+        ## Modeling assumptions & flagged conflicts
+        - **Beam extends past the tree (BEAMFIX)**: the 2x6 beams are **{beam_total_len:.0f}" long** ({beam_len:.0f}" deck run + {tree_overhang:.0f}" `tree_overhang`), not {beam_len:.0f}" flush at the tree face — the tree-attachment detail's beam stub is X-centered on the trunk and needs the member to continue this far to cover its tree-end reach past the centerline, so this is one continuous 2x6 per side, not two abutting pieces. Deck run, joist stations, leg station, rails and the ladder are all still measured from the tree face (X=0) and are unaffected — only the beam stock's own tree-end corner moves. See `tests/test_cross_detail.py` for the cross-detail proof.
+        - **48" vs 65" deck length**: the elevation calls the beam run "DECK RUN ~48\"" while the plan sheet calls the platform "DECK ~65\" LONG O/A". These don't reconcile; 48" is canonical for the deck run (matches the deck-board cut list) — the beam stock itself is 60" per BEAMFIX above. Confirm on site before cutting.
+        - **Overhang vs width**: decking is modeled butt-tight to the beam outer faces (no side overhang) so it can't foul the outboard legs; the drawing's nominal 3" overhang would need decking wider than the stated 30-32" O/A. Flag for site.
+        - **Deck width = a multiple of 5.5"**: with butt-tight 5/4x6 boards (5.5" each), `deck_width` should be an exact multiple of 5.5" so the field lands on whole boards. The default 33" = 6 boards exactly (slightly over the spec's 30-32" O/A nominal). The trolley/launch-edge detail's `deck_width` is reconciled to this same 33".
+        - **Deck notch around the trunk — CUT EACH BOARD AT ITS TREE END (A6)**: every deck board is full-length ({beam_len:.0f}" stock) but NOTCHED at its TREE END around the living trunk to a **{trunk_dia/2 + deck_notch_gap:.0f}"-radius** cutout (the {trunk_dia/2:g}" trunk radius + a **{deck_notch_gap:g}" screened growth clearance**, NOT a tight fit — the tree grows). The two centre boards (`deck 2`/`deck 3`, spanning the trunk axis) take the deepest bite; the boards out to each side take progressively smaller corner notches; the two outermost (`deck 0`/`deck 5`) barely clip it. Cut the notch from a paper template struck at {trunk_dia/2 + deck_notch_gap:.0f}" radius off the trunk centre, then screen the annular gap with a flexible collar so it is not a fall opening. The cut list bills all 6 as full {beam_len:.0f}" 5/4x6 — the notch is waste off the tree end, not a shorter board.
+        - **Joist O.C. / count**: interior joists are placed at the spec's true 12" O.C. (driven by `joist_oc`, see architect item 4's analysis above); the count is DERIVED from the clear run left after the trunk (tree end) and the leg lap (launch end) — 3 in the default 48" run, PLUS the end/rim joist (architect item 3, not O.C.-driven). Hangers are 2 per joist, each now with a declared Strong-Drive SD Connector screw stack (architect item 5) — see 'Connection hardware presence'.
+        - **Strong-Drive SD Connector screw count**: a reduced, representative sample (4 header-side + 2 hung-side per hanger) of the manufacturer's published fastening schedule for a LUS-class 2x hanger (typically 6-8 header / 3-4 joist in Simpson literature) — confirm the exact count against the current Simpson catalog page for the hanger actually installed before ordering (P1 confidence: INFERRED, not sourced from an official document in this repo).
+        - **Rail-to-post/leg fastening (task RAILFASTEN)**: {n_rail_screws} vertical structural screws per joint (4 joints: 2 rails x {{tree-end post, launch leg}}), driven straight down through the rail into the support's top END GRAIN — a representative count, not a sized fastening schedule; end-grain withdrawal capacity is markedly lower than long-grain (P1 confidence: INFERRED). Confirm the exact screw spec against the architect's guard design before ordering — see 'Guard system — engineering review' above.
+        - **Free-standing on four posts (per-post ground elevations)**: the platform fastens to nothing on the live tree. It stands on four posts whose bases are each held `leg_gap` (1/2") above their own foundation so end grain never sits in water, and whose lengths DERIVE from field-measured per-post ground elevations (`ground_z_rock`/`ground_z_front`/`ground_z_tree`, P1 — field-verify each before cutting). Grade falls tree→launch along the run and is modeled level across the width, so a +Y/-Y pair shares an elevation; if the field finds a cross-slope, enter the real numbers and the leg lengths and pier heights re-derive.
+          - **Launch end (X=45)**: the +Y (rock) leg lands on the boulder via the rock-anchor detail (Z=0 datum); the -Y leg lands on a precast **pier block** (`pier -Y`). Both launch legs derive to 63.5" tall (base 1/2" up, top = top-rail underside) and carry up as the launch-corner rail posts + the ladder's structural rails — the SAME members the trolley/launch-edge detail calls its "launch posts" (don't double-count across the two BOMs).
+          - **Tree end (X=18)**: two short 2x6 **tree-end legs** (`leg tree +Y`/`-Y`) are thru-bolted flat to the beam outer faces (2 carriage bolts each, a `BoltedClamp`) and bear on their own **pier blocks**. They are SHORT (derived ~15.5" at the default grade) because the ground is ~1' higher at the tree; their top caps the beam depth, their base sits `leg_gap` above the higher tree-end grade. This is what retired the old tree-cantilever — the beams now land on posts, not the trunk.
+          - The three pier blocks (under `leg -Y` + both tree-end legs) are purchased precast items; the +Y launch leg uses the rock anchor, so there is deliberately no `pier +Y` (the launch corner is intentionally asymmetric in its foundation).
+          - **Tree-apron cantilever — ENGINEER-OF-RECORD ITEM (structural adequacy NOT evaluated).** The deck's tree-end edge cantilevers ~{tree_leg_station - leg_inset:.0f}" past the tree-end legs to wrap the living trunk. This overhang is UNAVOIDABLE: the trunk's exclusion zone (radius + {bark_clear:g}" bark, out to X≈{trunk_dia/2 + bark_clear:g}") physically bars any foundation post or joist under the tree end, so the apron bears on the first joist + the beams, which carry back to the tree-end legs → pier blocks. The compiler declares this as a cantilever and confirms the deck otherwise sits WITHIN the grounded-support span — the −X apron is the only edge that overhangs it (support REPRESENTED, rung 3); whether this cantilever is structurally adequate is NOT evaluated here (that is a rung-4 capacity check for the engineer-of-record).
+          - **Pier-block footing on sloped ground — ENGINEER-OF-RECORD ITEM.** The per-post ground elevations (`ground_z_*`, P1) are field-measured, and lateral stability of a free-standing four-post platform on precast pier blocks on grade (vs. a fixed/embedded footing) is a design check not performed here — confirm bracing / anchorage against lateral sway before building.
+          - **Zipline cable system — ILLUSTRATIVE DEMONSTRATION, not engineered here.** The zipline wire, trolley wheel, hanger, and grab bar rendered at the launch end are pre-existing DEMONSTRATION geometry showing how the platform is used; they are NOT part of this engineered build, are excluded from the buy list, and their sizing/anchorage (cable tension, the tree cable-anchor) is an ENGINEER-OF-RECORD item, NOT evaluated by this model.
+        - Wire mesh is a single thin panel (envelope only), not wires.
+        - **Access is at the LAUNCH end**: the guard is closed on the tree end and both long sides (rail + mesh, the mesh wraps to the trunk, no gap over 4"). The ONLY opening is the strap gate at the launch edge, so the full-width ladder lands THERE (see 'Full-width ladder' above). Enter via the strap gate; use the ladder rungs between the legs, or just step off the boulder.
+        - **Context geometry (existing — not purchased)**: the ~20" live trunk (X=0, ground to deck underside; the above-deck trunk is out of scope) and the boulder under the +Y (rock) launch leg are modeled so renders orient themselves, and excluded from the buy list. They are not structural members of this detail. The trunk is a pre-EXISTING site body that SELF-GROUNDS (it is rooted in the earth, outside the built load path) — it carries NO bond to the deck now that the deck has its real {deck_notch_gap:g}" screened growth gap (A6/CTXGROUND); nothing bears on it. The boulder is a real FOUNDATION: the +Y leg lands on it at the Z=0 anchor plane (an honest bond), and the precast pier blocks (purchased) carry the other three legs' end-grain bearings.
+        - Beam tree end, leg-to-boulder anchorage (epoxy rods + air gap), and the launch-edge strap gate / grab handle are neighboring details, out of scope here.
+        - **Toolchain note**: this script's filename (`platform.py`) shadows the stdlib `platform` module that numpy imports transitively. The script drops its own dir off `sys.path` and primes the stdlib module before importing detailgen; tests load it by file path under a distinct name. Registry/drawing-sheet tooling that imports these detail files must be aware of the shadowing.

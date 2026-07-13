@@ -1,0 +1,113 @@
+# Design-review findings store — sit-and-reach 2x4 FRAME variant (task SITFRAME).
+#
+# SIBLING of sit_reach_frame-findings.yaml, same strict loader. DESIGN findings,
+# judged against the intent ruling: FUNCTIONAL-DOMINANT measurement instrument
+# UNDER A MATERIAL CONSTRAINT (owner: "I don't have a lot of plywood" — plywood
+# only where sheet stock is genuinely needed). The protocol metrology is
+# non-negotiable; the frame form is where the constraint bites.
+#
+# invariant_family UNKNOWN for all (design quality maps to no existing family).
+# The candidate scorecard lives in task-sitreach-report.md (SITFRAME appendix).
+#
+# BINDING: findings are SUSPICIONS/RECOMMENDATIONS, never proof.
+
+version: 1
+findings:
+  - id: DS1
+    subject: "the material constraint is honored exactly where it should be — and nowhere else"
+    suspected_issue: >-
+      A material-driven redesign risks trading away the instrument: a 2x4-only
+      build (lumber top) would corrugate the reach surface or need edge-glued
+      boards; a smaller top would break the 23cm/12in contract. Did the
+      constraint leak into the metrology?
+    severity: MEDIUM
+    visual_evidence: >-
+      v2_side.png — the top plate geometry (12 x 21.06 x 3/4 ply, 23cm
+      overhang) is byte-identical in intent to the ply variant; only the
+      structure beneath changed.
+    renders:
+      - path: outputs/sit_reach_frame/views/v2_side.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Hold the line: plywood for the ONE part whose function demands a flat,
+      continuous, dimensionally-stable sheet (the scale/slide surface); 2x4
+      for everything structural. Same literal-expected in-model checks + e2e
+      guard as the ply variant.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Adopted as the variant's contract. The top plate spec is unchanged
+        from the ply box (12in surface, 23cm derived overhang, literal
+        expecteds); the constraint reshaped only the support structure. The
+        ply need shrinks from a 24x48 project panel to a 12x22 offcut.
+  - id: DS2
+    subject: "legs-as-footplates: the stance assumption must be stated, not implied"
+    suspected_issue: >-
+      FRAME-A wins on material + fidelity by making the front legs the foot
+      bearing — but that bakes a stance-width assumption (feet land on strips
+      centered ~8.5in apart) into the structure itself. The ply box had no
+      such assumption (continuous face).
+    severity: LOW
+    visual_evidence: >-
+      v3_front.png — the two strips and the open center between them.
+    renders:
+      - path: outputs/sit_reach_frame/views/v3_front.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Disclose the assumption (protocol stance is roughly hip-width; the
+      strips cover it, full height, no toe-tip gap) and name the one-board
+      revision (1x4 across the leg faces) for narrow stances. Mirrors visual
+      finding V2.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Disclosed in the doc's honest-limits prose with the revision named.
+        For the owner's stated use (one adult, standard protocol) the strips
+        serve; no universal-stance claim is made.
+  - id: DS3
+    subject: "frame racking is a NEW unanalyzed load class the ply box did not have"
+    suspected_issue: >-
+      The closed ply box got its lateral stiffness from shear in the glued/
+      screwed panels; the open frame gets it from four cap screws and four
+      two-screw rail corners. Racking stiffness under an off-axis shove is a
+      real difference between the variants and no invariant measures it.
+    severity: MEDIUM
+    visual_evidence: >-
+      g1_iso.png — the open frame: no diagonal, no panel shear, two rail
+      bands as the only lateral ties.
+    renders:
+      - path: outputs/sit_reach_frame/views/g1_iso.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Say it plainly in the doc (glue the rail joints, hand-check for wobble,
+      capacity NOT ANALYZED) and file frame racking as ANALYSIS-v1 acceptance
+      material alongside slide/tip — the variant PAIR is good comparison
+      material for a future stiffness rung (same instrument, two structures).
+    resolution:
+      status: unresolved
+      note: >-
+        Deferred to ANALYSIS-v1 with the load case named. Mitigations shipped
+        as prose (glue + wobble check); no number claimed. The ply-box/frame
+        pair is recorded as comparison acceptance material.
+  - id: DS4
+    subject: "adhesive remains advisory prose (shared residual, third consumer)"
+    suspected_issue: >-
+      The rail-to-leg joints want glue (the prior-art norm and the racking
+      mitigation) but adhesive is still not a declarable connection — the
+      built frame's real joints will be stronger than the declared ones.
+    severity: LOW
+    visual_evidence: >-
+      z_rail.png — the rail-leg mating faces whose glue plane cannot be
+      declared today.
+    renders:
+      - path: outputs/sit_reach_frame/views/z_rail.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Same route as the ply box's DS4 and the waterfall arc (#22): keep the
+      honest asymmetry, carry glue as a fabrication note, and let this stand
+      as the adhesive ConnectionType's third recorded consumer.
+    resolution:
+      status: unresolved
+      note: >-
+        Open vocabulary residual, shared with caddy-waterfall (#22) and the
+        ply box. Three consumers now waiting on the same word.

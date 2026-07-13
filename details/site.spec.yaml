@@ -1,0 +1,226 @@
+# Site document — the Witten dacha zipline launch platform, composed as ONE
+# model (task SM1 SITECORE). A `kind: site` document references spec fragments
+# (each a DetailSpecDoc that still compiles standalone) and places them into one
+# shared frame; SiteDetail compiles them into ONE DetailAssembly / Construction
+# Graph / validation sweep. A member two subsystems share is ONE node, so
+# cross-subsystem disagreement is UNREPRESENTABLE.
+#
+# The site frame IS the platform's own world frame (tree face at X=0, ground/
+# anchor plane at Z=0, beam run along +X) — exactly what scripts/_site_overview.py
+# established. This document promotes that DISPLAY composition into THE MODEL:
+# compute_site_transforms' bases + confidences become declared provenance facts,
+# and a subsystem placement is expressed in the OWNING fragment's own numbers
+# (qualified `= platform.leg_station` refs), never a hardcoded copy.
+#
+# This phase composes TWO subsystems: platform (identity — the site frame IS the
+# platform frame) and rock_anchor (translated to the launch-leg station). Adding
+# tree_attachment / trolley_launch (task SM3) is an additive `subsystems:` entry.
+
+name: zipline site
+kind: site
+units: in
+
+subsystems:
+  # The platform is canonical: the site frame IS its world frame (identity).
+  - id: platform
+    fragment: platform.spec.yaml
+    place: identity
+    basis: >-
+      Canonical site frame (identity). Every other subsystem's placement is
+      expressed relative to this one, in this fragment's own numbers.
+    confidence: EXACT
+
+  # The rock anchor is translated only, to the platform's +Y launch-leg station
+  # at the shared Z=0 anchor plane — exactly compute_site_transforms' basis, but
+  # DECLARED here in the platform's own dimensions (qualified refs), not a
+  # hardcoded (45, 16.5) copy. Its own frame already matches the platform axis
+  # convention (beam/launch +X, leg wide faces along Y), so no rotation.
+  #
+  # The rock anchor's leg is a partial-member STUB of the platform's continuous
+  # +Y launch leg (rock_anchor.spec.yaml sets full_length -> stub_of()). In-site
+  # that stub is RETIRED and every anchor check runs against the platform's REAL
+  # leg member (single node). The overview could only CAVEAT that the anchor
+  # holds its leg stub 1/2" above the rock while the platform plants its leg at
+  # Z=0; the site model now CHECKS it.
+  - id: rock_anchor
+    fragment: rock_anchor.spec.yaml
+    place:
+      raw:
+        at: ["= platform.leg_station", "= platform.outer_y + platform.t2x/2", 0]
+    basis: >-
+      Translated to the platform's launch-leg station (X = platform.leg_station)
+      and CENTERED ON THE REAL +Y LEG'S CENTERLINE in Y (platform.outer_y +
+      platform.t2x/2 = the leg's mid-thickness, not its inboard face) at the
+      shared Z=0 rock-pad plane. The anchor's rod line and clamp angles register
+      on the platform's actual +Y launch leg. Only the +Y launch leg's anchor is
+      represented; the -Y twin post lands on a pier block, not a rock anchor.
+    confidence: ASSUMED
+    bind:
+      # Retire the anchor's leg stub -> the platform's real +Y launch leg.
+      leg: platform/leg_pY
+
+  # The tree attachment shares the platform's frame convention EXACTLY (the live
+  # trunk on the X/Y origin, ground at Z=0, the beam run along +X), so it composes
+  # at IDENTITY. Its twin beam stubs (plain Lumber, full_length -> stub_of) are the
+  # trunk-region portions of the platform's two continuous beams; in-site they are
+  # RETIRED and every tree check runs against the platform's REAL beams.
+  #
+  # The platform is FREE-STANDING and the beams CLEAR the trunk by a growth gap
+  # (inner face at Y=+/-15" = inner_y, ~5" off the 10" trunk radius). The tree
+  # fragment positions its beam stubs at that same clearance, so bound to the
+  # platform's real beams they AGREE: nothing fastens to the tree and there is no
+  # tree beam-Y divergence to pin. TREEFREE task #19 extended the trunk to the
+  # cable-anchor height (~96") purely as DEMONSTRATION geometry — it shows where
+  # the real (separate, deferred, non-engineered) zipline cable anchors; the trunk
+  # is a pre-EXISTING context body that SELF-GROUNDS (CTXGROUND `existing` role),
+  # not a structural attachment. There is NO cable<->trunk bond.
+  - id: tree
+    fragment: tree_attachment.spec.yaml
+    place: identity
+    basis: >-
+      Identity: the tree fragment's world frame IS the platform/site frame (live
+      trunk on the X/Y origin, ground Z=0, beam run +X). The tree is the canonical
+      trunk; the platform carries only a context copy (deduped below).
+    confidence: EXACT
+    bind:
+      # Retire the tree's beam stubs -> the platform's real continuous beams.
+      beam_pY: platform/beam_pY
+      beam_mY: platform/beam_mY
+
+  # The trolley/launch-edge subsystem is authored in its OWN frame (X across the
+  # deck width, Y along the beam-run / launch-edge normal), rotated 90 deg about Z
+  # from the platform/site frame — the first RIGHT-ANGLE ROTATED subsystem (SM3b's
+  # rotation generalization: bearing/through-hole axis letters and dimension bbox
+  # measures remap onto the world axes they now lie on). It is placed so its
+  # launch-edge line (local Y=0) lands at the platform's launch edge (X=beam_len)
+  # and its deck-width axis centers on the beam centerline — the placement is
+  # written in the PLATFORM's OWN numbers (beam_len, outer_y), so the trolley's
+  # deck_width==2*outer_y reconciliation (formerly a hand assert in
+  # scripts/_site_overview.py) is now an in-model consequence: if the platform's
+  # half-width changed, the posts would no longer land on the legs and the bind
+  # would surface it.
+  #
+  # THE TROLLEY REGISTRATION (TF-B refit): the trolley's launch posts + deck-edge
+  # rim are stubs of the platform's real launch legs + end joist (formalized via
+  # full_length -> stub_of). TF-B re-modeled the posts as EXACT stubs of the legs
+  # (true 63.5" length + orientation) and re-mounted the launch hardware on those
+  # faces, so the 5 hardware-registration findings now pass and the built structure
+  # grounds through the legs. TREEFREE task #19 resolved the last three residual
+  # findings BY DESIGN: the two leg<->end-joist bearing CLAIMS were removed (the
+  # legs bear on the beams, the end joist toe-screws to the beams — the launch
+  # posts never bore on the rim); the grab-bar height was re-derived against the
+  # real end-joist top (honest 47"); and the pre-existing hanging zipline hardware
+  # is declared `existing`+`grounded_by: site` (in the trolley fragment), so it
+  # self-grounds as demonstration context — exempt from the constructed-
+  # connectivity floating check, NOT grounded through the tree or any bond.
+  - id: trolley
+    fragment: trolley_launch.spec.yaml
+    place:
+      raw:
+        at: ["= platform.beam_len", "= -platform.outer_y", 0]
+        rotate: [["Z", 90]]
+    basis: >-
+      Rotated 90 deg about Z, then translated so the launch-edge line (local Y=0)
+      lands at the platform's launch edge (X = platform.beam_len) and the
+      deck-width axis (local X, 0..deck_width) centers on the beam centerline
+      (Y = -platform.outer_y). Placement is in the platform's own numbers, so the
+      deck_width == 2*outer_y reconciliation is an in-model consequence.
+    confidence: ASSUMED
+    bind:
+      # Retire the trolley's context stubs -> the platform's real members.
+      launch_post: platform/leg_mY
+      far_post: platform/leg_pY
+      deck_rim: platform/end_joist
+
+# Context-body dedup: the platform carries a bare CONTEXT boulder (existing
+# natural feature, no rod holes) under the launch end; the rock anchor models
+# the SAME physical boulder for real (epoxy rod holes, the anchor load-path
+# terminal). In-site they are ONE node — the platform's context copy is retired
+# and its references resolve to the anchor's real boulder.
+dedup:
+  - drop: platform/boulder
+    keep: rock_anchor/boulder
+    basis: >-
+      Same physical boulder under the +Y launch leg. rock_anchor models it with
+      the epoxy rod holes and the leg->angle->rod->boulder load path; the
+      platform's copy is bare context (existing, not purchased).
+  # The platform carries a bare CONTEXT trunk (existing live tree); the tree
+  # fragment models the SAME trunk as the context body of its growth-gap clearance
+  # close-up. In-site they are ONE node — the platform's copy is retired and
+  # references resolve to the tree's trunk.
+  - drop: platform/trunk
+    keep: tree/trunk
+    basis: >-
+      Same physical live trunk on the X/Y origin. The tree fragment carries it as
+      the context body for the growth-gap clearance (the beams pass it, nothing
+      attaches); the platform's copy is bare context (existing, not purchased).
+
+# The site's connectivity terminal: the real boulder is ground. The live trunk is
+# a pre-EXISTING site feature that self-grounds (CTXGROUND `existing` role) — it is
+# never a foundation and never a grounding conduit, so no fake bond routes the
+# constructed structure through it.
+#
+# A6/A3 (owner): the earlier cable<->trunk site bond is GONE. It was a grounding
+# hack that made the demonstration zipline reach `ground` through the tree; but an
+# `existing` body can't be a conduit, and the deck now has a REAL clearance gap so
+# the trunk<->deck bonds are gone too. The zipline hardware instead self-grounds as
+# `existing` demonstration context (declared in the trolley fragment's roles), the
+# honest resolution of the old floating-island pin.
+validation:
+  ground: rock_anchor/boulder
+
+# Views (SM2) — a detail becomes a VIEW of the one model: a scope selector +
+# camera + view-local annotation intent. The two composed subsystems each get
+# the view that WAS its standalone detail. Scope is by subsystem id (the minimal
+# selector that expresses "the platform detail" / "the rock anchor close-up");
+# a finer view would use an id/name glob to carve below a subsystem. A view NEVER
+# re-validates — verdicts are site-level; it presents the slice touching its
+# scope. TREEFREE task #19 resolved the last four pins BY DESIGN, so the site now
+# validates CLEAN (require_clean passes) and the gate is OPEN — every view renders.
+views:
+  - name: platform
+    include:
+      - subsystem: platform
+    camera: iso
+
+  # The rock-anchor close-up. Its scope pulls in the SHARED launch leg (via the
+  # retired rock_anchor/leg -> platform/leg_pY bind) and the shared boulder, so
+  # the leg-registration findings appear in THIS view and in the platform view
+  # both — one node, two views. The callout references the anchor's own leg_gap
+  # (a view-local, live-value annotation); a view callout may reference ANY
+  # subsystem's param by qualified name (e.g. platform.leg_station).
+  - name: rock_anchor
+    include:
+      - subsystem: rock_anchor
+    camera:
+      projection: front
+      zoom_to_scope: true
+    callouts:
+      - param: rock_anchor.leg_gap
+        label: '{v} LEG GAP (off rock)'
+        p0: [0, 0, 0]
+        p1: [0, 0, 12.7]
+
+  # The tree-clearance view. Scope pulls in the SHARED beams (via the retired
+  # tree/beam_{pY,mY} -> platform/beam_{pY,mY} binds) and the deduped trunk, so
+  # this view and the platform view show the same real beams. Front framing reads
+  # the growth-gap clearance from each beam to the trunk (the beams pass it,
+  # nothing attaches). Callouts are deferred: the fragment's own callout intent
+  # lands with the drawing compiler.
+  - name: tree
+    include:
+      - subsystem: tree
+    camera:
+      projection: front
+      zoom_to_scope: true
+
+  # The trolley-launch view (SM4 item 3). Scope pulls in the SHARED launch legs +
+  # end joist (via the retired trolley post/rim binds). Since TREEFREE task #19
+  # resolved the last pins by design, this view is now CLEAN — the launch hardware
+  # registers on the real legs, the grab bar reads its honest 47", and the hanging
+  # zipline hardware self-grounds as `existing` demonstration context (no bond to
+  # the tree). iso frames the launch hardware at the beam end. Callouts deferred.
+  - name: trolley
+    include:
+      - subsystem: trolley
+    camera: iso

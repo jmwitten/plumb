@@ -1,0 +1,745 @@
+# DetailSpec — 3-FOOT BACKYARD TREBUCHET (task TREB; v2 design pass, Form A:
+# the prior-art hinged-counterweight machine at published tennis-ball scale).
+#
+# A one-day, Home-Depot-stock throwing machine for water balloons and tennis
+# balls. Two braced 5/4x6 uprights on a 2x4 ladder base carry a 5/8in threaded-
+# rod axle at 32in; a 48in 5/4x6 arm rides the rod ON EDGE at a 4:1 ratio
+# (38.4in throw side / 9.6in counterweight side); a 2-gallon bucket of play
+# sand hangs on a rope hinge from the short end (the tuning knob: ~half a
+# bucket lobs a water balloon gently, a full bucket sends a tennis ball); a
+# rope sling with a canvas pouch and an open release pin does the throwing.
+# Sling, pouch, bucket, trigger are RIGGING — real purchases, not modelable
+# components (no soft-goods vocabulary; work order) — specified in the doc's
+# rigging section, not the geometry.
+#
+# Register (v2 design pass ruling): FUNCTIONAL-DOMINANT — a working MACHINE.
+# Visible galvanized fasteners and square-cut laps are the register's canon;
+# what must be RIGHT is the mechanism: axle height, arm ratio, counterweight
+# swing clearance, and the field-tunable rigging.
+#
+# THE MODELED POSE (declared, honest): the machine is modeled in a single
+# static reference pose — arm LEVEL and HANGING: the arm sits a full radial
+# clearance (bore 3/4 over rod 5/8 -> 1/16in) BELOW the axle centerline, its
+# bore's top surface tangent on the rod's top, exactly where gravity parks a
+# loose arm. The pose is a dimensioning reference, NOT an equilibrium or
+# operating claim: a real arm with a hung counterweight rests long-end-up.
+# Rotation/kinematics are NOT ANALYZED (no vocabulary — ANALYSIS-v1 material).
+#
+# THE PIVOT IS NOT A CONNECTION (disclosed): detailgen has no pivot/journal
+# ConnectionType (work order), so no connection is declared between arm and
+# rod. The joint's facts ride the honest escape hatches instead, the
+# trolley-launch precedent: through_holes (the rod clears every bore),
+# bonds/contacts (tangent adjacency of arm-on-rod and washer thrust faces),
+# expected_overlaps (nut threads engage the rod), and declared bearings for
+# the nut/washer stacks that clamp the uprights.
+#
+# CL-FIRST authoring notes (residuals are deliverables, stool-report pattern):
+#   - Arm + uprights are deck_board (5/4x6) BECAUSE the axle bore must be a
+#     designed FEATURE and only deck_board carries apply_feature_cut — that is
+#     route-by-class (the parts genuinely want 5/4 stock: light arm, bored
+#     posts), and the ONE-cut-per-board limit + no-feature lumber/plywood are
+#     recorded WORK ORDERS. The counterweight hitch is a rope hitch (rigging),
+#     not a second bore, honestly because of that limit.
+#   - MOUNT relations: NOT used (stool residual R1's in-plane offset forms).
+#     Placement is `raw`, every coordinate DERIVED from the governing dims.
+#   - The through-hole probe carries hand fit clearances (r_inner/r_outer),
+#     exactly the rock-anchor residual the deferred `drill` rule (#25) exists
+#     to retire.
+#
+# GOVERNING dims are PINNED (owner contract: ~3ft scale, one-day, dual
+# payload) and guarded by tests/test_trebuchet_e2e.py: axle height 32in, arm
+# 48in at ratio 4:1, clear width 14in between uprights (the counterweight
+# lane). Detailing dims (stock sizes, stations, runs) are free to tune.
+#
+# Datum: GROUND top is Z=0 (existing context, Boulder). The AXLE is the plan
+# origin: X across the machine (the rod's axis), Y the throw axis — LAUNCH is
+# toward -Y, the cocked arm tip and the runway extend toward +Y. Z up.
+
+name: trebuchet
+type: armchair_caddy
+units: in
+
+# --- GOVERNING dimensions (PINNED — the owner contract) ------------------------------
+params:
+  # Axle centerline height — the "3-foot" scale driver: uprights carry 3in of
+  # wood above the bore (35in frame), and the counterweight clears the runway
+  # through bottom-dead-center. PINNED.
+  axle_h: 32.0
+  # Arm stock length (one uncut 5/4x6x4ft run) and the prior-art ratio between
+  # throw side and counterweight side (published range 3.75-5; the tennis-ball
+  # plans' 4:1). Both PINNED: together they set every mechanism length.
+  arm_len: 48.0
+  arm_ratio: 4.0
+  # Clear lane between the uprights' inner faces — the 2-gal counterweight
+  # bucket (~9.5in dia) swings through this. PINNED.
+  clear_w: 14.0
+
+  # --- DETAILING dimensions (free to tune) -------------------------------------
+  ground_x: 44.0
+  ground_y: 76.0
+  ground_h: 3.0
+  board_thk: 1.0          # 5/4 deck board dressed thickness (arm, uprights)
+  board_w: 5.5            # 5/4x6 dressed width
+  ply_thk: 0.75           # sanded plywood (gussets, runway)
+  lum_thk: 1.5            # 2x4 dressed thickness
+  lum_w: 3.5              # 2x4 dressed width
+  front_run: 18.0         # base rail run forward of the axle (launch side, -Y)
+  rear_run: 30.0          # base rail run behind the axle (cocked-tip side, +Y)
+  upright_top_edge: 3.0   # wood left above the axle bore
+  gusset_h: 24.0          # gusset knee height
+  gusset_w: 12.0          # gusset knee fore-aft width
+  runway_w: 12.0          # runway plate width
+  rod_dia: 0.625          # 5/8-11 zinc threaded rod
+  rod_len: 24.0
+  bore_up: 0.6875         # 11/16 bore through each upright — snug rod seat
+  bore_arm: 0.75          # 3/4 bore through the arm — running clearance
+  washer_thk: 0.11        # fender washer thickness — EXPLICIT so stack positions derive
+  nut_h: 0.55             # 5/8-11 nut height — EXPLICIT so stack positions derive
+  # Representative structural screws (#9/#10-class). Capacity NOT analyzed.
+  screw_dia: 0.19
+  screw_len_lap: 2.25     # upright lap: through 1.5 rail + into the 1.0 board
+  screw_len_butt: 2.5     # through 1.5 rail + into cross-member end grain
+  screw_len_ply: 1.625    # through 0.75 ply + into board/lumber
+
+# --- derived: the whole machine, from the governing four + stock ---------------------
+derived:
+  short_arm: "= arm_len / (arm_ratio + 1)"        # 9.6 — counterweight side (+Y)
+  long_arm: "= arm_len - short_arm"               # 38.4 — throw side (-Y)
+  # The arm HANGS on the rod: bore radius minus rod radius below the axle line.
+  hang_drop: "= (bore_arm - rod_dia) / 2"         # 0.0625
+  arm_ctr_z: "= axle_h - hang_drop"               # 31.9375 — arm centerline
+  arm_bot_z: "= arm_ctr_z - board_w / 2"          # 29.1875
+  upright_h: "= axle_h + upright_top_edge"        # 35 — the frame height
+  upright_in_x: "= clear_w / 2"                   # 7 — the counterweight lane
+  upright_out_x: "= upright_in_x + board_thk"     # 8
+  rail_in_x: "= upright_out_x"                    # 8 — rails lap the uprights
+  rail_out_x: "= rail_in_x + lum_thk"             # 9.5
+  rail_len: "= front_run + rear_run"              # 48
+  cross_len: "= 2 * rail_in_x"                    # 16 — spans rail inner faces
+  runway_top: "= lum_thk + ply_thk"               # 2.25 — pouch slide surface
+  runway_len: "= 44.5"                            # covers all three crosses
+  runway_x: "= runway_w / 2"                      # 6
+  gusset_in_x: "= upright_in_x - ply_thk"         # 6.25
+  gusset_y: "= gusset_w / 2"                      # 6
+  # Cross-member center stations (front face flush at -front_run + 2; mid clear
+  # of the gusset feet; rear under the runway's tail).
+  cross_front_y: -14.25
+  cross_mid_y: 9.75
+  cross_rear_y: 26.75
+  # Counterweight geometry (rigging, DERIVED for the doc's clearance story):
+  # rope hitch + bucket bail + 2-gal bucket hang ~17.5in below the arm end.
+  cw_drop: 17.5
+  cw_low: "= axle_h - short_arm - cw_drop"        # 4.9 — bucket lowest point
+  cw_clearance: "= cw_low - runway_top"           # 2.65 — over the runway
+  half_rod: "= rod_len / 2"                       # 12
+
+components:
+  # EXISTING ground — plain slab, top at Z=0, body into -Z (stool/box pattern).
+  - id: ground
+    type: boulder
+    name: ground
+    params: {width: "$ground_y", length: "$ground_x", depth: "$ground_h"}
+    place: {raw: {at: ["0 in", "6 in", "0 in"]}}
+
+  # BASE RAILS — 2x4 on edge, the machine's fore-aft ladder sides. rotate [Z,90]
+  # maps length->Y, thickness->-X, depth(3.5)->Z (stool side-panel pattern).
+  # +X rail occupies X[8, 9.5].
+  - id: rail_pos
+    type: lumber
+    name: base rail +X
+    params: {nominal: "2x4", length: "$rail_len"}
+    place: {raw: {at: ["$rail_out_x", "= -front_run", "0 in"], rotate: [["Z", 90]]}}
+  - id: rail_neg
+    type: lumber
+    name: base rail -X
+    params: {nominal: "2x4", length: "$rail_len"}
+    place: {raw: {at: ["= -rail_in_x", "= -front_run", "0 in"], rotate: [["Z", 90]]}}
+
+  # CROSS MEMBERS — 2x4 laid FLAT between the rails' inner faces (three rungs of
+  # the ladder; the runway screws down onto them). rotate [X,90] lays the stick
+  # flat: length->X, depth(3.5)->-Y, thickness(1.5)->Z.
+  - id: cross_front
+    type: lumber
+    name: cross member front
+    params: {nominal: "2x4", length: "$cross_len"}
+    place: {raw: {at: ["= -rail_in_x", "= cross_front_y + lum_w/2", "0 in"], rotate: [["X", 90]]}}
+  - id: cross_mid
+    type: lumber
+    name: cross member mid
+    params: {nominal: "2x4", length: "$cross_len"}
+    place: {raw: {at: ["= -rail_in_x", "= cross_mid_y + lum_w/2", "0 in"], rotate: [["X", 90]]}}
+  - id: cross_rear
+    type: lumber
+    name: cross member rear
+    params: {nominal: "2x4", length: "$cross_len"}
+    place: {raw: {at: ["= -rail_in_x", "= cross_rear_y + lum_w/2", "0 in"], rotate: [["X", 90]]}}
+
+  # UPRIGHTS — 5/4x6 deck boards stood on end, lapped to the rails' inner faces,
+  # feet on the ground beside the rails. Each carries ONE designed bore: the
+  # 11/16 axle seat at Z=32 (the board's single FEATURE — the one-cut limit is a
+  # recorded work order). rotate [Y,-90] stands the board: length->Z,
+  # thickness->-X from the anchor, width(5.5)->Y, centered on the axle plane
+  # Y=0. Anchored at the OUTER face so +X upright occupies X[7, 8].
+  - id: upright_pos
+    type: deck_board
+    name: upright +X
+    params: {length: "$upright_h"}
+    place: {raw: {at: ["$upright_out_x", "= -board_w/2", "0 in"], rotate: [["Y", -90]]}}
+    features:
+      - bore: {dia: "$bore_up", id: axle_seat_pos, name: "axle seat", at: ["$axle_h", "= board_w/2"]}
+  - id: upright_neg
+    type: deck_board
+    name: upright -X
+    params: {length: "$upright_h"}
+    place: {raw: {at: ["= -upright_in_x", "= -board_w/2", "0 in"], rotate: [["Y", -90]]}}
+    features:
+      - bore: {dia: "$bore_up", id: axle_seat_neg, name: "axle seat", at: ["$axle_h", "= board_w/2"]}
+
+  # GUSSET KNEES — 3/4 ply plates lapping each upright's inner face, feet on the
+  # ground: the fore-aft stiffeners (square-cut quick-build prior art; no miter
+  # anywhere in the machine). Authored length 24 (the CUT length, so the BOM
+  # nests both knees on the same 12in-wide strip as the runway) -> Z via
+  # rotate [Y,-90]: length->Z, width(12)->Y, thickness->-X from the anchor.
+  - id: gusset_pos
+    type: plywood_panel
+    name: gusset knee +X
+    params: {length: "$gusset_h", width: "$gusset_w", thickness: "$ply_thk"}
+    place: {raw: {at: ["$upright_in_x", "= -gusset_y", "0 in"], rotate: [["Y", -90]]}}
+  - id: gusset_neg
+    type: plywood_panel
+    name: gusset knee -X
+    params: {length: "$gusset_h", width: "$gusset_w", thickness: "$ply_thk"}
+    place: {raw: {at: ["= -gusset_in_x", "= -gusset_y", "0 in"], rotate: [["Y", -90]]}}
+
+  # RUNWAY — 3/4 ply plate on the cross members between the rails: the smooth
+  # deck the sling pouch slides along at launch. Laid flat, length->Y via
+  # rotate [Z,90] (sit-reach top-plate pattern).
+  - id: runway
+    type: plywood_panel
+    name: runway plate
+    params: {length: "$runway_len", width: "$runway_w", thickness: "$ply_thk"}
+    place: {raw: {at: ["$runway_x", "-16 in", "$lum_thk"], rotate: [["Z", 90]]}}
+
+  # THROWING ARM — 48in 5/4x6 ON EDGE (5.5in of depth in the swing plane, light
+  # in the hand), its 3/4 bore hung on the rod. rotate [X,90],[Z,90]: length->Y,
+  # width->Z, thickness->X. Long (throw) side toward -Y, counterweight side +Y;
+  # the bore sits short_arm from the +Y end, so the bore's world station is
+  # exactly (0, 0) in plan — asserted below. The board's ONE feature.
+  - id: arm
+    type: deck_board
+    name: throwing arm
+    params: {length: "$arm_len"}
+    place: {raw: {at: ["= -board_thk/2", "= -long_arm", "$arm_bot_z"], rotate: [["X", 90], ["Z", 90]]}}
+    features:
+      - bore: {dia: "$bore_arm", id: axle_bore, name: "axle bore", at: ["$long_arm", "= board_w/2"]}
+
+  # AXLE — 5/8-11 threaded rod across the frame. rotate [Y,90] lays its +Z axis
+  # along +X; placed at the -X end so it spans X[-12, +12] through both bores.
+  - id: axle_rod
+    type: threaded_rod
+    name: axle rod
+    params: {diameter: "$rod_dia", length: "$rod_len"}
+    place: {raw: {at: ["= -half_rod", "0 in", "$axle_h"], rotate: [["Y", 90]]}}
+
+  # AXLE HARDWARE, +X upright: fender washer + nut OUTSIDE (face at x=8) and
+  # INSIDE (face at x=7) — the pair clamps the upright and ties the frame top.
+  # Washer/nut local axis is +Z; [Y,90] points it +X (body extends +X from the
+  # anchor), [Y,-90] points it -X.
+  - id: washer_po
+    type: washer
+    name: axle washer +X outer
+    params: {inner_diameter: "$bore_up", thickness: "$washer_thk", fender: true}
+    place: {raw: {at: ["$upright_out_x", "0 in", "$axle_h"], rotate: [["Y", 90]]}}
+  - id: nut_po
+    type: hex_nut
+    name: axle nut +X outer
+    params: {diameter: "$rod_dia", height: "$nut_h"}
+    place: {raw: {at: ["= upright_out_x + washer_thk", "0 in", "$axle_h"], rotate: [["Y", 90]]}}
+  - id: washer_pi
+    type: washer
+    name: axle washer +X inner
+    params: {inner_diameter: "$bore_up", thickness: "$washer_thk", fender: true}
+    place: {raw: {at: ["$upright_in_x", "0 in", "$axle_h"], rotate: [["Y", -90]]}}
+  - id: nut_pi
+    type: hex_nut
+    name: axle nut +X inner
+    params: {diameter: "$rod_dia", height: "$nut_h"}
+    place: {raw: {at: ["= upright_in_x - washer_thk", "0 in", "$axle_h"], rotate: [["Y", -90]]}}
+
+  # AXLE HARDWARE, -X upright (mirror).
+  - id: washer_mo
+    type: washer
+    name: axle washer -X outer
+    params: {inner_diameter: "$bore_up", thickness: "$washer_thk", fender: true}
+    place: {raw: {at: ["= -upright_out_x", "0 in", "$axle_h"], rotate: [["Y", -90]]}}
+  - id: nut_mo
+    type: hex_nut
+    name: axle nut -X outer
+    params: {diameter: "$rod_dia", height: "$nut_h"}
+    place: {raw: {at: ["= -(upright_out_x + washer_thk)", "0 in", "$axle_h"], rotate: [["Y", -90]]}}
+  - id: washer_mi
+    type: washer
+    name: axle washer -X inner
+    params: {inner_diameter: "$bore_up", thickness: "$washer_thk", fender: true}
+    place: {raw: {at: ["= -upright_in_x", "0 in", "$axle_h"], rotate: [["Y", 90]]}}
+  - id: nut_mi
+    type: hex_nut
+    name: axle nut -X inner
+    params: {diameter: "$rod_dia", height: "$nut_h"}
+    place: {raw: {at: ["= -(upright_in_x - washer_thk)", "0 in", "$axle_h"], rotate: [["Y", 90]]}}
+
+  # ARM THRUST STACKS: a fender washer against each arm face (the running thrust
+  # surface — modeled flush; the field sets a paper's width of play) backed by a
+  # JAM PAIR of nuts. Washer bores ride the rod loose (11/16 over 5/8).
+  - id: washer_ap
+    type: washer
+    name: arm washer +X
+    params: {inner_diameter: "$bore_up", thickness: "$washer_thk", fender: true}
+    place: {raw: {at: ["= board_thk/2", "0 in", "$axle_h"], rotate: [["Y", 90]]}}
+  - id: nut_ap1
+    type: hex_nut
+    name: arm jam nut +X inner
+    params: {diameter: "$rod_dia", height: "$nut_h"}
+    place: {raw: {at: ["= board_thk/2 + washer_thk", "0 in", "$axle_h"], rotate: [["Y", 90]]}}
+  - id: nut_ap2
+    type: hex_nut
+    name: arm jam nut +X outer
+    params: {diameter: "$rod_dia", height: "$nut_h"}
+    place: {raw: {at: ["= board_thk/2 + washer_thk + nut_h", "0 in", "$axle_h"], rotate: [["Y", 90]]}}
+  - id: washer_am
+    type: washer
+    name: arm washer -X
+    params: {inner_diameter: "$bore_up", thickness: "$washer_thk", fender: true}
+    place: {raw: {at: ["= -board_thk/2", "0 in", "$axle_h"], rotate: [["Y", -90]]}}
+  - id: nut_am1
+    type: hex_nut
+    name: arm jam nut -X inner
+    params: {diameter: "$rod_dia", height: "$nut_h"}
+    place: {raw: {at: ["= -(board_thk/2 + washer_thk)", "0 in", "$axle_h"], rotate: [["Y", -90]]}}
+  - id: nut_am2
+    type: hex_nut
+    name: arm jam nut -X outer
+    params: {diameter: "$rod_dia", height: "$nut_h"}
+    place: {raw: {at: ["= -(board_thk/2 + washer_thk + nut_h)", "0 in", "$axle_h"], rotate: [["Y", -90]]}}
+
+  # BUTT screws: through each rail's OUTER face into the cross members' end
+  # grain, two per end. Head at the outer face; +X side points -X ([Y,90]),
+  # -X side points +X ([Y,-90]).
+  - id: bscrew_pf0
+    type: structural_screw
+    name: butt screw +X front 0
+    params: {diameter: "$screw_dia", length: "$screw_len_butt"}
+    place: {raw: {at: ["$rail_out_x", "= cross_front_y - 1", "0.75 in"], rotate: [["Y", 90]]}}
+  - id: bscrew_pf1
+    type: structural_screw
+    name: butt screw +X front 1
+    params: {diameter: "$screw_dia", length: "$screw_len_butt"}
+    place: {raw: {at: ["$rail_out_x", "= cross_front_y + 1", "0.75 in"], rotate: [["Y", 90]]}}
+  - id: bscrew_pm0
+    type: structural_screw
+    name: butt screw +X mid 0
+    params: {diameter: "$screw_dia", length: "$screw_len_butt"}
+    place: {raw: {at: ["$rail_out_x", "= cross_mid_y - 1", "0.75 in"], rotate: [["Y", 90]]}}
+  - id: bscrew_pm1
+    type: structural_screw
+    name: butt screw +X mid 1
+    params: {diameter: "$screw_dia", length: "$screw_len_butt"}
+    place: {raw: {at: ["$rail_out_x", "= cross_mid_y + 1", "0.75 in"], rotate: [["Y", 90]]}}
+  - id: bscrew_pr0
+    type: structural_screw
+    name: butt screw +X rear 0
+    params: {diameter: "$screw_dia", length: "$screw_len_butt"}
+    place: {raw: {at: ["$rail_out_x", "= cross_rear_y - 1", "0.75 in"], rotate: [["Y", 90]]}}
+  - id: bscrew_pr1
+    type: structural_screw
+    name: butt screw +X rear 1
+    params: {diameter: "$screw_dia", length: "$screw_len_butt"}
+    place: {raw: {at: ["$rail_out_x", "= cross_rear_y + 1", "0.75 in"], rotate: [["Y", 90]]}}
+  - id: bscrew_mf0
+    type: structural_screw
+    name: butt screw -X front 0
+    params: {diameter: "$screw_dia", length: "$screw_len_butt"}
+    place: {raw: {at: ["= -rail_out_x", "= cross_front_y - 1", "0.75 in"], rotate: [["Y", -90]]}}
+  - id: bscrew_mf1
+    type: structural_screw
+    name: butt screw -X front 1
+    params: {diameter: "$screw_dia", length: "$screw_len_butt"}
+    place: {raw: {at: ["= -rail_out_x", "= cross_front_y + 1", "0.75 in"], rotate: [["Y", -90]]}}
+  - id: bscrew_mm0
+    type: structural_screw
+    name: butt screw -X mid 0
+    params: {diameter: "$screw_dia", length: "$screw_len_butt"}
+    place: {raw: {at: ["= -rail_out_x", "= cross_mid_y - 1", "0.75 in"], rotate: [["Y", -90]]}}
+  - id: bscrew_mm1
+    type: structural_screw
+    name: butt screw -X mid 1
+    params: {diameter: "$screw_dia", length: "$screw_len_butt"}
+    place: {raw: {at: ["= -rail_out_x", "= cross_mid_y + 1", "0.75 in"], rotate: [["Y", -90]]}}
+  - id: bscrew_mr0
+    type: structural_screw
+    name: butt screw -X rear 0
+    params: {diameter: "$screw_dia", length: "$screw_len_butt"}
+    place: {raw: {at: ["= -rail_out_x", "= cross_rear_y - 1", "0.75 in"], rotate: [["Y", -90]]}}
+  - id: bscrew_mr1
+    type: structural_screw
+    name: butt screw -X rear 1
+    params: {diameter: "$screw_dia", length: "$screw_len_butt"}
+    place: {raw: {at: ["= -rail_out_x", "= cross_rear_y + 1", "0.75 in"], rotate: [["Y", -90]]}}
+
+  # UPRIGHT LAP screws: driven from the RAIL side — head at the rail's outer
+  # face, shank inward through the 1.5in rail into the 1in upright (tip stops
+  # 0.75in in). Driving from outside keeps the upright's inner face clean for
+  # the gusset knee that laps it. Three per lap in the 5.5x3.5 lap zone.
+  - id: uscrew_p0
+    type: structural_screw
+    name: upright lap screw +X 0
+    params: {diameter: "$screw_dia", length: "$screw_len_lap"}
+    place: {raw: {at: ["$rail_out_x", "-1.5 in", "1.2 in"], rotate: [["Y", 90]]}}
+  - id: uscrew_p1
+    type: structural_screw
+    name: upright lap screw +X 1
+    params: {diameter: "$screw_dia", length: "$screw_len_lap"}
+    place: {raw: {at: ["$rail_out_x", "0 in", "2.5 in"], rotate: [["Y", 90]]}}
+  - id: uscrew_p2
+    type: structural_screw
+    name: upright lap screw +X 2
+    params: {diameter: "$screw_dia", length: "$screw_len_lap"}
+    place: {raw: {at: ["$rail_out_x", "1.5 in", "1.2 in"], rotate: [["Y", 90]]}}
+  - id: uscrew_m0
+    type: structural_screw
+    name: upright lap screw -X 0
+    params: {diameter: "$screw_dia", length: "$screw_len_lap"}
+    place: {raw: {at: ["= -rail_out_x", "-1.5 in", "1.2 in"], rotate: [["Y", -90]]}}
+  - id: uscrew_m1
+    type: structural_screw
+    name: upright lap screw -X 1
+    params: {diameter: "$screw_dia", length: "$screw_len_lap"}
+    place: {raw: {at: ["= -rail_out_x", "0 in", "2.5 in"], rotate: [["Y", -90]]}}
+  - id: uscrew_m2
+    type: structural_screw
+    name: upright lap screw -X 2
+    params: {diameter: "$screw_dia", length: "$screw_len_lap"}
+    place: {raw: {at: ["= -rail_out_x", "1.5 in", "1.2 in"], rotate: [["Y", -90]]}}
+
+  # GUSSET screws: through each gusset's inner face into its upright, three up
+  # the lap line (the upright is 5.5 wide in Y — stations at Y=0 land mid-board).
+  - id: gscrew_p0
+    type: structural_screw
+    name: gusset screw +X 0
+    params: {diameter: "$screw_dia", length: "$screw_len_ply"}
+    place: {raw: {at: ["$gusset_in_x", "0 in", "8 in"], rotate: [["Y", -90]]}}
+  - id: gscrew_p1
+    type: structural_screw
+    name: gusset screw +X 1
+    params: {diameter: "$screw_dia", length: "$screw_len_ply"}
+    place: {raw: {at: ["$gusset_in_x", "0 in", "15 in"], rotate: [["Y", -90]]}}
+  - id: gscrew_p2
+    type: structural_screw
+    name: gusset screw +X 2
+    params: {diameter: "$screw_dia", length: "$screw_len_ply"}
+    place: {raw: {at: ["$gusset_in_x", "0 in", "22 in"], rotate: [["Y", -90]]}}
+  - id: gscrew_m0
+    type: structural_screw
+    name: gusset screw -X 0
+    params: {diameter: "$screw_dia", length: "$screw_len_ply"}
+    place: {raw: {at: ["= -gusset_in_x", "0 in", "8 in"], rotate: [["Y", 90]]}}
+  - id: gscrew_m1
+    type: structural_screw
+    name: gusset screw -X 1
+    params: {diameter: "$screw_dia", length: "$screw_len_ply"}
+    place: {raw: {at: ["= -gusset_in_x", "0 in", "15 in"], rotate: [["Y", 90]]}}
+  - id: gscrew_m2
+    type: structural_screw
+    name: gusset screw -X 2
+    params: {diameter: "$screw_dia", length: "$screw_len_ply"}
+    place: {raw: {at: ["= -gusset_in_x", "0 in", "22 in"], rotate: [["Y", 90]]}}
+
+  # RUNWAY screws: straight down through the plate into each cross member, two
+  # per cross (default shank -Z, head on the slide surface — countersink FLUSH).
+  - id: rscrew_f0
+    type: structural_screw
+    name: runway screw front 0
+    params: {diameter: "$screw_dia", length: "$screw_len_ply"}
+    place: {raw: {at: ["-3 in", "$cross_front_y", "$runway_top"]}}
+  - id: rscrew_f1
+    type: structural_screw
+    name: runway screw front 1
+    params: {diameter: "$screw_dia", length: "$screw_len_ply"}
+    place: {raw: {at: ["3 in", "$cross_front_y", "$runway_top"]}}
+  - id: rscrew_m0
+    type: structural_screw
+    name: runway screw mid 0
+    params: {diameter: "$screw_dia", length: "$screw_len_ply"}
+    place: {raw: {at: ["-3 in", "$cross_mid_y", "$runway_top"]}}
+  - id: rscrew_m1
+    type: structural_screw
+    name: runway screw mid 1
+    params: {diameter: "$screw_dia", length: "$screw_len_ply"}
+    place: {raw: {at: ["3 in", "$cross_mid_y", "$runway_top"]}}
+  - id: rscrew_r0
+    type: structural_screw
+    name: runway screw rear 0
+    params: {diameter: "$screw_dia", length: "$screw_len_ply"}
+    place: {raw: {at: ["-3 in", "$cross_rear_y", "$runway_top"]}}
+  - id: rscrew_r1
+    type: structural_screw
+    name: runway screw rear 1
+    params: {diameter: "$screw_dia", length: "$screw_len_ply"}
+    place: {raw: {at: ["3 in", "$cross_rear_y", "$runway_top"]}}
+
+# --- connections: the honest joinery (Construction-Graph edges) ----------------------
+# The PIVOT is deliberately NOT here — no pivot/journal ConnectionType exists
+# (work order); its facts are declared through the validation escape hatches.
+connections:
+  # Cross members butt into the rails' inner faces, screwed through the rails'
+  # outer faces into END GRAIN — butt_screwed states that weaker bite honestly
+  # and claims no gravity seat (the crosses rest on the ground themselves).
+  - type: butt_screwed
+    label: "+X rail -> front cross end (screwed butt)"
+    params: {n_screws: 2}
+    parts: [rail_pos, cross_front]
+    hardware: [bscrew_pf0, bscrew_pf1]
+    assumptions: ["Screws bite the cross member's END grain — weaker in withdrawal than face grain, NOT analyzed to a number."]
+  - type: butt_screwed
+    label: "+X rail -> mid cross end (screwed butt)"
+    params: {n_screws: 2}
+    parts: [rail_pos, cross_mid]
+    hardware: [bscrew_pm0, bscrew_pm1]
+    assumptions: ["Screws bite the cross member's END grain — weaker in withdrawal than face grain, NOT analyzed to a number."]
+  - type: butt_screwed
+    label: "+X rail -> rear cross end (screwed butt)"
+    params: {n_screws: 2}
+    parts: [rail_pos, cross_rear]
+    hardware: [bscrew_pr0, bscrew_pr1]
+    assumptions: ["Screws bite the cross member's END grain — weaker in withdrawal than face grain, NOT analyzed to a number."]
+  - type: butt_screwed
+    label: "-X rail -> front cross end (screwed butt)"
+    params: {n_screws: 2}
+    parts: [rail_neg, cross_front]
+    hardware: [bscrew_mf0, bscrew_mf1]
+    assumptions: ["Screws bite the cross member's END grain — weaker in withdrawal than face grain, NOT analyzed to a number."]
+  - type: butt_screwed
+    label: "-X rail -> mid cross end (screwed butt)"
+    params: {n_screws: 2}
+    parts: [rail_neg, cross_mid]
+    hardware: [bscrew_mm0, bscrew_mm1]
+    assumptions: ["Screws bite the cross member's END grain — weaker in withdrawal than face grain, NOT analyzed to a number."]
+  - type: butt_screwed
+    label: "-X rail -> rear cross end (screwed butt)"
+    params: {n_screws: 2}
+    parts: [rail_neg, cross_rear]
+    hardware: [bscrew_mr0, bscrew_mr1]
+    assumptions: ["Screws bite the cross member's END grain — weaker in withdrawal than face grain, NOT analyzed to a number."]
+  # Uprights FACE-LAP the rails, screwed face to face. cleat_screwed is the
+  # face-lap word this vocabulary has: it claims exactly pull_out + shear
+  # (hold together, resist racking) and NO gravity seat — the upright's own
+  # rest on the ground is the separately-declared bearing. The noun stretch
+  # (an upright as the "cleat" role) is disclosed; a dedicated post-lap word
+  # is a work order.
+  - type: cleat_screwed
+    label: "+X upright -> +X rail (face lap, screwed)"
+    params: {n_screws: 3}
+    parts: [upright_pos, rail_pos]
+    hardware: [uscrew_p0, uscrew_p1, uscrew_p2]
+    assumptions: ["Face-grain lap both sides; the axle's shock loads NOT analyzed (ANALYSIS-v1).", "cleat_screwed is used as a generic face-lap word — a dedicated post-to-rail lap ConnectionType is a recorded work order."]
+  - type: cleat_screwed
+    label: "-X upright -> -X rail (face lap, screwed)"
+    params: {n_screws: 3}
+    parts: [upright_neg, rail_neg]
+    hardware: [uscrew_m0, uscrew_m1, uscrew_m2]
+    assumptions: ["Face-grain lap both sides; the axle's shock loads NOT analyzed (ANALYSIS-v1).", "cleat_screwed is used as a generic face-lap word — a dedicated post-to-rail lap ConnectionType is a recorded work order."]
+  # Gusset knees lap the uprights' inner faces: the fore-aft stiffener, screwed
+  # to the upright, FOOTED on the ground (bearing below). The knee is honestly
+  # NOT fastened to the base — its bracing action is the screwed lap plus the
+  # floor bearing; racking capacity NOT ANALYZED, disclosed in the doc.
+  - type: cleat_screwed
+    label: "+X gusset knee -> +X upright (face lap, screwed)"
+    params: {n_screws: 3}
+    parts: [gusset_pos, upright_pos]
+    hardware: [gscrew_p0, gscrew_p1, gscrew_p2]
+    assumptions: ["Ply face to board face; knee bracing capacity NOT analyzed (ANALYSIS-v1).", "cleat_screwed is used as a generic face-lap word — a dedicated lap/gusset ConnectionType is a recorded work order."]
+  - type: cleat_screwed
+    label: "-X gusset knee -> -X upright (face lap, screwed)"
+    params: {n_screws: 3}
+    parts: [gusset_neg, upright_neg]
+    hardware: [gscrew_m0, gscrew_m1, gscrew_m2]
+    assumptions: ["Ply face to board face; knee bracing capacity NOT analyzed (ANALYSIS-v1).", "cleat_screwed is used as a generic face-lap word — a dedicated lap/gusset ConnectionType is a recorded work order."]
+  # The runway caps each flat cross member and is screwed straight down —
+  # rail_cap_screwed's exact claim (gravity seat + the pouch-drag surface).
+  - type: rail_cap_screwed
+    label: "runway -> front cross (screwed down)"
+    params: {n_screws: 2}
+    parts: [cross_front, runway]
+    hardware: [rscrew_f0, rscrew_f1]
+    assumptions: ["Countersink the heads FLUSH — the runway is the pouch slide lane."]
+  - type: rail_cap_screwed
+    label: "runway -> mid cross (screwed down)"
+    params: {n_screws: 2}
+    parts: [cross_mid, runway]
+    hardware: [rscrew_m0, rscrew_m1]
+    assumptions: ["Countersink the heads FLUSH — the runway is the pouch slide lane."]
+  - type: rail_cap_screwed
+    label: "runway -> rear cross (screwed down)"
+    params: {n_screws: 2}
+    parts: [cross_rear, runway]
+    hardware: [rscrew_r0, rscrew_r1]
+    assumptions: ["Countersink the heads FLUSH — the runway is the pouch slide lane."]
+
+# --- roles ----------------------------------------------------------------------------
+# The ground is a pre-existing site body: it self-grounds. The trebuchet is a
+# LOOSE object resting on it — carried out to the yard, nothing anchored.
+roles:
+  ground: {role: existing, grounded_by: site}
+
+# --- validation -----------------------------------------------------------------------
+# NO `ground:` terminal — loose object (stool/box pattern). The pivot's facts
+# live here, in the escape hatches, because no pivot ConnectionType exists:
+# through_holes proves the rod clears every bore; bonds/contacts record the
+# tangent arm-on-rod ride and the thrust faces; expected_overlaps allowlists
+# the nut-thread engagements; bearings carry the clamp stacks and every
+# member's rest on the ground.
+validation:
+  through_holes:
+    - part: axle_rod
+      passes_through: [upright_neg, arm, upright_pos]
+      axis: X
+      center: ["0 in", "0 in", "$axle_h"]
+      r_inner: "= rod_dia/2 - 0.01"
+      r_outer: "= bore_arm/2 + 0.06"
+      span: "18 in"
+  bearings:
+    # The machine on the ground:
+    - {a: rail_pos, b: ground, axis: Z, area: 25000}
+    - {a: rail_neg, b: ground, axis: Z, area: 25000}
+    - {a: upright_pos, b: ground, axis: Z, area: 2000}
+    - {a: upright_neg, b: ground, axis: Z, area: 2000}
+    - {a: gusset_pos, b: ground, axis: Z, area: 3000}
+    - {a: gusset_neg, b: ground, axis: Z, area: 3000}
+    - {a: cross_front, b: ground, axis: Z, area: 20000}
+    - {a: cross_mid, b: ground, axis: Z, area: 20000}
+    - {a: cross_rear, b: ground, axis: Z, area: 20000}
+    # The runway on its crosses (the rail_cap gravity seats, proven flush):
+    - {a: runway, b: cross_front, axis: Z, area: 15000}
+    - {a: runway, b: cross_mid, axis: Z, area: 15000}
+    - {a: runway, b: cross_rear, axis: Z, area: 15000}
+    # Axle clamp stacks on the uprights (washer to wood, nut to washer):
+    - {a: washer_po, b: upright_pos, axis: X, area: 600}
+    - {a: nut_po, b: washer_po, axis: X, area: 120}
+    - {a: washer_pi, b: upright_pos, axis: X, area: 600}
+    - {a: nut_pi, b: washer_pi, axis: X, area: 120}
+    - {a: washer_mo, b: upright_neg, axis: X, area: 600}
+    - {a: nut_mo, b: washer_mo, axis: X, area: 120}
+    - {a: washer_mi, b: upright_neg, axis: X, area: 600}
+    - {a: nut_mi, b: washer_mi, axis: X, area: 120}
+    # Arm thrust stacks (jam nut against its washer):
+    - {a: nut_ap1, b: washer_ap, axis: X, area: 120}
+    - {a: nut_am1, b: washer_am, axis: X, area: 120}
+  # Honest touch adjacency of the pivot (trolley-on-cable precedent): the arm's
+  # bore rides tangent on the rod's top (the modeled hanging pose), the thrust
+  # washers kiss the arm faces, the jam pairs press together.
+  bonds:
+    - {a: arm, b: axle_rod}
+    - {a: axle_rod, b: nut_po}
+    - {a: axle_rod, b: nut_pi}
+    - {a: axle_rod, b: nut_mo}
+    - {a: axle_rod, b: nut_mi}
+    - {a: axle_rod, b: nut_ap1}
+    - {a: axle_rod, b: nut_ap2}
+    - {a: axle_rod, b: nut_am1}
+    - {a: axle_rod, b: nut_am2}
+    - {a: washer_ap, b: nut_ap1}
+    - {a: washer_am, b: nut_am1}
+    - {a: nut_ap2, b: nut_ap1}
+    - {a: nut_am2, b: nut_am1}
+  expected_overlaps:
+    # Nut threads engage the rod — designed interpenetration of the modeled
+    # thread forms. The washers are deliberately NOT here: their 11/16 bores
+    # clear the 5/8 rod (a true clearance, no overlap to allowlist).
+    - {a: axle_rod, b: nut_po}
+    - {a: axle_rod, b: nut_pi}
+    - {a: axle_rod, b: nut_mo}
+    - {a: axle_rod, b: nut_mi}
+    - {a: axle_rod, b: nut_ap1}
+    - {a: axle_rod, b: nut_ap2}
+    - {a: axle_rod, b: nut_am1}
+    - {a: axle_rod, b: nut_am2}
+  contacts:
+    - {a: arm, b: axle_rod}
+    - {a: washer_ap, b: arm}
+    - {a: washer_am, b: arm}
+  dimensions:
+    # GOVERNING assertions, LITERAL expecteds (sitreach MINOR-1 lesson): these
+    # pin the owner contract; a drifted governing param goes RED here and in
+    # the e2e guard, returning the question to the owner by mechanism.
+    - {name: "GOVERNING axle centerline height = 32in", part: axle_rod, measure: zmid, expected: "32 in", tolerance: "0.02 in"}
+    - {name: "GOVERNING counterweight lane: +X upright inner face at +7in (14in clear)", part: upright_pos, measure: xmin, expected: "7 in", tolerance: "0.02 in"}
+    - {name: "GOVERNING counterweight lane: -X upright inner face at -7in", part: upright_neg, measure: xmax, expected: "-7 in", tolerance: "0.02 in"}
+    - {name: "GOVERNING arm ratio 4:1 — counterweight end 9.6in behind the axle", part: arm, measure: ymax, expected: "= 48 / 5", tolerance: "0.02 in"}
+    - {name: "GOVERNING arm ratio 4:1 — throw tip 38.4in ahead of the axle", part: arm, measure: ymin, expected: "= -(48 - 48 / 5)", tolerance: "0.02 in"}
+    # The declared hanging pose: the arm centerline sits one radial clearance
+    # (3/4 bore over 5/8 rod = 1/16in) below the axle line — tangent on top.
+    - {name: "hanging pose: arm centerline = axle - radial clearance", part: arm, measure: zmid, expected: "= 32 - (0.75 - 0.625) / 2", tolerance: "0.005 in"}
+    - {name: "frame height: uprights 35in", part: upright_pos, measure: zmax, expected: "35 in", tolerance: "0.02 in"}
+    - {name: "runway surface at 2.25in (the counterweight-clearance datum)", part: runway, measure: zmax, expected: "2.25 in", tolerance: "0.02 in"}
+    - {name: "base rails 48in, feet on the ground", part: rail_pos, measure: zmin, expected: "0 in", tolerance: "0.02 in"}
+    - {name: "base rail run: 18in ahead / 30in behind the axle", part: rail_pos, measure: ymax, expected: "30 in", tolerance: "0.02 in"}
+
+# --- presentation ----------------------------------------------------------------------
+callouts:
+  - {param: axle_h, label: "AXLE {v}", p0: ["= rail_out_x + 2", 0, 0], p1: ["= rail_out_x + 2", 0, "$axle_h"]}
+  - {param: long_arm, label: "THROW ARM {v}", p0: ["= -board_thk/2 - 1.5", 0, "= arm_ctr_z + board_w/2 + 1"], p1: ["= -board_thk/2 - 1.5", "= -long_arm", "= arm_ctr_z + board_w/2 + 1"]}
+  - {param: short_arm, label: "CW ARM {v}", p0: ["= board_thk/2 + 1.5", 0, "= arm_ctr_z + board_w/2 + 1"], p1: ["= board_thk/2 + 1.5", "$short_arm", "= arm_ctr_z + board_w/2 + 1"]}
+  - {param: clear_w, label: "CW LANE {v}", p0: ["= -clear_w/2", "0 in", "12 in"], p1: ["= clear_w/2", "0 in", "12 in"]}
+
+export: {glb_tolerance: 0.1, glb_angular_tolerance: 0.15}
+
+doc:
+  sections:
+    - prose: |
+        # 3-Foot Backyard Trebuchet — Validation Report
+
+        A one-day, Home-Depot-stock hinged-counterweight trebuchet for water balloons and tennis balls, generated by the `detailgen` parametric library. Two 5/4x6 uprights lapped to a 2x4 ladder base carry a 5/8in threaded-rod axle at {axle_h:g}in; the {arm_len:g}in 5/4x6 arm rides the rod on edge at a {arm_ratio:g}:1 ratio (38.4in throw side / 9.6in counterweight side); plywood gusset knees stiffen the uprights fore-aft and a plywood runway between the rails gives the sling pouch its slide lane. The counterweight (a 2-gallon bucket of play sand on a rope hinge), the rope sling and pouch, the release pin and the pull-pin trigger are RIGGING — real purchases specified in the rigging section below, deliberately not modeled geometry. The machine is a loose object: carried to the yard, nothing anchored.
+
+        **The modeled pose is a declared reference, not an operating state**: arm LEVEL and HANGING — the arm sits one radial bore clearance (1/16in) below the axle centerline, its bore tangent on the rod's top, where gravity parks a loose arm. A real arm with the bucket hung rests long-end-up; rotation is NOT modeled (no kinematics vocabulary).
+
+        ## Collision / interference
+        - Pairwise interference checks run: **{interference_checks}**
+        - Unintended collisions detected: **{interference_failures}**
+        - Screw-into-member overlaps at the declared joints and nut-thread engagements on the axle rod are expected and allowlisted.
+    - findings: {header: "## Flush-bearing contacts (min-distance + bearing-area proof)", check: bearing}
+    - hardware_presence: {header: "## Connection hardware presence", cap: 13}
+    - derivation_log:
+        header: "## Construction Graph — derivation log"
+        preamble: "Every overlap/bond/hardware-presence/load-path fact for the thirteen declared joints (six butt_screwed cross ends, two cleat_screwed upright laps, two cleat_screwed gusset knees, three rail_cap_screwed runway straps) is generated from a declared Connection, recorded here with its source rule and confidence. The PIVOT is deliberately not a Connection — see the honest limits below:"
+        mode: per_connection
+        cap: 13
+    - findings: {header: "## Dimension checks (governing dims + declared pose asserted in-model)", check: dimension}
+    - prose: "## Result: **{result_verdict}**"
+    - bom_table: {header: "## Bill of materials"}
+    - prose: |
+        ## Rigging — the unmodeled half the machine needs (buy + build notes)
+
+        Everything here is deliberately NOT in the model (no soft-goods/rigging vocabulary — a recorded work order). It is half the machine; do not skip it.
+
+        - **Counterweight**: 2-gallon bucket + one 50lb bag of play sand. Drill two 3/8in holes through the arm's short end is NOT possible within this build's vocabulary honesty — instead: tie a 3ft loop of 550 paracord around the arm shaft 1.5in from the counterweight end using a constrictor/clove hitch seated hard, and hang the bucket bail from the loop with a carabiner or S-hook. The hitch IS the counterweight hinge. Keep total hang (hitch + bail + bucket) near 17.5in: the derived lowest point is {cw_low:g}in — {cw_clearance:g}in over the runway. If the bucket kisses the deck, shorten the hitch.
+        - **Tuning (the whole point of the bucket)**: tennis ball — fill the bucket (~25lb, ~190:1). Water balloon — start ~half (~12lb) and add sand until the lob is right; too much weight bursts the balloon at the whip.
+        - **Sling**: two 34in lengths of paracord + a pouch cut from canvas/tarp ~9x9in with the corners trimmed (a flattened diamond). One cord ties to a small hole punched in each pouch corner pair; the other ends: one tied through a 1/8in hole drilled at the arm tip (field drill — a rigging hole, disclosed as such), one ending in a 1in loop that slips over the RELEASE PIN.
+        - **Release pin**: a #10 x 2in screw driven into the arm tip's end grain, bent/angled ~30 degrees toward the throw side, 3/4in proud. The loop slips off this pin at release; bend it forward for earlier (higher) release, back for later (flatter). This is the range/angle knob.
+        - **Trigger**: two 1/4in eye lags into the rear cross member, one 1/4in eye lag into the arm's underside near the tip; cock the arm, line up the three eyes, slide a 3/8 x 6in bolt through all three as the pin, tie a pull cord to the bolt head. Everyone behind the machine, pull the cord.
+        - **Wax** the runway and the rod (candle stub or paste wax) — the pouch slides and the arm spins noticeably freer.
+
+        ## Operating safety (read before the first shot)
+        - The falling counterweight is the hazard: ~25lb dropping ~16in with a steel rod through wood. NOBODY inside the frame or beside the counterweight lane when cocked — cock it, load the pouch, clear everyone BEHIND the machine, pull the trigger cord from 10ft back.
+        - A cocked trebuchet is a loaded machine: never leave it cocked, never reach into the counterweight lane to adjust the pouch — uncock (lower the bucket by hand) first.
+        - The kids watch from behind; an adult cocks and fires. Tennis balls leave this machine fast enough to hurt at close range.
+        - First shots: half bucket, stand well back, watch the frame — if the uprights work loose at the laps, retighten and add a screw per lap.
+    - prose: |
+        ## Modeling assumptions & honest limits
+        - **The pivot is not a Connection.** detailgen has no pivot/journal joint word (recorded work order), so the arm-to-axle relationship is declared through the honest escape hatches: a through-hole probe (the rod clears both upright bores and the arm bore), tangency bonds/contacts (arm on rod, thrust washers on the arm faces), allowlisted nut-thread engagements, and the clamp-stack bearings on the uprights. No load-path or capacity claim rides those declarations.
+        - **The modeled pose is declared, not solved.** Arm level, hung tangent on the rod (centerline exactly one radial clearance below the axle line — asserted in the dimension checks). Kinematics, swing clearance over time, release dynamics, frame shock: ALL NOT ANALYZED — this build is the first MECHANISM in the ANALYSIS-v1 acceptance list. The counterweight's {cw_clearance:g}in runway clearance is derived arithmetic from the declared rigging drop, not a simulation.
+        - **Structural capacity: UNKNOWN — NOT ANALYZED.** The axle rod's bending under the dynamic bucket load, the lap screws under arm shock, the knee bracing under racking: none are analyzed (ANALYSIS-v1). The stock and screw counts follow the published prior art at this scale plus conservative hand sizing recorded in the task report — the DOC claims none of it.
+        - **Governing dims pinned.** Axle height {axle_h:g}in, arm {arm_len:g}in at {arm_ratio:g}:1, counterweight lane {clear_w:g}in — asserted in-model with literal expecteds and guarded by the e2e test. Detailing dims are free to tune.
+        - **Rigging is prose.** Sling, pouch, counterweight bucket, hitch, release pin, trigger: real BOM items, not modelable components (no flexible-element vocabulary — work order). The two field-drilled rigging holes (arm-tip sling hole, trigger eye pilot) are disclosed here, NOT in the cut plan: the fabrication vocabulary has no small-bore drill op on a placed assembly (work order #25 adjacent).
+        - **One bore per board is a vocabulary limit** (deck_board carries a single feature cut): the axle bores are the boards' one designed feature each; the counterweight hitch is a rope hitch partly BECAUSE a second bore cannot be expressed — disclosed as route-by-class honesty, with the multi-feature work order recorded.
+        - **The 5/4x6 stock is billed as PT decking** — the deck_board component's built-in profile (a species/grade register is CL v2 material). Untreated or cedar 5/4x6 is the same dimensions and nicer to handle on a machine you touch every shot; buy either.
+        - **The ground is EXISTING context**, modeled as a plain slab, self-grounded — not purchased, excluded from the buy list. The machine rests loose on it; slide/tip/walk under firing loads NOT ANALYZED (same honest rung as the stool's tip-over).

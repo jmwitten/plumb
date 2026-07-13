@@ -1,0 +1,133 @@
+# Visual-review findings store — sit-and-reach test box (task SITREACH).
+#
+# Per-detail store under the naming convention (<name>-findings.yaml), a sibling
+# of the stool/caddy/zipline stores, loaded by the SAME strict loader
+# (detailgen.review.load_findings_file): every field validated, resolutions
+# require evidence, unresolved is a legal persistent open state.
+#
+# Renders reviewed BY LOOKING: the shaded matplotlib views the renderer emits
+# (scripts/render_sitreach_views.py -> outputs/sit_reach_box/views/*.png). No
+# Blender/GPU path here; views are rasterized from the tessellated world solids —
+# the same geometry the GLB carries. Render refs carry no content_hash (no live
+# review manifest yet), so their staleness is honestly "unverifiable" until
+# re-reviewed against one.
+#
+# BINDING: findings are SUSPICIONS, never proof. Nothing here relaxes or gates an
+# invariant verdict; V3's honest resolution is the coverage matrix's existing
+# UNKNOWN, not a new clean claim.
+
+version: 1
+findings:
+  - id: V1
+    subject: butt-corner joinery unreadable from outside — panel faces occlude the joint
+    suspected_issue: >-
+      The first corner zoom (aimed at the +X back corner from outside) showed a
+      panel face filling the frame with NO readable butt-screw heads: the #10
+      heads are tiny against the big face and the painter-algorithm depth sort
+      loses them. The joint this build adds vocabulary for (butt_screwed) did not
+      visually read at all.
+    severity: MEDIUM
+    visual_evidence: >-
+      The first two z_corner attempts (outside oblique, wider oblique) rendered
+      the side panel as a solid wall; only top screws on the box rim were
+      visible. Re-aimed with the NEAR SIDE PANEL HIDDEN (plus floor and top),
+      z_corner.png now shows a butt screw's head hanging exactly where the
+      side's outside face was, with its shank visibly entering the front
+      panel's ply edge — and a top screw entering the panel's top edge as a
+      bonus rail_cap read.
+    renders:
+      - path: outputs/sit_reach_box/views/z_corner.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Keep the hidden-panel x-ray camera for the corner zoom (the stool's
+      z_cleat precedent); the general render-level auto-ghost rule for occluding
+      members remains unbuilt (same open item as stool V1 / caddy C1).
+    resolution:
+      status: fixed-by-revision
+      note: >-
+        Fixed at the render level: z_corner re-aimed (elev 10, azim -15) with
+        floor, top plate and the +X side panel hidden; committed in the render
+        script. No model change — a camera choice. The underlying auto-ghost
+        work item stays open in the stool/caddy stores; not duplicated here.
+  - id: V2
+    subject: existing-floor slab dominated the primary iso — the box read as a corner detail
+    suspected_issue: >-
+      With the first floor sizing (30x44in slab), the v1_iso frame was mostly
+      grey slab and the box occupied a small corner — the overhang-over-the-
+      sitter story the iso exists to tell was visually minor.
+    severity: LOW
+    visual_evidence: >-
+      First-pass v1_iso.png: slab fills ~60% of frame. After resizing the floor
+      (22x32in, a detailing dim — just enough to show the sitter's floor zone
+      under the 23cm overhang), the re-rendered v1_iso.png leads with the box
+      and the cantilever reads.
+    renders:
+      - path: outputs/sit_reach_box/views/v1_iso.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Size existing-context bodies to the story they support (enough floor to
+      show the sitter zone; not a room). Done here; a derived context-sizing
+      rule is Presentation-Graph material, not built.
+    resolution:
+      status: fixed-by-revision
+      note: >-
+        Floor detailing dims reduced 30x44x3 -> 22x32x2 in the spec; all views
+        re-rendered. No governing dim touched (guards green).
+  - id: V3
+    subject: box stability under test loads — could it slide or tip under heel push / hand pressure?
+    suspected_issue: >-
+      The tester's heels push the foot face horizontally and both hands press
+      down on the 23cm cantilever; the renders show a light open-bottom box
+      whose slide/tip behaviour under those loads nothing in the geometry
+      proves. Is stability represented, or silently assumed OK?
+    severity: MEDIUM
+    visual_evidence: >-
+      v2_side.png / z_overhang.png show the unsupported 9.055in overhang and
+      the plain wall footprint; nothing in the model proves slide/tip margins.
+    invariant_family: Support/Stability representation
+    renders:
+      - path: outputs/sit_reach_box/views/v2_side.png
+      - path: outputs/sit_reach_box/views/z_overhang.png
+    recommended_action: >-
+      Confirm the compiler does NOT silently pass stability: the coverage
+      matrix must show Support/Stability representation AND Structural capacity
+      as UNKNOWN — NOT ANALYZED, so the apparent risk is an honest non-claim.
+      Sit-and-reach box slide/tip is ANALYSIS-v1 acceptance material (in normal
+      use the sitter's own feet brace the box — stated as prose, never as a
+      proven claim).
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Verified in the coverage matrix: Support/Stability representation,
+        Load-path representation and Structural capacity all read "UNKNOWN —
+        NOT ANALYZED". The box declares no walking-surface rung (loose
+        floor-standing object), no support obligation is generated, and no
+        slide/tip number is claimed. The doc's honest-limits prose says exactly
+        this and routes the proof to ANALYSIS-v1.
+  - id: V4
+    subject: fastening reads structurally more than visually — #10 screw heads are tiny
+    suspected_issue: >-
+      The sixteen #10-class screws (eight capping the top plate, eight through
+      the butt corners) are physically small; at model scale the heads are
+      barely visible in the primaries, so a reader may not SEE the fastening
+      even though it is real.
+    severity: LOW
+    visual_evidence: >-
+      v4_top.png shows the eight top-screw stations only faintly; the butt
+      screws are invisible from outside (V1's subject) until the hidden-panel
+      zoom.
+    invariant_family: UNKNOWN
+    renders:
+      - path: outputs/sit_reach_box/views/v4_top.png
+      - path: outputs/sit_reach_box/views/z_corner.png
+    recommended_action: >-
+      Rely on the derivation log + hardware-presence table (which enumerate
+      every screw and its joint) to communicate the fastening; the render shows
+      placement, the tables prove presence.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Accepted with rationale (stool V4 precedent). The screws are REAL —
+        listed in the BOM, proven present by the hardware-presence check,
+        derived per-connection in the log. Small visual footprint is a property
+        of #10 hardware at scale, not a defect.

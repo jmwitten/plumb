@@ -1,0 +1,234 @@
+# Visual-review findings store (task VISREV).
+#
+# The durable, human-editable record of adversarial visual smell-test findings.
+# A reviewer appends suspicions here; the pipeline reads them into an honest
+# status block. Loaded strictly by detailgen.review.store — every field is
+# validated, and a resolution can never be asserted without its evidence.
+#
+# BINDING: findings are SUSPICIONS, never proof. `resolution.status: unresolved`
+# is a legal, persistent state — open work that never silently expires. It is
+# NOT the reviewer's job to close these by editing this file to "dismissed";
+# dismissal requires evidence, and F1's real resolution is the SUPPORT invariant.
+#
+# Seed set: the 6 findings from the first manual run
+# (.superpowers/sdd/visual-smelltest-interim.md, 2026-07-07). Render refs carry
+# no content_hash — that run predated the review manifest, so their staleness is
+# honestly "unverifiable" until a reviewer re-reviews against a live manifest.
+
+version: 1
+findings:
+  - id: F1
+    subject: platform / site overview — support at grade
+    suspected_issue: >-
+      The whole platform is carried by only TWO legs at the launch (right) end
+      landing on a concrete footing. The opposite (tree/left) end has NO legs to
+      grade. An occupied deck supported on one end only is a two-legged table —
+      it would rotate/tip toward the unsupported end and cannot stand with a
+      child on it.
+    severity: CRITICAL
+    visual_evidence: >-
+      platform_front.png — right end has two long legs on a gray footing block;
+      left end shows only the floating tree trunk and open air below the deck
+      beam. platform_iso.png / platform_iso_back.png / site_overview_iso.png
+      confirm no leg descends at the tree end.
+    renders:
+      - path: outputs/consolidated/renders/platform/platform_front.png
+      - path: outputs/consolidated/renders/platform/platform_iso.png
+      - path: outputs/consolidated/renders/platform/platform_iso_back.png
+      - path: outputs/consolidated/renders/site_overview/site_overview_iso.png
+    invariant_family: Load-path representation
+    recommended_action: >-
+      Confirm the SUPPORT invariant flags this as FAIL/UNKNOWN-BLOCK independent
+      of the render, and that the in-fix tree-end legs close it.
+    resolution:
+      status: covered-by-existing-invariant
+      note: >-
+        The SUPPORT invariant family (rung-3 support check) flags exactly this:
+        pre-STRUCT the deck walking_surface FAILs (tree end unsupported, -X by
+        42.3in). STRUCT task #19 closed it BY DESIGN — two tree-end 2x6 legs on
+        pier blocks support the tree end, and the residual tree apron (the living
+        trunk bars any foundation under X≈11) is a DECLARED cantilever — so the
+        support check now PASSES and require_clean opens the gate. The suspicion
+        is real and is now caught by a compiler invariant, not just the eye.
+    notes: >-
+      Resolved on branch sdd/struct: tree-end legs + per-post ground elevations +
+      declared tree-apron cantilever. Same invariant family as the motivating
+      missing-rear-support miss — now a passing SUPPORT verdict.
+  - id: F2
+    subject: tree_attachment detail
+    suspected_issue: >-
+      The detail named "tree attachment" shows two beams approaching the trunk
+      and stopping short with a clear AIR GAP on both sides, and NOTHING
+      connecting the platform to the tree — no clamp, bracket, strap, bolt, or
+      standoff. As drawn it does not depict how (or whether) the platform
+      attaches to or bears on the tree. The ~5" growth gap itself is
+      intentional/correct per directive, but a builder opening this detail learns
+      no connection method.
+    severity: MEDIUM
+    visual_evidence: >-
+      tree_attachment_top.png — black gap between each beam end and the trunk, no
+      connecting member. tree_attachment_iso.png / tree_attachment_front.png —
+      two beams pass beside a bare trunk with no hardware.
+    renders:
+      - path: outputs/consolidated/renders/tree_attachment/tree_attachment_top.png
+      - path: outputs/consolidated/renders/tree_attachment/tree_attachment_iso.png
+      - path: outputs/consolidated/renders/tree_attachment/tree_attachment_front.png
+    invariant_family: Load-path representation
+    recommended_action: >-
+      Either render the attachment hardware, or have the detail carry an explicit
+      "clearance only, no structural bearing on tree" annotation so the empty gap
+      is intentional, not an omission.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Intentional by design: the platform is FREE-STANDING (owner directive) —
+        nothing fastens to the live tree. The empty gap is the ~5" growth
+        clearance, an explicit design decision, not a missing connection. The
+        tree_attachment detail is reworked to a clearance-only view and the
+        platform doc states plainly that the beams pass the trunk with a growth
+        gap and never bear on it; the load path is legs → boulder/pier blocks, not
+        the tree. So "no structural attachment (clearance only)" is the documented
+        assumption the empty gap represents.
+  - id: F3
+    subject: trolley_launch detail
+    suspected_issue: >-
+      A trolley/pulley assembly with a horizontal cable and a hanging bar floats
+      in mid-air well above the launch frame, connected to nothing; the frame's
+      own span cable does not reach it. Reads as hardware suspended from an
+      invisible cable.
+    severity: LOW
+    visual_evidence: >-
+      trolley_launch_iso.png and trolley_launch_front.png — grey trolley body +
+      T-bar floating above the H-frame with a gap.
+    renders:
+      - path: outputs/consolidated/renders/trolley_launch/trolley_launch_iso.png
+      - path: outputs/consolidated/renders/trolley_launch/trolley_launch_front.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Confirm the reclassification lands and consider ghosting/labeling
+      illustrative hardware so it is not mistaken for a floating structural part.
+    notes: >-
+      Possible family is illustrative-vs-structural element classification —
+      rendered non-structural context should be visually distinguished (e.g.
+      ghosted). A NEW formal invariant for that remains a future candidate; for
+      THIS build the zipline hardware is handled as documented demonstration
+      context (below), so it is not forced into an ill-fitting existing family.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Resolved per owner ruling A3: the zipline system (wire, trolley wheel,
+        hanger, grab bar) is DEMONSTRATION context — rendered to show how the
+        platform is used, NOT an engineered part of this build. It is excluded
+        from the engineered BOM (classified existing/not-purchased) and the doc
+        labels it illustrative/non-engineered with its sizing/anchorage called an
+        engineer-of-record item. It does not gate require_clean; in the composed
+        site each of its 4 parts is declared `existing`+`grounded_by: site`, so it
+        SELF-GROUNDS as demonstration context — exempt from the floating check as
+        outside the constructed load paths. There is NO cable-to-trunk bond and it
+        does not "ground through the tree". A future "illustrative-vs-structural"
+        visual-distinction invariant is noted but NOT built tonight — honest
+        UNKNOWN on that axis, documented assumption on the scope.
+  - id: F4
+    subject: site overview / platform — tree context object
+    suspected_issue: >-
+      The tree trunk is a short cylinder whose bottom sits well above grade
+      (above the footing base), so the tree appears to float rather than enter
+      the ground. Illustrative context object, but visually reads as a floating
+      stump.
+    severity: LOW
+    visual_evidence: >-
+      platform_front.png — trunk bottom is at roughly mid-height of the legs,
+      clearly above the footing base; site_overview_iso.png confirms the trunk is
+      a floating cylinder.
+    renders:
+      - path: outputs/consolidated/renders/platform/platform_front.png
+      - path: outputs/consolidated/renders/site_overview/site_overview_iso.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Extend the trunk to grade or mark it schematic so it doesn't read as
+      floating.
+    notes: >-
+      Possible family is context/reference geometry should extend to or be
+      clipped at grade, or be marked schematic — a context object, not a
+      structural member. The CTXGROUND task added role-driven self-grounding for
+      exactly such context bodies; the trunk declares its context-grounding there.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        The trunk is an illustrative CONTEXT object (a living tree), not a
+        structural member — modeled from grade up to orient the renders, excluded
+        from the buy list. Its exact vertical registration is schematic/P1: with
+        per-post ground elevations the tree-end grade is ~1' above the launch
+        datum, so the trunk reads high relative to the launch footing in an
+        orthographic view. It is not "floating" structurally — the trunk is
+        declared `existing`+`grounded_by: site` (CTXGROUND), so it self-grounds as
+        a pre-existing site body and is exempt from the connectivity check. (It is
+        NOT held in by the deck: A6 opened a real 2" screened clearance gap, so the
+        old trunk-to-deck notch bonds are gone.) Treated as a documented schematic-
+        context assumption; a formal "context geometry meets grade" visual
+        invariant stays a future candidate.
+  - id: F5
+    subject: platform framing at tree end
+    suspected_issue: >-
+      A framing member projects horizontally past the deck edge toward the tree
+      and terminates in open air with no post, hanger, or bearing at its free
+      end. Consistent with the tree-end support scheme being incomplete (F1);
+      flagged separately in case the outrigger itself is meant to land on a
+      tree-end leg that is currently absent.
+    severity: MEDIUM
+    visual_evidence: >-
+      site_overview_iso.png and platform_iso.png — a beam sticks out to the left
+      past the deck with nothing under its tip.
+    renders:
+      - path: outputs/consolidated/renders/site_overview/site_overview_iso.png
+      - path: outputs/consolidated/renders/platform/platform_iso.png
+    invariant_family: Load-path representation
+    recommended_action: >-
+      Verify the tree-end leg fix lands under this outrigger's free end;
+      otherwise treat as an additional unsupported free-end flag.
+    notes: >-
+      Original severity was LOW–MEDIUM; recorded as MEDIUM (the conservative
+      higher grade). Same SUPPORT / free-end-bearing family as F1 — subsumed by
+      the STRUCT tree-end-legs fix.
+    resolution:
+      status: covered-by-existing-invariant
+      note: >-
+        Same root cause and same invariant as F1. The horizontal member reading
+        as an unsupported free end is the beam's tree overhang; STRUCT's tree-end
+        legs now land under the framing near the tree end, and the residual apron
+        past them is the DECLARED cantilever the SUPPORT check proves is the only
+        overhang (rung 3, adequacy an engineer-of-record item). The support
+        verdict PASSES, so this free-end suspicion is caught and resolved by the
+        compiler, not left to the eye.
+  - id: F6
+    subject: platform guarding
+    suspected_issue: >-
+      Guard/mesh panels appear on the two long sides only; both deck ends (tree
+      end and launch end) are open. The launch end is intentionally open; the
+      tree end being open on an elevated kids' platform is worth confirming as
+      intentional entry rather than a missing guard.
+    severity: LOW
+    visual_evidence: >-
+      platform_iso.png / platform_iso_back.png — panels on both long sides, no
+      panel across either short end.
+    renders:
+      - path: outputs/consolidated/renders/platform/platform_iso.png
+      - path: outputs/consolidated/renders/platform/platform_iso_back.png
+    invariant_family: Code compliance
+    recommended_action: >-
+      Confirm the open tree end is intended access, not an unguarded fall edge.
+    notes: >-
+      Guarding completeness on elevated walking surfaces (fall protection is a
+      code-compliance concern). Intentional design, not a stability issue.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Intentional by design, and the render pre-dated the current guard model.
+        The doc states plainly that the guard is CLOSED on the tree end and both
+        long sides (rail + welded-wire mesh, mesh wrapping to the trunk, no gap
+        over 4"); the ONLY opening is the strap gate at the LAUNCH edge, which is
+        the deliberate access/launch point (the ladder lands there). So the tree
+        end is guarded, not open. Fall-protection code compliance overall is NOT
+        evaluated here — it is called an engineer-of-record/code item — but the
+        specific "both ends open" suspicion is a documented, resolved assumption:
+        one end is guarded, the other is intentional access.

@@ -1,0 +1,4 @@
+{
+  "_doc": "The pinned site divergence set: every open FAILURE the compiled site model surfaces, each with the justification for why it is expected (deferred design). Exact-set-asserted by test_site_model.py; regenerate with `python scripts/regen_baselines.py` and review the diff — never hand-edit.",
+  "findings": []
+}

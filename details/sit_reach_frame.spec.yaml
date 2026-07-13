@@ -1,0 +1,326 @@
+# DetailSpec — SIT-AND-REACH test box, 2x4 FRAME variant (task SITFRAME).
+#
+# The owner's material constraint drives this revision of the five-panel ply box
+# (details/sit_reach_box.spec.yaml): plywood ONLY where sheet stock is genuinely
+# needed — the top plate, which IS the instrument (the scale/reach surface) — and
+# construction lumber for everything else. One 8-ft 2x4 yields the whole frame.
+#
+# The METROLOGY CONTRACT IS UNCHANGED and identical to the ply box: reach surface
+# at 12in, top plate overhanging the foot plane by EXACTLY 23cm (foot_line_cm /
+# 2.54 = 9.055in), President's Challenge / FitnessGram — scores compare to
+# published norms. Same register: FUNCTIONAL-DOMINANT measurement instrument.
+#
+# FRAME FORM (design pass FRAME-A, "legs are the footplates"): in the protocol the
+# tester's feet sit roughly shoulder-width apart — so the two FRONT LEGS, 2x4s
+# stood FLAT to the front plane, are themselves the foot bearing: two full-height
+# 3.5in-wide strips at exactly stance width (centers ~4.25in off centerline),
+# running floor to top plate with no gap at toe height. Two full-depth side rails
+# tie each front leg to its back leg — screwed flat through the rail's wide FACE
+# into each leg's narrow EDGE (long grain both sides; the legs' wide faces are
+# spent facing front/back, the front one IS the footplate, so the inward surface
+# is necessarily the edge); their front end grain lands flush in the foot plane.
+# The ply top
+# plate caps the four leg tops (rail_cap_screwed — genuinely END grain here,
+# unlike the ply box's edge-grain caveat) and bears on the two rail tops as
+# separately declared bearings. Open center between the leg strips, like every
+# frame box in the prior art — feet never land there.
+#
+# NEW VOCABULARY: NONE. Every joint is expressible honestly with existing words
+# (this is the point of the variant arc: the ply box bought plywood_panel +
+# butt_screwed; the frame spends them plus the original lumber vocabulary).
+#
+# GOVERNING dims PINNED (same protocol contract, same literal-expected discipline
+# from review-sitreach MINOR-1) and guarded by tests/test_sit_reach_frame_e2e.py.
+#
+# Datum: FLOOR top is Z=0. X = width across the box, Y = depth — the FOOT PLANE
+# is Y=0, the frame body extends +Y, the SITTER is at -Y (the top plate overhangs
+# to -Y). Z up.
+
+name: sit reach frame
+type: armchair_caddy
+units: in
+
+# --- GOVERNING dimensions (PINNED — the protocol contract) --------------------------
+params:
+  top_surface_h: 12.0     # reach surface height — universal across protocols
+  foot_line_cm: 23.0      # protocol constant (cm): scale reads this at the foot plane
+  box_depth: 12.0         # front (foot) plane to back plane
+  box_width: 12.0         # overall width; the two leg strips land at stance width
+
+  # --- DETAILING dimensions (free to tune) -------------------------------------
+  floor_x: 22.0
+  floor_y: 32.0
+  floor_h: 2.0
+  ply_thk: 0.75           # the ONLY plywood: the top plate
+  stud_thk: 1.5           # 2x4 dressed thickness
+  stud_w: 3.5             # 2x4 dressed width
+  # Representative structural screws (#10-class). Capacity NOT analyzed (ANALYSIS-v1).
+  screw_dia: 0.19
+  screw_len_v: 1.5        # plate cap screw: through 3/4 ply + 3/4 into leg end grain
+  screw_len_h: 3.0        # rail screw: through the 1.5 rail + 1.5 into the leg face
+
+# --- derived: every fit relationship, from the four governing dims ------------------
+derived:
+  foot_line_offset: "= foot_line_cm / 2.54"      # 9.0551 — the derived overhang
+  leg_h: "= top_surface_h - ply_thk"             # 11.25 — legs run floor to plate
+  top_len: "= box_depth + foot_line_offset"      # 21.055 — the top plate cut
+  outer_x: "= box_width / 2"                     # 6.0
+  leg_inner_x: "= outer_x - stud_w"              # 2.5 — leg strips span x [2.5, 6]
+  rail_inner_x: "= leg_inner_x - stud_thk"       # 1.0 — rails hug the legs' inner edges
+  rail_top_z: "= leg_h"                          # 11.25 — rails flush under the plate
+  rail_bot_z: "= leg_h - stud_w"                 # 7.75
+  leg_mid_x: "= leg_inner_x + stud_w / 2"        # 4.25 — cap-screw line over each leg
+  front_leg_mid_y: "= stud_thk / 2"              # 0.75
+  back_leg_mid_y: "= box_depth - stud_thk / 2"   # 11.25
+  rail_screw_mid_z: "= rail_bot_z + stud_w / 2"  # 9.5 — rail screw drive height
+
+components:
+  # EXISTING floor — plain slab, top at Z=0 (stool/caddy/ply-box pattern).
+  - id: floor
+    type: boulder
+    name: floor
+    params: {width: "$floor_y", length: "$floor_x", depth: "$floor_h"}
+
+  # LEGS — four 2x4s stood on end, FLAT to the front/back planes (3.5in face in
+  # X, 1.5in in Y). rotate [Y,-90]: length->Z (up), thickness->Y, width->-X.
+  # The FRONT pair is the FOOT BEARING: faces exactly in the plane Y=0.
+  - id: leg_fp
+    type: lumber
+    name: front leg +X (footplate)
+    params: {nominal: "2x4", length: "$leg_h"}
+    place: {raw: {at: ["$outer_x", "0 in", "0 in"], rotate: [["Y", -90]]}}
+  - id: leg_fm
+    type: lumber
+    name: front leg -X (footplate)
+    params: {nominal: "2x4", length: "$leg_h"}
+    place: {raw: {at: ["= -leg_inner_x", "0 in", "0 in"], rotate: [["Y", -90]]}}
+  - id: leg_bp
+    type: lumber
+    name: back leg +X
+    params: {nominal: "2x4", length: "$leg_h"}
+    place: {raw: {at: ["$outer_x", "= box_depth - stud_thk", "0 in"], rotate: [["Y", -90]]}}
+  - id: leg_bm
+    type: lumber
+    name: back leg -X
+    params: {nominal: "2x4", length: "$leg_h"}
+    place: {raw: {at: ["= -leg_inner_x", "= box_depth - stud_thk", "0 in"], rotate: [["Y", -90]]}}
+
+  # SIDE RAILS — two full-depth 2x4s laid flat against the legs' inner EDGES,
+  # flush under the top plate; each ties a front leg to its back leg. Their
+  # front end grain lands flush in the foot plane. rotate [Z,90]: length->Y,
+  # thickness->-X, width->Z (up).
+  - id: rail_pos
+    type: lumber
+    name: side rail +X
+    params: {nominal: "2x4", length: "$box_depth"}
+    place: {raw: {at: ["$leg_inner_x", "0 in", "$rail_bot_z"], rotate: [["Z", 90]]}}
+  - id: rail_neg
+    type: lumber
+    name: side rail -X
+    params: {nominal: "2x4", length: "$box_depth"}
+    place: {raw: {at: ["= -rail_inner_x", "0 in", "$rail_bot_z"], rotate: [["Z", 90]]}}
+
+  # TOP plate — the reach/scale surface, THE ONLY PLYWOOD. Identical geometry to
+  # the ply box: flush at the back, overhanging the foot plane by 23cm.
+  - id: top
+    type: plywood_panel
+    name: top plate (reach surface)
+    params: {length: "$top_len", width: "$box_width", thickness: "$ply_thk"}
+    place: {raw: {at: ["$outer_x", "= -foot_line_offset", "$leg_h"], rotate: [["Z", 90]]}}
+
+  # CAP screws — straight down through the top plate into each leg's top END
+  # grain (default shank -Z; head at the reach surface, countersink flush).
+  - id: cscrew_fp
+    type: structural_screw
+    name: cap screw front +X
+    params: {diameter: "$screw_dia", length: "$screw_len_v"}
+    place: {raw: {at: ["$leg_mid_x", "$front_leg_mid_y", "$top_surface_h"]}}
+  - id: cscrew_fm
+    type: structural_screw
+    name: cap screw front -X
+    params: {diameter: "$screw_dia", length: "$screw_len_v"}
+    place: {raw: {at: ["= -leg_mid_x", "$front_leg_mid_y", "$top_surface_h"]}}
+  - id: cscrew_bp
+    type: structural_screw
+    name: cap screw back +X
+    params: {diameter: "$screw_dia", length: "$screw_len_v"}
+    place: {raw: {at: ["$leg_mid_x", "$back_leg_mid_y", "$top_surface_h"]}}
+  - id: cscrew_bm
+    type: structural_screw
+    name: cap screw back -X
+    params: {diameter: "$screw_dia", length: "$screw_len_v"}
+    place: {raw: {at: ["= -leg_mid_x", "$back_leg_mid_y", "$top_surface_h"]}}
+
+  # RAIL screws — horizontal, through each rail's wide FACE into the leg's
+  # narrow EDGE (long grain both sides), two per corner: one high, one low within
+  # the rail's 3.5in band. +X side points +X (rotate [Y,-90]); -X side points -X
+  # (rotate [Y,90]). Heads sit on the rails' inner faces, inside the frame.
+  - id: rscrew_fp0
+    type: structural_screw
+    name: rail screw front +X hi
+    params: {diameter: "$screw_dia", length: "$screw_len_h"}
+    place: {raw: {at: ["$rail_inner_x", "$front_leg_mid_y", "10.5 in"], rotate: [["Y", -90]]}}
+  - id: rscrew_fp1
+    type: structural_screw
+    name: rail screw front +X lo
+    params: {diameter: "$screw_dia", length: "$screw_len_h"}
+    place: {raw: {at: ["$rail_inner_x", "$front_leg_mid_y", "8.5 in"], rotate: [["Y", -90]]}}
+  - id: rscrew_bp0
+    type: structural_screw
+    name: rail screw back +X hi
+    params: {diameter: "$screw_dia", length: "$screw_len_h"}
+    place: {raw: {at: ["$rail_inner_x", "$back_leg_mid_y", "10.5 in"], rotate: [["Y", -90]]}}
+  - id: rscrew_bp1
+    type: structural_screw
+    name: rail screw back +X lo
+    params: {diameter: "$screw_dia", length: "$screw_len_h"}
+    place: {raw: {at: ["$rail_inner_x", "$back_leg_mid_y", "8.5 in"], rotate: [["Y", -90]]}}
+  - id: rscrew_fm0
+    type: structural_screw
+    name: rail screw front -X hi
+    params: {diameter: "$screw_dia", length: "$screw_len_h"}
+    place: {raw: {at: ["= -rail_inner_x", "$front_leg_mid_y", "10.5 in"], rotate: [["Y", 90]]}}
+  - id: rscrew_fm1
+    type: structural_screw
+    name: rail screw front -X lo
+    params: {diameter: "$screw_dia", length: "$screw_len_h"}
+    place: {raw: {at: ["= -rail_inner_x", "$front_leg_mid_y", "8.5 in"], rotate: [["Y", 90]]}}
+  - id: rscrew_bm0
+    type: structural_screw
+    name: rail screw back -X hi
+    params: {diameter: "$screw_dia", length: "$screw_len_h"}
+    place: {raw: {at: ["= -rail_inner_x", "$back_leg_mid_y", "10.5 in"], rotate: [["Y", 90]]}}
+  - id: rscrew_bm1
+    type: structural_screw
+    name: rail screw back -X lo
+    params: {diameter: "$screw_dia", length: "$screw_len_h"}
+    place: {raw: {at: ["= -rail_inner_x", "$back_leg_mid_y", "8.5 in"], rotate: [["Y", 90]]}}
+
+# --- connections: the honest joinery (Construction-Graph edges) ---------------------
+connections:
+  # The top plate caps each leg's top END grain, screwed straight down —
+  # rail_cap_screwed's EXACT motivating semantics (support stands first, cap
+  # lands on its end grain; the ply box could only offer edge grain here).
+  - type: rail_cap_screwed
+    label: "top plate -> front +X leg top (screwed down)"
+    params: {n_screws: 1}
+    parts: [leg_fp, top]
+    hardware: [cscrew_fp]
+    assumptions: ["Screw bites the leg's top END grain; end-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
+  - type: rail_cap_screwed
+    label: "top plate -> front -X leg top (screwed down)"
+    params: {n_screws: 1}
+    parts: [leg_fm, top]
+    hardware: [cscrew_fm]
+    assumptions: ["Screw bites the leg's top END grain; end-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
+  - type: rail_cap_screwed
+    label: "top plate -> back +X leg top (screwed down)"
+    params: {n_screws: 1}
+    parts: [leg_bp, top]
+    hardware: [cscrew_bp]
+    assumptions: ["Screw bites the leg's top END grain; end-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
+  - type: rail_cap_screwed
+    label: "top plate -> back -X leg top (screwed down)"
+    params: {n_screws: 1}
+    parts: [leg_bm, top]
+    hardware: [cscrew_bm]
+    assumptions: ["Screw bites the leg's top END grain; end-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
+  # Each rail is screwed flat against its two legs' inner EDGES — the rail's
+  # wide FACE to the leg's narrow (1.5in) edge, LONG grain both sides (review-
+  # sitframe MAJOR-1: the legs' wide faces point front/back — the front one is
+  # the footplate — so the inward mating surface is necessarily the edge; edge
+  # and face are both side grain, far stronger in withdrawal than the end grain
+  # this joint class replaces, and stated exactly). The rail HOLDS the frame
+  # together (pull_out + shear); the plate's rest on the rail tops is a SEPARATE
+  # declared bearing, never smuggled through the fastener.
+  - type: cleat_screwed
+    label: "+X rail -> front +X leg inner edge (screwed, long grain)"
+    params: {n_screws: 2}
+    parts: [rail_pos, leg_fp]
+    hardware: [rscrew_fp0, rscrew_fp1]
+    assumptions: ["Screws pass through the rail's wide FACE and bite the leg's narrow EDGE — long grain both sides (unlike end grain); withdrawal not analyzed to a number here."]
+  - type: cleat_screwed
+    label: "+X rail -> back +X leg inner edge (screwed, long grain)"
+    params: {n_screws: 2}
+    parts: [rail_pos, leg_bp]
+    hardware: [rscrew_bp0, rscrew_bp1]
+    assumptions: ["Screws pass through the rail's wide FACE and bite the leg's narrow EDGE — long grain both sides (unlike end grain); withdrawal not analyzed to a number here."]
+  - type: cleat_screwed
+    label: "-X rail -> front -X leg inner edge (screwed, long grain)"
+    params: {n_screws: 2}
+    parts: [rail_neg, leg_fm]
+    hardware: [rscrew_fm0, rscrew_fm1]
+    assumptions: ["Screws pass through the rail's wide FACE and bite the leg's narrow EDGE — long grain both sides (unlike end grain); withdrawal not analyzed to a number here."]
+  - type: cleat_screwed
+    label: "-X rail -> back -X leg inner edge (screwed, long grain)"
+    params: {n_screws: 2}
+    parts: [rail_neg, leg_bm]
+    hardware: [rscrew_bm0, rscrew_bm1]
+    assumptions: ["Screws pass through the rail's wide FACE and bite the leg's narrow EDGE — long grain both sides (unlike end grain); withdrawal not analyzed to a number here."]
+
+# --- roles ---------------------------------------------------------------------------
+roles:
+  floor: {role: existing, grounded_by: site}
+
+# --- validation ----------------------------------------------------------------------
+# NO `ground:` terminal — loose object. The four legs' rest on the floor and the
+# plate's rest on the two rail tops are the declared bearing story; the plate's
+# seat on the leg ends is carried by the four rail_cap_screwed connections.
+validation:
+  bearings:
+    - {a: leg_fp, b: floor, axis: Z, area: 300}
+    - {a: leg_fm, b: floor, axis: Z, area: 300}
+    - {a: leg_bp, b: floor, axis: Z, area: 300}
+    - {a: leg_bm, b: floor, axis: Z, area: 300}
+    - {a: top, b: rail_pos, axis: Z, area: 400}
+    - {a: top, b: rail_neg, axis: Z, area: 400}
+  dimensions:
+    # GOVERNING protocol assertions with LITERAL expecteds (review-sitreach
+    # MINOR-1 discipline): these pin the PROTOCOL, not the parameter — a
+    # governing param drifted off the protocol goes RED here by mechanism.
+    - {name: "GOVERNING reach surface height = 12in", part: top, measure: zmax, expected: "12 in", tolerance: "0.02 in"}
+    - {name: "GOVERNING foot-line offset: top plate sitter edge 23cm (9.055in) forward of the foot plane", part: top, measure: ymin, expected: "= -(23 / 2.54)", tolerance: "0.02 in"}
+    - {name: "foot plane at Y=0: front +X leg (footplate) face", part: leg_fp, measure: ymin, expected: "0 in", tolerance: "0.02 in"}
+    - {name: "foot plane at Y=0: front -X leg (footplate) face", part: leg_fm, measure: ymin, expected: "0 in", tolerance: "0.02 in"}
+    - {name: "rail front end grain flush in the foot plane", part: rail_pos, measure: ymin, expected: "0 in", tolerance: "0.02 in"}
+    - {name: "GOVERNING box outer width = 12in", part: top, measure: xlen, expected: "12 in", tolerance: "0.02 in"}
+    - {name: "top plate length = box depth + foot-line offset", part: top, measure: ylen, expected: "= 12 + 23 / 2.54", tolerance: "0.02 in"}
+    - {name: "legs foot on the floor (Z=0)", part: leg_fp, measure: zmin, expected: "0 in", tolerance: "0.02 in"}
+
+# --- presentation ---------------------------------------------------------------------
+callouts:
+  - {param: top_surface_h, label: "HEIGHT {v}", p0: ["= outer_x + 1", "= box_depth / 2", 0], p1: ["= outer_x + 1", "= box_depth / 2", "$top_surface_h"]}
+  - {param: foot_line_offset, label: "FOOT LINE 23cm = {v}", p0: ["= outer_x + 1", 0, "$top_surface_h"], p1: ["= outer_x + 1", "= -foot_line_offset", "$top_surface_h"]}
+  - {param: box_depth, label: "DEPTH {v}", p0: ["= outer_x + 1", 0, 0], p1: ["= outer_x + 1", "$box_depth", 0]}
+
+export: {glb_tolerance: 0.1, glb_angular_tolerance: 0.15}
+
+doc:
+  sections:
+    - prose: |
+        # Sit-and-Reach Test Box (2x4 Frame) — Validation Report
+
+        The standard adult sit-and-reach flexibility box, built as a 2x4 FRAME under a plywood reach surface — the owner's material constraint (little plywood on hand) drives the form; the METROLOGY IS UNCHANGED from the five-panel ply variant: reach surface at {top_surface_h:g}in and a top plate overhanging the foot plane by exactly 23cm, so a centimeter scale laid from the sitter edge reads 23.0cm at the plane the feet press (President's Challenge / FitnessGram). The two FRONT LEGS are the footplates: 2x4s stood flat to the front plane, two full-height bearing strips at stance width. One 8-ft 2x4 yields the whole frame; the top plate is the only plywood. The frame rests on the floor by gravity; nothing fastens to the room. Deterministic computed placement is canonical.
+
+        ## Collision / interference
+        - Pairwise interference checks run: **{interference_checks}**
+        - Unintended collisions detected: **{interference_failures}**
+        - Screw-into-wood overlaps at the joints are expected and allowlisted.
+    - findings: {header: "## Flush-bearing contacts (min-distance + bearing-area proof)", check: bearing}
+    - hardware_presence: {header: "## Connection hardware presence", cap: 8}
+    - derivation_log:
+        header: "## Construction Graph — derivation log"
+        preamble: "Every overlap/bond/hardware-presence/load-path fact for the eight joints (four rail_cap_screwed capping the legs, four cleat_screwed rail-to-leg corners) is generated from a declared Connection, recorded here with its source rule and confidence:"
+        mode: per_connection
+        cap: 8
+    - findings: {header: "## Dimension checks (governing protocol dims asserted in-model)", check: dimension}
+    - prose: "## Result: **{result_verdict}**"
+    - bom_table: {header: "## Bill of materials"}
+    - prose: |
+        ## Modeling assumptions & honest limits
+        - **The protocol geometry is the contract — same as the ply variant.** Reach surface {top_surface_h:g}in and the 23cm foot line are PINNED with LITERAL in-model expecteds and guarded by the e2e test.
+        - **The legs are the footplates.** Feet sit roughly stance width apart in the protocol; the front legs' 3.5in faces run floor to plate at exactly that spacing, so soles bear on solid wood at full height (no toe-tip gap). The center between the strips is open — feet never land there; if a user with an unusual stance needs continuous width, add a 1x board across the legs (a revision, not modeled).
+        - **The measuring scale is a finishing step, not modeled geometry.** Lay a centimeter tape from the top plate's SITTER edge after finishing; the geometry guarantees the foot plane falls at 23.0cm. Verify after assembly.
+        - **The max-reach slider is a loose accessory, not modeled** (same open vocabulary/design item as the ply variant — any small block pushed along the top serves the protocol).
+        - **Loose object; slide/tip under test loads NOT ANALYZED.** Heel push and overhang hand-pressure are named ANALYSIS-v1 material; Support/Stability, Load-path capacity and Structural capacity are honestly NOT ANALYZED. The frame's racking stiffness (four cap screws + four two-screw rail corners) is likewise not analyzed to a number — glue the rail-to-leg joints (fabrication note) and hand-check for wobble before use.
+        - **Honest joinery.** The plate is `rail_cap_screwed` down into each leg's top END grain (this frame gives the word its true substrate — the ply box could only offer edge grain); each rail is `cleat_screwed` flat against its legs' inner EDGES — the rail's wide face to the leg's narrow edge, long grain both sides (the legs' wide faces are the front/back planes; the front one is the footplate) — holding the frame together while the plate's rest on the rail tops is a separately declared bearing. Glue every mating face (adhesive is not yet a declarable connection — advisory prose). Countersink the four cap screws FLUSH in the slide lane. The floor is EXISTING context, excluded from the buy list.

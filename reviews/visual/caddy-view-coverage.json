@@ -1,0 +1,35 @@
+{
+  "detail": "armchair_caddy",
+  "directive": "view-coverage-directive.md",
+  "note": "Auditable view-coverage decision table for the caddy (task 8). Each candidate area is scored on (1) installation complexity and (2) difficulty of seeing it from the primary whole-model views, then decided ZOOM or a recorded WHY-NOT. Audited BOTH directions: a high-complexity, poorly-visible area with no zoom and no why-not is a finding; a redundant zoom (mirror/simple/well-visible) is over-generation and is a why-not here. Renders: scripts/render_caddy_views.py -> outputs/armchair_caddy/views/.",
+  "context_treatment": "The sofa arm is a role:existing context body that OCCLUDES the subject (finding C1); the zoom variants (g1/g2/g3) are rendered with the arm HIDDEN so the joinery reads.",
+  "primary_views": [
+    {"id": "iso",   "file": "v1_iso.png",   "shows": "whole caddy saddling the arm (arm occludes; see g1_iso arm-hidden)"},
+    {"id": "front", "file": "v2_front.png", "shows": "straddle across the arm, cup-hole edge, both sides hanging free with clearance"},
+    {"id": "end",   "file": "v3_end.png",   "shows": "arm length, side-board 7in drop"},
+    {"id": "top",   "file": "v4_top.png",   "shows": "cup-hole opening + the four screw stations"}
+  ],
+  "candidate_areas": [
+    {"area": "cup-hole notch (top board interior)", "install": "MEDIUM", "primary_visibility": "MEDIUM",
+     "decision": "ZOOM", "view": "z1_cup.png (+ v4_top primary)",
+     "rationale": "a bored full-thickness notch — a fabrication op with interior geometry; the top primary shows the opening, the zoom shows the bore through the 1in board."},
+    {"area": "+X butt joint / 2-screw cluster into end grain", "install": "HIGH", "primary_visibility": "LOW",
+     "decision": "ZOOM", "view": "g2_joint.png (arm hidden)",
+     "rationale": "highest local density — a fabrication + fastening spot (2 screws, RailCapScrewed) — AND fully occluded by the arm in every oblique primary; needs an arm-hidden zoom."},
+    {"area": "-X butt joint / 2-screw cluster into end grain", "install": "HIGH", "primary_visibility": "LOW",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "mirror-identical to the +X joint about the Y-Z plane (a SymmetricAbout invariant would prove the reflection); one representative joint zoom suffices. A second identical zoom would be over-generation."},
+    {"area": "arm-clearance fit (side board vs arm, 0.25in gap)", "install": "MEDIUM", "primary_visibility": "LOW",
+     "decision": "ZOOM", "view": "z3_gap.png",
+     "rationale": "tolerance/fit-sensitive (the saddle drops on and lifts off by this gap); the thin gap is not readable in the whole-model primaries."},
+    {"area": "top-board <-> arm gravity bearing (the saddle contact)", "install": "LOW", "primary_visibility": "MEDIUM",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "a single flush bearing plane, no fabrication; the FRONT and END primaries already show the flush seating on the arm. A dedicated zoom would add nothing."},
+    {"area": "side-board free bottom ends", "install": "LOW", "primary_visibility": "HIGH",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "a plain square crosscut end, fully visible in FRONT/ISO; no fabrication, fit, or fastening complexity — a zoom would be over-generation."},
+    {"area": "screw-tip embedment into the side end grain (interior)", "install": "MEDIUM", "primary_visibility": "LOW",
+     "decision": "WHY-NOT", "view": null,
+     "rationale": "interior geometry with no section/cutaway capability in this render path; the ~1in embedment is VALIDATED (hardware-presence PASS + allowlisted screw-into-wood overlap), not drawn. Recorded as an honest render limitation, not a fabricated cutaway."}
+  ]
+}

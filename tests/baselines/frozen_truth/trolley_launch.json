@@ -1,0 +1,662 @@
+{
+  "_doc": "CURRENT-DESIGN determinism baseline for details/trolley_launch.spec.yaml, re-frozen from the SPEC path at base SHA 35e1a3693cc737bdd6b1bd1e18f75aea5e5a8d3f by scripts/refreeze_from_spec.py (task STRUCT #19 / addendum A2). The imperative path is gone (milestone 4B); this corpus IS the canonical record the compiled spec must reproduce byte-for-byte. The imperative-era testimony is retrievable at b52626b. Regenerate only with a justified, reviewed diff: python scripts/refreeze_from_spec.py.",
+  "bom": [
+    {
+      "assumptions": "Actual dressed dimensions (PS 20). Long edges eased r=0.06\"; end grain square.",
+      "dimensions": "2x6 x 63.5\"",
+      "ids": [
+        "lumber-0",
+        "lumber-1"
+      ],
+      "item": "PT 2x6 lumber",
+      "length_mm": 1612.8999999999999,
+      "material": "Pressure-treated lumber",
+      "qty": 2,
+      "source": "generated",
+      "stub_of": {
+        "full_dims": "2x6 x 63.5\" (continuous run)",
+        "modeled_dims": "2x6 x 63.5\"",
+        "note": "shown: 63.5\" modeled portion — full run in the platform detail"
+      }
+    },
+    {
+      "assumptions": "Actual dressed dimensions (PS 20).",
+      "dimensions": "2x6 x 33.0\"",
+      "ids": [
+        "lumber-2"
+      ],
+      "item": "PT 2x6 lumber",
+      "length_mm": 838.1999999999999,
+      "material": "Pressure-treated lumber",
+      "qty": 1,
+      "source": "generated",
+      "stub_of": {
+        "full_dims": "2x6 x 30.0\" (continuous run)",
+        "modeled_dims": "2x6 x 33.0\"",
+        "note": "models 33.0\" of stock for the 30.0\" finished run — full run in the platform detail"
+      }
+    },
+    {
+      "assumptions": "Strap/chain + carabiner represented as a flat webbing strap with a torus ring fused at each end — a simplified solid per the framework's straps/gates convention, not a literal buckle/carabiner mechanism. Width/thickness/ring size are assumed (the spec calls it 'short', no dimensions given).",
+      "dimensions": "1.00\" strap x 32.8\" span + 2 carabiner rings",
+      "ids": [
+        "strap_gate-0"
+      ],
+      "item": "Strap gate (safety strap + carabiner)",
+      "length_mm": null,
+      "material": "Galvanized steel",
+      "qty": 1,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Bent-tube grab handle simplified as straight standoff legs with spherical corner blends (no true tube-bend fillet). Mount height (between the 36in rail and the 46in-above-deck trolley bar) and all dimensions are this detail's own assumption — not given in the source drawing — since no handle height/size callout exists. Not a specific manufacturer SKU.",
+      "dimensions": "1.00\" dia grab handle, 10.00\" grip, 2.25\" standoff",
+      "ids": [
+        "grab_handle-0"
+      ],
+      "item": "Grab handle (galvanized)",
+      "length_mm": null,
+      "material": "Galvanized steel",
+      "qty": 1,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Thread represented as a revolved V-groove on the threaded zone; pitch exaggerated for legibility, not a fab spec.",
+      "dimensions": "0.25\" dia x 1.8\"",
+      "ids": [
+        "structural_screw-0",
+        "structural_screw-1"
+      ],
+      "item": "Structural Screw",
+      "length_mm": null,
+      "material": "Galvanized steel",
+      "qty": 2,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Pre-existing zipline cable, already installed and anchored to the tree — not purchased or fabricated as part of this build. Modeled as a short reference segment at the launch end only; diameter is an assumed representative size (no callout given).",
+      "dimensions": "0.31\" dia cable, 52.0\" shown",
+      "ids": [
+        "cable-0"
+      ],
+      "item": "Zipline cable (existing)",
+      "length_mm": null,
+      "material": "Galvanized steel",
+      "qty": 1,
+      "source": "existing — not purchased",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Pre-existing zipline trolley wheel — not purchased/fabricated here. Drawing shows a schematic circle with no callout; diameter/width are assumed representative sizes (visualization placeholders). Bore modeled smaller than the cable (no clearance) as a simplified 'wraps the cable' representation, not a real pulley-groove spec — allowlisted overlap.",
+      "dimensions": "3.00\" dia x 1.50\" wide wheel",
+      "ids": [
+        "trolley_wheel-0"
+      ],
+      "item": "Trolley wheel (existing)",
+      "length_mm": null,
+      "material": "Galvanized steel",
+      "qty": 1,
+      "source": "existing — not purchased",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Pre-existing hanger (rod/chain) — not purchased/fabricated here. Length is not directly dimensioned; derived as cable height minus grab-bar height, near the low end of the vault note's ~8-16in estimate. Modeled as a plain rod (chain links not represented).",
+      "dimensions": "0.38\" dia x 7.0\" hanger rod",
+      "ids": [
+        "hanger-0"
+      ],
+      "item": "Hanger (existing)",
+      "length_mm": null,
+      "material": "Galvanized steel",
+      "qty": 1,
+      "source": "existing — not purchased",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Pre-existing grab bar — not purchased/fabricated here. Drawing shows a schematic rounded bar with no callout; length/diameter are assumed representative sizes (visualization placeholders, ~16-18in typical).",
+      "dimensions": "1.00\" dia x 17.0\" grab bar, rounded ends",
+      "ids": [
+        "grab_bar-0"
+      ],
+      "item": "Grab bar (existing)",
+      "length_mm": null,
+      "material": "Zinc-plated steel",
+      "qty": 1,
+      "source": "existing — not purchased",
+      "stub_of": null
+    }
+  ],
+  "by_kind": {
+    "bearing": 1,
+    "contact": 7,
+    "dimension": 3,
+    "interference": 55
+  },
+  "captured_at_sha": "35e1a3693cc737bdd6b1bd1e18f75aea5e5a8d3f",
+  "connection_kind_types": [],
+  "content_fp": "d981132056af63ec58d991b0df83bf8dfbb69b15fdd8751a5fcbc3d0083f4d82",
+  "content_fp_divergence": {},
+  "content_fp_spec": "d981132056af63ec58d991b0df83bf8dfbb69b15fdd8751a5fcbc3d0083f4d82",
+  "counts": {
+    "bom_rows": 9,
+    "derivation_log": 0,
+    "formalized_stubs": 2,
+    "parts": 11
+  },
+  "findings": [
+    [
+      "bearing",
+      "launch post <-> grab handle",
+      true
+    ],
+    [
+      "contact",
+      "handle screw 0 <-> launch post",
+      true
+    ],
+    [
+      "contact",
+      "handle screw 1 <-> launch post",
+      true
+    ],
+    [
+      "contact",
+      "hanger <-> grab bar",
+      true
+    ],
+    [
+      "contact",
+      "hanger <-> trolley wheel",
+      true
+    ],
+    [
+      "contact",
+      "strap gate <-> far post",
+      true
+    ],
+    [
+      "contact",
+      "strap gate <-> launch post",
+      true
+    ],
+    [
+      "contact",
+      "trolley wheel <-> zipline cable",
+      true
+    ],
+    [
+      "dimension",
+      "grab bar height above end-joist top (~47in above joist / 46in above deck): grab bar <-> deck edge rim",
+      true
+    ],
+    [
+      "dimension",
+      "grab bar height above ground (~75in, drawing-vetted): grab bar",
+      true
+    ],
+    [
+      "dimension",
+      "hanger length (cable height minus bar height): zipline cable <-> grab bar",
+      true
+    ],
+    [
+      "interference",
+      "deck edge rim <-> grab bar",
+      true
+    ],
+    [
+      "interference",
+      "deck edge rim <-> grab handle",
+      true
+    ],
+    [
+      "interference",
+      "deck edge rim <-> handle screw 0",
+      true
+    ],
+    [
+      "interference",
+      "deck edge rim <-> handle screw 1",
+      true
+    ],
+    [
+      "interference",
+      "deck edge rim <-> hanger",
+      true
+    ],
+    [
+      "interference",
+      "deck edge rim <-> strap gate",
+      true
+    ],
+    [
+      "interference",
+      "deck edge rim <-> trolley wheel",
+      true
+    ],
+    [
+      "interference",
+      "deck edge rim <-> zipline cable",
+      true
+    ],
+    [
+      "interference",
+      "far post <-> deck edge rim",
+      true
+    ],
+    [
+      "interference",
+      "far post <-> grab bar",
+      true
+    ],
+    [
+      "interference",
+      "far post <-> grab handle",
+      true
+    ],
+    [
+      "interference",
+      "far post <-> handle screw 0",
+      true
+    ],
+    [
+      "interference",
+      "far post <-> handle screw 1",
+      true
+    ],
+    [
+      "interference",
+      "far post <-> hanger",
+      true
+    ],
+    [
+      "interference",
+      "far post <-> strap gate",
+      true
+    ],
+    [
+      "interference",
+      "far post <-> trolley wheel",
+      true
+    ],
+    [
+      "interference",
+      "far post <-> zipline cable",
+      true
+    ],
+    [
+      "interference",
+      "grab handle <-> grab bar",
+      true
+    ],
+    [
+      "interference",
+      "grab handle <-> handle screw 0",
+      true
+    ],
+    [
+      "interference",
+      "grab handle <-> handle screw 1",
+      true
+    ],
+    [
+      "interference",
+      "grab handle <-> hanger",
+      true
+    ],
+    [
+      "interference",
+      "grab handle <-> trolley wheel",
+      true
+    ],
+    [
+      "interference",
+      "grab handle <-> zipline cable",
+      true
+    ],
+    [
+      "interference",
+      "handle screw 0 <-> grab bar",
+      true
+    ],
+    [
+      "interference",
+      "handle screw 0 <-> handle screw 1",
+      true
+    ],
+    [
+      "interference",
+      "handle screw 0 <-> hanger",
+      true
+    ],
+    [
+      "interference",
+      "handle screw 0 <-> trolley wheel",
+      true
+    ],
+    [
+      "interference",
+      "handle screw 0 <-> zipline cable",
+      true
+    ],
+    [
+      "interference",
+      "handle screw 1 <-> grab bar",
+      true
+    ],
+    [
+      "interference",
+      "handle screw 1 <-> hanger",
+      true
+    ],
+    [
+      "interference",
+      "handle screw 1 <-> trolley wheel",
+      true
+    ],
+    [
+      "interference",
+      "handle screw 1 <-> zipline cable",
+      true
+    ],
+    [
+      "interference",
+      "hanger <-> grab bar",
+      true
+    ],
+    [
+      "interference",
+      "launch post <-> deck edge rim",
+      true
+    ],
+    [
+      "interference",
+      "launch post <-> far post",
+      true
+    ],
+    [
+      "interference",
+      "launch post <-> grab bar",
+      true
+    ],
+    [
+      "interference",
+      "launch post <-> grab handle",
+      true
+    ],
+    [
+      "interference",
+      "launch post <-> handle screw 0",
+      true
+    ],
+    [
+      "interference",
+      "launch post <-> handle screw 1",
+      true
+    ],
+    [
+      "interference",
+      "launch post <-> hanger",
+      true
+    ],
+    [
+      "interference",
+      "launch post <-> strap gate",
+      true
+    ],
+    [
+      "interference",
+      "launch post <-> trolley wheel",
+      true
+    ],
+    [
+      "interference",
+      "launch post <-> zipline cable",
+      true
+    ],
+    [
+      "interference",
+      "strap gate <-> grab bar",
+      true
+    ],
+    [
+      "interference",
+      "strap gate <-> grab handle",
+      true
+    ],
+    [
+      "interference",
+      "strap gate <-> handle screw 0",
+      true
+    ],
+    [
+      "interference",
+      "strap gate <-> handle screw 1",
+      true
+    ],
+    [
+      "interference",
+      "strap gate <-> hanger",
+      true
+    ],
+    [
+      "interference",
+      "strap gate <-> trolley wheel",
+      true
+    ],
+    [
+      "interference",
+      "strap gate <-> zipline cable",
+      true
+    ],
+    [
+      "interference",
+      "trolley wheel <-> grab bar",
+      true
+    ],
+    [
+      "interference",
+      "trolley wheel <-> hanger",
+      true
+    ],
+    [
+      "interference",
+      "zipline cable <-> grab bar",
+      true
+    ],
+    [
+      "interference",
+      "zipline cable <-> hanger",
+      true
+    ],
+    [
+      "interference",
+      "zipline cable <-> trolley wheel",
+      true
+    ]
+  ],
+  "findings_fp": "7385af05861520b2ea6ec6afb0972487a414b3e5e0f14ec333bc97db73d75817",
+  "geom_fingerprint": {
+    "deck edge rim": [
+      [
+        0.0,
+        0.0,
+        571.5
+      ],
+      4461378.174,
+      [
+        0.0,
+        0.0,
+        571.5,
+        838.2,
+        38.1,
+        711.2
+      ]
+    ],
+    "far post": [
+      [
+        876.3,
+        146.04999999999998,
+        0.0
+      ],
+      8581557.487978123,
+      [
+        838.1999999999999,
+        6.349999999999994,
+        -2.465190328815662e-32,
+        876.3,
+        146.05000000000015,
+        1612.9
+      ]
+    ],
+    "grab bar": [
+      [
+        419.09999999999997,
+        304.79999999999995,
+        1905.0
+      ],
+      210216.04282824908,
+      [
+        203.2,
+        292.09999999999997,
+        1892.3,
+        635.0,
+        317.49999999999994,
+        1917.7
+      ]
+    ],
+    "grab handle": [
+      [
+        0.0,
+        19.049999999999997,
+        1270.0
+      ],
+      183303.07154606853,
+      [
+        -1.4099832412739487e-15,
+        6.349999999999998,
+        1257.3,
+        69.85,
+        31.750000000000004,
+        1536.7
+      ]
+    ],
+    "handle screw 0": [
+      [
+        0.0,
+        41.91,
+        1270.0
+      ],
+      1595.1341639924583,
+      [
+        -44.450000100000004,
+        36.35374999999993,
+        1263.5841951336304,
+        4.127500000000001,
+        47.466250000000066,
+        1276.4158048663696
+      ]
+    ],
+    "handle screw 1": [
+      [
+        0.0,
+        41.91,
+        1524.0
+      ],
+      1595.1341639924583,
+      [
+        -44.450000100000004,
+        36.35374999999993,
+        1517.5841951336304,
+        4.127500000000001,
+        47.466250000000066,
+        1530.4158048663696
+      ]
+    ],
+    "hanger": [
+      [
+        419.09999999999997,
+        304.79999999999995,
+        1917.7
+      ],
+      12669.270438309635,
+      [
+        414.3375,
+        300.03749999999997,
+        1917.7,
+        423.86249999999995,
+        309.56249999999994,
+        2095.5
+      ]
+    ],
+    "launch post": [
+      [
+        0.0,
+        146.04999999999998,
+        0.0
+      ],
+      8581557.487978121,
+      [
+        -38.10000000000001,
+        6.349999999999994,
+        -2.465190328815662e-32,
+        5.284661597217738e-17,
+        146.05000000000015,
+        1612.9
+      ]
+    ],
+    "strap gate": [
+      [
+        3.175,
+        25.4,
+        1574.8
+      ],
+      49251.807820072914,
+      [
+        -1e-07,
+        6.349999900000001,
+        1555.7499999,
+        838.2000000999998,
+        44.4500001,
+        1593.8500001
+      ]
+    ],
+    "trolley wheel": [
+      [
+        419.09999999999997,
+        304.79999999999995,
+        2133.6
+      ],
+      346143.7441465096,
+      [
+        380.9999998999999,
+        266.69999989529447,
+        2095.4999999,
+        457.2000001,
+        342.9000001,
+        2171.7000000999997
+      ]
+    ],
+    "zipline cable": [
+      [
+        419.09999999999997,
+        304.79999999999995,
+        2133.6
+      ],
+      65357.34749921649,
+      [
+        415.13124999999997,
+        -355.6,
+        2129.63125,
+        423.06874999999997,
+        965.1999999999999,
+        2137.56875
+      ]
+    ]
+  },
+  "name": "trolley launch",
+  "ok": true
+}

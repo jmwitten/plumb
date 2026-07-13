@@ -1,0 +1,35 @@
+# CL-2 CONCEPTUAL acceptance test §7 Test 1 fixture — a board that must CLEAR a
+# trunk. The author declares ONLY "fit this board around the trunk with a growth
+# gap" — one `clearance_cut` relation, NO coordinates, NO hand notch center, NO
+# separate clearance check, NO overlap allowlist, NO callout. The compiler derives
+# ALL of: the board-local cut geometry (center from the trunk's placed position),
+# the ge growth-gap clearance invariant, the dimension callout anchor, the cut-list
+# / fabrication fact, and the affected-region edge. If any of those had to be
+# hand-authored, CL-2 would NOT have made the wrongness class ("placement and
+# clearance-check and prose disagree about the same notch", R14) impossible.
+name: clearance cut cat
+type: detail
+units: in
+params:
+  trunk_dia: 20.0
+  gap: 2.0
+  board_len: 48.0
+components:
+  # the live trunk — an existing self-grounded body at the world origin.
+  - id: trunk
+    type: tree_trunk
+    name: trunk
+    params: {diameter: "$trunk_dia", height: "24 in"}
+    place: {raw: {at: [0, 0, 0]}}
+  # the board, laid flat just above the trunk top, centered over the trunk axis in
+  # X and Y. It is fitted around the trunk by the ONE clearance_cut below — the
+  # author writes no cut center and no clearance number beyond the gap.
+  - id: board
+    type: deck_board
+    name: board
+    params: {length: "$board_len"}
+    place: {raw: {at: ["= -board_len/2", "= -5.5/2", "24 in"]}}
+    features:
+      - clearance_cut: {around: trunk, gap: $gap}
+roles:
+  trunk: {role: existing, grounded_by: site}

@@ -1,0 +1,23 @@
+# CL-1 CONCEPTUAL acceptance test §7 Test 2 fixture — a part mounted to another
+# by a construction RELATION (this face bearing flush on that face), NOT by
+# coordinates or a rotate. The compiler derives the placement transform (incl.
+# rotation), the bearing the relation implies, the dependency edge, and the doc
+# language — from the ONE mount. A raw transform is unnecessary; a hand-authored
+# bearing that could silently disagree with a hand transform is unwritable
+# (both are the same relation).
+name: mount bearing cat
+type: detail
+units: in
+params:
+  blk_len: 12.0
+  cleat_len: 6.0
+components:
+  - {id: block, type: lumber, name: block, params: {nominal: "2x8", length: "$blk_len"}}
+  - id: cleat
+    type: lumber
+    name: cleat
+    params: {nominal: "2x4", length: "$cleat_len"}
+    # inner face bears FLUSH on the block's face; centered along the block; base
+    # grounded at grade. The bearing is DERIVED from the relation KIND (flush =
+    # face-area registration) — not an authored knob.
+    place: {mount: {to: block, face: inner, axis: Y, flush: true, center: [X], ground: {above: 0 in}}}

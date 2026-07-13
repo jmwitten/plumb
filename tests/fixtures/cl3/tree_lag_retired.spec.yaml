@@ -1,0 +1,91 @@
+# CL-3 REPLAY C / CAT Test 3 fixture — a faithful reconstruction of the PRE-
+# TREEFREE tree-lag joint the design's REPLAY C retires. At master @a3c1941 the
+# real platform is already free-standing (TF-A hand-unwound the lag across ~15
+# files), so this fixture re-stands that joint to demonstrate the RETIRE mechanic
+# on it: a `bolted_clamp` "tree lag +Y" lag-bolting a tree-side cleat to the
+# platform beam. The free-standing redesign has moved the beam a growth gap CLEAR
+# of the tree, so the nut-side washer no longer bears on the beam — a real
+# `bearing` FAILURE the joint OWNS, PINNED by the attached `expect:` (the
+# deferred TREEFREE divergence). The lag passing through both plates and the head
+# washer seating into the cleat are DESIGNED overlaps (the escape-hatch
+# allowlist), so the ONLY open divergence is the pinned bearing. Retiring the
+# connection (the sibling tree_lag_retired.spec.yaml) unwinds this whole closure
+# — the bearings, the hardware findings, the evidence edges, AND the attached pin
+# — in ONE declaration, with 0 orphan pins.
+name: tree lag replayc
+type: detail
+units: in
+params:
+  beam_len: 24.0
+  cleat_len: 6.0
+  bolt_dia: 0.5
+  bw_id: 0.55
+  bw_od: 1.5
+  bw_thk: 0.125
+  grip_half: 1.5      # half the clamped stack thickness (cleat + beam faces)
+  clear_gap: 1.5      # the free-standing redesign's Y gap: the beam stands this
+                      # clear of the tree cleat, so the nut washer misses it.
+components:
+  # the tree-side cleat the lag clamps against; grounded at grade (it stands on
+  # the tree apron in the real detail — here it is the fixed near plate).
+  - id: cleat
+    type: lumber
+    name: "tree cleat"
+    params: {nominal: "2x4", length: "$cleat_len"}
+    place: {raw: {at: ["= -cleat_len/2", "0 in", "0 in"]}}
+  # the platform beam. Free-standing: it stands clear_gap PAST the cleat in Y, so
+  # the lag's nut-side washer no longer reaches it.
+  - id: beam
+    type: lumber
+    name: "beam +Y"
+    params: {nominal: "2x8", length: "$beam_len"}
+    place: {raw: {at: ["= -beam_len/2", "= 1.5 + clear_gap", "0 in"]}}
+  # the lag hardware: bolt + head washer + nut washer + nut, clamping along +Y.
+  - id: lag_bolt
+    type: hex_bolt
+    name: "lag bolt"
+    params: {diameter: "$bolt_dia", length: "6 in"}
+    place: {raw: {at: [0, "= 0.75 - grip_half - bw_thk", "2 in"], rotate: [["X", 90]]}}
+  - id: lag_wh
+    type: washer
+    name: "lag washer head"
+    params: {inner_diameter: "$bw_id", outer_diameter: "$bw_od", thickness: "$bw_thk"}
+    place: {datum: top, to: lag_bolt, to_datum: head_bearing}
+  - id: lag_wn
+    type: washer
+    name: "lag washer nut"
+    params: {inner_diameter: "$bw_id", outer_diameter: "$bw_od", thickness: "$bw_thk"}
+    place: {raw: {at: [0, "= 0.75 + grip_half", "2 in"], rotate: [["X", -90]]}}
+  - id: lag_nut
+    type: hex_nut
+    name: "lag nut"
+    params: {diameter: "$bolt_dia", label: "hex nut"}
+    place: {raw: {at: [0, "= 0.75 + grip_half + bw_thk", "2 in"], rotate: [["X", -90]]}}
+connections:
+  - type: bolted_clamp
+    label: "tree lag +Y"
+    params: {axis: Y, hardware_area: 20, end_plate_area: 60}
+    parts: [cleat, beam]
+    hardware: [lag_bolt, lag_wh, lag_wn, lag_nut]
+    surfaces: {lag_bolt: head_bearing}
+    expect:
+      # count: 2 — the free-standing redesign moves BOTH clamped plates off the
+      # lag axis, so BOTH washer bearings fail (nut washer <-> beam, head washer
+      # <-> tree cleat). The pin owns EXACTLY these two same-kind divergences; a
+      # THIRD bearing FAIL on this joint would be NEW (never silently absorbed).
+      - {check: bearing, count: 2, reason: "free-standing redesign (TREEFREE) stands the platform a growth gap clear of the tree; the lag is not installed, so NEITHER washer bears — the nut washer misses the beam and the head washer misses the tree cleat. Both deferred, pinned."}
+validation:
+  # DESIGNED overlaps (the escape-hatch allowlist): a lag bolt is MEANT to pass
+  # through both clamped plates, and the head washer seats into the near plate.
+  expected_overlaps:
+    - {a: lag_bolt, b: cleat}
+    - {a: lag_bolt, b: beam}
+    - {a: lag_wh, b: cleat}
+# THE ONE ADDED DECLARATION (REPLAY C): retire the tree lag. The connection block
+# above stays as audit (WHAT was there), inert to compilation; this record says it
+# is gone and WHY. The compiler withdraws the joint's ENTIRE derived closure — both
+# bearing findings, the four hardware-presence findings, the install-order/load-path
+# edges — and the attached `expect:` pin retires WITH it (0 orphans). No bearings:,
+# overlaps:, report prose, or golden was hand-unwound: deletion is the edit.
+retire:
+  - {connection: "tree lag +Y", reason: "free-standing redesign (TREEFREE): the platform bears on its legs + pier blocks, not the tree; the lag is not installed."}

@@ -1,0 +1,350 @@
+# Design-review findings store — armchair caddy (design-review pass, process-level v1).
+#
+# A SIBLING of caddy-findings.yaml (the visual-review store), loaded by the SAME
+# strict loader (detailgen.review.load_findings_file). The per-detail sibling
+# convention is sanctioned. These are DESIGN findings, not visual smell-tests:
+# each judges a construction choice against the pass's INTENT RULING (the caddy is
+# a MIXED piece whose DOMINANT register is AESTHETIC — living-room furniture in
+# plain sight, reference = walnut/maple butcher-block armrest table with NO
+# visible fasteners). They do NOT duplicate C1-C4 (render salience / stability /
+# cup-fit), which the visual pass already carries.
+#
+# invariant_family is UNKNOWN for all: aesthetic/design quality maps to NO
+# existing invariant family — it is exactly the MISSING family the future Design
+# Exploration Graph (DESIGN-0) would add. That is the directive-prized discovery
+# case, kept explicit rather than forced into an ill-fitting family.
+#
+# resolution: the OWNER picks the fix; the reviewer does not resolve by fiat.
+# D1 is FIXED (the hidden-cleat revision); D6 is FIXED (those cleats deepened into
+# full-depth 1x6 registration rails, restoring the lateral grip the D1 fix gave
+# up — see its resolution note); D2 is accepted-with-rationale (hardwood intent,
+# deferred to species vocabulary); D3, D4, D5 remain open design decisions the
+# owner has not ruled on. `renders` reuse the caddy view PNGs that show the issue
+# (no design-review manifest yet, so staleness is unverifiable — the same honest
+# state the sibling store carries).
+#
+# BINDING: findings are SUSPICIONS/RECOMMENDATIONS, never proof; nothing here
+# relaxes or gates an invariant verdict. The full argument, the intent ruling and
+# evidence, and the recommendation table live in task-designreview-report.md.
+
+version: 1
+findings:
+  - id: D1
+    subject: "structural screws land on the TOP SHOW face and bite side end grain (owner's catch)"
+    suspected_issue: >-
+      Four #10-class structural screws are driven straight DOWN through the top
+      board and their heads land on the Z=+1.0 top face — the single most-seen,
+      most-touched surface of the piece, flanking the cup hole a hand reaches
+      past every time. On an AESTHETIC-dominant living-room piece (reference: a
+      hardwood armrest table with NO visible fasteners anywhere) a fastener on
+      the show face is the cardinal defect. Going deeper than the surface catch:
+      the same screws land in the side boards' TOP END GRAIN, so withdrawal
+      capacity is markedly lower than long-grain (threads wedge between parallel
+      fibres that split rather than biting across them) — the spec itself flags
+      this and does not analyze it. The joint is therefore both the ugliest AND
+      the mechanically weakest way to make this connection: any upward, racking,
+      or lift-by-the-top load is resisted only by end-grain screw withdrawal.
+    severity: HIGH
+    visual_evidence: >-
+      Re-rendered after the fix: v4_top.png — the top face now shows only the cup
+      hole, NO screw heads (the four show-face screws are gone). g2_joint.png /
+      z2_joint.png — the corner now holds a hidden 1x2 cleat, screwed UP into the
+      top's underside and into the side's inner FACE (no end-grain screws). The
+      pre-fix renders showed four screw heads on the top face and screws running
+      down into the side's top end grain.
+    renders:
+      - path: outputs/armchair_caddy/views/v4_top.png
+      - path: outputs/armchair_caddy/views/g2_joint.png
+      - path: outputs/armchair_caddy/views/z2_joint.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Move the fastening off the show face AND out of pure end grain. Best
+      furniture answer: no visible fasteners — glue + clamps, dominoes/dowels, or
+      a housed dado in the top board's underside that captures each side and
+      resists racking. Next best: pocket screws driven UP from the side boards'
+      inner faces into the top board's underside (hidden, and into face grain of
+      the top). Cheapest visual-only patch: keep the screws but counterbore and
+      plug the heads (hides them, does NOT fix the end-grain weakness). See the
+      report's recommendation table for buildability against today's spec surface
+      (only screw REPOSITIONING is expressible now; every hidden/stronger JOINT
+      TYPE needs CL/FAB v2 vocabulary).
+    resolution:
+      status: fixed-by-revision
+      note: >-
+        FIXED by the cleat revision (branch sdd/cleat, commits 183a87d + 876af44,
+        2026-07-08). Two interior 1x2 cleats now fasten the top to the sides with
+        HIDDEN face-grain screws: each cleat is screwed UP into the top board's
+        underside AND horizontally into its side board's inner face, via the new
+        `cleat_screwed` connection type. The four top-face screws are DELETED — no
+        fastener is visible from above or outside (verified in the re-rendered
+        views), and none bites end grain (both substrates are FACE grain, stronger
+        in withdrawal). The top<->side end-grain GRAVITY SEAT is unchanged: it
+        stays a separately-declared bearing pair, because a cleat holds parts
+        together and is not a seat (`cleat_screwed` emits no bears_on). The site
+        validates CLEAN.
+    notes: >-
+      This is the owner's own catch, filed as finding #1 and taken deeper
+      (end-grain holding, joint direction). Distinct from visual finding C4:
+      C4 is that the screws are hard to SEE in the renders (a salience concern);
+      D1 is that the screws should not BE on the show face at all (a design
+      defect regardless of render quality).
+      RULING (2026-07-08, owner-delegated): hidden fasteners ADOPTED as the
+      recorded design intent (aesthetic-dominant piece). The earlier
+      not-expressible verdict has been RETIRED: the missing vocabulary is now
+      built. `rail_cap_screwed` and `toe_screwed` bake DIRECTION and SUBSTRATE
+      into their load semantics (a directional bears_on gravity seat + an
+      "end grain, screwed down" transfer_claim), so neither could honestly carry
+      a cleat screwed UP into FACE grain — reusing one would assert a bearing and
+      a substrate that do not exist (the "validate as geometry without honest
+      joint semantics" the review flagged, report §3 row D1b). Rather than lie,
+      the revision ADDED the honest type that was missing: `cleat_screwed`
+      (connection.py) claims EXACTLY what the mechanism does — face-grain screw
+      withdrawal (pull_out) + racking resistance (shear), NO gravity seat, NO
+      bears_on — and the caddy spec now uses it for all four top<->side joints.
+      This is the CL-vocab-from-design-review handoff realized for the D1 joint
+      type. To fit interior cleats clear of the arm (which fills the saddle
+      interior), the side boards move OUT one cleat thickness; the cleat then
+      holds the original 1/4in reveal off the arm, and the top board widens to
+      9.5in to span them (see the BOM in the build document).
+  - id: D2
+    subject: material / species — PT decking top + generic 1x6 sides for a living-room piece
+    suspected_issue: >-
+      The buy list reads "PT 5/4x6 decking" for the top board and "1x6 lumber"
+      (construction-grade SPF/pine) for the two visible sides. Against an
+      aesthetic-dominant ruling with a walnut/maple laminated butcher-block
+      reference this is a hard mismatch. Pressure-treated decking is an outdoor,
+      chemically treated (copper-azole class), often-damp, green/brown material
+      chosen for ground and weather contact — it is wrong indoors on appearance,
+      on skin/food/cup contact, and on intent; it never sees the conditions PT
+      exists for. Knotty construction 1x6 for the show sides reads as a shop jig,
+      not furniture. Critically, the spec comments show the species/grade was NOT
+      a design choice: it was forced by what the component library's nominal
+      table could express ("1x8/5/4x8 are not in the component library's nominal
+      table, so the design is SIMPLIFIED to the nearest real stock").
+    severity: HIGH
+    visual_evidence: >-
+      g1_iso.png — the whole three-board saddle; every visible surface is this
+      stock. Buy list / cut plan in the build document name "PT 5/4x6 decking"
+      and "1x6 lumber" explicitly.
+    renders:
+      - path: outputs/armchair_caddy/views/g1_iso.png
+      - path: outputs/armchair_caddy/views/v4_top.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Specify a furniture hardwood (walnut / maple / cherry) for all three
+      boards, one species for visual coherence; a laminated strip top if the
+      butcher-block look of the reference is wanted. HONESTY: species/grade is
+      NOT a first-class spec field today — the nominal table drives it — so this
+      needs component-library vocabulary (a species/grade attribute) to express.
+      BOM/cut-plan impact: the "PT 5/4x6 decking" and "1x6 lumber" buy lines
+      change stock class; a glue-up top changes the cut plan to strips.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        RULING (2026-07-08, owner-delegated): hardwood ACCEPTED as the recorded
+        design intent (walnut/maple, one species). ACCEPTED-WITH-RATIONALE, not
+        applied: species/grade is NOT a first-class spec field today — the
+        component library's closed nominal table drives stock, so "PT 5/4x6
+        decking" / "1x6 lumber" is what the model can say. Changing the BOM to a
+        hardwood species honestly needs component-library vocabulary (a
+        species/grade attribute), handed off to CL v1
+        (cl-vocab-from-design-review.md). The buy list is therefore kept as-built
+        and honest about the stock the model can express, not silently relabeled.
+  - id: D3
+    subject: cup-hole bore — raw unfinished wall, un-eased rim, floor is the sofa arm
+    suspected_issue: >-
+      The cup hole is a raw full-thickness cylindrical bore. Its wall is left
+      as-cut (Forstner/router marks through 1in of stock), its top rim is NOT
+      eased (the ease_radius reaches only the boards' long edges), and its floor
+      is the sofa arm's own top surface — so a set-down cup rests directly on the
+      upholstery through a locating ring and leaves a wet ring on the sofa. On an
+      aesthetic piece the most-touched edge in the whole design (where the hand
+      and the cup lip meet the board) is the one left sharp and unfinished.
+    severity: MEDIUM
+    visual_evidence: >-
+      z1_cup.png — into the bore: bare full-thickness wall, sharp top rim, arm
+      surface immediately below. v4_top.png — the arm shows straight through the
+      opening (no well floor).
+    renders:
+      - path: outputs/armchair_caddy/views/z1_cup.png
+      - path: outputs/armchair_caddy/views/v4_top.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Ease/round the cup-hole rim to match the eased-edge intent, and finish the
+      bore wall. If protecting the sofa matters, give the well a closed or lined
+      bottom (a shallow recess or a coaster insert) instead of boring through to
+      the arm — a design change, not a compiler-invariant issue. Rim-ease is a
+      fabrication-op parameter the spec cannot express today (ease applies to
+      board edges, not the bore); flag as CL/FAB v2.
+    resolution:
+      status: unresolved
+      note: ""
+    notes: >-
+      Distinct from visual finding C3: C3 asks the FUNCTIONAL question "does a cup
+      catch on the ring?" (resolved: intended). D3 is the AESTHETIC/finish and
+      collateral-damage concern — rim treatment, bore-wall finish, wet cup on the
+      upholstery — which C3 does not cover.
+      RULING: OPEN — the owner ruled only on D1/D2. Rim-ease and a closed/lined
+      well are NOT expressible today (ease reaches board edges, not the bore; a
+      closed well is different notch geometry) — CL/FAB v2, handed off.
+  - id: D4
+    subject: edge treatment + surface finish — minimal ease, un-eased ends, no finish specified
+    suspected_issue: >-
+      The eased edges (r=0.125") are a correct aesthetic gesture but under-scaled:
+      1/8in is a light knock-off, where a hand-held show piece reads and feels
+      more finished at 3/16-1/4in. The ease is also inconsistent — the cup-hole
+      rim and the side boards' bottom end-cuts are left square/sharp, so the
+      eased-edge intent is applied to some visible edges and not others. No
+      surface finish (oil/wax/poly) is specified at all, though the piece is
+      hand-touched and will take cup rings and stains.
+    severity: LOW
+    visual_evidence: >-
+      g1_iso.png — the light 1/8in ease and the square bottom ends of the side
+      boards. z1_cup.png — the sharp, un-eased cup-hole rim beside the eased
+      long edges.
+    renders:
+      - path: outputs/armchair_caddy/views/g1_iso.png
+      - path: outputs/armchair_caddy/views/z1_cup.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Increase the roundover, apply it consistently to every seen edge (long
+      edges, cup rim, and the side bottoms), and specify a food-safe hardwood
+      finish. Ease radius is expressible (ease_radius exists); applying it to the
+      bore rim and the end-cuts, and any finish/coating, are not — CL/FAB v2.
+    resolution:
+      status: unresolved
+      note: ""
+    notes: >-
+      RULING: OPEN — owner ruled only on D1/D2. Partly expressible: ease_radius
+      exists but reaches only the board LONG edges, not the bore rim or the
+      end-cuts, and there is no finish/coating field. The owner has not directed a
+      larger/consistent roundover, so NO geometry changed; the shortfall (rim/
+      end-cut ease, finish) is handed off to CL/FAB v2.
+  - id: D5
+    subject: visible butt-joint seam + plain slab sides vs the reference's continuous wrap
+    suspected_issue: >-
+      The top board simply caps the two sides, leaving a butt-joint seam line
+      running across the top of each outer side face. The reference is a
+      continuous butcher-block that WRAPS over the arm with no visible joint. The
+      sides are plain 1x6 slabs; grain direction and figure matching across the
+      three boards are unspecified, so a build could land mismatched or
+      cross-grained figure on a show piece. Minor beside D1/D2 but the same
+      register: the construction reads as assembled boards, not a resolved
+      furniture form.
+    severity: LOW
+    visual_evidence: >-
+      g1_iso.png / g2_joint.png — the top-of-side butt seam and the plain slab
+      side faces; no wrap, no figure continuity.
+    renders:
+      - path: outputs/armchair_caddy/views/g1_iso.png
+      - path: outputs/armchair_caddy/views/g2_joint.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Consider a mitered or rounded wrap over the arm to hide the seam, and
+      specify grain/figure orientation and matching across the boards. Grain
+      orientation and joint STYLE (miter vs butt) are not spec fields today —
+      CL/FAB v2 vocabulary.
+    resolution:
+      status: unresolved
+      note: ""
+    notes: >-
+      RULING: OPEN — owner ruled only on D1/D2. Joint STYLE (miter vs butt) and
+      grain/figure orientation are not spec fields today, so no honest change is
+      available; handed off to CL/FAB v2.
+  - id: D6
+    subject: "FIXED (1x6 registration rails): hidden-cleat revision had traded away lateral registration — the caddy rocked ~4.6x more freely on the arm (regression from the D1 fix)"
+    suspected_issue: >-
+      The D1 hidden-fastener revision moved the arm registration from the two
+      FULL-DEPTH side boards (inner faces 0.25in off the arm, registering the
+      caddy along a 5.5in x 7.0in face that runs the whole side) to two small 1x2
+      cleats (inner faces 0.25in off the arm, but registering along only a 4.0in x
+      1.5in face). To fit a 0.75in-thick cleat clear of the arm the side boards
+      stepped OUT from 0.25in to 1.0in off the arm (so the sides no longer touch/
+      register the arm at all — they hang free), and the top board widened 8in ->
+      9.5in to span them. Measured from the compiled model (world bounding boxes,
+      inches): before, the deepest registration point sat 7.0in below the arm-top
+      pivot; after, only 1.5in below it. A lateral bump tips the caddy about the
+      arm's top edge until a registration face re-engages the arm side across the
+      0.25in gap; that re-engagement angle is arctan(0.25/depth) — 2.05deg before,
+      9.46deg after (about 4.6x more rock), and the far show-corner of the top now
+      lifts ~1.29in at full rock versus ~0.25in before. Pure sideways SLIDE play is
+      unchanged (0.25in gap each side, both designs); the regression is entirely
+      ROTATIONAL. The wider top also lengthens the overhang lever that initiates
+      the rock (1.75in each side vs 1.0in). The center of mass is centered between
+      the registration faces and ~1.5in BELOW the arm top (empty), so the caddy
+      will not fall OFF — but that gravity centering is weak and erodes as a filled
+      cup raises the COM, leaving the shallow cleat as the only backstop. This is
+      the owner's architect's "shakes around the armrest": a real regression the
+      D1 fix introduced while correctly hiding the fasteners.
+    severity: HIGH
+    visual_evidence: >-
+      Compiled-geometry measurement, not a render claim (the compiler does NOT
+      analyze rocking — Support/Stability is NOT ANALYZED). Cleat +X inner face
+      X=3.25in (0.25in off the arm at X=3.0in), registration face Y[-2.0,2.0]=4.0in
+      x Z[-1.5,0]=1.5in = 6.0 sq in; side board +X inner face X=4.0in (1.0in off
+      the arm, non-registering); top board X[-4.75,4.75]=9.5in wide (1.75in overhang
+      each side beyond the 6in arm). Pre-revision (git 876af44^): side inner face
+      X=3.25in (0.25in off), registration face 5.5in x 7.0in = 38.5 sq in; top 8.0in
+      wide (1.0in overhang). g1_iso.png / g2_joint.png show the shallow corner
+      cleats and the free-hanging sides.
+    renders:
+      - path: outputs/armchair_caddy/views/g1_iso.png
+      - path: outputs/armchair_caddy/views/g2_joint.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Restore deep registration WITHOUT un-hiding any fastener: deepen the two
+      corner cleats into full-depth registration RAILS — nominal 1x6 (0.75 x 5.5in,
+      already in the stock table), dropped ~5.5in down the arm side in place of the
+      1.5in 1x2, with a second pair of side-screws added lower down. This is
+      expressible TODAY with zero new vocabulary (existing `cleat_screwed` joint +
+      existing 1x6 nominal); it restores the deepest registration point to 5.5in
+      below the pivot, cutting the rock angle from 9.46deg back to 2.60deg (the
+      pre-revision design was 2.05deg). Every screw stays interior and hidden (up
+      into the top underside + into the side inner face, both FACE grain). The
+      sides stay 1.0in off the arm and the top stays 9.5in: a 0.75in cleat still
+      needs that room, so "put the sides back to 0.25in" is NOT available without
+      changing the top<->side joint TYPE (a 0.75in cleat cannot fit the 0.25in slot
+      beside the arm — the original reason the revision pushed the sides out).
+      Residual: the 1.75in top overhang lever is unchanged (minor; it affects how
+      easily the rock starts, not its amplitude). A complementary, weaker option is
+      to declare a non-slip lining (felt/rubber on the inner registration faces) as
+      a documented field assumption — the commercial-caddy answer — but that leaves
+      stability an UNKNOWN resting on friction rather than restoring geometric
+      registration. See task-designreview2-report.md for the full option table.
+    resolution:
+      status: fixed-by-revision
+      note: >-
+        FIXED by the registration-rail revision (branch sdd/caddy5, commit 87b42b7,
+        2026-07-08). The two shallow 1x2 corner cleats are DEEPENED into full-depth
+        1x6 registration rails (dressed 0.75 x 5.5, dropping 5.5in down the arm
+        side), each gaining a second (lower) pair of side-screws, via the SAME
+        `cleat_screwed` joint — zero new vocabulary (1x6 is in the stock table). The
+        deepest registration point returns to 5.5in below the arm-top pivot,
+        cutting the reviewer's rigid-body rock angle from 9.46deg back to 2.60deg (a
+        hair off the pre-cleat 2.05deg). Verified from the compiled model: rail
+        inner face at X=3.25in (0.25in off the arm, reveal preserved), rail Z-extent
+        [-5.5, 0]. Every fastener stays interior and hidden (up into the top
+        underside + into the side inner face, both FACE grain); the top still bears
+        on the side end grain (unchanged, declared bearing). Sides stay 1.0in off
+        the arm, top stays 9.5in. Site validates CLEAN. HONEST RESIDUAL: no
+        stability NUMBER is proven — detailgen still has no rocking rung
+        (Support/Stability NOT ANALYZED); the rock angles are reviewer hand-geometry,
+        and the deferred fix for grading this class mechanically is ANALYSIS-v1
+        (below), which this finding remains the dataset for.
+    notes: >-
+      RULING (2026-07-08, owner-delegated via controller): FIX ADOPTED — deepen the
+      cleats into 1x6 registration rails (the report's Option a/d), applied on
+      branch sdd/caddy5. This finding is a REGRESSION introduced by the D1 fix
+      (branch sdd/cleat), surfaced by the owner's architect on 2026-07-08; it does
+      not reopen D1 (hidden fasteners stay ADOPTED) — it says the D1 fix must also
+      keep the registration deep, which the rail revision restores. The rock-angle numbers are REVIEWER hand-geometry
+      (rigid-body rotation about the arm-top edge) computed from the compiled world
+      bounding boxes, NOT a compiler verdict: detailgen has no rocking/stability
+      analysis, so no stability NUMBER is asserted as proven. This is exactly the
+      named ANALYSIS-v1 acceptance case — a future analysis IR should derive
+      registration-gap + registration-depth -> rock-angle so the compiler can grade
+      this class of stability regression mechanically (today it passes CLEAN while a
+      furniture maker feels the wobble in one bump). The recommended 1x6-rail fix
+      needs NO new vocabulary, so per the vocabulary-gap-directive there is no gap
+      to file for the fix itself; the missing WORD is the analysis (stability/
+      rocking), routed to ANALYSIS-v1, not to CL/FAB.

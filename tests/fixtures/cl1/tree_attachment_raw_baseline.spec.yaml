@@ -1,0 +1,143 @@
+# DetailSpec — tree-clearance close-up (Witten dacha zipline platform).
+#
+# The platform is free-standing: it bears on posts and pier blocks, not on the live
+# tree. This sheet is the tree-clearance close-up — the twin 2x6 beam run passes the
+# trunk with a growth gap on each side, so the tree can sway and add girth without
+# touching the structure. The tree's only structural role is the future cable anchor
+# (deferred to the model). This sheet models the trunk as context + the two beam
+# stubs' trunk-region portion — enough to (a) dedup the trunk to the platform's real
+# trunk node and (b) bind each beam stub onto the platform's REAL continuous beam, so
+# the Y-growth-clearance invariant (platform detail: beam inner face clears the trunk
+# by >= growth_gap) runs against the real member. The two short tree-end posts + pier
+# blocks that carry this end are PLATFORM parts; this sheet owns their close-up VIEW,
+# not their geometry.
+#
+# Value language: see details/rock_anchor.spec.yaml's header + detailgen/spec/
+# values.py. A bare number is dimensionless / internal-mm; "$name"/"= expr" is a
+# LENGTH in authoring units; "8 in" an explicit quantity.
+#
+# GEOMETRY + BOM equivalence to tree_attachment.py is byte-identical (see
+# tests/test_tree_attachment_spec.py: 3 parts, transforms <=1e-6, BOM identical).
+
+name: tree attachment
+type: tree_attachment
+units: in
+
+# --- author intent: the modeled dimensions of the detail (inches) ------------
+params:
+  trunk_dia: 20.0        # live trunk diameter at the attach zone
+  # TREEFREE task #19: the modeled trunk rises to the CABLE-ANCHOR height purely as
+  # DEMONSTRATION geometry — it shows where the real (separate, deferred, non-
+  # engineered) zipline cable lag-anchors up here (~96"). The model does NOT bond
+  # the cable to the trunk: the trunk is a pre-EXISTING context body that self-
+  # grounds (CTXGROUND `existing` role), and the hanging hardware self-grounds the
+  # same way — neither grounds "through the tree" via a bond. The trunk still grows
+  # past the deck (Z=28..29, notched around by the platform) on its way up. P1:
+  # field-verify the exact anchor height + tree-saver/lag hardware before rigging.
+  trunk_h: 96.0          # modeled trunk segment height = the cable-anchor zone
+  growth_gap: 5.0        # per-side beam-inner-face-to-trunk clearance (sway + growth
+                         # allowance) = the platform's as-built inner_y - trunk_dia/2
+                         # = 5"; the platform's invariant requires this stay >= 4"
+  beam_len: 24.0         # modeled beam stub length (full run is platform's)
+  full_beam_len: 60.0    # platform's continuous beam this stub is part of
+                         # (presentation metadata only, via stub_of)
+  beam_z: 22.5           # world height of the beam's bottom edge (matches the
+                         # platform's real beam underside 29-1-5.5)
+
+# --- derived dimensions ------------------------------------------------------
+derived:
+  beam_inner_y: "= trunk_dia / 2 + growth_gap"   # beam inner face Y = the platform's
+                                                 # real inner_y (15"): a growth gap
+                                                 # clear of the trunk surface
+
+# --- components + placement --------------------------------------------------
+# The trunk is a global-measurement context body (identity at origin, the ground
+# datum). Each beam stub is a plain 2x6 (a stub_of the platform's continuous run),
+# positioned by a global measurement — its inner face a growth gap clear of the
+# trunk surface (the real beam Y); the -Y beam is spun 180 about Z so its inner face
+# turns to the trunk from the far side. In-site both stubs bind to the platform's
+# real beams; standalone they stand OFF the trunk, showing the true clearance.
+components:
+  - id: trunk
+    type: tree_trunk
+    name: trunk
+    params: {diameter: "$trunk_dia", height: "$trunk_h"}
+    # no placement -> identity at the origin (ground datum)
+
+  - id: beam_pY
+    type: lumber
+    name: "beam +Y"
+    params:
+      nominal: "2x6"
+      length: "$beam_len"
+      treated: true
+      ease_radius: "0.125 in"
+      full_length: "$full_beam_len"
+    place: {raw: {at: ["= -beam_len/2", "$beam_inner_y", "$beam_z"]}}
+  - id: beam_mY
+    type: lumber
+    name: "beam -Y"
+    params:
+      nominal: "2x6"
+      length: "$beam_len"
+      treated: true
+      ease_radius: "0.125 in"
+      full_length: "$full_beam_len"
+    place: {raw: {at: ["= beam_len/2", "= -beam_inner_y", "$beam_z"], rotate: [["Z", 180]]}}
+
+# --- validation --------------------------------------------------------------
+# A clearance close-up declares no connectivity graph: the trunk is context and the
+# two beam stubs are placed by independent global measurement, each standing a
+# growth gap clear of the trunk — nothing bears or bonds in this fragment (the beams
+# are carried by the platform, off this sheet), so there is no ground/floating check
+# to run here. The pairwise no-collision sweep + the trunk-diameter dimension are
+# the invariants this sheet owns. In-site each stub binds to the platform's real
+# beam, which the platform grounds through the legs to the boulder.
+validation:
+  dimensions:
+    - name: "trunk diameter"
+      part: trunk
+      measure: xlen
+      expected: "$trunk_dia"
+      tolerance: "0.02 in"
+
+# --- presentation surfaces (task 4B-2) ---------------------------------------
+# Param-derived callout: the DIA label + its two endpoints track trunk_dia/trunk_h
+# (a re-sized trunk moves both). Explode offsets are authored in internal mm
+# (= expr -> * IN), keyed by component id -> display name. The report is the same
+# markdown tree_attachment.py's _write_report wrote, as an ordered section list.
+callouts:
+  - {param: trunk_dia, label: "~{v} DIA", p0: ["= -trunk_dia/2", 0, "= trunk_h"], p1: ["= trunk_dia/2", 0, "= trunk_h"]}
+  # Per-side clearance: trunk surface (+Y radius) out to the beam inner face. The
+  # label reports growth_gap, so the number tracks the beam placement it dimensions.
+  - {param: growth_gap, label: "~{v} GROWTH GAP", p0: [0, "= trunk_dia/2", "$beam_z"], p1: [0, "= trunk_dia/2 + growth_gap", "$beam_z"]}
+
+explode:
+  - {id: trunk, vector: ["= 0", "= 0", "= 0"]}
+  - {id: beam_pY, vector: ["= 0", "= 6", "= 0"]}
+  - {id: beam_mY, vector: ["= 0", "= -6", "= 0"]}
+
+export: {glb_tolerance: 0.08, glb_angular_tolerance: 0.12, inject_explode: true}
+
+doc:
+  sections:
+    - prose: |
+        # Tree Clearance — Validation Report
+
+        Tree-clearance close-up for the free-standing dacha zipline platform, generated by the `detailgen` parametric library. The platform bears on posts and pier blocks, not on the live tree; the twin 2x6 beam run passes the trunk with a growth gap on each side so the tree can sway and grow without touching the structure. The tree's only structural role is the (deferred-to-model) cable anchor.
+
+        ## Modeling the round-trunk clearance honestly
+        - The trunk is round and un-notched. Each beam inner face stands a growth gap clear of the trunk surface, so the beams never touch the live tree.
+        - That per-side clearance is proven in the platform detail as the Y-growth-clearance invariant (beam inner face clears the trunk by >= growth_gap), run against the real continuous beam.
+
+        ## Collision / interference
+        - Pairwise interference checks run: **{interference_checks}**
+        - Unintended collisions: **{interference_failures}**
+    - findings: {header: "## Dimension checks", check: dimension}
+    - prose: "## Result: **{result_verdict}**"
+    - bom_table: {header: "## Bill of materials"}
+    - prose: |
+        ## Modeling assumptions & known limitations
+        - The beams clear the live trunk; the platform is free-standing — posts and pier blocks (platform detail) carry the tree end.
+        - The trunk is an exact cylinder (clean validation/ground body); the real trunk is irregular and grows — the deck cutout + growth gap (platform detail) accommodate that.
+        - Beams are modeled as trunk-side stubs; the full run, joists (1" bark clearance), deck (notched around the trunk) and rails are the platform detail. The beam underside sits at 22.5" to match platform.py's real beam height, so the two details share one beam datum. Trunk dia (20") also matches the platform detail's shared trunk param.

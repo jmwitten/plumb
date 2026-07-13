@@ -1,0 +1,439 @@
+# DetailSpec — leg-to-boulder rock anchor (Witten dacha zipline platform).
+#
+# The same detail as details/rock_anchor.py, authored declaratively. A
+# pressure-treated 2x6 platform leg anchored to a natural boulder by two epoxied
+# 1/2" all-thread rods, clamped by a pair of galvanized 3x3x1/4 steel angles
+# with leveling/lock-nut stacks, and cross-bolted through the leg with two 3/8"
+# thru-bolts. The leg is held 1/2" clear of the rock so its end grain never
+# sits in water.
+#
+# Value language (see detailgen/spec/values.py):
+#   * a bare number / string / bool is passed through unchanged (a nominal size,
+#     an axis letter, a bearing area in mm², a rotate angle in degrees);
+#   * "$name"    -> the value of a param/derived dimension (authoring units);
+#   * "= expr"   -> arithmetic over params/derived (authoring units);
+#   * "8 in"     -> an explicit quantity in inches / mm / ft.
+# Directives ($ / = / unit-suffixed) always denote a LENGTH, resolved to the
+# package-internal millimetre; everything derivable (placements, bearings,
+# install order, BOM) is derived by the compiler, not written here.
+
+name: rock anchor
+type: rock_anchor
+units: in
+
+# --- author intent: the ~two dozen dimensions of the detail (inches) ---------
+params:
+  rod_dia: 0.5
+  rod_embed: 8.0
+  rod_stick: 2.75
+  rod_sp: 4.5
+  hole_dia: 0.625
+  leg_gap: 0.5
+  ang_leg: 3.0
+  ang_thk: 0.25
+  ang_len: 3.5
+  flange_hole: 0.6875
+  nut_h: 0.4375
+  jam_h: 0.3125
+  fw_od: 1.5
+  fw_id: 0.5625
+  fw_thk: 0.08
+  lev_nut_z: 0.8
+  bolt_dia: 0.375
+  bolt_dx: 0.75
+  bolt_up: 2.4
+  bw_od: 0.812
+  bw_id: 0.406
+  bw_thk: 0.065
+  rock_w: 9.0
+  rock_l: 12.0
+  rock_d: 11.0
+  leg_full_len: 63.5                        # platform's continuous launch leg this
+                                             # stub is the base of (presentation only)
+
+# --- derived dimensions: relationships the compiler resolves (and logs) ------
+derived:
+  leg_face_y: 0.75                          # half of the 1.5" leg thickness
+  rod_y: "= rod_sp / 2"                      # rod offset off the leg centreline
+  rod_len: "= rod_embed + rod_stick"        # total rod length
+  flange_bot: "= lev_nut_z + nut_h + fw_thk"  # angle base flange underside Z
+  bolt_z: "= leg_gap + bolt_up"             # thru-bolt height above the rock
+  grip_half: "= leg_face_y + ang_thk"       # half the clamped sandwich width
+  leg_hx: "= bolt_z - leg_gap"              # bolt hole height in the leg's frame
+  blen: "= 2*grip_half + 2*bw_thk + 0.45"   # thru-bolt length (sandwich + take-up)
+
+# --- components + placement --------------------------------------------------
+# Order is build order: a mate may only seat on a part declared before it.
+components:
+  # boulder + epoxy + rods ----------------------------------------------------
+  - id: boulder
+    type: boulder
+    name: boulder
+    params:
+      width: "$rock_w"
+      length: "$rock_l"
+      depth: "$rock_d"
+      holes:
+        - ["0 in", "$rod_y", "$hole_dia", "$rod_embed"]
+        - ["0 in", "= -rod_y", "$hole_dia", "$rod_embed"]
+    # no placement -> identity at the origin (rock pad plane at Z=0)
+
+  - id: epoxy_0
+    type: epoxy
+    name: "epoxy 0"
+    params: {hole_diameter: "$hole_dia", rod_diameter: "$rod_dia", depth: "$rod_embed"}
+    place: {datum: top, to: boulder, to_datum: hole_0_top}
+  - id: rod_0
+    type: threaded_rod
+    name: "rod 0"
+    params:
+      diameter: "$rod_dia"
+      length: "$rod_len"
+      thread_zones: [["= rod_embed - 1", "$rod_len"]]
+    place: {datum: bottom, to: boulder, to_datum: hole_0_bottom}
+  - id: epoxy_1
+    type: epoxy
+    name: "epoxy 1"
+    params: {hole_diameter: "$hole_dia", rod_diameter: "$rod_dia", depth: "$rod_embed"}
+    place: {datum: top, to: boulder, to_datum: hole_1_top}
+  - id: rod_1
+    type: threaded_rod
+    name: "rod 1"
+    params:
+      diameter: "$rod_dia"
+      length: "$rod_len"
+      thread_zones: [["= rod_embed - 1", "$rod_len"]]
+    place: {datum: bottom, to: boulder, to_datum: hole_1_bottom}
+
+  # +Y rod hardware stack: leveling nut -> lower washer -> angle -> upper
+  # washer -> lock nut -> jam nut. The leveling nut is threaded to a hand-set
+  # height (a free DOF), so it is a raw placement off the global stack height;
+  # every course above it seats on the part below by datum mate.
+  - id: leveling_nut_0
+    type: hex_nut
+    name: "leveling nut 0"
+    params: {diameter: "$rod_dia", height: "$nut_h", label: "leveling nut"}
+    place: {raw: {at: ["0 in", "$rod_y", "$lev_nut_z"]}}
+  - id: fender_washer_lo_0
+    type: washer
+    name: "fender washer lo 0"
+    params: {inner_diameter: "$fw_id", outer_diameter: "$fw_od", thickness: "$fw_thk", fender: true}
+    place: {datum: base, to: leveling_nut_0, to_datum: top}
+  - id: angle_0
+    type: angle_bracket
+    name: "angle 0"
+    params:
+      leg1: "$ang_leg"
+      leg2: "$ang_leg"
+      thickness: "$ang_thk"
+      length: "$ang_len"
+      holes_base: [["0 in", "= rod_y - leg_face_y", "$flange_hole"]]
+      holes_up:
+        - ["$bolt_dx", "= bolt_z - flange_bot", "= bolt_dia + 0.02"]
+        - ["= -bolt_dx", "= bolt_z - flange_bot", "= bolt_dia + 0.02"]
+    place: {datum: base_hole_0_bottom, to: fender_washer_lo_0, to_datum: top, rotate: 0}
+  - id: fender_washer_up_0
+    type: washer
+    name: "fender washer up 0"
+    params: {inner_diameter: "$fw_id", outer_diameter: "$fw_od", thickness: "$fw_thk", fender: true}
+    place: {datum: base, to: angle_0, to_datum: base_hole_0_top}
+  - id: lock_nut_0
+    type: hex_nut
+    name: "lock nut 0"
+    params: {diameter: "$rod_dia", height: "$nut_h", label: "lock nut"}
+    place: {datum: base, to: fender_washer_up_0, to_datum: top}
+  - id: jam_nut_0
+    type: hex_nut
+    name: "jam nut 0"
+    params: {diameter: "$rod_dia", height: "$jam_h", label: "jam nut"}
+    place: {datum: base, to: lock_nut_0, to_datum: top}
+
+  # -Y rod hardware stack: identical, the angle spun 180° about the rod so its
+  # upright faces the leg from the opposite side.
+  - id: leveling_nut_1
+    type: hex_nut
+    name: "leveling nut 1"
+    params: {diameter: "$rod_dia", height: "$nut_h", label: "leveling nut"}
+    place: {raw: {at: ["0 in", "= -rod_y", "$lev_nut_z"]}}
+  - id: fender_washer_lo_1
+    type: washer
+    name: "fender washer lo 1"
+    params: {inner_diameter: "$fw_id", outer_diameter: "$fw_od", thickness: "$fw_thk", fender: true}
+    place: {datum: base, to: leveling_nut_1, to_datum: top}
+  - id: angle_1
+    type: angle_bracket
+    name: "angle 1"
+    params:
+      leg1: "$ang_leg"
+      leg2: "$ang_leg"
+      thickness: "$ang_thk"
+      length: "$ang_len"
+      holes_base: [["0 in", "= rod_y - leg_face_y", "$flange_hole"]]
+      holes_up:
+        - ["$bolt_dx", "= bolt_z - flange_bot", "= bolt_dia + 0.02"]
+        - ["= -bolt_dx", "= bolt_z - flange_bot", "= bolt_dia + 0.02"]
+    place: {datum: base_hole_0_bottom, to: fender_washer_lo_1, to_datum: top, rotate: 180}
+  - id: fender_washer_up_1
+    type: washer
+    name: "fender washer up 1"
+    params: {inner_diameter: "$fw_id", outer_diameter: "$fw_od", thickness: "$fw_thk", fender: true}
+    place: {datum: base, to: angle_1, to_datum: base_hole_0_top}
+  - id: lock_nut_1
+    type: hex_nut
+    name: "lock nut 1"
+    params: {diameter: "$rod_dia", height: "$nut_h", label: "lock nut"}
+    place: {datum: base, to: fender_washer_up_1, to_datum: top}
+  - id: jam_nut_1
+    type: hex_nut
+    name: "jam nut 1"
+    params: {diameter: "$rod_dia", height: "$jam_h", label: "jam nut"}
+    place: {datum: base, to: lock_nut_1, to_datum: top}
+
+  # leg: stands on a global measurement (held leg_gap clear of the rock) and is
+  # the datum every clamp hangs off, so it is a raw placement. Rotate Y -90 maps
+  # local +X -> world +Z (the leg stands up).
+  - id: leg
+    type: lumber
+    name: leg
+    params:
+      nominal: "2x6"
+      length: "14 in"
+      treated: true
+      ease_radius: "0.125 in"
+      full_length: "$leg_full_len"
+      holes:
+        - ["$leg_hx", "= 2.75 - bolt_dx", "= bolt_dia + 0.02"]
+        - ["$leg_hx", "= 2.75 + bolt_dx", "= bolt_dia + 0.02"]
+    place: {raw: {at: ["2.75 in", "= -leg_face_y", "$leg_gap"], rotate: [["Y", -90]]}}
+
+  # thru-bolt fastener assemblies: bolt driven +Y through the sandwich; head-
+  # side washer mates under the head, nut-side washer + nut clamp to a tightened
+  # position (a take-up free DOF), so those two are raw placements.
+  - id: bolt_0
+    type: hex_bolt
+    name: "bolt 0"
+    params: {diameter: "$bolt_dia", length: "$blen"}
+    place: {raw: {at: ["$bolt_dx", "= -(grip_half + bw_thk)", "$bolt_z"], rotate: [["X", 90]]}}
+  - id: bolt_washer_head_0
+    type: washer
+    name: "bolt washer head 0"
+    params: {inner_diameter: "$bw_id", outer_diameter: "$bw_od", thickness: "$bw_thk"}
+    place: {datum: top, to: bolt_0, to_datum: head_bearing}
+  - id: bolt_washer_nut_0
+    type: washer
+    name: "bolt washer nut 0"
+    params: {inner_diameter: "$bw_id", outer_diameter: "$bw_od", thickness: "$bw_thk"}
+    place: {raw: {at: ["$bolt_dx", "$grip_half", "$bolt_z"], rotate: [["X", -90]]}}
+  - id: bolt_nut_0
+    type: hex_nut
+    name: "bolt nut 0"
+    params: {diameter: "$bolt_dia", label: "hex nut"}
+    place: {raw: {at: ["$bolt_dx", "= grip_half + bw_thk", "$bolt_z"], rotate: [["X", -90]]}}
+  - id: bolt_1
+    type: hex_bolt
+    name: "bolt 1"
+    params: {diameter: "$bolt_dia", length: "$blen"}
+    place: {raw: {at: ["= -bolt_dx", "= -(grip_half + bw_thk)", "$bolt_z"], rotate: [["X", 90]]}}
+  - id: bolt_washer_head_1
+    type: washer
+    name: "bolt washer head 1"
+    params: {inner_diameter: "$bw_id", outer_diameter: "$bw_od", thickness: "$bw_thk"}
+    place: {datum: top, to: bolt_1, to_datum: head_bearing}
+  - id: bolt_washer_nut_1
+    type: washer
+    name: "bolt washer nut 1"
+    params: {inner_diameter: "$bw_id", outer_diameter: "$bw_od", thickness: "$bw_thk"}
+    place: {raw: {at: ["= -bolt_dx", "$grip_half", "$bolt_z"], rotate: [["X", -90]]}}
+  - id: bolt_nut_1
+    type: hex_nut
+    name: "bolt nut 1"
+    params: {diameter: "$bolt_dia", label: "hex nut"}
+    place: {raw: {at: ["= -bolt_dx", "= grip_half + bw_thk", "$bolt_z"], rotate: [["X", -90]]}}
+
+# --- connections: the Construction-Graph edges (W2-6) ------------------------
+# Each declares only type + participating parts + hardware + the datums that
+# carry the joint; the compiler DERIVES every required bearing/overlap/bond,
+# the install order, and the load path from these, and generates the validation
+# that proves them — none of it is written by hand.
+connections:
+  - type: threaded_rod_epoxy_anchor
+    label: "rock anchor rod 0"
+    params: {stack_axis: Z, nut_washer_area: 60, washer_bracket_area: 90, bracket_bearing_axis: Y, bracket_bearing_area: 1800}
+    parts: [boulder, angle_0, leg]
+    hardware: [epoxy_0, rod_0, leveling_nut_0, fender_washer_lo_0, fender_washer_up_0, lock_nut_0, jam_nut_0]
+    surfaces: {boulder: hole_0_bottom, rod_0: bottom, angle_0: base_hole_0_bottom}
+    assumptions:
+      - "Leveling-nut axial position is a hand-set free DOF (leveling), not a mating constraint."
+      - "The angle bears on the leg under the anchor's clamping tension, not a separate fastener."
+  - type: threaded_rod_epoxy_anchor
+    label: "rock anchor rod 1"
+    params: {stack_axis: Z, nut_washer_area: 60, washer_bracket_area: 90, bracket_bearing_axis: Y, bracket_bearing_area: 1800}
+    parts: [boulder, angle_1, leg]
+    hardware: [epoxy_1, rod_1, leveling_nut_1, fender_washer_lo_1, fender_washer_up_1, lock_nut_1, jam_nut_1]
+    surfaces: {boulder: hole_1_bottom, rod_1: bottom, angle_1: base_hole_0_bottom}
+    assumptions:
+      - "Leveling-nut axial position is a hand-set free DOF (leveling), not a mating constraint."
+      - "The angle bears on the leg under the anchor's clamping tension, not a separate fastener."
+  - type: bolted_clamp
+    label: "leg thru-bolt 0"
+    params: {axis: Y, hardware_area: 40, end_plate_area: 60}
+    parts: [angle_1, leg, angle_0]
+    hardware: [bolt_0, bolt_washer_head_0, bolt_washer_nut_0, bolt_nut_0]
+    surfaces: {bolt_0: head_bearing}
+    assumptions:
+      - "Leg is a middle plate: on-axis clearance is proven by through_holes, not asserted to bear on either angle directly."
+  - type: bolted_clamp
+    label: "leg thru-bolt 1"
+    params: {axis: Y, hardware_area: 40, end_plate_area: 60}
+    parts: [angle_1, leg, angle_0]
+    hardware: [bolt_1, bolt_washer_head_1, bolt_washer_nut_1, bolt_nut_1]
+    surfaces: {bolt_1: head_bearing}
+    assumptions:
+      - "Leg is a middle plate: on-axis clearance is proven by through_holes, not asserted to bear on either angle directly."
+
+# --- roles: the load-system Role of each part (task ONTOLOGY) -----------------
+# Author intent only: what each part IS in the load system. The compiler DERIVES
+# the load-path REPRESENTATION (leg -> angle -> rod -> boulder) from these roles
+# + the connections' transfer claims; none of the path is written here. The leg
+# is the support (carries the platform's launch-corner load down); the clamp
+# angles and epoxied rods are connectors; the boulder is ground (terminal
+# Support). Reserved roles (barrier/access/surface) are left undeclared.
+roles:
+  leg: support
+  angle_0: connector
+  angle_1: connector
+  rod_0: connector
+  rod_1: connector
+  boulder: ground
+
+# --- validation: only the escape-hatch checks not yet Connection-owned -------
+# expected_overlaps / bearings / bonds are all generated from the connections
+# above; only fastener-through-hole probes, the floating-part ground, and two
+# design-intent dimension checks remain authored here.
+validation:
+  ground: boulder
+  through_holes:
+    - part: bolt_0
+      passes_through: [leg, angle_0, angle_1]
+      axis: Y
+      center: ["$bolt_dx", "0 in", "$bolt_z"]
+      r_inner: "= bolt_dia/2 - 0.01"
+      r_outer: "= bolt_dia/2 + 0.06"
+      span: "2.4 in"
+    - part: bolt_1
+      passes_through: [leg, angle_0, angle_1]
+      axis: Y
+      center: ["= -bolt_dx", "0 in", "$bolt_z"]
+      r_inner: "= bolt_dia/2 - 0.01"
+      r_outer: "= bolt_dia/2 + 0.06"
+      span: "2.4 in"
+    - part: rod_0
+      passes_through: [angle_0]
+      axis: Z
+      center: ["0 in", "$rod_y", "= flange_bot + ang_thk/2"]
+      r_inner: "= rod_dia/2 + 0.005"
+      r_outer: "= flange_hole/2 + 0.03"
+      span: "0.8 in"
+    - part: rod_1
+      passes_through: [angle_1]
+      axis: Z
+      center: ["0 in", "= -rod_y", "= flange_bot + ang_thk/2"]
+      r_inner: "= rod_dia/2 + 0.005"
+      r_outer: "= flange_hole/2 + 0.03"
+      span: "0.8 in"
+  dimensions:
+    - name: 'leg held 1/2" above rock'
+      part: leg
+      measure: zmin
+      expected: "$leg_gap"
+      tolerance: "0.02 in"
+    - name: 'rod embedment 8"'
+      part: rod_0
+      measure: zmin
+      negate: true
+      expected: "$rod_embed"
+      tolerance: "0.02 in"
+
+# --- presentation surfaces (task 4B-2) ---------------------------------------
+# Callouts track the live rod/leg params; explode offsets authored in internal mm
+# (= expr -> * IN), keyed by component id. cross_check is an escape-hatch dotted
+# reference to an independent constraint solve (verification only, never
+# canonical) — logged loudly, not a DSL. The doc is the same report rock_anchor.py
+# wrote: the derivation-log sample is the first 8 of the connection-derived facts.
+callouts:
+  - {param: rod_embed, label: "{v} EMBED", p0: [0, "= rod_sp/2 + 1.6", 0], p1: [0, "= rod_sp/2 + 1.6", "= -rod_embed"]}
+  - {param: rod_sp, label: "{v} C-C", p0: [0, "= -rod_sp/2", "= 3.6"], p1: [0, "= rod_sp/2", "= 3.6"]}
+  - {param: leg_gap, label: "{v} GAP", p0: [0, "= -(rod_sp/2 + 2)", 0], p1: [0, "= -(rod_sp/2 + 2)", "= leg_gap"]}
+  - {param: rod_stick, label: "{v} STICK-OUT", p0: [0, "= rod_sp/2 + 2.6", 0], p1: [0, "= rod_sp/2 + 2.6", "= rod_stick"]}
+
+explode:
+  - {id: leg, vector: ["= 0", "= 0", "= 16"]}
+  - {id: boulder, vector: ["= 0", "= 0", "= 0"]}
+  - {id: epoxy_0, vector: ["= 0", "= 0", "= -2"]}
+  - {id: rod_0, vector: ["= 0", "= 0", "= 3.5"]}
+  - {id: leveling_nut_0, vector: ["= 0", "= 0", "= 5"]}
+  - {id: fender_washer_lo_0, vector: ["= 0", "= 0", "= 6.5"]}
+  - {id: angle_0, vector: ["= 0", "= 3.0", "= 8"]}
+  - {id: fender_washer_up_0, vector: ["= 0", "= 0", "= 10"]}
+  - {id: lock_nut_0, vector: ["= 0", "= 0", "= 11.5"]}
+  - {id: jam_nut_0, vector: ["= 0", "= 0", "= 13"]}
+  - {id: epoxy_1, vector: ["= 0", "= 0", "= -2"]}
+  - {id: rod_1, vector: ["= 0", "= 0", "= 3.5"]}
+  - {id: leveling_nut_1, vector: ["= 0", "= 0", "= 5"]}
+  - {id: fender_washer_lo_1, vector: ["= 0", "= 0", "= 6.5"]}
+  - {id: angle_1, vector: ["= 0", "= -3.0", "= 8"]}
+  - {id: fender_washer_up_1, vector: ["= 0", "= 0", "= 10"]}
+  - {id: lock_nut_1, vector: ["= 0", "= 0", "= 11.5"]}
+  - {id: jam_nut_1, vector: ["= 0", "= 0", "= 13"]}
+  - {id: bolt_0, vector: ["= 0", "= -8", "= 9"]}
+  - {id: bolt_washer_head_0, vector: ["= 0", "= -6", "= 9"]}
+  - {id: bolt_washer_nut_0, vector: ["= 0", "= 6", "= 9"]}
+  - {id: bolt_nut_0, vector: ["= 0", "= 8", "= 9"]}
+  - {id: bolt_1, vector: ["= 0", "= -8", "= 9"]}
+  - {id: bolt_washer_head_1, vector: ["= 0", "= -6", "= 9"]}
+  - {id: bolt_washer_nut_1, vector: ["= 0", "= 6", "= 9"]}
+  - {id: bolt_nut_1, vector: ["= 0", "= 8", "= 9"]}
+
+cross_check: {ref: detailgen.spec.crosschecks.rock_anchor_solver}
+
+export: {glb_tolerance: 0.08, glb_angular_tolerance: 0.12, inject_explode: true}
+
+doc:
+  sections:
+    - prose: |
+        # Rock Anchor — Validation Report
+
+        Leg-to-boulder anchor detail, generated by the `detailgen` parametric
+        component library. Placement is deterministic computed placement
+        (canonical); cq.Assembly constraints are used only as an independent
+        verification pass and never replace the computed model.
+
+        ## Collision / interference
+        - Pairwise interference checks run: **{interference_checks}**
+        - Unintended collisions detected: **{interference_failures}**
+        - Fastener-into-nut thread overlaps are expected and allowlisted (rods to nuts, bolts to nuts).
+    - findings: {header: "## Flush-bearing contacts (true min-distance + bearing-area proof)", check: bearing}
+    - findings: {header: "## Fastener-through-hole probes", check: through_hole}
+    - findings: {header: "## Floating-part connectivity", check: floating}
+    - findings: {header: "## Connection hardware presence", check: connection_hardware}
+    - derivation_log:
+        header: "## Construction Graph — derivation log (sample)"
+        preamble: "Every bearing/overlap/bond/hardware-presence check above generated from a declared `Connection` (rod-epoxy anchors + leg thru-bolts) is recorded here with its source rule and confidence:"
+        mode: first_n
+        cap: 8
+    - findings: {header: "## Dimension checks", check: dimension}
+    - prose: |
+        ## Constraint-solver cross-check (verification only, non-canonical)
+        - solver: {cc_solver}
+        - max radial deviation from computed placement: {cc_max_radial_deviation_in} in
+        - note: {cc_note}
+    - prose: "## Result: **{result_verdict}**"
+    - bom_table: {header: "## Bill of materials"}
+    - prose: |
+        ## Modeling assumptions & known limitations
+        - Threads are a *representation* (single revolved V-groove on visible zones), pitch exaggerated for legibility — not a fabrication thread spec.
+        - The boulder is an exact rectangular prism (clean validation body); the real boulder is irregular, which the leveling-nut standoff accommodates. Organic surface is a render concern, not modeled in CAD here.
+        - Epoxy annulus is a perfect ring; real injection is imperfect (hence the clean-hole install procedure).
+        - Leg is truncated at 14 in; it continues up as the platform's launch-corner leg / rail post — modeled by platform.py at 63.5 in above THIS rock plane (Z=0, leg bottom to the top-rail underside), with the field leg STOCK 65-68 in (this detail's ~1/2 in air-gap standoff + cut allowance). platform.py models the leg bottom at Z=0 for simplicity; THIS detail owns the 1/2 in air gap that actually holds the leg end grain clear of the rock (leg bottom at Z=0.5 in here). Same leg, one story — the gap is owned here.
+        - Leveling-nut axial position is a genuine free DOF (hand-set leveling); the constraint solver cannot reproduce it, which is exactly why computed placement is canonical.
+        - Bolt clearance holes modeled at nominal + 1/32 in; field-drill per spec.

@@ -1,0 +1,61 @@
+"""The opt-in ``cabinetry.frameless@1`` compiler front end."""
+
+from __future__ import annotations
+
+from ...spec import compile_spec
+from ..project import PackedProject
+from .artifacts import build_artifacts
+from .lowering import lower_model
+from .model import build_model
+from .presets import expand_cabinetry_project
+from .run import (
+    build_run_artifacts,
+    build_run_model,
+    lower_run_model,
+    validate_run_model,
+)
+from .schema import CabinetrySection, parse_cabinetry_project
+from .validation import validate_model
+from .vanity import FramelessVanityPack
+
+
+class FramelessCabinetryPack:
+    pack_id = "cabinetry.frameless"
+    major_version = 1
+    version = "1.0.0"
+    section_keys = ("site", "cabinetry")
+
+    def parse(self, doc) -> CabinetrySection:
+        expanded, source_archetypes = expand_cabinetry_project(doc)
+        return parse_cabinetry_project(expanded, source_archetypes)
+
+    def compile(self, doc):
+        expanded, source_archetypes = expand_cabinetry_project(doc)
+        section = parse_cabinetry_project(expanded, source_archetypes)
+        if len(section.cabinets) == 1:
+            model = build_model(section, project_name=doc.name)
+            lowered = lower_model(model)
+            report = validate_model(model)
+            artifacts = build_artifacts(model, report)
+        else:
+            model = build_run_model(section, project_name=doc.name)
+            lowered = lower_run_model(model)
+            report = validate_run_model(model)
+            artifacts = build_run_artifacts(model, report)
+        detail = compile_spec(lowered)
+        return PackedProject(
+            project_doc=doc,
+            model=model,
+            lowered_doc=lowered,
+            detail=detail,
+            report=report,
+            artifacts=artifacts,
+            pack_id=self.pack_id,
+            pack_version=self.version,
+            expanded_project_doc=expanded,
+        )
+
+
+__all__ = [
+    "CabinetrySection", "FramelessCabinetryPack", "FramelessVanityPack"
+]

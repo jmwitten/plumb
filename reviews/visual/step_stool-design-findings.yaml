@@ -1,0 +1,112 @@
+# Design-review findings store — kids' two-step step stool (v2 design pass, Form A).
+#
+# A SIBLING of step_stool-findings.yaml (the visual store), loaded by the SAME
+# strict loader. These are DESIGN findings, not visual smell-tests: each judges a
+# construction choice against the v2 design pass's INTENT RULING for this piece
+# (FUNCTIONAL-DOMINANT — a wet, hard-use kids' bathroom/kitchen object; painted
+# SPF is the category norm; the deciding canon is structural + safety, not
+# show-surface finish). They do NOT duplicate V1-V4 (render salience / cleat
+# readability / stability / screw scale), which the visual pass carries.
+#
+# invariant_family is UNKNOWN for all: aesthetic/design/register quality maps to
+# NO existing invariant family — the MISSING family a future Design Exploration
+# Graph (DESIGN-0) would add. Kept explicit rather than forced into an ill-fitting
+# family. The full argument + scorecard live in task-stool-report.md (the v2 pass)
+# and task-stoolbuild-report.md (this build).
+#
+# resolution: the OWNER picks the fix; the reviewer does not resolve by fiat. The
+# owner has PICKED Form A, which settles DS1. DS2 (tip-over) is deferred to
+# ANALYSIS-v1. DS3 (toe-kick) is an open design + vocabulary residual.
+#
+# BINDING: findings are SUSPICIONS/RECOMMENDATIONS, never proof; nothing here
+# relaxes or gates an invariant verdict.
+
+version: 1
+findings:
+  - id: DS1
+    subject: "intent register — visible screws are APPROPRIATE here (the inverse of the caddy ruling)"
+    suspected_issue: >-
+      The upper tread is fastened with screws whose heads land on the top step
+      surface (the most-stepped-on face), and the cleat screws are visible on the
+      panel inner faces. On the AESTHETIC-dominant caddy that would be the cardinal
+      defect (D1). The question the design review must answer: is a show-face screw
+      a defect on THIS piece, or register-appropriate?
+    severity: LOW
+    visual_evidence: >-
+      v4_top.png / z_upper.png show the upper-tread screws on the top surface;
+      z_cleat.png shows the cleat screws on the inner face. All are countersunk-
+      ready #10 structural screws.
+    renders:
+      - path: outputs/step_stool/views/v4_top.png
+      - path: outputs/step_stool/views/z_upper.png
+      - path: outputs/step_stool/views/z_cleat.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Rule the register FIRST (per the design-review directive): this is a wet,
+      hard-use, floor-level kids' object; the dominant canon is positive fastening
+      + load path + tip-over, not hidden joinery. Visible, countersunk screws are
+      register-appropriate; plugging is a nicety, not an obligation.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Ruled FUNCTIONAL-DOMINANT and owner-CONFIRMED (Form A picked). Visible
+        screws are the correct, honest choice: rail_cap_screwed states the true
+        gravity seat + child's-grab path of the upper tread, cleat_screwed states
+        the face-grain cleats. No hidden-fastener obligation applies. What would
+        flip this to a defect: an heirloom/hardwood register (then plugged/hidden
+        joinery — Form B's plugged five-board). Absent that signal, accepted.
+  - id: DS2
+    subject: "tip-over is the governing safety property but detailgen has no stability rung"
+    suspected_issue: >-
+      The one property that most determines whether this stool is SAFE for a 4.5yo
+      standing 10.25in up — tip-over resistance under an off-centre load — is not
+      analyzed by any invariant. The footprint-to-height ratio was the scored
+      tip-over proxy in the v2 pass, but a ratio is a heuristic, not a proof.
+    severity: MEDIUM
+    visual_evidence: >-
+      v2_front.png / g1_iso.png show a tall-ish two-step whose upper surface sits
+      well above the base — the geometry whose tip-over behaviour no invariant checks.
+    renders:
+      - path: outputs/step_stool/views/v2_front.png
+      - path: outputs/step_stool/views/g1_iso.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Pin the governing dims (step heights + footprint-depth >= upper-height ratio)
+      and GUARD them, so detailing can never silently erode the stability geometry;
+      route the actual tip-over proof to ANALYSIS-v1.
+    resolution:
+      status: unresolved
+      note: >-
+        Deferred to ANALYSIS-v1 (no stability rung exists; honest UNKNOWN in the
+        coverage matrix, mirrored by visual finding V3). MITIGATED in this build:
+        the governing step heights (5.5 / 10.25in) and the footprint-depth-to-
+        upper-height ratio (1.07) are PINNED in the spec and asserted by the
+        governing-dims guard test — if detailing ever pressures one the guard goes
+        red and the question returns to the owner. The proof itself is ANALYSIS-v1.
+  - id: DS3
+    subject: "front toe-kick — a helpful recess the FEATURE vocabulary cannot yet express"
+    suspected_issue: >-
+      A shallow toe-kick recess at the base of the panels' front edge would let a
+      child stand closer to the sink on the upper step. Form A omits it; is that a
+      miss, and can the language even say it?
+    severity: LOW
+    visual_evidence: >-
+      g1_iso.png / v3_side.png show the open front between the lower tread and the
+      floor — the region a toe-kick would recess (and where the open front already
+      gives toe room).
+    renders:
+      - path: outputs/step_stool/views/g1_iso.png
+      - path: outputs/step_stool/views/v3_side.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Decide whether the toe room the open front already provides is enough; if a
+      toe-kick is wanted, it needs a `notch` / edge-rebate FEATURE verb (today's
+      FEATURE kinds are only clearance_cut + bore — neither reaches an edge rebate).
+    resolution:
+      status: unresolved
+      note: >-
+        Open design decision AND a vocabulary residual (R2 in the build report).
+        The open front between the lower tread and the floor already gives usable
+        toe room, so no toe-kick is authored; if the owner wants one, it is a new
+        `notch`/edge-rebate FEATURE verb — routed as CL vocabulary, not a raw
+        escape hatch. Left open for the owner.

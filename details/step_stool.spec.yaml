@@ -1,0 +1,288 @@
+# DetailSpec — kids' TWO-STEP step stool (owner pick, Form A of the v2 design pass).
+#
+# A two-step stool for a bathroom sink / kitchen counter, sized for a 4.5yo and an
+# almost-6yo. Two solid side panels (2x10 on edge) straddle the depth; a LOWER tread
+# (front, 5.5in surface) rides on 1x2 cleats screwed to the panels' inner faces, and
+# an UPPER tread (back, 10.25in surface) caps the panel tops, screwed straight down.
+# The two heights are the pick's contract: 5.5in gets the younger child up, 10.25in
+# reaches the sink for both (the function brief's scored fact). It rests on the floor
+# by gravity and lifts straight off — nothing fastens to the room.
+#
+# Register (v2 design pass ruling): FUNCTIONAL-DOMINANT. Visible screws are fine; the
+# joints are chosen to be TRUE, not hidden. `rail_cap_screwed` states the upper tread
+# capping the panel end-grain tops and screwed down (a real gravity seat + the lateral
+# grab a child applies); `cleat_screwed` states the face-grain cleats that carry the
+# lower tread (they hold + register, they do NOT seat — the tread-on-cleat gravity seat
+# is a SEPARATE declared bearing). Never a connection whose claims don't fit.
+#
+# CL-FIRST authoring note (this is the first novel detail born in the language; the
+# residual list is a deliverable — see task-stoolbuild-report.md):
+#   - DERIVED fit: every placement coordinate is DERIVED from the pinned GOVERNING
+#     dims via the value language — the governing dims are the only free step-height
+#     numbers; footprint + fit fall out. That is the CL win this detail books.
+#   - MOUNT relations: NOT used. Tested — a mount gives normal-standoff + target-frame
+#     centering + ground + mirror only; every stool member is a hand-rotated stick set
+#     by an in-plane OFFSET (X spacing, Y stagger, Z rail height) that mount cannot
+#     express, and mounting a mirror twin onto a rotated sibling yields an unpredictable
+#     orientation. So placement is `raw` (the caddy's honest state too). RESIDUAL R1.
+#   - FEATURE verbs (clearance_cut / bore): NONE honest here (no member to clear, no
+#     designed recess). A front toe-kick would want a `notch`/edge-rebate FEATURE verb
+#     that does not exist. RESIDUAL R2 (deferred; the open front already gives toe room).
+#
+# GOVERNING dims are PINNED (owner contract) and guarded by tests/test_step_stool_e2e
+# (governing-dims guard): step heights 5.5 / 10.25 in and footprint-depth >= upper
+# height (the tip-over ratio that scored). Detailing dims (tread width/thickness, panel
+# thickness, cleat size) are free to tune against the function brief; if detailing ever
+# pressures a GOVERNING dim the guard goes red and the question returns to the owner.
+#
+# Value language: a bare number/string passes through (nominal size, axis, area mm2);
+# "$name" / "= expr" resolve as LENGTHS -> mm; "4 in" is an explicit quantity.
+# Datum: the FLOOR top is Z=0 (an EXISTING context box, Boulder, into -Z, like the
+# caddy's sofa arm). X = width across the stool, Y = depth front(-)/back(+), Z up.
+
+name: step stool
+type: armchair_caddy
+units: in
+
+# --- GOVERNING dimensions (PINNED — owner contract; the guard test asserts these) ---
+params:
+  # Step surface heights — the scored function-brief fact (5.5 boosts the 4.5yo; 10.25
+  # reaches the sink for both). PINNED.
+  upper_step_surface: 10.25
+  lower_step_surface: 5.5
+  # Footprint depth (Y) — the tip-over ratio that scored: the base must reach at least
+  # as deep as the top is tall (depth >= upper height). PINNED at 11.0 (ratio 1.07).
+  stool_depth: 11.0
+
+  # --- DETAILING dimensions (free to tune against the function brief's minimums) ----
+  floor_w: 20.0
+  floor_l: 20.0
+  floor_h: 3.0
+  side_thk: 1.5            # 2x10 dressed thickness (X) — panel stock
+  tread_thk: 1.0          # 5/4x6 decking dressed thickness — the tread stock
+  tread_w: 5.5            # 5/4x6 dressed width — tread depth on each step
+  inner_span: 9.0         # clear span between the two panels' inner faces
+  cleat_thk: 0.75         # 1x2 dressed thickness (the face fastened to the panel)
+  cleat_drop: 1.5         # 1x2 dressed width (how far the cleat drops below the tread)
+  cleat_len: 4.0          # cleat length along the tread (Y)
+  ease_r: 0.125           # eased long-edge radius on every board
+  # Representative structural screws (#10-class). Capacity NOT analyzed (ANALYSIS-v1).
+  screw_dia: 0.19
+  screw_len_v: 2.0        # up screw: through the tread + into the panel top
+  screw_len_h: 1.75       # cleat screw: through the 0.75 cleat + 1.0 bite into the
+                          # panel face (>= the half-length embedment minimum; 1.25
+                          # left only 0.5 bite once the head sat on the cleat's
+                          # free face — INSTALL v1 fix arc)
+
+# --- derived: the fit relationships, ALL from the pinned governing dims ------------
+derived:
+  # Panel height is DERIVED so the upper tread SURFACE lands exactly on the governing
+  # 10.25in: panel top = upper_step_surface - tread_thk. (2x10 nominally dresses to
+  # 9.25; this is the same number, now DERIVED from the pinned step height, not a raw
+  # stock figure — pressure on the step height moves the panel, guarded.)
+  side_h: "= upper_step_surface - tread_thk"     # 9.25
+  # Lower tread underside = lower step surface - its own thickness -> cleat top height.
+  lower_z: "= lower_step_surface - tread_thk"    # 4.5
+  side_inner_x: "= inner_span / 2"               # 4.5
+  side_outer_x: "= side_inner_x + side_thk"      # 6.0
+  tread_len: "= 2 * side_outer_x"                # 12.0 (outer to outer)
+  half_depth: "= stool_depth / 2"                # 5.5
+  cleat_bot_z: "= lower_z - cleat_drop"          # 3.0
+  cleat_mid_z: "= lower_z - cleat_drop/2"        # 3.75 — side-screw drive height
+  side_mid_x: "= side_inner_x + side_thk/2"      # 5.25 — over-panel screw line
+  footprint_ratio: "= stool_depth / upper_step_surface"  # 1.07 (the pinned tip-over ratio)
+
+components:
+  # EXISTING floor — a plain slab, top face at Z=0, body into -Z. Self-grounded, not
+  # purchased, carries no structural claim (like the caddy's sofa arm).
+  - id: floor
+    type: boulder
+    name: floor
+    params: {width: "$floor_l", length: "$floor_w", depth: "$floor_h"}
+
+  # Two solid side panels: 2x10 stood on edge. rotate [Z,90] maps length->Y (depth),
+  # thickness->X, depth(9.25)->Z (height). RAW placement (residual R1: an in-plane X
+  # straddle mount cannot express). +X panel occupies X[4.5,6.0].
+  - id: side_pos
+    type: lumber
+    name: side panel +X
+    params: {nominal: "2x10", length: "$stool_depth", ease_radius: "$ease_r"}
+    place: {raw: {at: ["$side_outer_x", "= -half_depth", "0 in"], rotate: [["Z", 90]]}}
+  - id: side_neg
+    type: lumber
+    name: side panel -X
+    params: {nominal: "2x10", length: "$stool_depth", ease_radius: "$ease_r"}
+    place: {raw: {at: ["= -side_inner_x", "= -half_depth", "0 in"], rotate: [["Z", 90]]}}
+
+  # UPPER tread — caps the panel tops (back half), screwed straight down. RAW (Y stagger).
+  - id: upper_tread
+    type: deck_board
+    name: upper tread
+    params: {length: "$tread_len", ease_radius: "$ease_r"}
+    place: {raw: {at: ["= -tread_len/2", "0 in", "$side_h"]}}
+
+  # LOWER tread — front half, fits BETWEEN the panels, carried on the two cleats. RAW.
+  - id: lower_tread
+    type: deck_board
+    name: lower tread
+    params: {length: "$inner_span", ease_radius: "$ease_r"}
+    place: {raw: {at: ["= -inner_span/2", "= -tread_w", "$lower_z"]}}
+
+  # Cleats: 1x2 blocks screwed to the panels' inner faces, top at lower_z.
+  # rotate [Z,90]: length->Y, thickness(0.75)->-X, depth(1.5)->Z.
+  - id: cleat_pos
+    type: lumber
+    name: cleat +X
+    params: {nominal: "1x2", length: "$cleat_len"}
+    place: {raw: {at: ["$side_inner_x", "= -cleat_len", "$cleat_bot_z"], rotate: [["Z", 90]]}}
+  - id: cleat_neg
+    type: lumber
+    name: cleat -X
+    params: {nominal: "1x2", length: "$cleat_len"}
+    place: {raw: {at: ["= -side_inner_x + cleat_thk", "= -cleat_len", "$cleat_bot_z"], rotate: [["Z", 90]]}}
+
+  # UP screws: driven DOWN through the upper tread into each panel top (2 per panel).
+  # Default screw shank is -Z (head up) — exactly a driven-down screw, no rotation.
+  - id: uscrew_p0
+    type: structural_screw
+    name: up screw +X 0
+    params: {diameter: "$screw_dia", length: "$screw_len_v"}
+    place: {raw: {at: ["$side_mid_x", "1.5 in", "$upper_step_surface"]}}
+  - id: uscrew_p1
+    type: structural_screw
+    name: up screw +X 1
+    params: {diameter: "$screw_dia", length: "$screw_len_v"}
+    place: {raw: {at: ["$side_mid_x", "4.0 in", "$upper_step_surface"]}}
+  - id: uscrew_m0
+    type: structural_screw
+    name: up screw -X 0
+    params: {diameter: "$screw_dia", length: "$screw_len_v"}
+    place: {raw: {at: ["= -side_mid_x", "1.5 in", "$upper_step_surface"]}}
+  - id: uscrew_m1
+    type: structural_screw
+    name: up screw -X 1
+    params: {diameter: "$screw_dia", length: "$screw_len_v"}
+    place: {raw: {at: ["= -side_mid_x", "4.0 in", "$upper_step_surface"]}}
+
+  # CLEAT screws: driven horizontally through each cleat into its panel inner face.
+  # Head STATION = the cleat's FREE face (one cleat_thk inboard of the panel
+  # interface): the 1.75in shank passes 0.75in through the cleat and bites 1.0in
+  # into the panel — the buildable station (INSTALL v1 fix arc; the old station
+  # sat AT the interface, drawn unbuildably).
+  - id: cscrew_p0
+    type: structural_screw
+    name: cleat screw +X 0
+    params: {diameter: "$screw_dia", length: "$screw_len_h"}
+    place: {raw: {at: ["= side_inner_x - cleat_thk", "-3.0 in", "$cleat_mid_z"], rotate: [["Y", -90]]}}
+  - id: cscrew_p1
+    type: structural_screw
+    name: cleat screw +X 1
+    params: {diameter: "$screw_dia", length: "$screw_len_h"}
+    place: {raw: {at: ["= side_inner_x - cleat_thk", "-1.0 in", "$cleat_mid_z"], rotate: [["Y", -90]]}}
+  - id: cscrew_m0
+    type: structural_screw
+    name: cleat screw -X 0
+    params: {diameter: "$screw_dia", length: "$screw_len_h"}
+    place: {raw: {at: ["= -(side_inner_x - cleat_thk)", "-3.0 in", "$cleat_mid_z"], rotate: [["Y", 90]]}}
+  - id: cscrew_m1
+    type: structural_screw
+    name: cleat screw -X 1
+    params: {diameter: "$screw_dia", length: "$screw_len_h"}
+    place: {raw: {at: ["= -(side_inner_x - cleat_thk)", "-1.0 in", "$cleat_mid_z"], rotate: [["Y", 90]]}}
+
+# --- connections: the honest joinery (Construction-Graph edges) --------------------
+connections:
+  # Upper tread capped onto each panel top and screwed down. rail_cap_screwed states
+  # exactly this: a cap on a standing support's top, screwed down — it emits the
+  # gravity-seat bears_on AND represents the lateral grab a child applies to the step.
+  - type: rail_cap_screwed
+    label: "upper tread -> +X panel top (screwed down)"
+    params: {n_screws: 2}
+    parts: [side_pos, upper_tread]
+    hardware: [uscrew_p0, uscrew_p1]
+    assumptions: ["Screws bite the panel's top edge; end-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
+  - type: rail_cap_screwed
+    label: "upper tread -> -X panel top (screwed down)"
+    params: {n_screws: 2}
+    parts: [side_neg, upper_tread]
+    hardware: [uscrew_m0, uscrew_m1]
+    assumptions: ["Screws bite the panel's top edge; end-grain withdrawal capacity NOT analyzed (ANALYSIS-v1)."]
+  # Cleats screwed to the panel inner faces (face grain). cleat_screwed emits NO
+  # gravity seat — the lower tread's rest on the cleat tops is a SEPARATE declared
+  # bearing (validation.bearings), never smuggled through the fastener.
+  - type: cleat_screwed
+    label: "cleat +X -> +X panel inner face (screwed, face grain)"
+    params: {n_screws: 2}
+    parts: [cleat_pos, side_pos]
+    hardware: [cscrew_p0, cscrew_p1]
+    assumptions: ["Screws bite the panel's FACE grain; withdrawal not analyzed to a number here."]
+  - type: cleat_screwed
+    label: "cleat -X -> -X panel inner face (screwed, face grain)"
+    params: {n_screws: 2}
+    parts: [cleat_neg, side_neg]
+    hardware: [cscrew_m0, cscrew_m1]
+    assumptions: ["Screws bite the panel's FACE grain; withdrawal not analyzed to a number here."]
+
+# --- roles -------------------------------------------------------------------------
+# The floor is a pre-EXISTING site body: it self-grounds (it is the room the stool
+# sits in). Nothing is a `walking_surface` in the detailgen sense — the treads ARE
+# occupied, but detailgen has no walking-surface support/stability rung for a loose
+# floor-standing object, so no support obligation is generated; the treads' load path
+# is REPRESENTED by the connections, capacity + tip-over UNKNOWN (ANALYSIS-v1).
+roles:
+  floor: {role: existing, grounded_by: site}
+
+# --- validation --------------------------------------------------------------------
+# NO `ground:` terminal — the stool is a loose object resting on existing furniture/
+# floor; connectivity within it is proven by the panel-on-floor bearings + the
+# tread-on-cleat bearings + the connection bonds. The bearings below are the honest
+# support story: each panel bears flat on the floor; each cleat carries the lower tread
+# on its top edge (a real gravity seat the cleat_screwed connection does NOT emit).
+validation:
+  bearings:
+    - {a: side_pos, b: floor, axis: Z, area: 400}        # panel foot on the floor
+    - {a: side_neg, b: floor, axis: Z, area: 400}
+    - {a: lower_tread, b: cleat_pos, axis: Z, area: 300}  # lower tread on cleat tops
+    - {a: lower_tread, b: cleat_neg, axis: Z, area: 300}
+  dimensions:
+    # GOVERNING-dim assertions inside the model (mirrored by the guard test):
+    - {name: "GOVERNING upper step surface = 10.25in", part: upper_tread, measure: zmax, expected: "$upper_step_surface", tolerance: "0.02 in"}
+    - {name: "GOVERNING lower step surface = 5.5in", part: lower_tread, measure: zmax, expected: "$lower_step_surface", tolerance: "0.02 in"}
+    - {name: "stool overall width (outer to outer)", part: upper_tread, measure: xlen, expected: "$tread_len", tolerance: "0.02 in"}
+    - {name: "panels foot on the floor (Z=0)", part: side_pos, measure: zmin, expected: "0 in", tolerance: "0.02 in"}
+
+# --- presentation ------------------------------------------------------------------
+callouts:
+  - {param: upper_step_surface, label: "UPPER {v}", p0: ["= side_outer_x + 1", "= half_depth", 0], p1: ["= side_outer_x + 1", "= half_depth", "$upper_step_surface"]}
+  - {param: lower_step_surface, label: "LOWER {v}", p0: ["= side_outer_x + 1", "= -half_depth", 0], p1: ["= side_outer_x + 1", "= -half_depth", "$lower_step_surface"]}
+  - {param: stool_depth, label: "DEPTH {v}", p0: ["= side_outer_x + 1", "= -half_depth", 0], p1: ["= side_outer_x + 1", "= half_depth", 0]}
+
+export: {glb_tolerance: 0.1, glb_angular_tolerance: 0.15}
+
+doc:
+  sections:
+    - prose: |
+        # Kids' Two-Step Step Stool — Validation Report
+
+        A two-step stool for a bathroom sink / kitchen counter, sized for a 4.5-year-old and an almost-6-year-old, generated by the `detailgen` parametric library. Two solid 2x10 side panels straddle the depth; a LOWER tread (front, {lower_step_surface:g}" surface) rides on 1x2 cleats screwed to the panels' inner faces, and an UPPER tread (back, {upper_step_surface:g}" surface) caps the panel tops, screwed straight down. The two heights are the design's contract — {lower_step_surface:g}" boosts the younger child, {upper_step_surface:g}" reaches the sink for both. It rests on the floor by gravity and lifts straight off; nothing fastens to the room. Register is functional-dominant, so the screws are visible and the joints are chosen to be TRUE. Deterministic computed placement is canonical.
+
+        ## Collision / interference
+        - Pairwise interference checks run: **{interference_checks}**
+        - Unintended collisions detected: **{interference_failures}**
+        - Screw-into-tread, screw-into-panel and screw-into-cleat overlaps at the joints are expected and allowlisted.
+    - findings: {header: "## Flush-bearing contacts (min-distance + bearing-area proof)", check: bearing}
+    - hardware_presence: {header: "## Connection hardware presence", cap: 8}
+    - derivation_log:
+        header: "## Construction Graph — derivation log"
+        preamble: "Every overlap/bond/hardware-presence/load-path fact for the four joints (two rail_cap_screwed, two cleat_screwed) is generated from a declared Connection, recorded here with its source rule and confidence:"
+        mode: per_connection
+        cap: 4
+    - findings: {header: "## Dimension checks (governing dims asserted in-model)", check: dimension}
+    - prose: "## Result: **{result_verdict}**"
+    - bom_table: {header: "## Bill of materials"}
+    - prose: |
+        ## Modeling assumptions & honest limits
+        - **Loose object, no fastening to the room.** The stool rests on the floor and lifts straight off. Support/Stability, Load-path capacity, and structural capacity are honestly NOT ANALYZED — a step stool's headline risk is **tip-over**, which detailgen has no rung for; it is named ANALYSIS-v1 acceptance material and left UNKNOWN. No stability number is claimed as proven.
+        - **Governing dims pinned.** Step surfaces {lower_step_surface:g}" / {upper_step_surface:g}" and footprint depth {stool_depth:g}" (>= the {upper_step_surface:g}" upper height — the tip-over ratio that scored) are the owner contract, asserted in the dimension checks and guarded by the e2e test. Detailing dims (tread width/thickness, panel/cleat stock) are free to tune.
+        - **The floor is EXISTING context**, modeled as a plain box (Boulder primitive), self-grounded — not purchased, excluded from the buy list, carrying no structural claim.
+        - **Honest joinery, functional register.** The upper tread is `rail_cap_screwed` to the panel tops (a real gravity seat + the lateral grab a child applies, screwed down — screws visible, which the functional register permits). The lower tread's cleats are `cleat_screwed` to the panel FACE grain; the cleat holds and registers but does NOT seat — the tread rests on the cleat tops as a SEPARATELY declared bearing. Face-grain and end-grain screw withdrawal are stronger/weaker respectively but NOT analyzed to a number here.

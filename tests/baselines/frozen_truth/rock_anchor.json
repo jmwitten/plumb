@@ -1,0 +1,2562 @@
+{
+  "_doc": "CURRENT-DESIGN determinism baseline for details/rock_anchor.spec.yaml, re-frozen from the SPEC path at base SHA 5feee8a0b275b8330b57c9b035e9f21b3caf8560 by scripts/refreeze_from_spec.py (task STRUCT #19 / addendum A2). The imperative path is gone (milestone 4B); this corpus IS the canonical record the compiled spec must reproduce byte-for-byte. The imperative-era testimony is retrievable at b52626b. Regenerate only with a justified, reviewed diff: python scripts/refreeze_from_spec.py.",
+  "bom": [
+    {
+      "assumptions": "Exact prism as validation body; real boulder irregular — leveling nuts absorb surface variation. Render displacement is display-only.",
+      "dimensions": "12.0\" x 9.0\" x 11.0\" chunk",
+      "ids": [
+        "boulder-0"
+      ],
+      "item": "Boulder (existing)",
+      "length_mm": null,
+      "material": "Natural stone",
+      "qty": 1,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Perfect annulus; real injection imperfect (clean-hole procedure).",
+      "dimensions": "0.62\"/0.50\" annulus x 8.0\" deep",
+      "ids": [
+        "epoxy-0",
+        "epoxy-1"
+      ],
+      "item": "Anchoring epoxy",
+      "length_mm": null,
+      "material": "Anchoring epoxy",
+      "qty": 2,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Thread represented on exposed zone only; embedded length smooth. Pitch exaggerated for legibility.",
+      "dimensions": "0.50\" dia x 10.8\" all-thread",
+      "ids": [
+        "threaded_rod-0",
+        "threaded_rod-1"
+      ],
+      "item": "Anchor rod (all-thread)",
+      "length_mm": null,
+      "material": "Galvanized steel",
+      "qty": 2,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Finished hex nut; threads not modeled (bore at nominal).",
+      "dimensions": "0.50\" leveling nut (0.75\" AF)",
+      "ids": [
+        "hex_nut-0",
+        "hex_nut-3"
+      ],
+      "item": "Leveling nut",
+      "length_mm": null,
+      "material": "Zinc-plated steel",
+      "qty": 2,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Nominal catalog dimensions.",
+      "dimensions": "fender washer 1.50\" OD x 0.56\" ID x 0.08\"",
+      "ids": [
+        "washer-0",
+        "washer-1",
+        "washer-2",
+        "washer-3"
+      ],
+      "item": "Fender washer",
+      "length_mm": null,
+      "material": "Zinc-plated steel",
+      "qty": 4,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Hot-rolled angle; inner bend radius = thickness, concentric outer bend; punched holes; edges broken.",
+      "dimensions": "3.00\" x 3.00\" x 0.25\" angle, 3.5\" long",
+      "ids": [
+        "angle_bracket-0",
+        "angle_bracket-1"
+      ],
+      "item": "Steel angle",
+      "length_mm": null,
+      "material": "Galvanized steel",
+      "qty": 2,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Finished hex nut; threads not modeled (bore at nominal).",
+      "dimensions": "0.50\" lock nut (0.75\" AF)",
+      "ids": [
+        "hex_nut-1",
+        "hex_nut-4"
+      ],
+      "item": "Lock nut",
+      "length_mm": null,
+      "material": "Zinc-plated steel",
+      "qty": 2,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Finished hex nut; threads not modeled (bore at nominal).",
+      "dimensions": "0.50\" jam nut (0.75\" AF)",
+      "ids": [
+        "hex_nut-2",
+        "hex_nut-5"
+      ],
+      "item": "Jam nut",
+      "length_mm": null,
+      "material": "Zinc-plated steel",
+      "qty": 2,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Actual dressed dimensions (PS 20). Long edges eased r=0.12\"; end grain square.",
+      "dimensions": "2x6 x 14.0\"",
+      "ids": [
+        "lumber-0"
+      ],
+      "item": "PT 2x6 lumber",
+      "length_mm": 355.59999999999997,
+      "material": "Pressure-treated lumber",
+      "qty": 1,
+      "source": "generated",
+      "stub_of": {
+        "full_dims": "2x6 x 63.5\" (continuous run)",
+        "modeled_dims": "2x6 x 14.0\"",
+        "note": "shown: 14.0\" modeled portion — full run in the platform detail"
+      }
+    },
+    {
+      "assumptions": "Thread represented as a revolved V-groove on the threaded zone; pitch exaggerated for legibility, not a fab spec.",
+      "dimensions": "0.38\" dia x 2.6\"",
+      "ids": [
+        "hex_bolt-0",
+        "hex_bolt-1"
+      ],
+      "item": "Hex Bolt",
+      "length_mm": null,
+      "material": "Zinc-plated steel",
+      "qty": 2,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Nominal catalog dimensions.",
+      "dimensions": "flat washer 0.81\" OD x 0.41\" ID x 0.07\"",
+      "ids": [
+        "washer-4",
+        "washer-5",
+        "washer-6",
+        "washer-7"
+      ],
+      "item": "Flat washer",
+      "length_mm": null,
+      "material": "Zinc-plated steel",
+      "qty": 4,
+      "source": "generated",
+      "stub_of": null
+    },
+    {
+      "assumptions": "Finished hex nut; threads not modeled (bore at nominal).",
+      "dimensions": "0.38\" hex nut (0.56\" AF)",
+      "ids": [
+        "hex_nut-6",
+        "hex_nut-7"
+      ],
+      "item": "Hex nut",
+      "length_mm": null,
+      "material": "Zinc-plated steel",
+      "qty": 2,
+      "source": "generated",
+      "stub_of": null
+    }
+  ],
+  "by_kind": {
+    "bearing": 20,
+    "connection_hardware": 22,
+    "dimension": 2,
+    "floating": 1,
+    "install_access": 4,
+    "install_termination": 4,
+    "interference": 325,
+    "load_path": 1,
+    "through_hole": 8
+  },
+  "captured_at_sha": "5feee8a0b275b8330b57c9b035e9f21b3caf8560",
+  "connection_kind_types": [
+    "BoltedClamp",
+    "ThreadedRodEpoxyAnchor"
+  ],
+  "content_fp": "1a56571f6e67626fa5c67518572408cd298b739e2ad201dfecd904d20025d8e1",
+  "content_fp_divergence": {},
+  "content_fp_spec": "1a56571f6e67626fa5c67518572408cd298b739e2ad201dfecd904d20025d8e1",
+  "counts": {
+    "bom_rows": 12,
+    "derivation_log": 104,
+    "formalized_stubs": 1,
+    "parts": 26
+  },
+  "findings": [
+    [
+      "bearing",
+      "angle 0 <-> fender washer up 0",
+      true
+    ],
+    [
+      "bearing",
+      "angle 0 <-> leg",
+      true
+    ],
+    [
+      "bearing",
+      "angle 1 <-> fender washer up 1",
+      true
+    ],
+    [
+      "bearing",
+      "angle 1 <-> leg",
+      true
+    ],
+    [
+      "bearing",
+      "bolt 0 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "bearing",
+      "bolt 1 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "bearing",
+      "bolt nut 0 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "bearing",
+      "bolt nut 1 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "bearing",
+      "bolt washer head 0 <-> angle 1",
+      true
+    ],
+    [
+      "bearing",
+      "bolt washer head 1 <-> angle 1",
+      true
+    ],
+    [
+      "bearing",
+      "bolt washer nut 0 <-> angle 0",
+      true
+    ],
+    [
+      "bearing",
+      "bolt washer nut 1 <-> angle 0",
+      true
+    ],
+    [
+      "bearing",
+      "fender washer lo 0 <-> angle 0",
+      true
+    ],
+    [
+      "bearing",
+      "fender washer lo 1 <-> angle 1",
+      true
+    ],
+    [
+      "bearing",
+      "fender washer up 0 <-> lock nut 0",
+      true
+    ],
+    [
+      "bearing",
+      "fender washer up 1 <-> lock nut 1",
+      true
+    ],
+    [
+      "bearing",
+      "leveling nut 0 <-> fender washer lo 0",
+      true
+    ],
+    [
+      "bearing",
+      "leveling nut 1 <-> fender washer lo 1",
+      true
+    ],
+    [
+      "bearing",
+      "lock nut 0 <-> jam nut 0",
+      true
+    ],
+    [
+      "bearing",
+      "lock nut 1 <-> jam nut 1",
+      true
+    ],
+    [
+      "connection_hardware",
+      "leg thru-bolt 0: bolt 0",
+      true
+    ],
+    [
+      "connection_hardware",
+      "leg thru-bolt 0: bolt nut 0",
+      true
+    ],
+    [
+      "connection_hardware",
+      "leg thru-bolt 0: bolt washer head 0",
+      true
+    ],
+    [
+      "connection_hardware",
+      "leg thru-bolt 0: bolt washer nut 0",
+      true
+    ],
+    [
+      "connection_hardware",
+      "leg thru-bolt 1: bolt 1",
+      true
+    ],
+    [
+      "connection_hardware",
+      "leg thru-bolt 1: bolt nut 1",
+      true
+    ],
+    [
+      "connection_hardware",
+      "leg thru-bolt 1: bolt washer head 1",
+      true
+    ],
+    [
+      "connection_hardware",
+      "leg thru-bolt 1: bolt washer nut 1",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 0: epoxy 0",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 0: fender washer lo 0",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 0: fender washer up 0",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 0: jam nut 0",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 0: leveling nut 0",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 0: lock nut 0",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 0: rod 0",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 1: epoxy 1",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 1: fender washer lo 1",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 1: fender washer up 1",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 1: jam nut 1",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 1: leveling nut 1",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 1: lock nut 1",
+      true
+    ],
+    [
+      "connection_hardware",
+      "rock anchor rod 1: rod 1",
+      true
+    ],
+    [
+      "dimension",
+      "leg held 1/2\" above rock: leg",
+      true
+    ],
+    [
+      "dimension",
+      "rod embedment 8\": rod 0",
+      true
+    ],
+    [
+      "floating",
+      "all parts grounded",
+      true
+    ],
+    [
+      "install_access",
+      "leg thru-bolt 0: bolt 0",
+      true
+    ],
+    [
+      "install_access",
+      "leg thru-bolt 1: bolt 1",
+      true
+    ],
+    [
+      "install_access",
+      "rock anchor rod 0: rod 0",
+      true
+    ],
+    [
+      "install_access",
+      "rock anchor rod 1: rod 1",
+      true
+    ],
+    [
+      "install_termination",
+      "leg thru-bolt 0: bolt 0",
+      true
+    ],
+    [
+      "install_termination",
+      "leg thru-bolt 1: bolt 1",
+      true
+    ],
+    [
+      "install_termination",
+      "rock anchor rod 0: rod 0",
+      true
+    ],
+    [
+      "install_termination",
+      "rock anchor rod 1: rod 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> fender washer lo 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> fender washer up 0",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> jam nut 0",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> leveling nut 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> lock nut 0",
+      true
+    ],
+    [
+      "interference",
+      "angle 0 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 1 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "angle 1 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 1 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "angle 1 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 1 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "angle 1 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 1 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "angle 1 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 1 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 1 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "angle 1 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "angle 1 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt 0 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt 0 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "bolt 0 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt 0 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "bolt 0 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt 0 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "bolt 0 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt 1 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt 1 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt 1 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt nut 0 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt nut 0 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt nut 0 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt nut 0 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer head 0 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer head 0 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer head 0 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer head 0 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer head 0 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer head 0 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer head 1 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer head 1 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer nut 0 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer nut 0 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer nut 0 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer nut 0 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer nut 0 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "bolt washer nut 1 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> angle 0",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> epoxy 0",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> epoxy 1",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> fender washer lo 0",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> fender washer lo 1",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> fender washer up 0",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> jam nut 0",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> leveling nut 0",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> leveling nut 1",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> lock nut 0",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> rod 0",
+      true
+    ],
+    [
+      "interference",
+      "boulder <-> rod 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> angle 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> epoxy 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> fender washer lo 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> fender washer lo 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> fender washer up 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> jam nut 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> leveling nut 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> leveling nut 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> lock nut 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> rod 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 0 <-> rod 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> angle 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> fender washer lo 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> fender washer lo 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> fender washer up 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> jam nut 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> leveling nut 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> leveling nut 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> lock nut 0",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "epoxy 1 <-> rod 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> angle 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> fender washer lo 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> fender washer up 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> jam nut 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> leveling nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> lock nut 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 0 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "fender washer lo 1 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> fender washer lo 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> jam nut 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> leveling nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> lock nut 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 0 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 1 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 1 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 1 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 1 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 1 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 1 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 1 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 1 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 1 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 1 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "fender washer up 1 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> fender washer lo 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> leveling nut 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 0 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 1 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 1 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 1 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 1 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 1 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 1 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 1 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 1 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "jam nut 1 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "leg <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "leg <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "leg <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "leg <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "leg <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "leg <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "leg <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "leg <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> angle 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> fender washer lo 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> fender washer lo 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> fender washer up 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> jam nut 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> leveling nut 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> lock nut 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 0 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> fender washer lo 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "leveling nut 1 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> fender washer lo 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> jam nut 0",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> leveling nut 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 0 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 1 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 1 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 1 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 1 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 1 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 1 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 1 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 1 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 1 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "lock nut 1 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> angle 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> epoxy 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> fender washer lo 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> fender washer lo 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> fender washer up 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> jam nut 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> leveling nut 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> leveling nut 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> lock nut 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> lock nut 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 0 <-> rod 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> angle 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> angle 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> bolt 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> bolt 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> bolt nut 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> bolt nut 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> bolt washer head 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> bolt washer head 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> bolt washer nut 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> bolt washer nut 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> fender washer lo 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> fender washer lo 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> fender washer up 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> fender washer up 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> jam nut 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> jam nut 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> leg",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> leveling nut 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> leveling nut 1",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> lock nut 0",
+      true
+    ],
+    [
+      "interference",
+      "rod 1 <-> lock nut 1",
+      true
+    ],
+    [
+      "load_path",
+      "downward_load: leg -> boulder",
+      true
+    ],
+    [
+      "through_hole",
+      "bolt 0 through angle 0",
+      true
+    ],
+    [
+      "through_hole",
+      "bolt 0 through angle 1",
+      true
+    ],
+    [
+      "through_hole",
+      "bolt 0 through leg",
+      true
+    ],
+    [
+      "through_hole",
+      "bolt 1 through angle 0",
+      true
+    ],
+    [
+      "through_hole",
+      "bolt 1 through angle 1",
+      true
+    ],
+    [
+      "through_hole",
+      "bolt 1 through leg",
+      true
+    ],
+    [
+      "through_hole",
+      "rod 0 through angle 0",
+      true
+    ],
+    [
+      "through_hole",
+      "rod 1 through angle 1",
+      true
+    ]
+  ],
+  "findings_fp": "d5cec990c965172be625efecec32d990c77cd14b16feb9b42ecd649e763a8c7c",
+  "geom_fingerprint": {
+    "angle 0": [
+      [
+        0.0,
+        19.050000000000004,
+        33.4645
+      ],
+      77207.9267715427,
+      [
+        -44.449999999999996,
+        19.050000000000004,
+        33.4645,
+        44.449999999999996,
+        95.25,
+        109.66449999999999
+      ]
+    ],
+    "angle 1": [
+      [
+        4.665904304751415e-15,
+        -19.050000000000004,
+        33.4645
+      ],
+      77207.92677154267,
+      [
+        -44.449999999999996,
+        -95.25,
+        33.4645,
+        44.45,
+        -19.049999999999997,
+        109.66449999999999
+      ]
+    ],
+    "bolt 0": [
+      [
+        19.049999999999997,
+        -27.051,
+        73.66
+      ],
+      5336.539639919573,
+      [
+        10.801108028953216,
+        -33.24225,
+        66.51624999999991,
+        27.298891971046775,
+        38.480999999999995,
+        80.80375000000008
+      ]
+    ],
+    "bolt 1": [
+      [
+        -19.049999999999997,
+        -27.051,
+        73.66
+      ],
+      5336.539639919574,
+      [
+        -27.29889197104678,
+        -33.24225,
+        66.51624999999991,
+        -10.80110802895322,
+        38.480999999999995,
+        80.80375000000008
+      ]
+    ],
+    "bolt nut 0": [
+      [
+        19.049999999999997,
+        27.051,
+        73.66
+      ],
+      858.2962585596754,
+      [
+        10.801108028953218,
+        27.05099999999999,
+        66.51624999999991,
+        27.298891971046775,
+        35.385374999999996,
+        80.80375000000008
+      ]
+    ],
+    "bolt nut 1": [
+      [
+        -19.049999999999997,
+        27.051,
+        73.66
+      ],
+      858.2962585596754,
+      [
+        -27.29889197104678,
+        27.05099999999999,
+        66.51624999999991,
+        -10.80110802895322,
+        35.385374999999996,
+        80.80375000000008
+      ]
+    ],
+    "bolt washer head 0": [
+      [
+        19.049999999999997,
+        -25.4,
+        73.66
+      ],
+      413.6925593234235,
+      [
+        8.737599999999997,
+        -27.051,
+        63.3476,
+        29.362399999999997,
+        -25.4,
+        83.9724
+      ]
+    ],
+    "bolt washer head 1": [
+      [
+        -19.049999999999997,
+        -25.4,
+        73.66
+      ],
+      413.69255932342344,
+      [
+        -29.362399999999997,
+        -27.051,
+        63.3476,
+        -8.737599999999997,
+        -25.4,
+        83.9724
+      ]
+    ],
+    "bolt washer nut 0": [
+      [
+        19.049999999999997,
+        25.4,
+        73.66
+      ],
+      413.69255932342344,
+      [
+        8.737599999999997,
+        25.4,
+        63.3476,
+        29.362399999999997,
+        27.051,
+        83.9724
+      ]
+    ],
+    "bolt washer nut 1": [
+      [
+        -19.049999999999997,
+        25.4,
+        73.66
+      ],
+      413.69255932342344,
+      [
+        -29.362399999999997,
+        25.4,
+        63.3476,
+        -8.737599999999997,
+        27.051,
+        83.9724
+      ]
+    ],
+    "boulder": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      19387392.219693266,
+      [
+        -152.39999999999998,
+        -114.3,
+        -279.4,
+        152.39999999999998,
+        114.3,
+        0.0
+      ]
+    ],
+    "epoxy 0": [
+      [
+        0.0,
+        57.15,
+        0.0
+      ],
+      14479.16621521099,
+      [
+        -7.9375,
+        49.2125,
+        -203.2,
+        7.9375,
+        65.0875,
+        0.0
+      ]
+    ],
+    "epoxy 1": [
+      [
+        0.0,
+        -57.15,
+        0.0
+      ],
+      14479.16621521099,
+      [
+        -7.9375,
+        -65.0875,
+        -203.2,
+        7.9375,
+        -49.2125,
+        0.0
+      ]
+    ],
+    "fender washer lo 0": [
+      [
+        0.0,
+        57.15,
+        31.432499999999997
+      ],
+      1990.885354591513,
+      [
+        -19.049999999999997,
+        38.1,
+        31.432499999999997,
+        19.049999999999997,
+        76.19999999999999,
+        33.4645
+      ]
+    ],
+    "fender washer lo 1": [
+      [
+        0.0,
+        -57.15,
+        31.432499999999997
+      ],
+      1990.885354591513,
+      [
+        -19.049999999999997,
+        -76.19999999999999,
+        31.432499999999997,
+        19.049999999999997,
+        -38.1,
+        33.4645
+      ]
+    ],
+    "fender washer up 0": [
+      [
+        0.0,
+        57.15,
+        39.8145
+      ],
+      1990.8853545915129,
+      [
+        -19.049999999999997,
+        38.1,
+        39.8145,
+        19.049999999999997,
+        76.19999999999999,
+        41.846500000000006
+      ]
+    ],
+    "fender washer up 1": [
+      [
+        0.0,
+        -57.15,
+        39.8145
+      ],
+      1990.8853545915129,
+      [
+        -19.049999999999997,
+        -76.19999999999999,
+        39.8145,
+        19.049999999999997,
+        -38.1,
+        41.846500000000006
+      ]
+    ],
+    "jam nut 0": [
+      [
+        0.0,
+        57.15,
+        52.959
+      ],
+      1453.2000144925833,
+      [
+        -10.998522628062371,
+        47.62499999999986,
+        52.958999999999996,
+        10.998522628062371,
+        66.67500000000013,
+        60.89650000000002
+      ]
+    ],
+    "jam nut 1": [
+      [
+        0.0,
+        -57.15,
+        52.959
+      ],
+      1453.2000144925833,
+      [
+        -10.998522628062371,
+        -66.67500000000013,
+        52.958999999999996,
+        10.998522628062371,
+        -47.62499999999986,
+        60.89650000000002
+      ]
+    ],
+    "leg": [
+      [
+        69.85,
+        -19.049999999999997,
+        12.7
+      ],
+      1883604.4862996656,
+      [
+        -69.85,
+        -19.049999999999997,
+        12.7,
+        69.85000000000004,
+        19.05,
+        368.29999999999995
+      ]
+    ],
+    "leveling nut 0": [
+      [
+        0.0,
+        57.15,
+        20.32
+      ],
+      2034.4800202896154,
+      [
+        -10.99852262806237,
+        47.62499999999986,
+        20.319999999999993,
+        10.998522628062371,
+        66.67500000000013,
+        31.4325
+      ]
+    ],
+    "leveling nut 1": [
+      [
+        0.0,
+        -57.15,
+        20.32
+      ],
+      2034.4800202896154,
+      [
+        -10.99852262806237,
+        -66.67500000000014,
+        20.319999999999993,
+        10.998522628062371,
+        -47.624999999999865,
+        31.4325
+      ]
+    ],
+    "lock nut 0": [
+      [
+        0.0,
+        57.15,
+        41.846500000000006
+      ],
+      2034.4800202896145,
+      [
+        -10.99852262806237,
+        47.62499999999986,
+        41.8465,
+        10.998522628062371,
+        66.67500000000013,
+        52.95900000000002
+      ]
+    ],
+    "lock nut 1": [
+      [
+        0.0,
+        -57.15,
+        41.846500000000006
+      ],
+      2034.480020289615,
+      [
+        -10.998522628062371,
+        -66.67500000000013,
+        41.8465,
+        10.998522628062371,
+        -47.62499999999986,
+        52.95900000000002
+      ]
+    ],
+    "rod 0": [
+      [
+        0.0,
+        57.15,
+        -203.2
+      ],
+      32120.788414504692,
+      [
+        -6.35,
+        50.8,
+        -203.2,
+        6.35,
+        63.5,
+        69.85000000000002
+      ]
+    ],
+    "rod 1": [
+      [
+        0.0,
+        -57.15,
+        -203.2
+      ],
+      32120.788414504692,
+      [
+        -6.35,
+        -63.5,
+        -203.2,
+        6.35,
+        -50.8,
+        69.85000000000002
+      ]
+    ]
+  },
+  "name": "rock anchor",
+  "ok": true
+}

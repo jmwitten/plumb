@@ -1,0 +1,118 @@
+{
+  "detail": "trebuchet",
+  "directive": "view-coverage-directive.md",
+  "note": "Auditable view-coverage decision table for the 3-foot backyard trebuchet (task TREB). Each candidate area is scored on (1) installation/fabrication complexity and (2) difficulty of seeing it from the primary whole-model views, then decided ZOOM or a recorded WHY-NOT. Audited BOTH directions: a high-complexity, poorly-visible area with no zoom and no why-not is a finding; a redundant zoom (mirror/simple/well-visible) is over-generation and is a why-not here. Renders: scripts/render_trebuchet_views.py -> outputs/trebuchet/views/. DRAWDIM (naive-builder review follow-up): three derived 2D SHEETS added \u2014 every rectangle a placed part's bbox, every number read from the compiled namespace, nothing hand-typed.",
+  "context_treatment": "The ground is a role:existing context slab sized to show the machine's stance plus the launch lane's start; the hero iso and all zooms hide it. The pivot's occlusion problem (the arm slab hides the hardware between the uprights) is solved by role-splitting the two pivot zooms: z_pivot hides the ARM to show the rod/nut/washer clamp stacks; z_arm hides the UPRIGHTS to show the arm riding the rod between its thrust stacks (finding V1).",
+  "primary_views": [
+    {
+      "id": "iso",
+      "file": "v1_iso.png",
+      "shows": "whole machine on the ground from the launch side, level-arm reference pose"
+    },
+    {
+      "id": "side",
+      "file": "v2_side.png",
+      "shows": "THE mechanism elevation: 32in axle height, 4:1 arm split, runway, gusset knees"
+    },
+    {
+      "id": "front",
+      "file": "v3_front.png",
+      "shows": "down the throw axis: the 14in counterweight lane between the uprights"
+    },
+    {
+      "id": "top",
+      "file": "v4_top.png",
+      "shows": "the 2x4 ladder base, runway plate, and the arm over the centerline"
+    }
+  ],
+  "candidate_areas": [
+    {
+      "area": "whole machine form (braced posts, ladder base, hung arm)",
+      "install": "MEDIUM",
+      "primary_visibility": "MEDIUM",
+      "decision": "ZOOM",
+      "view": "g1_iso.png (ground hidden \u2014 the HERO view)",
+      "rationale": "with the context slab hidden the frame's construction logic reads in one image: rails, crosses, runway, uprights, knees, rod, arm. Leads the document."
+    },
+    {
+      "area": "pivot assembly \u2014 rod nutted to both uprights (washer+nut inside and out)",
+      "install": "HIGH",
+      "primary_visibility": "LOW",
+      "decision": "ZOOM",
+      "view": "z_pivot.png (ground + ARM hidden)",
+      "rationale": "the machine's most load-critical, most occluded assembly: from every primary the arm slab and the uprights hide the eight-piece nut/washer stack. With the arm hidden the rod's full span, both upright bores' positions and the floating thrust cluster read. The hardware is small at frame scale \u2014 the caption carries the stack order (finding V2)."
+    },
+    {
+      "area": "arm riding the rod between thrust washers + jam pairs",
+      "install": "HIGH",
+      "primary_visibility": "LOW",
+      "decision": "ZOOM",
+      "view": "z_arm.png (ground, uprights + gussets hidden)",
+      "rationale": "the pivot's other half: the arm's bore on the rod shank flanked by fender-washer thrust faces and double jam nuts. The 1/16in hanging tangency is asserted by a dimension check, not visible at render scale \u2014 the caption says so honestly (finding V3)."
+    },
+    {
+      "area": "base corner joint cluster: upright lap + gusset knee + cross member butt",
+      "install": "HIGH",
+      "primary_visibility": "MEDIUM",
+      "decision": "ZOOM",
+      "view": "z_lap.png (ground hidden)",
+      "rationale": "three different joint words meet in one 12in cube: the upright face-lapped to the rail (screws driven from the rail side), the ply knee lapping the upright's inner face, and a cross member butt-screwed through the rail. One zoom shows all three layers."
+    },
+    {
+      "area": "the mirror (-X) base corner and pivot hardware",
+      "install": "HIGH",
+      "primary_visibility": "LOW",
+      "decision": "WHY-NOT",
+      "view": null,
+      "rationale": "mirror-identical about the Y-Z plane; one representative zoom per subject suffices \u2014 more would be over-generation."
+    },
+    {
+      "area": "governing mechanism dims (32in axle, 4:1 split, 14in lane)",
+      "install": "LOW",
+      "primary_visibility": "HIGH",
+      "decision": "SHEET",
+      "view": "d1_dimensions.png",
+      "rationale": "dimensioned by the derived callouts on the SIDE primary + asserted in the model's dimension checks + guarded by the e2e test; a dedicated zoom adds nothing the callouts do not. REVISED (builder review): callouts on a shaded view under-carried the numbers a builder tapes. D1 is a dedicated dimensioned elevation: stations chained from one datum, bore stations, screw map, launch direction."
+    },
+    {
+      "area": "runway-to-cross rail_cap joints and the runway slide surface",
+      "install": "LOW",
+      "primary_visibility": "MEDIUM",
+      "decision": "WHY-NOT",
+      "view": null,
+      "rationale": "flat plate screwed down onto flat crosses (six screws, countersunk flush per the connection's fabrication note); the TOP primary and z_lap's runway edge show it, and the seats are proven by three declared bearings. Nothing complex to draw."
+    },
+    {
+      "area": "counterweight bucket, rope hitch, sling, pouch, release pin, trigger",
+      "install": "HIGH",
+      "primary_visibility": "LOW",
+      "decision": "SHEET (schematic)",
+      "view": "d3_operating.png",
+      "rationale": "the RIGGING is deliberately unmodeled (no soft-goods vocabulary \u2014 recorded work order) and cannot be drawn from the model without faking geometry; the doc's rigging section carries the full recipe, dimensions and tuning instead. An honest render limitation, not a coverage gap. REVISED: the rigging still cannot be modeled, but D3 now DRAWS it as clearly-dashed declared schematic (bucket, sling path, pouch start, trigger eyes) so attachment positions live on paper, not only in prose."
+    },
+    {
+      "area": "cocked pose / swing envelope / counterweight clearance arc",
+      "install": "MEDIUM",
+      "primary_visibility": "LOW",
+      "decision": "SHEET",
+      "view": "d3_operating.png",
+      "rationale": "REVISED by the naive-builder review: the trigger/release/pouch positions are defined by the cocked pose, and prose-only positions left a fresh builder at trial-and-error. D3 draws the cocked pose as DERIVED ARITHMETIC over the modeled geometry (arm rotated about the modeled axle to a declared 2in tip clearance) with the rigging as the declared recipe, banner-labeled schematic + kinematics NOT ANALYZED \u2014 where things go, proving nothing."
+    },
+    {
+      "area": "axle bores in the uprights and arm (the three designed FEATUREs)",
+      "install": "MEDIUM",
+      "primary_visibility": "LOW",
+      "decision": "WHY-NOT",
+      "view": null,
+      "rationale": "each bore is occupied by the rod in every honest view (z_pivot shows the rod crossing both uprights at the bore stations; z_arm shows the arm's bore region); an empty-bore view would require hiding the rod to show a hole. Bore fit is VALIDATED by the through-hole probe; the cut plan carries each bore's own fabrication step."
+    },
+    {
+      "area": "pivot hardware stack order + threading sequence",
+      "install": "HIGH",
+      "primary_visibility": "LOW",
+      "decision": "SHEET",
+      "view": "d2_pivot_stack.png",
+      "rationale": "builder review: the stack order was validated data + caption prose; assembly needs it as a picture. D2 draws every washer/nut/arm at its modeled position with the threading order spelled out."
+    }
+  ]
+}

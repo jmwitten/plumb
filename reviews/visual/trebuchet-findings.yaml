@@ -1,0 +1,167 @@
+# Visual-review findings store — 3-foot backyard trebuchet (task TREB).
+#
+# Per-detail store under the naming convention (<name>-findings.yaml), a sibling
+# of the stool/caddy/sitreach stores, loaded by the SAME strict loader
+# (detailgen.review.load_findings_file): every field validated, resolutions
+# require evidence, unresolved is a legal persistent open state.
+#
+# Renders reviewed BY LOOKING: the shaded matplotlib views the renderer emits
+# (scripts/render_trebuchet_views.py -> outputs/trebuchet/views/*.png). No
+# Blender/GPU path here; views are rasterized from the tessellated world solids —
+# the same geometry the GLB carries. Render refs carry no content_hash (no live
+# review manifest yet), so their staleness is honestly "unverifiable" until
+# re-reviewed against one.
+#
+# BINDING: findings are SUSPICIONS, never proof. Nothing here relaxes or gates an
+# invariant verdict.
+
+version: 1
+findings:
+  - id: V1
+    subject: pivot hardware unreadable — the arm slab occludes the whole stack between the uprights
+    suspected_issue: >-
+      The first pivot zoom (oblique from the launch side, everything shown)
+      rendered the arm's face filling the frame: the rod, both uprights' bores
+      and all eight nut/washer pieces hid behind it. The machine's most
+      load-critical assembly did not visually read at all.
+    severity: MEDIUM
+    visual_evidence: >-
+      First-pass z_pivot.png: arm slab wall-to-wall, hardware invisible. Fixed
+      by ROLE-SPLITTING the pivot into two zooms with complementary hides:
+      z_pivot.png (ARM hidden — rod span, upright bores, floating thrust
+      cluster read) and z_arm.png (UPRIGHTS + gussets hidden — the arm on the
+      rod between its washer/jam-nut stacks reads).
+    renders:
+      - path: outputs/trebuchet/views/z_pivot.png
+      - path: outputs/trebuchet/views/z_arm.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Keep the complementary-hide pair (the sitreach z_corner hidden-panel
+      precedent, extended to a two-view split); the general render-level
+      auto-ghost rule for occluding members remains unbuilt (same open item as
+      stool V1 / caddy C1 / sitreach V1).
+    resolution:
+      status: fixed-by-revision
+      note: >-
+        Fixed at the render level: two zooms with complementary hides,
+        committed in the render script. No model change — a camera/visibility
+        choice.
+  - id: V2
+    subject: axle nuts and washers under-read at frame scale even in the dedicated zoom
+    suspected_issue: >-
+      The 5/8 nuts (0.55in) and fender washers (0.11in) are physically small
+      against 35in uprights; in z_pivot.png the upright clamp stacks read as
+      slight bulges on the rod, and a reader may not SEE that each upright is
+      nutted inside AND out even though all eight pieces are modeled and their
+      bearings proven.
+    severity: LOW
+    visual_evidence: >-
+      z_pivot.png: the center (arm) thrust cluster reads clearly; the
+      upright-face washers and nuts are visible but small at the bore
+      stations. Hardware presence + the eight clamp-stack bearings + the
+      nut-thread expected_overlaps are all VALIDATED in the report tables.
+    renders:
+      - path: outputs/trebuchet/views/z_pivot.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Carry the stack order in the caption and the rigging/assembly prose
+      (washer+nut outside, nut+washer inside, per upright; washer + double jam
+      nut per arm face) so the reader assembles from words + validated counts,
+      not from squinting. A dedicated hardware-explode view is Presentation-
+      Graph material, not built.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Caption + doc narrative carry the full stack order; hardware presence
+        and bearing proofs carry the counts. Accepted as a render-scale limit.
+  - id: V3
+    subject: the 1/16in hanging tangency cannot visually read — is the pose claim real?
+    suspected_issue: >-
+      The modeled pose claims the arm HANGS on the rod (bore top tangent on
+      the rod top, centerline 1/16in below the axle line). At render scale
+      that offset is sub-pixel: no view can show it, so the pose could be
+      concentric-faked and the renders would look identical.
+    severity: MEDIUM
+    visual_evidence: >-
+      z_arm.png shows the bore region occupied by the rod but cannot resolve
+      1/16in; the claim is carried instead by the in-model dimension check
+      "hanging pose: arm centerline = axle - radial clearance" (expected
+      literal "= 32 - (0.75 - 0.625) / 2", tol 0.005in) and the arm<->rod
+      contact + bond declarations, all PASS in the gate.
+    renders:
+      - path: outputs/trebuchet/views/z_arm.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Keep the pose pinned by the dimension check (a drifted pose goes RED by
+      mechanism); never claim the tangency from the renders.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        The pose is proven by the dimension check + contact declaration, not
+        the pixels; the doc's pose prose says the offset is asserted in-model.
+  - id: V4
+    subject: firing loads on a loose frame — can the machine slide, walk or tip when fired?
+    suspected_issue: >-
+      The renders show a light braced frame standing loose on the ground with
+      a ~25lb counterweight meant to free-fall through it. Recoil, walk and
+      tip under firing loads are proven by nothing in the geometry.
+    severity: MEDIUM
+    visual_evidence: >-
+      v1_iso.png / v2_side.png: the loose stance and the tall mast with the
+      hung arm; nothing in the model analyzes dynamics.
+    renders:
+      - path: outputs/trebuchet/views/v1_iso.png
+      - path: outputs/trebuchet/views/v2_side.png
+    invariant_family: Support/Stability representation
+    recommended_action: >-
+      Confirm the compiler does NOT silently pass stability: the coverage
+      matrix must show Support/Stability representation AND Structural
+      capacity as UNKNOWN — NOT ANALYZED (loose object, no walking-surface
+      rung, no dynamics). Trebuchet firing dynamics are named ANALYSIS-v1
+      acceptance material — the first MECHANISM on that list.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Verified in the coverage matrix: Support/Stability, Load-path capacity
+        and Structural capacity read UNKNOWN — NOT ANALYZED. The doc's safety
+        prose treats the machine as live (stand behind, never inside the
+        frame) precisely because no stability number is claimed.
+  - id: V5
+    subject: the load-bearing NUMBERS lived in prose only — a fresh builder taped nothing off the drawings
+    suspected_issue: >-
+      Two independent naive-builder comprehension reviews (agents given ONLY
+      the rendered document) both verdicted BUILDABLE-WITH-GUESSES: the frame
+      reconstructed correctly, but the arm-bore station was absent from the
+      cut plan (bore the wrong end = a 1:4 arm that won't throw), the
+      cross-member/upright stations were never dimensioned, the trigger and
+      release positions had no drawing at all (the cocked pose is unmodeled),
+      the launch direction was inferable but unstated, and the screw-length
+      map and axle threading order were prose-only.
+    severity: HIGH
+    visual_evidence: >-
+      The pre-DRAWDIM document: shaded views carry shapes, prose carries every
+      number. Both builder reports quote the same insufficiencies (the reports
+      are quoted in review-drawdim context; the arm-bore station is the shared
+      top finding).
+    renders:
+      - path: outputs/trebuchet/views/d1_dimensions.png
+      - path: outputs/trebuchet/views/d2_pivot_stack.png
+      - path: outputs/trebuchet/views/d3_operating.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Systematic, not local: (1) bore/notch cut-plan lines carry their DERIVED
+      station compiler-wide, guarded by a class-closer test; (2) a dedicated
+      dimensioned-elevation sheet (D1) drawn from placed bboxes + the compiled
+      namespace, nothing hand-typed; (3) the pivot stack + threading order as
+      a drawn sheet (D2); (4) the cocked pose + rigging positions as a
+      declared-schematic operating diagram (D3), banner-labeled derived
+      arithmetic / NOT ANALYZED. The e2e prose guard asserts the sheets and
+      the stations ship in the document.
+    resolution:
+      status: fixed-by-revision
+      note: >-
+        DRAWDIM branch: process_graph._station_phrase (+ class-closer +
+        off-board-notch guards, textlayer golden regenerated insertion-only),
+        three derived sheets in the renderer, panel + coverage table updated,
+        e2e guard extended. The naive-builder review class itself is worth
+        repeating on future details — recorded in the task report.

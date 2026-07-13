@@ -1,0 +1,3242 @@
+# Wave 1+2 progress ledger — detailgen framework roadmap
+
+## HISTORY REWRITE NOTE (2026-07-13, after SESSION UPDATE 11)
+
+The repo was pushed to private GitHub (jmwitten/plumb) and its FULL history
+was rewritten once (git-filter-repo mailmap) to fix commit authorship:
+dinawitten -> Joel Witten <jmwitten@users.noreply.github.com>. Content is
+byte-identical (master tree hash verified unchanged); every SHA changed.
+ALL commit citations in this ledger and the sdd/ documents written before
+2026-07-13 are PRE-REWRITE SHAs — resolve them via
+commit-map-authorship-2026-07-13.txt (old -> new, 633 entries) in this
+directory. Post-rewrite master tip at the time of the rewrite: 3bbdaa7.
+
+## ★ SESSION UPDATE 11 (2026-07-13 — STEPDOC/CPG v1-core COMPLETE + merged; zipline REDELIVERED)
+
+v1-core is DONE per amendment 1, merged in two arcs: `sdd/stepdoc-core`
+(@43cd1a4: SEQSCHEMA loader plumbing + CPGCORE semantic core) and the
+follow-up `sdd/condoc` (@139daed: the consolidated zipline generator gets
+the same reader surfaces — a THIRD doc surface the design's inventory never
+named, caught by the delivery agent's content verification, not by the
+suite). Suite 1116 → **1169 passed / 3 skipped / 1 xfailed**, gated at every
+merge (branch-tip gate read before each merge as a separate command;
+post-merge gate re-run where the tree's code moved).
+
+What landed: event graph (`src/assemblies/event_graph.py`) with THREE lift
+rules — F-5 same-event drop, R-2 multi-stack at-or-before mapping (cycling
+counterexample pinned), and a third found LIVE during implementation:
+mid-event member interleave (the shipped ThreadedRodEpoxyAnchor threads
+hardware through its bracket; both directions drop as intra-event order,
+structural necessity keeps the member conservatively PRESENT) — plus
+structural necessity with the technique-only exception, authored_sequence
+per chain, merged Kahn cycle check naming edges + provenance families.
+Axis-3 reclassification on the ONE graph (`_Scope`'s own-connection closure
+gone); F-7 party delta pinned both directions. Rung wording: every
+declared-leaning clear reads "geometry proven at the DECLARED build order,"
+SEQUENCE-PROVEN claimed nowhere (AST + live-corpus guards). `sequence:` spec
+surface (stages, why: required, five teaching errors; after:/subassemblies:/
+assembly: deliberately unknown keys). Epistemic-contract table + derived
+Build Sequence section on validation_report.md, the per-detail HTML, and
+(condoc) the consolidated doc. Platform authors toes-before-launch-bolts
+(wedge-fact why): its 2 top toe UNKNOWNs flip to declared-order PASS,
+double-qualified; the other 17 UNKNOWN texts re-worded (§4.1 form, staging
+named future-only, site rod names cross-fragment + P1), verdicts unchanged.
+CAT-I both halves + Q9 four-property reversion probes pinned.
+
+Adversarial trail: review-cpgcore.md — FIX-FIRST (F-1 BLOCKING: an authored
+stage could silence structural necessity via a declared_out built AFTER
+authored edges appended; fixed technique-only with the reviewer's three
+constructions pinned) → confirmation round CONFIRMED. Everything else held
+under live attack.
+
+DELIVERED: consolidated zipline doc regenerated from the gated tree and
+verified on content (declared-order clears + whys on paper, Build sequence
+(derived) + epistemic table present ×2, headline honestly BLOCKED on
+foundation_capacity×3, rod-vs-rung names both gaps, old CPG-absence
+sentence extinct) → vault `05_Attachments/Organized/Zipline Platform
+Drawings/Zipline Build Document (model-backed) 2026-07-13.html` +
+~/Downloads (dated-copy convention; 07-08/07-10 copies retained).
+
+Residuals for the next controller: (1) `FastenerInstallation.stage`
+("own_connection") predates amendment 5's stage/step split and still prints
+in describe() lines — rename when convenient, owner-flagged; (2) the two
+report scripts hold verbatim COPIES of _render_install_section /
+_render_build_sequence_section (goldens pin both; consolidate to a shared
+import in a cleanup pass); (3) caddy panel's hand-typed sequence prose
+ships beside the derived section until +process (CAT-K owns it); (4) event
+edges are not evidence-graph nodes (projection is a later increment).
+NEXT: **+staging** (subassemblies/frames/join, R-1 rule — buys caddy 8 +
+frame 8, CATs G/H) → +process (cure, CAT-K, prose retirement) →
++presentation (slider, content-keyed step PNGs, CATs J/L).
+
+## ★ SESSION UPDATE 10 (2026-07-12 — STEPDOC/CPG v1 design APPROVED-WITH-AMENDMENTS; v1-core IS GO)
+
+Owner approved the STEPDOC/CPG design with BINDING amendments (recorded in
+stepdoc-cpg-design.md §Owner sign-off): (1) PHASED scope, semantics ahead of
+presentation always — v1-core = event graph (both lift rules) + merged cycle
+check + authored_sequence (why: required) + axis-3 reclassification (§4.1
+incl. party-delta re-pins) + rung wording + ONE plain-text derived step list
++ the PLATFORM corpus row (2 UNKNOWNs → declared-order PASS) + CAT-I +
+reversion probes; then +staging (caddy 8 + frame 8, CATs G/H) → +process
+(cure, CAT-K, caddy prose retirement) → +presentation (slider, keyed PNGs,
+coverage, CATs J/L), each increment independently gated; (2) an
+epistemic-contract TABLE (derived / declared / UNKNOWN order facts);
+(3) declared-trust visibility = a PRODUCT requirement wherever resolved
+verdicts appear ("resolved" never reads as "proved"); (4) the platform's
+authored order presented as a declared build strategy, never derived;
+(5) "stage" vs "step" vocabulary kept sharply distinct, blurring made
+unrepresentable in types. Owner's minimality probe answered in the sign-off
+section: the floor still needs the whole semantic core — the design's center
+carries no speculative weight.
+
+NEXT CONTROLLER: implement v1-core per amendment 1 (worktree implementer +
+fresh adversarial review + one full gate per merge; master @894a324, suite
+1116/3/1 baseline; the .shim recipe + gate-read-before-merge discipline are
+in the memory file). The 18-UNKNOWN corpus table (§4.4) and CAT specs (§7)
+are the acceptance surface; only the platform row is v1-core scope.
+
+## ★ SESSION UPDATE 9 (2026-07-11 ~15:00 EST — STEPDOC/CPG v1 design READY FOR OWNER)
+
+Owner directive ("break complex installations into steps"): STEPDOC/CPG v1
+design authored + adversarially reviewed (REVISE: corpus row geometrically
+impossible at detail granularity — the frame's 8 blockers are MUTUALLY
+blocking, forcing per-subassembly staging into v1, which SIMPLIFIED the
+design: one staging model, bench_then_set = sugar; 3 CATs rebuilt; in_situ
+default flipped to UNDECLARED=UNORDERED preserving day-one truth; v1 claims
+SEQUENCE-PROVEN nowhere) → confirmation round (FIX-AGAIN: 2 derived-edge
+rules — bench-events-before-join; multi-stack lift mapping w/ the hanger
+pinned) → folded @a105d3b, CONFIRMED ready. Doc:
+stepdoc-cpg-design.md (727 lines, CATs G-L, acceptance corpus = the 18
+standing install-order UNKNOWNs → all flip at declared-order rung).
+★AWAITING OWNER SIGN-OFF — his three decisions flagged in the review "For
+the owner" section: v1 scope growth (subassembly staging vs 10/18),
+declared-order epistemic ceiling, caddy hand-typed fieldnote derives-or-
+retires. NO implementation before sign-off.
+
+## ★ SESSION UPDATE 8 (2026-07-11 ~10:00 EST — GLUE arc: owner directive, caddy re-delivered)
+
+Owner (no pocket jig): "just do glue and clamp" for the caddy rail→top
+joints. Retires work order R-GLUE: NEW `glued` ConnectionType (2 parts at a
+face-to-face bond plane; NO hardware [raises]; bonded_pairs + new
+`bonded_to` edge in loadpath LOAD_BEARING_EDGE_KINDS + evidence
+EDGE_KINDS — reviewer PROVED the transfer-claims gate prevents over-routing:
+only downward_load is provable and glued claims pull_out/shear placeholder
+only; NO bears_on; substrate on per-connection assumptions per R-SUBSTRATE;
+clamp/cure = disclosed process fact; install_contract () = nothing to
+contract). Caddy spec: 4 stand-in up screws DELETED, two rail→top joints
+glued, 8 side screws untouched. Blocking 12→8 (side-screw sofa-arm
+install-order UNKNOWNs — the honest remainder until axis 3). Reversion
+probe reworked: RE-ADDS the D6 screw to the spec text, original impossible-
+joint verdicts return verbatim. Adversarially reviewed (MERGE, zero
+blocking) + gated; master @db28a9d, suite 1116/3/1. Doc re-delivered w/
+FORCED view re-render (ensure_views only fills missing files — stale-by-
+geometry PNG lesson): vault "Armchair Caddy Build Document (model-backed)
+2026-07-11.html" (supersedes the one-day-old pocket-era 07-10 copy,
+removed) + ~/Downloads. NEW RESIDUALS filed: bond-plane contact unproven by
+any check (contact-proof-without-bears_on = the honest upgrade); ""-key
+install: override silently ignored on ()-contract types (second consumer
+now); glued-only detail family row reads NOT-ANALYZED (mild under-claim,
+correct side; "NOT APPLICABLE" verdict = vocabulary work). ANALYSIS-v1
+material += adhesive bond capacity.
+
+## ★ SESSION UPDATE 7 (2026-07-10 ~14:00 EST — DRAWDIM merged; trebuchet doc REDELIVERED)
+
+Owner follow-up on the trebuchet: ran a NEW REVIEW CLASS — two independent
+NAIVE-BUILDER comprehension reads (fresh agents, document only). Both:
+BUILDABLE-WITH-GUESSES — frame perfect, rigging guessed, trigger a stall;
+shared top finding: the arm-bore STATION was absent from the cut plan
+(wrong-end bore = a 1:4 arm). Owner directive: systematic fixes + "everything
+in the drawing — people don't read the text."
+
+DRAWDIM merged @526025e onto the INSTALL-arc master (@267d91b), suite
+1062/3/1 on the combined tree; adversarially reviewed (review-drawdim.md,
+MERGE-WITH-NITS — N1 sling-length divergence fixed; reviewer mutation-tested
+the class-closer and re-derived every sheet number):
+1. COMPILER CLASS-CLOSER: ProcessRecord._station_phrase — every in-board
+   bore/notch cut-plan line carries its derived STATION (tape distances from
+   BOTH stick ends + width position); off-board notch centers honestly omit
+   it; unit guards; textlayer golden regenerated insertion-only (decks 2/3
+   gain stations, off-board decks correctly don't).
+2. DERIVED 2D SHEETS (render_trebuchet_views.py DRAWDIM section — bboxes +
+   namespace only, nothing hand-typed): D1 dimensioned side elevation
+   (stations chained from one datum, screw map, WHICH-END-IS-WHICH, launch
+   direction), D2 pivot stack + threading order, D3 operating diagram
+   (cocked pose = DECLARED derived arithmetic; rigging drawn dashed as the
+   declared recipe; kinematics NOT ANALYZED banner).
+3. GUARDS: e2e asserts stations + all three sheets ship in the BUILT doc;
+   coverage table entries upgraded WHY-NOT→SHEET with honest rationale; V5
+   filed fixed-by-revision.
+Doc REDELIVERED to vault "Trebuchet Drawings/" + ~/Downloads/Build Documents/
+(now shows the INSTALL family's honest new "Fastener installability: UNKNOWN"
+headline row too). RESIDUAL for the roadmap: a general "every load-bearing
+number appears on a drawing" invariant = Presentation-Graph material; the
+naive-builder read is its manual stand-in — RECOMMEND running one per future
+detail (cheap, found a wrong-build-risk class two adversarial reviews missed).
+
+## ★ SESSION UPDATE 7 (2026-07-11 ~00:15 EST — INSTALL v1 COMPLETE + three fix arcs DELIVERED)
+
+INSTALL v1 shipped end-to-end in one controller session, multi-agent
+(2 impl branches parallel → axes branch → 9-agent verify fleet → 3 parallel
+fix arcs; every merge one full gate on the true tree; every branch a FRESH
+adversarial review). Master @aa7e02e, suite 1108/3/1.
+
+LANDED: "Fastener installability" family (auto-UNKNOWN day one) → typed
+FastenerInstallation contract (installation.py; install_contract hook,
+defaults on all 8 types; spec install: surface on BOTH build paths;
+per-field provenance in the derivation log + per-detail doc disclosures) →
+axis-1 termination + axis-2 static access (install.py, contract-driven,
+member-chord walk w/ own-member standoff-gap disclosure, both-side
+through-bolt sweeps, role-group-scoped corridors, rung-honest wording) →
+Phase-0 sweep as pytest (per-flavor pins, all 9 specs + site-composed).
+CATs A-F all CONFIRMED by independent verifiers. Review fleet caught and
+fixed pre-merge: breach-masking chord credit (GEO-F1 + standoff refinement
+after a red gate), unswept nut zone (GEO-F2), probe-cap far-face prints
+(GEO-F3), concealed_exit unmatched-face waiver (HON-F1), guardrail-#7
+per-detail doc gap (HON-F2 → render_install_disclosures_md).
+
+FIX ARCS (each reviewed + gated): CADDY = pocket_screw contract on the two
+rail→top joints (REPRESENTED until vocab #1), authored 0.5in embedments w/
+geometric whys, BOM display-shadow disclosed; truthful state BLOCKED on 12
+named install-order UNKNOWNs (off-the-sofa assembly = axis 3). STOOL =
+station move onto the cleat free face + screw_len_h 1.25→1.75 (old PASS was
+an artifact of the unbuildable station) — CLEAN on merit, ★BOM CHANGE: 4x
+1.75in cleat screws. PLATFORM = authored 3x1in stubby-driver envelope
+(F-6 first-class exemplar; adversarial 3-6in mask sweep confirmed no
+weakening); verdict content unchanged, epistemics upgraded.
+
+DELIVERED 2026-07-10 (vault 05_Attachments/Organized/ dated + ~/Downloads/
+Build Documents/): Step Stool (installability PASS), Zipline (per-contract,
+2 named toe UNKNOWNs), Armchair Caddy (first vault copy ever; honest
+UNKNOWN — UNRESOLVED headline, full reasons on paper).
+
+FLAGS FOR NEXT CONTROLLERS / THE TREBUCHET AGENT: trebuchet = 18 honest
+embedment FAILs (task-install-axes-report.md §Trebuchet handoff — pins
+ready to re-pin green after longer screws or authored override);
+sit_reach_frame doc truthful state BLOCKED (8 install-order UNKNOWNs —
+build order screws rails before the box closes; fix = declared stubby
+envelope or axis 3); un-owned fasteners (tree lags, trolley hardware,
+trebuchet axle) invisible to the axis checks until connection adoption
+(named residual); BOM screw-length display is 1-decimal ("1.8 in" for a
+1-3/4 screw — not a purchasable name; repo-wide nit). Vocab work orders
+queued: #1 counterbore/pocket step kind (raises caddy to GEOMETRY-PROVEN),
+#2 angled fastener placement, then waterfall #22 / drill #25 / CL v2 /
+Phase-2 derived stations (kills D6-class rot at the root) / Phase-3 CPG
+(axis 3 — resolves every named install-order UNKNOWN).
+
+## ★ SESSION UPDATE 6 (2026-07-10 ~11:55 EST — RETRO BACKLOG CLEARED; R39-R44 filed)
+
+The retro-row backlog that had trailed every recent update ("R39+ not yet
+filed", carried across SITREACH / SITFRAME / stool / CL-3 / INSTALL) is now
+DONE. Six pending pain points classified into the dataset and committed
+@23c2d70 (retro-index.md):
+- **R39** `install` · PASS — caddy impossible joint (owner-caught up-screw
+  heads mid-plate; CLEAN because no installability invariant + no coverage
+  family, the absence invisible). Prevention = INSTALL v1 family + contract
+  + axes 1-2.
+- **R40** `install` · SEM — D6 authored-station ROT (cleat→rail resize kept
+  the cleat-era `upscrew_z=-1.5`; coordinate meaning died with the part).
+  Root fix = Phase-2 derived stations; interim axis-2.
+- **R41** `install` · SEM — undeclared idealization (`toe_screwed` names
+  angled, models straight/buried; model never says it idealizes). Fix =
+  type default contract + flagged display fact referencing it, never a
+  waiver.
+- **R42** `install` · SEM — stool station-at-interface (right length, head
+  at the joint face not the free face; drawn unbuildably, documented
+  buildably). Same root as R40 + the trivial stool station-move fix arc.
+- **R43** `cl3` · SEM — EXPECT over-cover (kind+substring `covers()`
+  absorbed a genuinely-new same-kind failure; CL-1 byte-equal claims-
+  precision class at the mechanism level). Already FIXED on merge:
+  subject-precise coverage + same-kind-count guard + injected regression.
+- **R44** `stoolbuild` · CONTROL — CL-first residuals (0/0/14 raw) BECAME CL
+  v2's requirements list; residual-driven roadmap beats speculative vocab.
+
+Tally now: **LANG 4 · TOOL 13 · SEM 20 · PASS 3 · MIG 1 (retired) · INH 2 ·
+controls 16**. HOUSEKEEPING: retro-index.md had NEVER been committed — it
+lived only on disk, and `.superpowers/sdd/.gitignore` is `*` (ignore-all),
+so it and every tracked sibling require `git add -f`; @23c2d70 is the file's
+FIRST commit (R1-R44 all landed with it). Every future retro appends one row
++ updates the tally.
+
+## ★ SESSION UPDATE 5 (2026-07-10 ~11:40 EST — TREBUCHET delivered; queue unchanged)
+
+Owner asked for a 3ft one-day trebuchet for water balloons + tennis balls.
+Full arc in one session, parallel to the INSTALL-design session: v2 design
+pass (web prior-art survey: hinged-CW is the published tennis-ball-scale
+form; water balloon = the binding fragile-payload constraint → sling +
+tunable bucket CW; scorecard in task-trebuchet-report.md) → CL-first spec
+(details/trebuchet.spec.yaml: 57 parts, 13 connections, gate CLEAN) →
+adversarial review (review-treb.md, MERGE-WITH-NITS; 3 doc-consistency nits
+fixed same round) → MERGED @2c23157 onto the INSTALL-design master
+(@1f34bbf), suite 1020/3/1 on the combined tree → DELIVERED to vault
+"05_Attachments/Organized/Trebuchet Drawings/" + ~/Downloads/Build Documents/.
+
+FIRST MECHANISM in the corpus; no new vocabulary added (route-by-class held):
+- PIVOT IS NOT A CONNECTION: arm-on-axle rides the honest escape hatches
+  (bonds/contacts/expected_overlaps/through_holes + clamp-stack bearings) —
+  the trolley-launch precedent. Leading NEW WORK ORDER: pivot/journal
+  ConnectionType (would derive bore-fit invariant, thrust chain, install
+  order, free-rotation non-claim).
+- HANGING POSE: the arm is placed one radial bore clearance (1/16in) below
+  the axle line, bore tangent on the rod top — a derived, dimension-checked
+  honest pose (not concentric-faked); e2e guards it.
+- RIGGING AS FIRST-CLASS PROSE (design finding DS1): sling/pouch/CW bucket/
+  trigger are unmodelable (no soft-goods vocabulary — work order); shipped
+  as dedicated doc sections via a new ADDITIVE `extra_sections` consumer
+  hook in single_detail_report.py (other consumers byte-unchanged).
+- Other residuals filed: one-feature-per-board limit (the CW hitch is a rope
+  hitch partly BECAUSE a 2nd bore is inexpressible — disclosed), features
+  only on deck_board, generic face-lap word (cleat_screwed noun stretched,
+  disclosed per-connection, DS4), species/grade register (PT decking billed
+  on a kids' machine — disclosed), miter brace alternative sequenced behind
+  waterfall #22. ANALYSIS-v1 acceptance material += trebuchet firing
+  dynamics / frame racking / rod bending (the first MECHANISM entry).
+
+## ★ SESSION UPDATE 4 (2026-07-10 ~16:30 EST — INSTALL design APPROVED-WITH-AMENDMENTS @d2204ba; IMPLEMENTATION IS GO)
+
+Owner approved the INSTALL design with BINDING amendments + guardrails (all
+recorded in installability-design.md §Owner sign-off): (1) NO global
+geometric rules — checks derive from a typed FastenerInstallation contract
+on the Connection (method/entry face/tool axis/exit/embedment/head/tool
+envelope/stage), ConnectionType-supplied defaults, spec-overridable;
+(2) three verdict axes: geometric termination / static tool access /
+sequence-aware — v1 proves the first two, sequence honestly UNKNOWN until
+CPG; (3) display idealization NEVER a waiver (angled semantics drive
+validation/docs/access); (4) core invariant: construction-complete requires
+a represented, checkable installation method (unresolved contract ⇒
+UNKNOWN, blocks CLEAN); (5) success = CATs A-F (pocket/toe/through-bolt/
+resize/late-obstruction/sequence) get DIFFERENT CORRECT VERDICTS from ONE
+model; (6) installability epistemic ladder REPRESENTED < GEOMETRY-PROVEN <
+SEQUENCE-PROVEN — never "declared-PASS"; (7) field-level contract
+provenance (connectiontype_default/manufacturer_data/authored_override/
+assumption); (8) ship v1 minimal+honest, vocabulary raises rungs later.
+NEXT CONTROLLER: implement INSTALL v1 (contract schema + type defaults +
+family + axes 1-2 + sweep-as-pytest) then the three fix arcs (caddy pocket
+joint, stool station move [trivial], platform toe-screw contract) with doc
+regens + vault re-delivery. Vocab work orders on the board: counterbore/
+pocket step kind; angled fastener placement; derived stations (CL v2 list).
+
+## ★ SESSION UPDATE 3 (2026-07-10 ~15:30 EST — OWNER CAUGHT A SHIPPED DEFECT CLASS; INSTALL design authored)
+
+Owner, reading the caddy doc, asked "how does the up screw get driven?" —
+the up-screw heads are EMBEDDED MID-PLATE in the solid 1x6 rail (D6 resize
+kept the 1x2-cleat-era authored station z=-1.5). validate() is CLEAN
+(overlaps allowlisted; no installability invariant; absence invisible — no
+coverage family). Phase-0 sweep found the CLASS: 14 no-accessible-head
+fasteners / 3 delivered docs / 3 flavors — caddy x4 (impossible joint),
+platform toe screws x6 (undeclared idealization of the angled technique),
+stool cleat screws x4 (station-at-interface, right length wrong face).
+Sit-reach x2 clean.
+
+INSTALL design authored + adversarially reviewed (review-install-design.md
+REVISE — caught F1-vs-pocket-fix contradiction, a Phase-3-dependent CAT,
+and a vacuous CAT; all rebuilt, replacement CAT verified live: 1.75in caddy
+side screw breaches the SHOW face and ships CLEAN today) → revised doc
+committed @ddd6786, ready for owner. Plan shape: new coverage family
+(UNKNOWN-visible day one) → F1/F3 then F2 checks (declared driver, no
+cross-connection FAIL claims until CPG) → derived fastener stations (CL v2)
+→ process-aware access (CPG). Named vocab work orders: counterbore/pocket
+step kind; declared-technique-idealization fact. FIX ARCS PENDING OWNER:
+caddy pocket joint, stool station move (trivial), platform idealization
+declaration. Retro rows R39+ still unfiled (now includes this arc).
+
+## ★ SESSION UPDATE 2 (2026-07-10 ~09:50 EST — SITFRAME variant delivered)
+
+Owner follow-up: same box but "plywood panel at the top, 2x4 for the rest"
+(little ply on hand). Full arc again: FRAME-A pick (THE FRONT LEGS ARE THE
+FOOTPLATES — full-height strips at protocol stance width; one 8-ft 2x4 =
+whole frame; ply only for the scale surface; metrology identical) →
+sdd/sitframe → adversarial review FIX-FIRST: reviewer caught the cleat
+joint claimed as "FACE grain both sides" when geometry is rail FACE to leg
+narrow EDGE (footplate orientation forces it) — wording corrected
+everywhere, reviewer CONFIRMED → merged @e55d1c6, suite 1010/3/1 →
+DELIVERED (vault Sit-and-Reach Box Drawings/ @JoelBrain fcae16d +
+~/Downloads/Build Documents/). NO new vocabulary (the variant spends the
+ply box's words; rail_cap finally gets true END grain). NEW: e2e ONE-STUD
+guard pattern (fab-record crosscuts + kerf <= stock); RESIDUAL R-SUBSTRATE
+(connection-type class text bakes substrate — per-connection DECLARED
+substrate = CL v2); ANALYSIS-v1 += frame RACKING, with the ply-box/frame
+pair filed as stiffness-comparison acceptance data. Review lesson: check
+substrate claims against ORIENTATION, not just joint class — a reused type's
+generic text can be true for one consumer and false for the next.
+
+## ★ SESSION UPDATE (2026-07-10 ~01:45 EST — SITREACH delivered; queue below unchanged)
+
+Owner asked for a sit-and-reach fitness test box. Full arc ran in one
+session: v2 design pass (owner answers: adult / OFFICIAL-SPEC / pick
+delegated) → Form A merit pick (task-sitreach-report.md) → CL-first spec
+(details/sit_reach_box.spec.yaml) → adversarial review (review-sitreach.md,
+MERGE + 1 MINOR fixed + 1 packer follow-on fixed) → MERGED @543535b
+(+ reviewer writeup @391f0e2), suite 999/3/1 twice → DELIVERED to vault
+"05_Attachments/Organized/Sit-and-Reach Box Drawings/" @JoelBrain 7630b34
++ ~/Downloads/Build Documents/.
+
+NEW VOCABULARY (route-by-class): plywood_panel component (sheet.py;
+ripped-strip stock honestly disclosed) + butt_screwed connection (edge-grain
+claims, no bears_on) + "plywood" material + ply-strips-pack-on-48in-stock in
+single_detail_report (stick packer printed a nonexistent 8ft-ply-strip SKU).
+Review lesson worth keeping (MINOR-1 class): an in-model dimension check
+whose expected reads its own governing param asserts geometry-matches-
+parameter, NOT parameter-matches-contract — pin contracts with LITERAL
+expecteds. NEW WORK ORDERS: R-SHEET (rip step / sheet stock form + nesting),
+R-SLIDE (captive slider = groove FEATURE + sliding-fit connection), R-GLUE
+(= #22's adhesive ConnectionType, second consumer). ANALYSIS-v1 acceptance
+material grew: box slide-under-heel-push + tip-under-overhang-pressure.
+Retro rows for the CL-3/stool/sitreach arcs still not filed (R39+).
+
+## ★★★★★★★★★★ SESSION HANDOFF (written 2026-07-09 ~03:00 EST — owner hit billing limit and ordered wrap-up; YOU are the fresh controller) ★★★★★★★★★★
+
+STATE (FINAL, updated at wrap): master @83479b2, suite 987/3/1
+deterministic. BOTH parked branches CLOSED before wrap: STOOL merged
+@f8c2c5e (review MERGE + gate green; build doc DELIVERED to vault
+"05_Attachments/Organized/Step Stool Drawings/" @JoelBrain 7264b33) ·
+CL-3 merged @83479b2 (fix round killed the EXPECT over-cover; ★ CL v1
+IS COMPLETE — MOUNT/ground + FEATURE/bore + EXPECT/RETIRE, all three
+REPLAYs met). Items 1-2 below are DONE — the next controller starts at
+item 3 (waterfall) after optionally: stool artifact page (owner liked
+the caddy's; cheap polish) + stoolbuild's 2 optional nits + retro rows
+for the CL-3/stool arcs (not yet filed — R39+ candidates: EXPECT
+over-cover class, CL-first residuals as roadmap data).
+
+ORIGINAL STATE NOTE (superseded): master @a3c1941 (CL-2), suite
+953/3/1 deterministic (red=real).
+Everything merged this session is adversarially reviewed + gated:
+FAB v1 complete (FAB-1..4 + caddy smoke + doc regen, R28/R29 retired)
+· caddy design arc (design-review directive → cleat_screwed → rails,
+D1+D6 fixed-by-revision; adopted END-STATE = waterfall, task #22) ·
+VIEWER (derived explode, Panel E, fab tooltips; vault re-delivered
+@JoelBrain b49a7a8) · stores/cutnote/fixstatus/cachefix cleanups ·
+CL-1 @e3088f3 (MOUNT+ground, REPLAY B) · CL-2 @a3c1941 (FEATURE+bore,
+REPLAY A flagship, cup-hole noun closed).
+
+TWO BRANCHES IN FLIGHT — FINISH THESE FIRST (both committed, safe,
+worktrees in the OLD controller scratchpad
+/private/tmp/claude-501/-Users-joelwitten-Code-JoelBrain/9571557f-0a8b-4dd5-8966-7544a91d2abb/scratchpad — copy anything needed before OS tmp cleanup):
+1. sdd/stoolbuild (wt-stoolbuild, off a3c1941): Form A kids' step
+   stool, OWNER-PICKED, built CL-first (honest result: 0 mounts / 0
+   features / 14 raw — residuals R1-R3 in task-stoolbuild-report.md
+   are CL v2's requirements list). GATE ALREADY GREEN (962/3/1 on
+   scratch/stoolbuild-merge). Review (stoolbuild-review agent) was
+   MID-FLIGHT attacking the residual claims — check
+   review-stoolbuild.md for a verdict; if MERGE, merge + deliver:
+   preview already staged ("PREVIEW - Step Stool Build Document.html"
+   in old scratchpad), owner wants FULL delivery (vault copy beside
+   the zipline drawings + commit/push JoelBrain + an artifact page
+   like the caddy's: claude.ai/code/artifact/15cfc1b6... is the CADDY
+   artifact — the stool gets its OWN new artifact).
+2. sdd/cl3 (wt-cl3, off a3c1941): EXPECT+RETIRE+REPLAY C. Verdict was
+   FIX-FIRST (review-cl3.md): RETIRE/REPLAY-C/CAT-4 all held; EXPECT
+   covers() OVER-COVERS (kind+substring absorbs genuinely-new
+   same-kind failures — masking). Controller ruling issued to
+   cl3-impl: subject-precise coverage + same-kind-count guard +
+   reviewer's injection as regression + fix the fixture pin + correct
+   overclaims. cl3-impl was mid-fix — check wt-cl3 git log +
+   task-cl3-report.md fix-round section; then cl3-review confirms,
+   re-gate, merge. Gate on pre-fix tip was green 974/3/1.
+MERGE ORDER: whichever completes second re-gates on the combined tree
+(both off a3c1941; stool touches single_detail_report consumers, cl3
+touches spec/lowering — low collision, verify).
+
+QUEUE AFTER (priority order):
+3. #22 WATERFALL vocabulary (task + full context in its description):
+   the caddy's owner-adopted end-state — v2 design-pass FRONT END
+   (prior-art + function brief + rendered finalist variants for owner
+   pick), then miter crosscut op + glued-miter ConnectionType
+   (adhesive as hardware; epoxy prior art) + grain-continuity as
+   cut-adjacency; then the caddy waterfall revision (D1/D5/D6 close;
+   drop the bore per owner call — clean top; shallow recess optional);
+   artifact v4.
+4. #25 drill fit/stackup rule (+ stale derivation_log count cleanup).
+5. CL v2 requirements now REAL: the stool residuals (in-plane offset
+   forms, mirror-on-rotated-stock, edge-notch verb) + species/grade +
+   show-face/intent-register + grain awareness (all in
+   cl-vocab-from-design-review.md + task-stoolbuild-report.md).
+6. THEN the handoff queue resumes: ANALYSIS v1 (acceptance material
+   accumulated: pier capacity UNKNOWNs, caddy rock-stability, stool
+   tip-over) → Inspector v2 ∥ Presentation Graph → DESIGN-0 LAST
+   (owner ruling stands).
+
+BINDING DIRECTIVES (grew this session — ALL Joel, ALL in force):
+vocabulary-gap-directive.md (+ MERIT-FIRST amendment: not-expressible
+is a work order; expressibility never selects, only sequences) ·
+design-review-directive.md (+ v2: prior-art survey with web research,
+function brief, whole-form candidates, rendered finalists) · plus the
+pre-existing seven (support/visual/view-coverage/fabrication/designer/
+analysis-adapter/cl-constraints). Retro dataset now R1-R38, C1-C15 —
+new controls: gates caught 2 real-main()-path crashes (R33 class ×2);
+implementers stall at final-suite step (controller runs ALL gates,
+R32); owner caught 3 process defects (R31/R37/R38 pattern: the system
+needs eyes, intent, precedent).
+
+OWNER DELIVERABLES THIS SESSION (all delivered): zipline doc
+regenerated + viewer-improved in vault (@b49a7a8); caddy artifact
+3 versions https://claude.ai/code/artifact/15cfc1b6-1209-46cd-be65-b43aee4b2e0b;
+system-design overview for NotebookLM in vault (01_Projects/04_Side
+Projects/Construction Compiler - System Design Overview.md, @8711080);
+stool preview staged (pre-merge). Owner style: conversational prose,
+docs first-time-reader, opinionated-controller design calls delegated
+(but merit-first + prior-art now binding), billing-conscious — batch
+work, avoid re-dispatch churn, controller runs gates itself.
+
+EXECUTION MODEL (unchanged, proven over ~20 reviewed merges today):
+controller + one-item worktree implementers + fresh adversarial
+reviewer per diff + ONE full-suite gate per merge on the true final
+tree. Gotchas confirmed repeatedly: messages cross/get lost (re-send
+FULL text, check disk artifacts on idle); implementers stall at the
+full-suite step (controller gates); reviewers who verify claims
+INDEPENDENTLY (pristine-master repro, own throwaway resolutions,
+attempting expressions themselves) caught every real defect today.
+
+## CURRENT SESSION (2026-07-08, fresh controller — FAB v1 execution)
+
+DESIGN-REVIEW CYCLE COMPLETE (tasks #11+#12, merged @fa20490): caddy
+intent ruled AESTHETIC-DOMINANT (mixed); D1 hidden-fasteners + D2
+hardwood ADOPTED as design intent; expressibility verdict NOT-honest
+(screw connection types bake gravity-seat + end-grain into type
+semantics — reviewer enumerated all 6 types both directions); ZERO
+geometry change (honesty over fake joinery); the doc now renders the
+Design review block from reviews/visual/caddy-design-findings.yaml
+(D1 open-with-ruling, D2 accepted-with-rationale, D3-D5 open);
+cl-vocab-from-design-review.md = CL v1 acceptance material (joint
+types / adhesive / species / show-face / bore-rim ease, per-finding
+traced). Suite 882/3/1. CL v1 decomposition MUST consume this handoff
++ cl-design-constraints.md + the trunk-clearance flagship CAT.
+
+★ CL-2 MERGED @a3c1941 (suite 953/3/1 twice — implementer + controller
+gate on the identical reconciled tree): FEATURE verbs land the FLAGSHIP
+CAT — the platform deck notch is ONE clearance_cut declaration deriving
+cut geometry (bit-exact via a principled arithmetic-order fix) +
+NET-NEW growth-gap ge invariant (implementer honestly corrected the
+design's own touchpoint count) + callout + fab fact + affected-region;
+grep-closer proves nothing hand-authored downstream; CAT-1 verified
+under mutation. New verb 'bore' (vocabulary-gap addition, owner-traced)
+— the cup hole speaks its own name, trunk words zero, whitelist
+deleted. 'spin' REMOVED; 'drill' → task #25 (fit/stackup rule).
+Feature identity authored-id-keyed (Q3 closed). Semantic reconciliation
+with caddy5 verified independently by reviewer (throwaway resolution
+first) + implementer. NEXT: CL-3 (EXPECT/RETIRE + REPLAY C) · waterfall
+vocabulary (#22, v2-pass front end) · stool awaiting OWNER PICK (A/B/C,
+task #23 report + rendered candidates staged) · #25 drill.
+
+CADDY5 MERGED @3df82c8 (suite 941/3/1; two review rounds): D6 fixed —
+1x2 cleats → full-depth 1x6 registration rails (rock 9.46°→2.60°,
+architect-caught, stability pass quantified); FIX-FIRST retired ALL
+pre-D1 reader prose (R24-class) + bite-tested guard; INCR read the
+edit as resized-not-replaced, region 0.53 (bounded-edit acceptance
+evidence). Rails = RECORDED INTERIM; adopted end-state = waterfall
+(task #22, v2-design-pass front end). Owner artifact v3 published
+(rails-interim-d6-fixed). NIGHT DIRECTIVE AMENDMENTS (both Joel):
+vocabulary-gap MERIT-FIRST amendment (R37 — expressibility never
+selects, only sequences) · design-review v2 THINK-LIKE-A-DESIGNER
+(R38 — prior-art survey with web research + function brief +
+whole-form candidates + rendered finalists). First v2 from-scratch
+test in flight: kids' step stool (task #23, wt-stool). Also in
+flight: CL-2 (task #21).
+
+VIEWER MERGED @ca69a63 (suite 940/3/1; owner-reported findings):
+derived explode (context bodies pinned — review catch), interactive
+Panel E (+ subset-crash guard the GATE caught in the real main() path
+— R33's class, second occurrence), fab-note tooltips single-sourced
+from ProcessRecord.fab_note() (cut plan delegates). Vault RE-DELIVERED
+@b49a7a8 (JoelBrain pushed) + preview refreshed. CL-2 dispatched
+(wt-cl2: FEATURE verbs + REPLAY A + feature identity + caddy cup-hole
+noun closure + spin justify-or-remove).
+
+★ CL-1 MERGED @e3088f3 (suite 924/3/1; two review rounds): MOUNT
+relations + pure lowering + semantic analysis. REPLAY B met on the
+tree_attachment beams (6 raw coords/1 rotate/1 mirror-twin → 0/0/0;
+base bit-exact, mirror ≤1e-6 with byte-identical digests — claims
+corrected to mechanisms). Fix-round rulings that now BIND CL-2+:
+'raise' struck (raw coordinate in semantic costume) → the R3 ground-
+datum relation implemented instead ('ground: {above: N}' derives
+grounding fact + doc sentence); 'asserts' struck → contact DERIVES
+from the relation kind; 'spin' = justify-or-remove in CL-2 (design-
+listed but derives nothing, unused). Honest residuals for CL-2+:
+trolley legs need edge-registration (X from deck edge/Y setback —
+beyond elevation); ground emits a derivation-log fact, not yet a real
+graph edge to a grade datum node. NEXT: CL-2 (FEATURE verbs + REPLAY A
++ feature-identity/naming — consume cl-vocab-from-design-review.md),
+then CL-3 (EXPECT/RETIRE + REPLAY C). VIEWER task (#20) in
+review/gate in parallel — merge-order: whichever lands second re-gates.
+
+CLEANUP TASKS CLOSED (2026-07-08 ~20:50, suite 906/3/1 @7e07f1d):
+fixstatus merged @ba08a32 (fixed-by-revision resolution state; D1
+migrated; zipline seed byte-untouched) · cachefix merged @7e07f1d
+(binary BREP, warm==cold bit-faithful, both tiers format-keyed, R36
+CLOSED — reviewer independently reproduced everything; perf improved).
+NEXT: CL v1 decomposition (task #18) — all acceptance material listed
+in that task + this ledger. Worktree/branch debris from today can be
+pruned at next controller convenience (wt-fab*/wt-caddy*/wt-cutnote/
+wt-visrevstores/wt-cleat/wt-cachefix/wt-fixstatus + sdd/* branches —
+all merged).
+
+PROCESS NOTE (2026-07-08 ~20:40): the harness task store was wiped
+mid-session (all 15 entries vanished around the time an implementer
+self-marked its task complete — cause unconfirmed). No work lost (this
+ledger + git are the durable record). Live entries recreated as #16
+(cachefix, in review) / #17 (fixstatus, in review) / #18 (CL v1
+decomposition). Reminder made explicit in both recreated tasks:
+implementers NEVER self-mark; complete = reviewed+merged+gated.
+
+EVENING ARC COMPLETE (merges @1c38001 visrevstores · @a30333d cutnote ·
+@27133ca cleat; suite 897/3/1): per-detail findings stores formalized
+(new detail files findings with zero test edits; R36 cache-not-
+tessellation-faithful hazard found by reviewer → task #14); cut-note
+honesty pass (radius truth, generic fallback; the caddy's noun gap is
+CL v1's second traced feature-identity need — first attempt hand-rolled
+a naming field through the IR and was reverted in full); cleat_screwed
+7th connection type (no bears_on/gravity-seat — the honest hidden
+joint) + the caddy hidden-fastener revision (4 show-face screws → 2
+interior cleats, top 8→9.5in, D1 FIXED; INCR's first real design
+change: attribution clean, honestly whole-model). Owner artifact
+(claude.ai) republished at the same URL with the clean show face.
+Remaining queue: #14 cache faithfulness · #15 fixed-by-revision status
+· CL v1 decomposition (acceptance material now: trunk-clearance CAT +
+cl-vocab-from-design-review.md + feature-identity ×2 + grain checking).
+
+NEW OWNER DIRECTIVE (2026-07-08 evening, BINDING): vocabulary-gap-
+directive.md — "not expressible" is a WORK ORDER, never a terminal
+state: every expressibility ruling names the missing word's required
+semantics and opens a vocabulary task in the same round; model
+vocabulary (connection types/op kinds/components) is taskable
+immediately (does NOT wait for CL — StandoffPostBase/cleat_screwed
+precedents), authoring-surface vocabulary routes into the live
+language effort's acceptance material with the finding cited. Origin:
+the D1 cleat verdict nearly parked an addable joint type behind CL v1;
+owner corrected. Corollary recorded: the language's poverty steers
+designs — the caddy had show-face screws because the only sayable
+joint was 'cap screwed down into end grain'. First application: task
+#13 (cleat_screwed, in flight).
+
+NEW OWNER DIRECTIVE (2026-07-08 afternoon, BINDING): design-review-
+directive.md — every design-document build now runs a DESIGN REVIEW
+pass (intent ruling functional/aesthetic FIRST, then every
+construction choice judged against it, findings filed per-detail)
+alongside view-coverage + visual-review. Origin: Joel caught top-face
+screws on the caddy (show-face fasteners on a furniture piece —
+invisible to all machinery). Process-level v1; findings = DESIGN-0's
+future dataset. First subject: caddy (task #11 in flight,
+sdd/designreview). Owner delegated the design CHOICE to the
+controller: be opinionated, conservative, grounded in looked-up design
+principles (hidden-fastening ladder: relocate off show face / cleats /
+pocket holes / plugged counterbores / joinery) — controller rules when
+the report lands, then the chosen revision exercises INCR end-to-end.
+
+★★ DELIVERED: the build-doc regeneration (the handoff's top-priority
+deliverable) — DOCREGEN merged @a1f8754 (impl e8a51d2 + review-
+docregen.md MERGE+DELIVER; suite 877/3/1; stray build logs dropped at
+merge), vault file REPLACED at the same path and JoelBrain pushed
+@62dd955; owner PREVIEW refreshed in the scratchpad. View-coverage
+directive's first application: 11 areas, 2 zooms added (deck-notch top
+plan + Panel E pier zoom), 6 why-nots, reviewer re-derived the
+enumeration independently. CADDY2 merged @c0984a5 (task #8: doc-render
++ VISREV feedback + view-coverage fixture; suite 872/3/1; per-detail
+sibling findings store sanctioned, formalization = task #9); the
+6-milestone progression series re-captured with the extended harness
+(raw file now backs the ledger). Controller visual observation
+(2026-07-08, to file via the caddy findings store in a future round —
+NOT yet filed): the caddy z1_cup zoom shows featureless planes, cup
+hole not discernible — same family as open C1 arm-occlusion; candidate
+new finding. Remaining queue: #7 domain-neutral cut-note renderer ·
+#9 per-detail VISREV stores · then CL v1 → ANALYSIS v1 → Inspector v2 ∥
+Presentation Graph → DESIGN-0 last.
+
+★ FAB v1 COMPLETE @c093b45 (all four merged + adversarially reviewed +
+gated): FAB-1 @439e6cf · FAB-2 @d80ad75 · FAB-4 @b5e685d · CADDY
+@76b93e4 (owner-ask smoke detail + progression harness; ledger
+caddy-progression.md, 6 milestone snapshots incl. retroactive pre-FAB;
+post-FAB-3 column = honest non-event) · FAB-3 @c093b45 (fix round:
+ungated render_documentation for the honestly-BLOCKED site + foundation
+pair-coherence check; reviewer ran real main() end-to-end). Site is now
+HONESTLY BLOCKED: Structural capacity UNKNOWN—UNRESOLVED ×3 (pier
+capacity, rung 4) — the designed §7 outcome; R28+R29 structurally
+retired; suite 869/3/1. Owner asks folded in this session: caddy smoke
+(#6 done), doc-render+visual-review+view-coverage harness extension
+(#8, in flight), domain-neutral cut-note renderer (#7, queued — the
+caddy exposed zipline-overfit note text). NOW IN FLIGHT (parallel,
+disjoint): DOCREGEN (wt-docregen — the ★deliverable: task-docregen-
+brief.md, view-coverage first application, staging→controller delivers
+vault) ∥ caddy task #8 (wt-caddy). Next after: adversarial doc review →
+binding gates → vault delivery (controller commits+pushes JoelBrain) →
+then CL v1 / ANALYSIS v1 per the handoff queue.
+
+Resumed per the handoff below. State verified on arrival: master
+@e9b63cb clean, no branches/worktrees; the "wt-struct salvage" note was
+stale — e74f109 is an ancestor of master (STRUCT fully merged), nothing
+to salvage. arch-context-pack.md BASE updated to e9b63cb/814-3-1.
+Controller scratchpad this session:
+/private/tmp/claude-501/-Users-joelwitten-Code-JoelBrain/9571557f-0a8b-4dd5-8966-7544a91d2abb/scratchpad
+(owner PREVIEW re-seeded there; wt-fab* worktrees live there).
+
+MERGED this session: FAB-1 @439e6cf (impl b589d00 on wt-fab1; the
+implementer went idle twice without the full suite — controller ran the
+gate suite itself: 828/3/1 green; adversarial review review-fab1.md =
+FIX-FIRST one claim-scope item, resolved: report's invariant claim
+tightened to "delegation for migrated components + test-exercised
+guard", production guard wiring named a REQUIRED FAB-2 obligation and
+added to task-fab2-brief.md, incl. enumerate-by-capability not
+type-name).
+
+ALSO MERGED: FAB-2 @d80ad75 (impl 66d6ef1; review-fab2.md = MERGE, no
+fix-first; implementer stalled pre-suite AGAIN — controller ran gate
+suite 836/3/1). Substance: R28 retired at source; the truthful cut list
+names the notch on ALL SIX deck boards — fab-design §6's "5 plain
+boards" was counterfactual (reviewer verified independently); the
+fabrication-fold guard is WIRED INTO the production doc build
+(capability-enumerated, ~17s cost recorded) — CAT-4 now literally true,
+closing the FAB-1 review's FIX-FIRST obligation.
+
+ALSO MERGED: FAB-4 @b5e685d (impl e148d50; review-fab4.md = MERGE, 2
+non-blocking notes: duplicate _fabrication_record_of DRY smell + its
+exception swallow could mask a fabricated part as purchased if a
+record raised — upstream verify_ guards it; future cleanup). CAT-3
+landed. Suite 848/3/1 implementer-run at the exact merged tree state.
+
+Queue in flight: FAB-3 (wt-fab3 @7da6477, impl DONE, suite self-run
+837/3/1 off 439e6cf; review dispatched review-fab3-brief.md — ITEM 1 =
+does the doc still BUILD with the site honestly BLOCKED by 3 capacity
+UNKNOWNs? The site CLEAN→BLOCKED flip is the designed §7 outcome but
+gates the owner deliverable; controller gate suite running on scratch
+merge d80ad75+fab3 — NOTE: merge order now makes that gate stale, fab3
+merge must re-gate on master(fab4)+fab3) ∥ CADDY fix round (3 items
+from review-caddy.md FIX-FIRST: probe FAB-2's real surface
+cutlist_fab_notes; add a real notch so the FAB-2 column can ever
+populate — FAB-2 v1 renders notes only for notch ops; de-era-lock the
+self-test). Then: caddy progression snapshots (pre-FAB @e9b63cb,
+post-FAB-1 @439e6cf, post-FAB-2 @d80ad75, post-FAB-4 @b5e685d,
+post-FAB-3, → caddy-progression.md), then the ★build-doc regeneration
+(view-coverage step + decision table, --vault-copy, replace the
+2026-07-08 vault file, commit+push JoelBrain). Process gotcha CONFIRMED
+3x this session: implementers stall at the full-suite step —
+controller runs gate suites itself.
+
+## ★★★★★★★★★★ SESSION HANDOFF (written 2026-07-08 ~08:30 EST — Joel signed off all four designs and is clearing context; YOU are the fresh controller) ★★★★★★★★★★
+
+STATE: master @e9b63cb, 814 passed / 3 skipped / 1 xfailed, suite
+DETERMINISTIC (the export-contamination flake was root-caused and fixed
+— red = real, zero adjudication permitted). Repo CLEAN: no branches, no
+worktrees, no in-flight agents. The vault holds the delivered platform
+doc (JoelBrain @61999fc, "…2026-07-08.html"). Every merge this session
+was adversarially reviewed; the review trail is review-*.md throughout
+this directory.
+
+WHAT MERGED THIS SESSION (in order): SUPPORT invariant family @4ccb73d
+· VISREV subsystem @afebae4 · CTXGROUND existing-role self-grounding
+@a378960 · SOLIDCACHE determinism fix @35e1a36 · STRUCT platform
+complete @a745248 (+vault delivery) · test_timing/cleanup @7ba7822 ·
+SUPPORT v1.1 tracked-support obligations @e5e2fce · INCR-1..5
+revision-semantics v1 @de3c321/@9040b5f/@6763885/@273e59f/@e2f4e16 ·
+HEADLINE per-family verdict @e9b63cb.
+
+★ THE FOUR IR DESIGNS — ALL DIRECTION-APPROVED BY JOEL (2026-07-08
+morning), amendments INCORPORATED into each doc (see each doc's "Owner
+sign-off amendments (2026-07-08)" section — those amendments are
+BINDING; per-question recommendations stand approved-by-direction
+except where the amendment sections say otherwise):
+1. cl0-design.md — CONSTRUCTION LANGUAGE. Highest-leverage per Joel.
+   Amendment: verbs are construction SEMANTICS not geometry ("support
+   beam on post" >> "translate 12in"); every verb answers "what
+   additional knowledge does the compiler derive?"; shorter YAML earns
+   nothing.
+2. incr-design.md — REVISION SEMANTICS (rebranded; the compiler
+   understands change/time, perf is a side effect). v1 SUBSTRATE IS
+   FULLY MERGED (INCR-1..5). Scoped validation stays deferred until it
+   meets the same byte-soundness bar as scoped regen (Joel affirmed).
+   Scoped-regen tooling is flag-gated default-off.
+3. fab-design.md — CONSTRUCTION PROCESS GRAPH (renamed for evolution
+   headroom: excavation/curing/temporary-supports/inspections later;
+   v1 = the fabrication/assembly slice: ProcessStep/ProcessRecord,
+   geometry = fold(stock, steps), the fold invariant kills R28's
+   class, FoundationSystem + foundation-role obligations kill R29's).
+   FAB-1..4 decomposed briefs-ready in the doc.
+4. analysis-design.md — ANALYSIS IR (canonical, solver-neutral;
+   compiler lowers into it; PyNite 3.0.0 = adapter #1 of N; six-clause
+   no-silent-trust-upgrade result schema pinned to the IR side; dual
+   staleness trigger incl. affected-region; bearings→pins = DECLARED
+   idealization). Honest path to ladder rung 4.
+Joel's frame: four IRs — Construction Graph (what exists) / Construction
+Process Graph (how it's built) / Analysis IR (how it's evaluated) /
+Presentation Graph (how it's communicated). The DESIGN EXPLORATION
+GRAPH (goals+constraints → candidates → analysis → comparison →
+recommendation) is deliberately DEFERRED until the four are complete —
+"exploration amplifies whatever understanding the compiler already
+has." Do NOT start it early.
+
+★ NEW STANDING DISCIPLINE (Joel, verbatim crux — applies to EVERY
+design and its implementation): each design carries CONCEPTUAL
+ACCEPTANCE TESTS ("a real/adversarial situation the system cannot
+handle today; after this lands it handles it FOR THE RIGHT REASON" —
+never "unit test passes because the function exists"), at least one
+would-have-caught-a-real-past-failure (cite the retro row) and one
+new-adversarial. "Success means a class of wrongness disappears — or
+at least becomes impossible to call CLEAN — not just that new code
+exists." All four docs now carry their CAT sections; IMPLEMENTATIONS
+MUST LAND THOSE CATS AS REAL TESTS. Also standing: every major
+abstraction is justified by an observed failure class, never by
+elegance (his opening note).
+
+IMPLEMENTATION QUEUE (priority order):
+1. FAB v1 (FAB-1..4 from fab-design.md; disjoint ownership; the CATs
+   are the acceptance bar) → THEN IMMEDIATELY the ★BUILD-DOC
+   REGENERATION (Joel's explicit top-priority deliverable: true
+   process-derived cut list + designed pier FoundationSystem; the
+   merged per-family HEADLINE rides automatically; MUST include the
+   view-coverage-directive.md step with its decision table in the
+   report; --vault-copy, dated filename, REPLACE the 2026-07-08 vault
+   file, controller commits+pushes JoelBrain; NO interim patches to
+   the current doc — owner ruling).
+2. CL v1 (decompose from cl0-design.md; the trunk-clearance CAT is the
+   flagship; coordinate the ProcessStep identity convention with FAB —
+   both docs already agree on content-keying, keep them agreeing).
+3. ANALYSIS v1 (analysis-design.md ACs + CATs; PyNite adapter;
+   load_cases minimal block; declared idealizations).
+   CL/FAB/ANALYSIS can overlap with disjoint ownership per the proven
+   execution model; FAB first because the doc regeneration gates on it.
+4. Inspector v2 ∥ Drawing Compiler / Presentation Graph (AD#2/#3/#4 +
+   view-coverage-directive as the Presentation Graph's acceptance
+   spec; Inspector v2 defining req: engineer/contractor reader).
+5. DESIGN-0 / Design Exploration — ONLY after the four IRs are
+   complete (task #15 holds it; designer-directive.md §1/§4 is the
+   charter).
+
+BINDING DIRECTIVES ON DISK (all Joel, all in force):
+support-invariant-directive.md · visual-review-directive.md ·
+cl-design-constraints.md · fabrication-directive.md (missing-IR-before-
+symptom pattern) · designer-directive.md (compiler→designer trajectory
++ the §3 headline change ALREADY MERGED) · analysis-adapter-directive.md
+(no silent trust upgrades) · view-coverage-directive.md (every doc
+build). The epistemic ladder governs every surface; claims exactly as
+strong as mechanisms.
+
+KNOWN HONEST GAPS (disclosed, do not "fix" outside their designs):
+cut list says 6×48in while geometry is notched (FAB v1 regenerates —
+owner ruled NO interim patch/note) · pier blocks constructionally
+undesigned (FAB FoundationSystem) · SUPPORT multi-surface cross-borrow
+residual (strict xfail test_cross_surface_phantom_borrow_is_rejected;
+real fix = declared bearing direction, CL-gated — note bearing
+direction now has TWO motivations, weigh it in CL v1) · structural
+capacity / code compliance NOT ANALYZED (ANALYSIS v1's job, honestly).
+
+EXECUTION MODEL (proven over ~15 reviewed merges): controller +
+one-item worktree implementers (fresh agent each, worktree+.shim per
+arch-context-pack.md — UPDATE its BASE to e9b63cb/814-3-1 when
+dispatching) + fresh adversarial reviewer per diff + ONE full suite per
+merge. Review patterns that work (retro controls): novel-spec
+generality attack (C9) · pristine-master repro for "pre-existing"
+claims (C8) · class-closer guard in the same fix round (C14 — it
+caught 2 extra defect classes) · attack-until-claim-matches-mechanism
+(C13). Process gotchas (hard-won): implementers SELF-MARK tasks
+complete prematurely — the CONTROLLER owns task states, complete =
+reviewed+merged+gated only · agents go idle silently AND inbound
+messages get lost — re-send rulings with FULL text, check disk
+artifacts on idle · design docs get adversarially reviewed BEFORE the
+owner reads them (caught overclaimed numbers in ALL FOUR) · liveness
+markers: git rm before final commit · retro-index.md is the DATASET
+(R1-R31, C1-C14) — every ≥20-min task retros into it, never weaken a
+check to pass, honest FAIL/UNKNOWN > fake PASS.
+
+USER CONTEXT: Joel is engaged (this was a morning of live sign-offs)
+but clearing context — do NOT assume he's watching; standing mandate =
+keep the queue moving unattended, flag genuine scope changes only.
+Joel-facing text: conversational narrative prose (memory:
+feedback_conversational_style); docs first-time-reader, no diff
+framing. Vault writes allowed, announce after; controller
+commits+pushes the vault. New controller = new scratchpad: worktrees
+live there; if a doc build runs, refresh a PREVIEW copy there and give
+Joel the `open` command in your first status message.
+
+Scratchpad this session: /private/tmp/claude-501/-Users-joelwitten-Code-JoelBrain/9e8768ba-12c8-4ebe-aacc-c24727bf6ef2/scratchpad
+(owner PREVIEW re-seeded there; worktrees wt-support / wt-visrev /
+wt-solidcache live there; old session's wt-struct still at the old
+scratchpad path per `git worktree list`, DIRTY — discard uncommitted
+state at STRUCT re-dispatch, salvage = committed e74f109).
+
+- VISREV: MERGED @afebae4 (impl f872633, review-visrev.md verdict
+  MERGE). Visual Review subsystem v1: src/review/ model+store+manifest+
+  report block, reviews/visual/findings.yaml seeded F1-F6 all open.
+- SUITE REALITY at afebae4 (655 tests): the pre-existing
+  export-mutates-geometry contamination now fires on MOST full runs
+  (-n auto: 3 fails one run, 1 DIFFERENT fail the next; serial: the 5
+  proven-pre-existing failures; every victim passes in isolation).
+  Merge-gate reliability problem → SOLIDCACHE task pulled forward from
+  post-queue (task-solidcache-brief.md, branch sdd/solidcache off
+  afebae4, in flight). Retro R23/C8 filed.
+- SUPPORT: MERGED @4ccb73d (review-support.md verdict MERGE —
+  acceptance proof reproduced live: platform FAIL -X by 42.3in, 5th
+  blocking site finding pinned, 4 zipline pins byte-intact; generality
+  attack PASSED with a novel catwalk spec; no weakening; boulder is a
+  real bonded foundation, not a relabel). Suite gate on 4ccb73d: 667/1/3
+  under -n auto, sole failure = rock_anchor frozen-transform oracle
+  (one of the proven-5 contamination set, passes in isolation) —
+  adjudicated green modulo the SOLIDCACHE-owned flake. Zero
+  VISREV×SUPPORT interaction failures.
+- Doc-prose defect CONFIRMED HARDCODED (consolidated_report.py ~470 +
+  ~1256: "Each of the 4 models validates CLEAN", only {n_open}
+  interpolates) — assigned to struct-impl2 with controller
+  pre-authorization to fix by DERIVING the status from validation
+  reports.
+- DISPATCHED in parallel (post-SUPPORT): struct-impl2 (fresh clean
+  wt-struct at this session's scratchpad from e74f109 — old dirty
+  worktree discarded; first step merge master 4ccb73d; support-family
+  RE-ADJUDICATES the gate; reqs 6-8 + A1-A6 + F1-F6 resolutions in the
+  VISREV store) and cl-design (cl0-design.md for Joel's sign-off,
+  designs against SUPPORT as implemented).
+- CONTROLLER RULING (2026-07-08 ~05:20, mid-STRUCT): the support-family
+  FAIL on the merged branch is resolved by an HONEST declared_cantilever
+  on the deck's -X tree apron (~15in past the tree-end legs at station
+  18). Geometry is decisive: the living trunk occupies X<~11 at grade —
+  no foundation is placeable under the tree end; the apron cantilevers
+  off joist 0 + beams (chain to piers/boulder). This OVERRIDES the
+  pre-legs inline spec comment ("tree end is meant to be supported, not
+  cantilevered") — an assumption falsified by measurement, replaced not
+  silenced. 5 conditions: truthful scoped declaration (derived extent),
+  replace the false comment, verify the other 3 edges are truly
+  supported, cantilever visible in doc + architect/EOR list (rung-4 NOT
+  evaluated), fork documented in the report for reviewer + owner.
+  RETRO CANDIDATE at STRUCT close: spec comments that pre-commit
+  another branch's design intent.
+- CONTROLLER RULINGS #2 (2026-07-08 ~05:35): (A3) e74f109's physical
+  demonstration grounding STANDS (trunk extension + cable bond = legal
+  demonstration geometry; no anchor hardware, no 2nd terminal);
+  struct-impl2 does the non-src deltas (BOM exclusion, architect
+  cable-system line, illustrative labeling). No non-gating scope
+  mechanism built tonight. (A6) BLOCKED on a missing src/validation
+  semantic, confirmed: check_no_floaters has no context-body notion;
+  trunk grounds only via the 0.004in fake notch bonds. → CTXGROUND task
+  dispatched to support-impl (sdd/ctxground off 4ccb73d): role-driven
+  EXPLICIT self-grounding for context/existing bodies, teaching errors,
+  context body ≠ foundation for support obligations, exemptions visible
+  in reports. STRUCT does A6 (real clearance gap + honest cut plan)
+  after CTXGROUND merges — the fake-tight notch does NOT ship in the
+  final doc (owner A6).
+- CTXGROUND: MERGED @a378960 (review-ctxground.md verdict MERGE —
+  abuse attack found no laundering path: existing-role bodies are never
+  foundations, never grounding conduits, never validation.ground;
+  shipped-detail findings byte-identical pre/post). Gate 676/1/3, sole
+  failure = known contamination flake (isolation-pass). struct-impl2
+  notified: A6 unblocked.
+- SOLIDCACHE: MERGED @35e1a36 (review-solidcache.md verdict MERGE —
+  root cause reproduced by independent probe: 0.1776mm exact-read drift
+  after export pre-fix → 0.0 post-fix; regression test proven to fail
+  pre-fix; prohibitions held; memo attacks all passed). MASTER GATE ON
+  35e1a36: 681 passed / 3 skipped / 0 FAILED under -n auto — the suite
+  is DETERMINISTIC again; watch items 1-2 (OCCT bbox flake, export
+  mutation hazard) are RETIRED. All future gates: red = real.
+- STRUCT: ★ MERGED @a745248 — THE PLATFORM ARC IS CLOSED. Site
+  validates CLEAN adjudicated BY the support family; gate OPEN; pins
+  5→0 by named design changes; A1-A6 complete; F1-F6 resolved (visual
+  pass upheld all 6 on the renders). Review trail: review-struct.md
+  (FIX-FIRST → 10 stale-narrative spots purged across 2 fix commits →
+  re-verified). Master gate: 682/0/3, zero adjudication. VAULT
+  DELIVERED: JoelBrain @61999fc pushed ("…2026-07-08.html" in, stale
+  2026-07-06 removed). Post-merge cleanups @7ba7822: test_timing bound
+  now vs measured elapsed (load-insensitive, tighter discriminator —
+  task #10 closed), stray .struct-liveness removed. Retro rows
+  R24-R26 + C11-C12 filed.
+- STRUCT REVIEW (review-struct.md): FIX-FIRST — structure/gate/doc all
+  verified honest (pins live-audited, cantilever probed, visual pass
+  upheld F1-F6, suite 682/0/3); ONE textual blocker: the abandoned
+  e74f109 "island grounds through tree via cable↔trunk bond" narrative
+  survives in ~8 spots (site.spec.yaml ×3 w/ dangling bonds ref,
+  trolley doc.prose = A4/A5 violation, tree_attachment comment,
+  visual-store F3/F4 evidence text = false audit record). Fix list
+  routed to struct-impl2 (textual only); same reviewer verifies.
+- REVIEWER-FILED GAP (task #9): SUPPORT v1 span-check coarseness —
+  removing ONE tree-end leg still passes (plan-bbox span, not
+  per-support necessity). v1.1 candidate via rule packs. Not tonight.
+- POST-QUEUE ARC OPEN (dispatched ~04:00 EST): incr-design
+  (task-incrdesign-brief.md → incr-design.md; identity-across-revisions
+  per AD#7.5/AD#5.5 — affected regions over evidence-graph edges,
+  pre-rounding identity per R17, fingerprint semantics decided in-design
+  per watch item 3, CL touch-points labeled not depended on) ∥
+  SUPPORT v1.1 (support-impl, sdd/supportv11 — declared supports become
+  tracked existence+bearing obligations; closes the dropped-leg hole
+  from struct-review's probe). test_timing fix + .struct-liveness
+  cleanup on master @7ba7822.
+- INCR-0 DESIGN: READY FOR JOEL (incr-design.md; adversarially reviewed
+  → 3 corrections applied incl. honest per-edit attribution of the
+  STRUCT churn; review-incrdesign.md verdict was FIX-FIRST→resolved,
+  gate proven non-circular, all measured claims reproduced). §11 = 4
+  open questions, each with a recommendation. Per the unattended
+  mandate, INCR-1 (authored-id bridge, sdd/incr1) ∥ INCR-2 (identity
+  fingerprint, sdd/incr2) DISPATCHED on the designer's recommendations
+  — both are substrate pieces uncontroversial under any §11 answer;
+  INCR-3→4→5 chain follows (INCR-5's consumer choice = §11 Q3, Joel
+  can redirect before it dispatches).
+- INCR-1: MERGED @de3c321 (review-incr1.md MERGE — round-trips proven
+  both sides, bind winner deterministic w/ aliases, override-variant
+  rebuilds hold). Gate: 711/0/3. src/spec/identity.py is the identity
+  substrate.
+- INCR-2: MERGED @9040b5f (FIX-FIRST → enumeration class closed:
+  signature from full instance-fact surface vars minus {_solid,name},
+  guard test with proven teeth; exclusion set verified sound —
+  content_fp is name-insensitive so rename stays an id-layer event).
+  Gate 734/0/3.
+- INCR-3: MERGED @6763885 (2 review rounds — id-reuse rename
+  double-classification caught → all one-diff id-reuse shapes loudly
+  rejected, honest delete-and-reuse works across two revisions; AC1
+  re-derived independently; site diff alias-safe). Gate 769/3/1
+  xfailed. The `was:` surface is in, minimal + inert (corpus emits
+  none) — Joel's Q1 answer can still strip it cleanly.
+- ★ NEW OWNER DIRECTIVE (Joel, 2026-07-08 morning, BINDING):
+  fabrication-directive.md — his platform review found 3 findings that
+  are ONE missing IR: geometry/cut-list divergence (all 6 deck boards
+  declared 48in + trunk_cut geometry subtraction; cut plan reads
+  declared length — VERIFIED), pier blocks visually present but
+  constructionally undesigned, no fabrication/assembly stage between
+  design intent and installed geometry. Mandate: Fabrication/Assembly
+  Graph as a major IR; NO individual symptom patches; standing pattern
+  = output disagreement ⇒ ask what IR is missing. Retro R28/R29 filed.
+  FAB-0 design doc commissioned (task-fabdesign-brief.md → fab-design
+  agent → review → JOEL SIGN-OFF GATE, same class as CL-0).
+- FAB-0: READY FOR JOEL — fab-design.md (reviewed: review-fabdesign.md
+  FIX-FIRST → both defects corrected + code-verified: worked-example op
+  order matches the real build [crosscut, ease, notch] with order
+  declared semantic; FabOp identity content-keyed (drill on authored
+  (x,z), notch on referenced feature) — ordinal dropped as a
+  re-import of the Placed.id defect; residual disclosed). Key design
+  moves: 4th generative graph on the Construction side (assembly half
+  REUSES Connection edges — hardware/bearings/install-order all
+  already there); geometry = fold(stock, ops), single-source; the
+  fabrication-fold invariant closes R28's class; FoundationSystem +
+  foundation-role obligations close R29; v1 = FAB-1..4 disjoint tasks.
+  JOEL'S SIGN-OFF QUEUE COMPLETE: cl0-design.md (§10, 4 Qs) +
+  incr-design.md (§11, 4 Qs) + fab-design.md (4 Qs incl. the FabOp-id
+  coordination item with CL-0).
+- OWNER DECISION (Joel, follow-up): NO interim cut-list patch, NO
+  disclosure note in the delivered vault doc. The moment FAB v1 merges,
+  REGENERATING THE BUILD DOCUMENT (fabrication-derived cut list +
+  pier foundation system) is the immediate top-priority deliverable —
+  vault commit + push, replacing the current 2026-07-08 file per the
+  A1 dated-filename convention. That regeneration task's brief MUST
+  include the VIEW COVERAGE step (view-coverage-directive.md, Joel
+  2026-07-08): enumerate model areas scored by installation complexity
+  × primary-view visibility → zoomed view or recorded why-not; the
+  decision table ships with the report; reviewer audits COVERAGE.
+  (Also headline change rides that regeneration — HEADLINE merged
+  separately in scripts.)
+- INCR-4: MERGED @273e59f after a REJECT→remediate→MERGE arc (real
+  soundness escape: symmetric_about findings attributed only to their
+  first operand — one-sided edits slipped the region; fixed with
+  two-sided attribution + all-or-nothing floor fallback + a permanent
+  partial-attribution guard that caught 2 MORE pre-existing partial
+  classes). Gate 790/3/1. Locality: single-beam edit = 36 parts / 1.8%
+  of findings. Retro R30 + C14 filed.
+- INCR-5: ★ MERGED @e2f4e16 — THE INCREMENTAL V1 ARC IS COMPLETE
+  (INCR-1..5: identity → diff → region → self-verified consumer).
+  Review proved AC2 independence by monkeypatching the region to raise
+  (whole-world side still ran); normalization-masking and fresh-edit
+  attacks failed; anomaly net bites. Scoped regen: STRUCT-style edit
+  5 details → 2, flag-gated default-off pending Joel Q3/Q4. Gate
+  814/3/1.
+- ★ NEW OWNER DIRECTIVE (Joel, morning #3):
+  analysis-adapter-directive.md — do NOT rebuild physics engines;
+  Analysis Adapter boundary (Construction Graph → Analysis Model →
+  solver → Analysis Results → Evidence Graph); backends to research
+  for real (PyNite, OpenSeesPy, Karamba-as-reference, lightweight
+  frame solvers); MOST IMPORTANT: no silent trust upgrades (six-field
+  result schema: loads/supports/properties/solver/passed/UNKNOWN).
+  This is the honest path to LADDER RUNG 4. ANALYSIS-0 commissioned
+  (task-analysisdesign-brief.md → analysis-design.md → review → the
+  sign-off queue). Also: designer-directive.md (morning #2) captured
+  the compiler→designer trajectory + optimization north star;
+  DESIGN-0 queued behind the three sign-offs.
+- HEADLINE: MERGED @e9b63cb (review proved MD5-identical validation
+  output — pure presentation change; all 8 families derived, CLEAN
+  demoted; guard test bites on hardcoded verdicts). Gate 814/3/1.
+  view-coverage-directive.md (Joel) filed — binding VIEW COVERAGE step
+  for every doc build starting with the FAB regeneration.
+- ANALYSIS-0: READY FOR JOEL — analysis-design.md (reviewed:
+  review-analysisdesign.md FIX-FIRST → both corrections applied +
+  code-verified: staleness = dual trigger (consumed-input fingerprint
+  + affected-region membership) with the undeclared-resting-element
+  residual honestly bounded by the support family itself; bearing→pin
+  named as a DECLARED translational idealization, "conservative"
+  scoped to gravity bending only). Recommended backend: PyNite 3.0.0
+  (MIT, pure-Python, deterministic — web-verified 2026-07-08). 5 open
+  questions with recommendations.
+- ★ ALL WORK STREAMS DRAINED. Waiting on JOEL'S FOUR SIGN-OFFS:
+  cl0-design.md · incr-design.md · fab-design.md · analysis-design.md.
+  Queued behind them: CL v1 impl · INCR Q3/Q4 defaults · FAB v1 impl →
+  BUILD-DOC REGENERATION (top priority per owner; must include the
+  view-coverage step + rides the merged headline) · ANALYSIS v1 impl ·
+  DESIGN-0 commissioning. Master @e9b63cb, 814/3/1, deterministic.
+- SUPPORT v1.1: ★ MERGED @e5e2fce (3 adversarial rounds; gate 747/3/1
+  xfailed, deterministic). Task #9 closed. Retro R27 + C13 filed.
+  [History of the rounds below:]
+- SUPPORT v1.1: round 2 — DEFEAT 3 CLOSED by the held-up-frame block
+  (_surface_side, chosen over a Z-gravity ceiling that false-FAILed
+  the real leveling brackets). Re-verify found ONE narrower residual:
+  CROSS-SURFACE borrow (per-surface frame blocking). CONTROLLER RULING:
+  Option B — single-surface claim (true and proven), residual DISCLOSED
+  on the report surface, xfail pinned. Rationale: separating the
+  cross-surface phantom borrow from the LEGIT stacked-platform pattern
+  requires DECLARED BEARING DIRECTION = schema/CL territory, gated on
+  Joel's CL sign-off. NOTE FOR JOEL'S CL REVIEW: bearing-direction
+  semantics now has two independent motivations (this residual + the
+  stacked-deck disambiguation) — worth weighing in the CL-0 Q&A.
+- CL-0: READY FOR JOEL'S SIGN-OFF — .superpowers/sdd/cl0-design.md
+  (4 primitives MOUNT/FEATURE/RETIRE/EXPECT + semantic-analysis pass +
+  rule-pack growth model; 7-field tables; quantified vs
+  platform.spec.yaml). Adversarially reviewed (review-cl0-design.md:
+  FIX-FIRST → all 5 count/currency corrections applied and
+  independently re-verified, R5/R7 coverage added). §10 = 4 open
+  questions for Joel, each with a recommendation. CL IMPLEMENTATION
+  DOES NOT START until he signs off (his one deliberate gate).
+- Then: final doc + vault (remove stale 2026-07-06 file per A1) →
+  incremental compilation → Inspector v2 ∥ Drawing Compiler.
+
+## ★★★★★★★★★★ SESSION HANDOFF (written 2026-07-08 ~03:20 EST; Joel away for the evening) ★★★★★★★★★★
+
+STATE: master @fcf96b6, suite 599 passed / 3 skipped fully green.
+Tonight's completed arc, every merge adversarially reviewed + full
+suite: TREEDOC @89c3233 (539/3) → 4B-3 @8088624 (546/3, scripts on spec
+path, --vault-copy default off) → 4B-4a @b52626b (frozen-truth corpus)
+→ 4B-4b @2700da9 (★ MILESTONE 4B COMPLETE: four imperative mirrors
+DELETED, −3,144 LOC, single spec path, 590/3) → DOCREBUILD @fcf96b6
+(599/3, honest interim doc delivered; vault COMMITTED+PUSHED, JoelBrain
+@432c420). Retro rows R14–R22 + C3–C7 filed in retro-index.md. Suite
+537 → 599 across the night, zero checks weakened.
+
+IN FLIGHT — WILL DIE WITH THIS SESSION (salvage exactly like last
+handoff):
+1. STRUCT (task #19, the capstone): agent struct-impl, branch
+   sdd/struct, worktree wt-struct (this session's scratchpad; path
+   differs per session). Brief task-struct-brief.md is SELF-CONTAINED —
+   its ADDENDA section A1–A5 captures every mid-flight controller
+   dispatch (doc timestamp+dated filename; approved corpus re-freeze +
+   4 conditions; PLATFORM-scope redefinition; owner-caught load-path
+   prose defect; epistemic-ladder prose rules). Next controller:
+   inspect branch commits + worktree + task-struct-report.md; salvage
+   coherent commits review-then-merge, otherwise delete branch +
+   re-dispatch FRESH from the brief (addenda included — they are
+   binding). PROGRESS AT KILL (verified on disk): branch sdd/struct
+   holds 0fdbb64 (req 1: PierBlock) + ee98dc6 (reqs 2+3: tree-end legs
+   + pier blocks + per-post elevations; platform 124→145, clean
+   standalone) + e74f109 (reqs 4+5: all 4 pins resolved by design —
+   SITE VALIDATES CLEAN, GATE OPENS). The structural work is
+   essentially COMPLETE and committed; remaining = reqs 6-8 (downstream
+   surfaces, corpus re-freeze per A2, complete doc per A1/A4/A5/A6 +
+   visual-findings resolutions) + review + merge. Salvage: fresh
+   implementer into the existing branch/worktree from e74f109 (verify
+   worktree clean first). SEQUENCING NOTE for the new priority order:
+   SUPPORT still implements FIRST against master (which lacks the
+   legs); its platform-FAIL acceptance proof stands; sdd/struct then
+   rebases/merges atop it and must satisfy the new invariant — its
+   gate-open claim gets RE-ADJUDICATED by the support family (do not
+   trust e74f109's CLEAN until the invariant agrees).
+2. visual-smelltest: DONE (released). Findings at
+   .superpowers/sdd/visual-smelltest-interim.md — 12 views, 6
+   suspicions (1 CRITICAL = the known two-legged-table, in-fix by
+   STRUCT; 1 MEDIUM NEW = tree panel visually reads as
+   beams-stopping-in-air, needs explicit clearance-by-design
+   annotation; 4 LOW). struct-impl instructed to resolve each per the
+   4-outcome rule in its doc phase; the STRUCT reviewer verifies the
+   resolutions. First-run validation of the visual-review directive:
+   it independently re-found the flagship miss.
+
+★ OVERNIGHT PRIORITY RANKING (Joel, 2026-07-08 ~03:45, SUPERSEDES the
+previous queue order — read his full framing at the bottom of this
+block): the platform is the BENCHMARK, not the product. Success is not
+"platform finished"; success is "the platform forced the compiler to
+become permanently better." If forced to trade, spend the extra day on
+the compiler.
+
+1. HIGHEST: ELIMINATE THE FAILURE CLASS — implement SUPPORT
+   (task-support-brief.md) FIRST, on/against current master. THE
+   ACCEPTANCE PROOF IS ALREADY IN GIT: master @fcf96b6's platform has
+   no rear support — the new invariant MUST REJECT IT (FAIL/
+   UNKNOWN-BLOCK). That rejection is the deliverable. The finished
+   platform is then the proof the invariant works — NOT the motivation
+   for writing it. (Brief's req 8 ordering note updated accordingly:
+   pre-STRUCT, the platform's new honest findings are the point;
+   STRUCT's merge resolves them.) VISREV subsystem still pairs in
+   parallel (disjoint ownership).
+2. CL-0 design (cl-design-constraints.md + cl-design-plan.md +
+   ontology growth model + consequence-encoding audit + rule packs).
+   Focus: reduce agent fragility, increase compiler derivation — every
+   primitive earns its place by eliminating a real retro finding. NOT
+   prettier YAML, NOT prompting ergonomics.
+3. COMPLETE THE PLATFORM (STRUCT salvage → finish reqs 6-8 + addenda)
+   — as the FIRST REAL STRESS TEST of the improved compiler. Success
+   criterion (Joel, verbatim spirit): not "correct because an agent
+   fixed it" but "correct because the compiler would reject the
+   previous design." Merge AFTER (or rebased onto) SUPPORT so the
+   invariant adjudicates it. Review incl. visual pass + A4/A5 attacks.
+4. THEN the final build document — evidence that the improvements
+   worked, not the primary artifact. Vault commit (remove the old
+   2026-07-06-named file per A1), efficiency retros throughout.
+5. After the above: incremental compilation (AD#7.5; identity compares
+   PRE-ROUNDING values, R17) → Inspector v2 ∥ Drawing Compiler.
+
+THE STANDING DISCIPLINE (Joel): when a failure is found, the first
+question is never "how do we fix this design?" — it is "WHAT COMPILER
+ABSTRACTION WOULD HAVE MADE THIS CLASS OF FAILURE IMPOSSIBLE?" The
+evidence trail so far: mirrored railings, ladder placement, unsupported
+platform, hand-authored findings, lockstep authoring, whole-world
+recompilation — every major improvement came from an embarrassing
+failure that revealed a missing abstraction. Every new design should
+teach the compiler something reusable so each project is cheaper,
+safer, more expressive than the last. That compounding is the actual
+product.
+
+BINDING DIRECTIVES (full texts on disk, all Joel 2026-07-07/08):
+- support-invariant-directive.md — STOP-THE-LINE: Support/Stability
+  Representation family as ROLE-GENERATED OBLIGATIONS; epistemic ladder
+  (connected < load-path-represented < support-represented < adequate);
+  CLEAN impossible where support is unanswerable; no deck-specific
+  rules as architecture. RCA evidence: investigation-stability-miss.md
+  (floating=connectivity-to-label, ground was a MEMBER (leg_pY),
+  load_path opt-in+never-run, UNKNOWN never gates, 60in-slab-on-one-
+  block validates CLEAN; PASS+SEM, v1 = 5 localized changes).
+- visual-review-directive.md — visual LLM review post-render, SECOND
+  line of defense; findings are SUSPICIONS with a mandatory 4-outcome
+  resolution; never the arbiter.
+- cl-design-constraints.md — CL is an internal compilation abstraction
+  (NOT a prompt interface); 7-field derivation tables per primitive;
+  readability-only primitives REJECTED; replay value = top acceptance
+  criterion; semantic-analysis/lowering/validation separation; ontology
+  growth model (components/systems/rule-packs); motion concepts = v2,
+  earned by retro data.
+- DELIVERABLE SCOPE (supersedes decision-A cable anchor): the product
+  is the PLATFORM design; zipline system (wire/trolley/cable anchor) is
+  DEMONSTRATION context — illustrative, non-gating, not in the
+  engineered BOM. Full terms: task-struct-brief.md ADDENDA A3.
+
+WATCH ITEMS: (1) tree-detail OCCT bbox flake under -n auto — passes
+serially, justified-tolerance precedent test_trolley_launch_spec.py:26;
+(2) LATENT HAZARD: exports MUTATE model geometry (coarse-GLB
+re-tessellates shared solids) — caused a phantom doc finding (fixed by
+validate-once ordering) AND an order-dependent -n auto flake
+(reviewer-confirmed on master); src-level fix post-queue; (3)
+content_fingerprint rounds transforms but NOT BOM length_mm — don't
+"fix" ad hoc, invalidates baselines.
+
+EXECUTION MODEL (unchanged, proven over 5 merges tonight): controller +
+one-item worktree implementers (fresh agent each, worktree+shim per
+arch-context-pack.md) + fresh adversarial reviewer per diff + ONE full
+suite per merge. Process rules hard-won tonight: commit-per-step;
+verify the COMMITTED state (git show HEAD:) before claiming done (R18);
+agents go silently idle — check disk artifacts, nudge, they respond;
+inventories go stale — grep at execution time, enumerate ALL attribute
+reads (R16/R20); ≥20-min tasks get efficiency retros classified into
+retro-index.md; never weaken a check to pass; UNKNOWN > fake PASS.
+
+USER CONTEXT: Joel is out for the evening; standing mandate (explicit,
+2026-07-08 ~04:00) = keep moving through the ENTIRE queue unattended —
+after the platform/doc arc closes, proceed directly into the remaining
+ranked items (SUPPORT/VISREV if not already done → CL-0 → incremental
+compilation → Inspector v2 ∥ Drawing Compiler) without waiting for
+check-ins. The ONE deliberate gate: CL-0 produces a DESIGN DOC for
+Joel's sign-off before CL implementation begins — while that awaits
+him, continue other queue work. Joel-facing text: conversational narrative
+prose (memory: feedback_conversational_style) — he flagged compressed
+jargon as unreadable once tonight. Docs: first-time-reader, no diff
+framing. Vault writes allowed — write freely, announce after; controller
+commits+pushes the vault. Owner live preview: <this session's
+scratchpad>/zipline-doc-PREVIEW.html — a NEW controller has a NEW
+scratchpad: re-seed the preview copy there, tell agents the new path,
+and give Joel the new `open` command in the first status message.
+Epistemic honesty is Joel's top concern: never let any surface claim a
+stronger rung than proven.
+
+INSPECTOR V2 DEFINING REQUIREMENT (Joel, 2026-07-08): v1's content
+(model-evidence / four-questions payload) serves an AUTHOR in the spec
+language, not the document's audience. Inspector v2 must be designed
+for the ENGINEER/CONTRACTOR reader: fastening schedule, embedment,
+torque, materials, inspection points — what someone BUILDING the detail
+needs, derived from the model. Consequence applied at DOCREBUILD: the
+reader-facing doc does NOT link the v1 inspector (scope change sent to
+docrebuild-impl; regen kept as internal tooling). The earlier
+"link inspector from anchor panel" ask is superseded by this.
+
+TREEDOC CAVEAT (implementer-reported, MUST be picked up by the treehouse
+doc rebuild task — assign explicitly in its brief): the retired-lag
+figure caption + "WHY SLOTTED HOLES?" panel are HARDCODED in
+scripts/consolidated_report.py (+ echoes in scripts/_site_overview.py) —
+outside TREEDOC's ownership, still stale there. Until fixed, a built doc
+still shows the retired design in that panel. (Also: this is more R8/
+Presentation-Graph evidence — doc prose living in a script, not the model.)
+
+4B-3 FINDINGS (agent-reported, pending review): (1) committed inspector
+HTML f439c3f is STALE vs the current toolchain — NEITHER the .py nor the
+spec path reproduces it (they match each other byte-identically in
+isolation, so spec parity holds); not re-baselined; regenerate as a
+justified separate act, naturally with the treehouse-doc rebuild. (2)
+provenance geom-hash cells differ .py-vs-spec by ~1e-13mm evaluator
+float noise (bboxes Δ=0, oracles match) — documented, reviewer must
+verify. (3) controller authorized a scoped exception: 4 reads in
+tests/test_site_overview.py swap private `._beam_outer_y` (dies with the
+.py in 4B-4b) → public `.params.outer_y * IN`, expected values untouched.
+
+CL plan APPROVED directionally
+(Joel): cl-design-plan.md + cl-design-constraints.md now carry the
+mandatory 7-field derivation-table format, the readability-only
+rejection rule, replay value as top acceptance criterion, and the
+semantic-analysis/lowering/validation phase separation.
+
+CL DIRECTIVE (Joel, 2026-07-07, BINDING for the design phase): the
+Construction Language is an internal authoring/compilation abstraction,
+NOT a prompt-interface feature — optimize for compiler+agents doing less
+fragile work, not for conversational describability. Benchmark: fewer
+coordinated files / raw transforms / hand validation specs / manual pins
+/ full-suite loops / agent spatial-math error surface; MORE derived
+facts per declaration. Full constraints + quantified acceptance criteria:
+cl-design-constraints.md (the CL design brief MUST cite it).
+
+Handoff state as of the last merge: master @b38fda9, 537 passed /
+3 skipped, tree clean.
+
+ARCH PHASE STATE: ARCH0 auto-goldens MERGED @4d63828 · 4B-1 param
+overrides + ParamsProxy MERGED @67c6103 (+flake fix 0e49444) · 4B-2
+presentation surfaces MERGED @b38fda9 (callouts/explode/doc/cross_check/
+export byte-parity all four details; trolley stub params derived).
+Suite history: 492 → 499 → 520 → 537, every merge adversarially
+reviewed (reviews: review-arch0.md, review-4b1.md, review-4b2.md).
+
+NEXT ACTION 0 (small, Joel-caught at handoff): the tree panel's
+doc prose/caption still describes the RETIRED lag connection ("each
+lagged with 2 HDG lags through vertical slotted holes", the WHY SLOTTED
+HOLES explainer) and the standalone tree stubs may still render TANGENT
+to the trunk — TF-A missed the caption, rev-tfa checked geometry not
+prose, and 4B-2's byte-parity migration faithfully preserved the stale
+text. Fix: rewrite tree detail panel prose for clearance+footing
+reality, decide the standalone stubs' honest position, BOTH paths,
+reviewer must check PROSE AGAINST MODEL. Also classify in
+retro-index.md: prose-not-derived-from-model = doc-level label drift
+(SEM; Presentation Graph is the structural fix). Also: TreeTrunk
+component assumptions() string still cites slotted holes
+(src/components/tree.py) — update with it.
+
+NEXT ACTION 1 (dispatch after/with the above): 4B-3 script rewires —
+brief ALREADY WRITTEN at task-4b3-brief.md; BASE = master @b38fda9, suite baseline
+537/3. Philosophy: rewire not regenerate (outputs byte-stable; the
+scripts' true rewrites belong to Drawing Compiler / Inspector v2).
+Then 4B-4 (frozen-truth capture + oracle conversion + DELETE the 4 .py
+mirrors, ~2,900 LOC) — decompose from scout-4b-inventory.md §3-5.
+Then: Construction Language design (AD#5/#6 — placement/subtraction/
+feature verbs, ontology-backed semantic analysis) → incremental
+compilation (identity-across-revisions, AD#7.5) → Inspector v2 ∥
+Drawing Compiler (AD#2/#3/#4).
+
+EXECUTION MODEL (unchanged, proven): controller + one-item worktree
+implementers (fresh agent each) + fresh adversarial reviewer per diff +
+merge per green suite. Context pack: arch-context-pack.md (UPDATE its
+BASE/suite numbers when dispatching). NEW STANDING RULE (Joel,
+2026-07-07): any task that took ≥20 min wall-clock gets a post-completion
+efficiency retro — find simplification that would speed up that class of
+work (waste, over-scope, serial-that-could-parallelize, missing tooling),
+NEVER by weakening checks/accuracy; classify findings into retro-index.md.
+Process rules: liveness commits,
+scoped tests inner loop + ONE full suite, tight self-contained briefs,
+retros per phase classified into retro-index.md (6 categories), agents
+must SEND final replies (they habitually go idle silently — check
+report files on disk when they do). Known flake class: solver/cache
+float noise under -n auto — fix = justified tolerance, precedent
+comments in test_trolley_launch_spec.py:26.
+
+GOTCHA (hit at handoff): scripts/consolidated_report.py AUTO-COPIES its
+output into the JoelBrain vault (05_Attachments/.../Zipline Build
+Document...) — running it dirties the vault working tree. Controller
+restored via git checkout. 4B-3's implementer should either neutralize
+that copy step behind a flag (4B-3 did: --vault-copy, default off).
+Vault writes are allowed — pass the flag when the doc should land in
+the vault, and announce writes to Joel after the fact. Fresh doc
+scratch copy (post-TREEFREE geometry, 4-finding site section):
+<scratchpad>/zipline-build-document-treefree.html.
+
+USER CONTEXT: Joel is away-ish, checks in occasionally; standing
+mandate = keep going unattended, platform over the zipline design.
+Joel-facing text: conversational narrative, no theatrics (memory:
+feedback_conversational_style). Docs: first-time-reader, no diff
+framing. Vault writes: allowed — write freely, announce when done.
+Deferred zipline
+structure work = task #19 (guarded by the 4 pinned findings; site
+DIRTY by design — do not "fix" those findings). Fresh-controller-per-
+phase is now the standing pattern (this handoff is its first
+application).
+
+## ★★★★★★★★★★ TREEFREE PARTIAL-CLOSED (2026-07-07 ~18:00) ★★★★★★★★★★
+master @6b29695, 492 passed / 3 skipped, tree clean, NO branches/
+worktrees, all agents released. TF-A + TF-B merged (rev-tfa PASS,
+rev-tfb PASS clean); controller resolved the pin-set union at merge
+(first-run green — both agents' pin discipline held).
+
+RESOLVED BY DESIGN (25 of 29): rock-leg 11 (anchor re-seated +0.75" Y
+onto real leg centerline, rock post drilled, leg base = boulder +
+leg_gap), tree beam-Y + trunk/deck 9 (lag connection RETIRED, tree
+fragment 11→3 parts, deck NOTCHED around trunk via DeckBoard.trunk_cut,
+Y-growth-clearance ge invariant), trolley registration 5 (hardware
+re-mounted on real legs; 2 NEW conflicts caught+cleared mid-design:
+handle vs -Y mesh, screw vs rail fastener).
+
+RESIDUAL = 4 PINNED FINDINGS (the deferred-design guard set — LEAVE
+PINNED; controller judgment: these encode OPEN DESIGN QUESTIONS, not
+bookkeeping): 2 leg↔end-joist bearing claims (does the real structure
+intend that bearing?), grab-bar height 47" vs drawn 46" (field-verify:
+loaded bar height), 4-part floating island (hanging zipline hardware —
+resolves via decision-A trunk extension to ~96" cable anchor + second
+ground terminal). Site stays DIRTY + render-gated until the deferred
+structure work resumes — the gate IS the guard.
+
+DEFERRED (task #19, no code): tree-end legs, pier blocks, per-post
+elevations, trunk/cable extension, overview transforms, BOM/cut-plan.
+Plans: task-treefree-brief.md + treefree-design.md + task-tfa-handoff.md.
+
+RETROS: retro-tfb.md + retro-tfa.md → Adopted Directions #5/#6/#7
+(Construction Language incl. subtraction+feature verbs, auto-derived
+goldens FIRST, incremental compilation on evidence-graph edges,
+identity-across-revisions synthesis, finding ownership as model data,
+the decision filter, retro lens = missing abstractions).
+
+NEXT (user mandate): ARCH phase (task #20) — 0) auto-derived goldens →
+4B remove imperative mirror + frozen-truth corpus capture → Construction
+Language → incremental compiler. Then Inspector v2 ∥ Drawing Compiler
+(AD #2/#3/#4). Vault findings note is current; consolidated-doc scratch
+copy exists; NO vault doc pushes without Joel's explicit go.
+
+## ★★★★★★★★★★ SITEMODEL PHASE COMPLETE (2026-07-07 ~16:30) ★★★★★★★★★★
+master @095f3d1, 494 passed / 3 skipped, tree clean, NO branches/worktrees,
+all agents released. 5 impl tasks (SM1, SM3a, SM2, SM3b, SM4) + 4
+adversarial reviews + 3 fix rounds + 1 controller post-merge
+reconciliation, every merge suite-verified.
+
+SHIPPED: one compiled site model (details/site.spec.yaml, 4 subsystems,
+164 parts) — fragments ARE DetailSpecDocs; bind: retires stubs into
+single-node shared members (`is`-identity); dedup: restricted to context
+bodies; right-angle-Z rotation remap (through-hole + bearing axes + dims);
+ValidationSpec grew expected_overlaps/contacts/cross-part+threshold dims
+(tree+trolley CLEAN standalone, byte-identical to imperative); views layer
+(scope selectors, SITE-level render gate, findings/BOM slices 29/0/0,
+where-else query); consolidated site section fully model-driven (hand
+callout retired); floating check wired (ground under validation:).
+
+THE RESULT: 29 pinned honest-FAIL findings in 4 divergence families —
+tree beam-Y 9 (washer↔beam gap 3.420", tangent 15" vs 10"), trunk-height
+4 (28" vs 36" context trunks → deck needs a trunk cutout), trolley
+post/leg 8+1 island (legs 1.5" from joist, handle 2.25", screws 3.4",
+gate 5.5", bar 47" vs 46"), rock-anchor leg 11 (0.750" Y / 0.5" Z).
+Site require_clean() raises BY DESIGN; no view renders until resolved.
+3 of 4 families machine-caught (only tree beam-Y was human-caught).
+Joel-facing narrative: JoelBrain vault "Zipline Platform - Coordination
+Findings.md" @cefb398.
+
+NEXT (user mandate, unattended): TREEFREE on the unified model — brief
+task-treefree-brief.md (pre-SITEMODEL, needs adaptation: execute as spec-
+fragment edits; ACCEPTANCE = the 29 pinned FAILs flip to CLEAN one by one,
+site renders unlock). Then INSPECTOR v2 ∥ DRAWING COMPILER (Adopted
+Directions #2/#3/#4 — sheets = compiler backend, Presentation Graph, key
+invariant block above). Joel wants: regenerated consolidated doc to a
+SCRATCH path after SM4 (DONE? see dispatch log tail), vault push only on
+his explicit go; docs written first-time-reader style (no diff framing).
+
+## ★★★★★★★★★★ SITEMODEL PHASE (2026-07-07, dispatch log below) ★★★★★★★★★★
+Executing ADOPTED DIRECTION #1 (block below is the binding spec). Controller
+session resumed off master @5c3df21, 409 passed/3 skipped, tree clean.
+Execution model: controller + worktree implementers + fresh adversarial
+reviewers per diff; PYTHONPATH .shim pattern; liveness-marker commits; merges
+to master in dependency order, full suite per merge. NO vault doc regen.
+ACCEPTANCE BAR (user): when the platform is rebuilt (TREEFREE) on the unified
+model, the SYSTEM must surface the tree-relationship divergence itself.
+
+Design doc: sitemodel-design.md (written before dispatch).
+
+USER MANDATE EXTENSION (2026-07-07 midday): after SITEMODEL wraps, KEEP
+GOING unattended through the queue — TREEFREE (on the unified model; the
+system itself must surface the tree divergence), then INSPECTOR v2 ∥
+drawing sheets (both consume views). User away for hours; commit and move
+forward without waiting.
+
+ARCH PHASE DISPATCH LOG:
+ - rev-4b1 verdict: PASS/SHIP (scratch-merge vs 4d63828 = 520/3; A
+   byte-identity code-read confirmed [same statements, not equal-by-
+   luck]; B independent rebuild incl. joist_oc=16 derived-chain
+   [n_joists 3→2 matches .py]; C proxy read-only, NON-BLOCKING note:
+   proxy namespace 65 names vs .py Params 23 — derived readable,
+   documented; D-F clean). 4B-1 MERGED @67c6103; suite 519+1 flake →
+   flake = the twice-seen trolley 1e-6 transform bar under -n auto
+   (passes isolated) → controller fix @0e49444 per rev-sm3a's
+   recommendation: TOL 1e-6 → 1e-3mm (one micron) with justification.
+   Master @0e49444 green. impl-4b1 + rev-4b1 released, cleaned.
+ - 4B-2 DISPATCHED (impl-4b2, wt-4b2, sdd/4b2, BASE 0e49444). Brief
+   task-4b2-brief.md: callouts:/explode:/doc: blocks + cross_check
+   escape ref + export parity; author content in all 4 spec yamls;
+   trolley stub-params fix both paths (4B-1 divergence flips to full
+   equality); byte-equal per surface per detail; consumers untouched
+   (they read the Detail API — an edit there means parity broke).
+ - Context pack written (arch-context-pack.md — one page, replaces
+   doc-chain reading lists per the process rule).
+ - ARCH0 auto-derived goldens: brief task-arch0-brief.md — DISPATCHED
+   (impl-arch0, wt-arch0, sdd/arch0, BASE 6b29695). Test-layer only
+   (baselines + regen command + annotation channel for the 4 pinned
+   residual findings); zero behavior change; discrepancy = stop-and-flag.
+   Next after merge: 4B (remove imperative mirror + frozen-truth
+   capture), then Construction Language design.
+ - ARCH0: impl COMPLETE in ~40min (8b32040..963bcc5: baseline_lib + 6
+   tests/baselines/*.json + scripts/regen_baselines.py [--check] +
+   migrations [site divergence set annotated, detail_counts, slice
+   accounting, promote/evidence fps, site_report 47/46] + round-trip/
+   tamper/annotation-completeness self-tests; 499/3 = 492 + 7; zero
+   behavior change — regen matched existing literals exactly; no src/
+   details edits). The tight-brief/context-pack pattern's first data
+   point: ~40min vs TF-B's ~2h for comparable diff size. Report:
+   task-arch0-report.md.
+ - rev-arch0 DISPATCHED (brief review-arch0-brief.md, detached
+   wt-rev-arch0). Verdict-deciding attacks: silent assertion weakening
+   (mutation probes per surface), implicit-regen impossibility
+   (read-only baselines run; single-writer proof).
+ - SCOUT-4B inventory delivered (scout-4b-inventory.md; scout released).
+   BOTTOM LINE: declarative core done; render/present/params surface
+   not. DEEPEST BLOCKER: specs are single frozen instances — .py details
+   are parametric FAMILIES (variant tests construct Platform(rail_height
+   =42) etc.). Missing spec surfaces: callouts/explode_vectors/
+   cross_check/_document prose/_export hooks (no schema blocks, no
+   SpecDetail overrides). Consumers: consolidated_report hard-codes 4
+   classes; _site_overview reads .params.<field> (SpecDetail.params=None
+   → AttributeError); build_inspector loads .py by path; 23 test files
+   instantiate the classes. 4B DECOMPOSED: 4B-1 param-override compile +
+   params proxy + variant twins → 4B-2 callout/explode/doc blocks +
+   viewer/report consumers → 4B-3 rewire 3 scripts → 4B-4 frozen-truth
+   capture + oracle conversion + DELETE the 4 .py (~2,877 LOC).
+ - 4B-1 DISPATCHED (impl-4b1, wt-4b1, sdd/4b1, BASE 6b29695 — parallel
+   with rev-arch0, file-disjoint). Brief task-4b1-brief.md: override
+   entry recomputes derived; read-only params proxy w/ teaching
+   AttributeError; variant-test twins; no-override path byte-identical
+   (test-enforced); baselines untouched.
+ - rev-arch0 verdict: PASS clean — mutations on all 6 surfaces caught
+   under chmod-444 baselines (nothing written); implicit regen
+   impossible (single writer = regen script's non---check branch);
+   annotation channel enforced (new finding → TODO-JUSTIFY, test fails
+   on placeholder); two-process regen byte-identical; exclusions
+   sensible; scope clean. Review: review-arch0.md.
+ - ARCH0 MERGED @4d63828 (--no-ff); suite on master 499 passed /
+   3 skipped. impl-arch0 + rev-arch0 released; worktrees removed;
+   sdd/arch0 deleted. GOLDEN-CHURN TAX RETIRED (retro R7/R11) — future
+   re-baselines are regen + reviewed git diff.
+ - 4B-1: impl COMPLETE (192a5c2..8a7c54b: compile_spec(doc, overrides) +
+   compile_spec_file + ParamsProxy + teaching errors; 21 tests; 513/3 on
+   its pre-arch0 base; all 8 variants byte-identical twins [platform
+   rail_height=42/beam_len=60/deck_width=22/44, trolley combo, tree
+   trunk_dia=24]; no-override path byte-identical test-enforced).
+   HONEST DIVERGENCE documented: trolley stub_of static full-length
+   metadata doesn't track overrides (presentation only; details/**
+   authoring fix → fold into 4B-2/4B-4). Report: task-4b1-report.md.
+ - rev-4b1 DISPATCHED (brief review-4b1-brief.md, detached wt-rev-4b1;
+   includes scratch-merge vs master @4d63828, expected 520/3).
+   Verdict-deciders: no-override path provably unperturbed (code-read,
+   not equal-by-luck), independent variant rebuild, proxy namespace
+   width vs .py Params surface.
+
+SITEMODEL/TREEFREE DISPATCH LOG (closed phases):
+ - Phase decomposition: SM1 SITECORE → (SM2 VIEWS ∥ SM3 TREEMIGRATE) →
+   SM4 WRAP. Design doc + task-sm1-brief.md written.
+ - SM1: brief task-sm1-brief.md — DISPATCHED (impl-sm1, wt-sm1, sdd/sm1,
+   BASE 5c3df21). Owns src/spec/** + details/site.spec.yaml; scripts and
+   validation/assemblies barred.
+ - SM3 SPLIT: SM3a (tree+trolley standalone spec fragments, SPECPLAT
+   equivalence discipline — parallel with SM1, file-disjoint) then SM3b
+   (site integration + stub binds + divergence pinning, after SM1 merge).
+ - SM3a: brief task-sm3a-brief.md — DISPATCHED (impl-sm3a, wt-sm3a,
+   sdd/sm3a, BASE 5c3df21). Owns new spec yamls + additive component
+   registrations + tests; src/spec/** HARD-BARRED (SM1 owns).
+ - SM1: impl COMPLETE (97f9223 on sdd/sm1: src/spec/site.py ~600 lines —
+   SiteSpecDoc + strict loader + SiteDetail(Detail); values.py +28 dotted
+   qualified names; details/site.spec.yaml platform+rock_anchor; 20 new
+   tests). HEADLINE: leg bind NOT clean — 11 pinned honest-FAIL findings
+   quantify the anchor↔leg registration divergence (0.750" Y centerline
+   offset: +side angle embeds into real leg, −side gaps, bolts foul; 0.5" Z:
+   anchor floats leg above rock, platform plants at Z=0). The overview's
+   ASSUMED caveat is now system-caught. Single-node proven by `is`;
+   boulder deduped via new `dedup:` block; BOM stub-free by construction;
+   perf 0.94× vs standalone sum (cache asymmetry stated); fragments
+   byte-identical standalone. Seams: rotated-subsystem checks (SM3b
+   blocker-adjacent — through-hole axis mapping under rotation), unified
+   site load-path honest-UNKNOWN, single-authoring-unit rule. Implementer
+   went idle without posting suite summary — reviewer ordered to verify
+   suite independently. Report: task-sm1-report.md.
+ - rev-sm1 DISPATCHED (brief review-sm1-brief.md, detached wt-rev-sm1,
+   scope 5c3df21..sdd/sm1). Priority attacks: dedup-as-fake-pass-hole
+   (drop a REAL member?), pinned-set absorption of new regressions,
+   _by_id rewrite same-process leakage, rotated-subsystem silent
+   wrongness (loud error or REQUIRED FIX), dotted-name inertness, suite.
+ - SM3a: impl COMPLETE (e431b23..37a59cd on sdd/sm3a: tree_attachment +
+   trolley_launch spec yamls; additive component registrations; 8 new
+   tests; suite 417/3). Equivalence: GEOMETRY+BOM byte-identical (tree
+   0.0mm 11/11 BOM 4/4; trolley 4.66e-10mm 11/11 BOM 9/9; YAML+JSON
+   round-trip). KEY FINDING: both are pre-Connection details — their
+   hand-written expected_overlaps/contacts/threshold findings are NOT
+   expressible in the frozen DetailSpec schema, so the specs do NOT
+   validate() clean standalone; residual pinned (tree: 4 lag-trunk
+   overlaps + 1 embeds threshold; trolley: 3 overlaps + 2 cross-part dims
+   + 7 contacts). → SM3b work item: extend ValidationSpec escape-hatch
+   surface (expected_overlaps/contacts) once SM1 merges, then close the
+   residual. STUB NOTES for SM3b: beam_pY/beam_mY (SlottedBeamEnd,
+   stub_of set) → platform beams — Y-divergence ±10/±11.5 vs ±15/±16.5,
+   AND real beam is plain Lumber LACKING lag_face_i datums the lag screws
+   mate to; launch_post/far_post/deck_rim (no stub_of, matches imperative)
+   → legs + deck edge. Report: task-sm3a-report.md.
+ - rev-sm3a DISPATCHED (brief review-sm3a-brief.md, detached wt-rev-sm3a,
+   scope 5c3df21..sdd/sm3a). Priority attack: the "not expressible" claim
+   (per residual item — decides SM3b scope); equivalence independently
+   rebuilt; registration side effects; exact-residual pin; stub-notes
+   verification (lag_face_i datum gap).
+ - rev-sm1 verdict: APPROVE WITH 2 REQUIRED FIXES (suite independently
+   429/3 green; single-node + 11-finding physics independently confirmed;
+   pinned-set/interleave/determinism/teaching/scope attacks all DEFENDED).
+   FIX 1: dedup unrestricted — reviewer probe silently deleted a real
+   bolt's interference+through_hole findings; restrict drop to existing/
+   context bodies (is_existing), teaching error otherwise. FIX 2: rotated
+   subsystem compiles with silently-wrong through-hole axis checks —
+   loud SpecCompileError guard this phase (rotation support queued).
+   Minor: dotted-name "inert" claim false-but-benign (dotted param key).
+   FIX ROUND DISPATCHED to impl-sm1 (context warm). NOTE for SM3b: the
+   rotation guard will fire on the trolley placement (its fragment has
+   cross-part dims) — SM3b must either land the rotation generalization
+   or re-express those checks; factor into its brief. Review: review-sm1.md.
+ - rev-sm3a verdict: APPROVE, zero required fixes. "Not expressible"
+   CONFIRMED for all 5 residual items (frozen ValidationSpec lacks
+   expected_overlaps/contacts; DimensionSpec single-part equality only)
+   → SM3b schema scope is firm. Equivalence independently reproduced
+   (tree 0.0mm, trolley 9.31e-10mm). Scope clean; registrations additive.
+   SM3b intel verified: plain Lumber datums base/end_far/end_near/
+   face_far/face_near/top — NO lag_face_i; binding real beam breaks both
+   the mate target and the ~5" Y reach. Non-blocking: trolley equiv 1e-6
+   bar can flake under -n auto (pre-existing pattern; option: widen to
+   1e-3mm or serialize). Review: review-sm3a.md.
+ - SM3a MERGED to master @609de30 (--no-ff); suite on master 417 passed/
+   3 skipped (167s). impl-sm3a + rev-sm3a released; wt-sm3a + wt-rev-sm3a
+   removed; sdd/sm3a branch deleted.
+ - SM1 fix round: 009e03a (dedup restricted to context bodies + rotated-
+   subsystem guard) + 0103fc7 (comment wording). Suite 432/3 in impl wt.
+ - rev-sm1 re-verification: APPROVE MERGE — probe A2 now loud teaching
+   error, boulder dedup still passes; rotation guard fires for SM3b's
+   case, not over-broad; no-bbox-coincidence argument judged SOUND
+   (structural guard blocks load-bearing drops; misplaced context body
+   can't hide structural divergence — bonds redirect + fail loudly).
+   NON-BLOCKING GAP → folded into SM3b brief: guard/remap must cover
+   BEARINGS axis letters too (bearings-only rotated fragment slips the
+   guard today; checks.py:342,383); correct SM1 report's "bearings need
+   no fix-up" line.
+ - SM1 MERGED to master @26ab908 (--no-ff); suite on master 440 passed/
+   3 skipped (162s). impl-sm1 + rev-sm1 released; wt-sm1 + wt-rev-sm1
+   removed; sdd/sm1 branch deleted.
+ - WAVE 2 DISPATCHED off master @26ab908: SM2 VIEWS (impl-sm2, wt-sm2,
+   sdd/sm2 — brief task-sm2-brief.md; owns src/spec/views.py + marked
+   VIEWS section in site.py + views: block + scripts consumers) ∥ SM3b
+   (impl-sm3b, wt-sm3b, sdd/sm3b — brief task-sm3b-brief.md; owns
+   src/spec/** core + subsystems/bind/dedup entries + tree/trolley yamls
+   + test_site_model.py + test_cross_detail.py). Controller resolves the
+   site.spec.yaml + site.py union at merge. Both told explicitly to SEND
+   their final reply (SM1 pattern: agents went idle without messaging).
+ - SM2: impl COMPLETE (8bab887..8acc4ef on sdd/sm2: src/spec/views.py;
+   site.py single marked +25-line block; views: block in site doc;
+   consolidated_report site section MODEL-DRIVEN [site_facts placement
+   table, findings-driven divergence section — SM3b's findings will
+   auto-subsume the one remaining marked hand callout, SM4 deletes it];
+   +37 tests, suite 477/3). Gate proven both ways: dirty site blocks
+   EVERY view render; synthetic clean site renders scoped PNG. Report:
+   task-sm2-report.md.
+ - rev-sm2 DISPATCHED (brief review-sm2-brief.md, detached wt-rev-sm2,
+   scope 26ab908..sdd/sm2). Priority attacks: gate bypass (any rendered
+   artifact of a dirty site), findings-slice under-reporting, zero-match
+   selector, report-section truth (model-driven claim), BOM slice
+   conservation, determinism, where-else semantics for bound members.
+ - rev-sm2 verdict: APPROVE WITH 1 REQUIRED FIX (suite 477/3 reproduced;
+   gate-bypass HOLDS both paths; selectors/report-truth/BOM-conservation/
+   determinism/where-else all HOLD). FIX: findings-slice under-reporting —
+   views._subject_part_ids misses the ` through ` subject shape → the 2
+   through_hole failures (naming the in-scope shared leg) land in NO view
+   slice (8/11 site failures sliced, must be 11/11). Not fake-clean (leg
+   still flagged 8×, gate blocks regardless) but exactly attack B. FIX
+   ROUND DISPATCHED to impl-sm2: parse ` through ` + audit ALL check
+   subject shapes in checks.py + slice-completeness test + report wording.
+   Review: review-sm2.md.
+ - SM2 fix round a0e2034: 4-shape subject parser (audited ALL Finding
+   producers: through / -> / comma-floaters / about+faces clause strip),
+   slice-completeness test pinning exact 10-of-11 accounting (11th =
+   dimension check's prose-only subject, correctly unscoped), suite 480/3.
+ - rev-sm2 re-verification: APPROVE MERGE — attack-B probe closed (both
+   through_hole failures in both view slices), parser audit verified
+   beyond the ordered shapes (loadpath both forms, floaters, spatial
+   clauses), completeness test non-vacuous, tests ADD-only, 480/3
+   reproduced. FOLLOW-UP (controller queue): reshape the dimension
+   check's Finding.subject to carry a part name (checks.py — nobody in
+   wave 2 owned it) so the last unscoped finding becomes sliceable.
+ - SM2 QUEUED FOR MERGE behind SM3b (spec core merges first; controller
+   resolves the site.py marked-block + site.spec.yaml union at merge).
+   impl-sm2 + rev-sm2 held alive until post-merge suite is green.
+ - SM3b: impl COMPLETE (c87ef37..0c9d359 on sdd/sm3b: ValidationSpec
+   surface [expected_overlaps/contacts/cross-part+threshold dims — no
+   value-language change, sqrt via **0.5]; SM3a residual CLOSED [both
+   fragments CLEAN standalone, findings byte-identical]; tree + trolley
+   into the site; right-angle-Z rotation generalization incl. BEARINGS
+   remap [SM1 report corrected; remap proven load-bearing — flips a false
+   PASS to honest 1.5" FAIL]; trolley stubs formalized + bound; mirror-
+   selector cross-subsystem leak found+fixed [_scoped_spatial]; suite
+   454/3). SITE NOW = 4 subsystems, 164 parts, 28 PINNED FAILS in 4
+   divergence families: tree beam-Y 9 (washer gap 3.420", tangent 15 vs
+   10), trunk-height 4 (28" vs 36" context trunks → deck interference),
+   trolley post/leg 8 (1.5" leg↔joist bearing gap, handle 3.4", gate
+   5.5", bar 47 vs 46), rock leg 11 (SM1 carried byte-identical).
+   EVERY pair of drawings sharing a member disagreed somewhere — 3 new
+   divergence families beyond the user-caught one. SEAM CONFESSED:
+   site-wide floating check silently OFF (SM1 latent — ground nested
+   under validation: never reaches _site_ground()); reviewer ordered to
+   adjudicate fix-now vs SM4. KEEP decision on test_cross_detail.py
+   (guards standalone pair until views replace details post-TREEFREE).
+   Report: task-sm3b-report.md.
+ - rev-sm3b DISPATCHED (brief review-sm3b-brief.md, detached wt-rev-sm3b,
+   scope 26ab908..sdd/sm3b). Priority attacks: rotation remap correctness
+   (180/270, translated-origin inverse order, 45° snap guard), 28-pin
+   exactness + SM1-11 byte-carry, mirror-scoping fix, floating-check
+   adjudication (D), schema strictness, scope.
+ - rev-sm3b verdict: APPROVE no fixes (suite 454/3 verified; remap attacks
+   all HELD [guard-before-remap strict incl. 45+45 compose, letters right
+   at 90/180/270, translated-origin inverse <1e-6, load-bearing FAIL real];
+   28-pin EXACT, SM1's 11 byte-carried; mirror-scoping fix verified both
+   ways; stub/BOM honest; schema teaches 5/6 [self-pair matches SM1
+   culture]; scope clean). Item D adjudication: floating-off ACCEPTABLE
+   this wave — the ungrounded island is the TROLLEY (not tree; §7
+   mislabels), already caught by the 8 pinned trolley FAILs → SM4: fix
+   wiring, pin trolley island, correct §7. Review: review-sm3b.md.
+ - SM3b MERGED @d0683fe (--no-ff); suite 454/3. SM2 MERGED @dce13af
+   (clean auto-merge — marked-section discipline held); expected
+   cross-branch pin collision: SM2's slice accounting (10/1/11) vs the
+   28-finding site → controller post-merge reconciliation @96914bb
+   (25 scoped / 3 prose-dimension / 28 total; THE completeness invariant
+   held over all 25 unchanged). Suite on master 494 passed / 3 skipped.
+   All 4 wave-2 agents released; worktrees removed; branches deleted.
+ - SM4: brief task-sm4-brief.md — DISPATCHED (impl-sm4, wt-sm4, sdd/sm4,
+   BASE 96914bb). Items in order: ground wiring + trolley-island pin
+   (29) + §7 prose fix; dimension subjects carry part names (goldens
+   re-baselined justified); tree+trolley views authored; legacy hand
+   callout deleted; CLAUDE.md refresh; stub-note phrasing.
+ - SM4: impl COMPLETE (6 commits on sdd/sm4, one per item: ground wiring
+   activates floating → 29th finding = trolley island pinned; dimension
+   subjects carry part names → 29 scoped / 0 no-part / 0 unscoped;
+   tree+trolley views authored; hand tree-Y callout deleted; CLAUDE.md
+   site-model section; stub-note modeled>full phrasing. Suite 494/3.
+   CONFESSED: item-2 equivalence forced edits in compiler.py +
+   details/*.py beyond the scope line (subject reshape both paths,
+   justified in report); ~10 goldens re-baselined (strip-suffix
+   verification claimed per golden). §7 prose corrected. Report:
+   task-sm4-report.md.
+ - rev-sm4 DISPATCHED (brief review-sm4-brief.md, detached wt-rev-sm4,
+   scope 96914bb..sdd/sm4). Highest-stakes: per-golden re-baseline
+   verification (reproduce old hashes by stripping the reshape) + the
+   confessed scope excursion (nothing beyond subject format; equivalence
+   intact all 4 details).
+ - rev-sm4 verdict: APPROVE (goldens = pure subject reshape, old FPs
+   reproduced by strip; excursion = subject-format only, equivalence
+   lockstep all 4; floating = exactly the trolley island; 29/0/0
+   independently verified; hand callout gone from main path; CLAUDE.md
+   accurate; 1 suite fail = pre-existing test_timing flake). SM4 MERGED
+   @095f3d1; suite on master 494/3. Agents released, worktrees/branch
+   cleaned. PHASE COMPLETE — see wrap block at top.
+ - Consolidated doc rebuilt post-SM4 (local outputs/, NOT vault): new
+   site section live — "164 parts, 29 open findings (DIRTY — composed
+   render gated)". Scratch copy for Joel:
+   /private/tmp/claude-501/-Users-joelwitten-Code-JoelBrain/0f8a425d-bd36-4d14-a0d9-b52900bf00c0/scratchpad/zipline-build-document-sitemodel.html
+ - TREEFREE OPENED off master @095f3d1: design doc treefree-design.md
+   (old brief's decisions stand + spec-first/lockstep rules + pins-flip
+   protocol + 2 new items: deck trunk cutout, anchor re-seat).
+   DISPATCHED: TF-A (impl-tfa, wt-tfa, sdd/tfa — structure: platform/
+   tree/rock_anchor, owns 24 findings→0) ∥ TF-B (impl-tfb, wt-tfb,
+   sdd/tfb — trolley refit, owns 6 findings→0, incl. corrected 47" bar
+   height). TF-C wrap after merges (site CLEAN, first composed render,
+   cut plan/BOM, scratch doc).
+ - PROCESS RULE ADDED (Joel, 2026-07-07 evening — token burn observed at
+   ~300K/agent): tasks dispatch at ONE-FAMILY/ONE-ITEM granularity with
+   fresh agents; each phase gets a one-page CONTEXT PACK (facts inlined,
+   no doc-chain reading lists); briefs mandate SCOPED test files during
+   development, full suite ONCE at the end (its output is context-
+   expensive); implementers hand off at boundaries via compact handoff
+   files rather than running long. Applied immediately: impl-tfa ordered
+   to stop at its current family boundary + write task-tfa-handoff.md;
+   TF-B redispatch gets a self-contained brief with numbers inlined.
+ - TF-B seam + CONTROLLER DECISION: the 4 hanging parts (cable, wheel,
+   hanger, grab bar) anchor to the TREE at ~8ft — no modeled member
+   within honest bond reach, so the floating island shrinks 8→4 but
+   can't vanish inside the trolley fragment. TF-B recommended an
+   exempt-from-grounding mechanism — REJECTED as waiver machinery and
+   factually wrong (the tree is in the site; the cable→tree anchor
+   carries the rider). DECISION = MODEL IT: trunk extends to the ~96"
+   cable-anchor height (P1 field-verify), trunk declared a SECOND GROUND
+   TERMINAL (answers SM3b's open ground-topology question), cable run
+   extended + cable→trunk bond — ALL assigned to the tree-family agent
+   (fresh, next). TF-B closes out: 5 registration findings flipped,
+   island pinned shrunk-4 w/ resolution comment, bar 47" prose, report.
+   NOTE: TF-B also surfaced + cleared 2 NEW conflicts in its re-mount
+   (grab handle vs -Y railing mesh; screw vs leg rail fastener) — the
+   model catching conflicts in NEW design work, on the record in its
+   report.
+ - RETRO-TFB DISPATCHED (Joel-requested, refined mandate): measure TF-B's
+   cost through three named taxes — LOCKSTEP (spec+imperative duplication;
+   if material → prioritize retiring the imperative mirror once
+   equivalence proven), PLACEMENT ABSTRACTION (raw frame math vs "mount
+   handle to leg at datum" intent → generative-Connection/mount-to
+   roadmap), FEEDBACK-LOOP LATENCY (full-world rebuild to find local
+   conflicts → local validation + affected-subgraph checks, NEW roadmap
+   candidate). All findings partitioned process/platform/inherent.
+   Deliverable = platform changes making the next similar change 5-10x
+   cheaper. Output: retro-tfb.md.
+ - RETRO-TFB DELIVERED (retro-tfb.md; agent released). Measured: ~15
+   load-bearing values → 463 diff lines / ~300K tokens; unique geometry
+   ~12-15%, prose ~65%, lockstep duplication ~11%; token cost dominated
+   by 8-15 full-suite runs + the cross-scope seam investigation.
+   ROADMAP CONSEQUENCES (per Joel's conditional directive "if material,
+   prioritize retiring the imperative mirror"):
+   1. RETIRE IMPERATIVE PATH (details→views) — PROMOTED to first
+      post-TREEFREE task (measured ~2x authoring tax; equivalence
+      corpus is the proof it's safe). Sequencing: finish TREEFREE's
+      remaining families under lockstep (small), then retire.
+   2. GENERATIVE CONNECTIONS (mount-to/attach-to intent) — second
+      independent motivation (SPECPLAT's 116 raw placements was the
+      first); one part move today = 4-6 hand-agreed numbers; the SM3b
+      axis-composition bug was this failure mode. Slot: with/before
+      Inspector v2 + Drawing Compiler (sheets benefit from intent-level
+      placements).
+   3. NEW ROADMAP ITEMS from the retro: (a) validate-at-declaration
+      ("check as you place" — mount-zone spatial check at author time,
+      kills the late-conflict rework loop); (b) cross-subsystem
+      DEFERRED-FINDING/seam primitive ("this finding resolves in another
+      subsystem's scope" — the TF-B island hand-off had no
+      representation).
+   4. PROCESS (already standing rule): scoped inner test loop, one full
+      suite at end; pins-as-generated-baseline (emit finding-set, diff
+      it) noted as tooling candidate; brief rule "update prose that is
+      now false, don't re-narrate" added to future briefs.
+ - TF-B: impl COMPLETE (04b60e6..02b7195 on sdd/tfb: hardware refit onto
+   real legs [5 registration findings flip], honest 47" bar callout,
+   island pinned shrunk-4 w/ decision-A note, pins re-derived 29→24,
+   suite 494/3, no golden re-baseline). Forward-design catches on record:
+   handle vs -Y mesh (moved to launch-end corner X≈47 > mesh 46.25),
+   handle screw vs rail fastener (dropped below 61"). Report:
+   task-tfb-report.md.
+ - rev-tfb DISPATCHED (compact brief review-tfb-brief.md, scoped-test
+   discipline, detached wt-rev-tfb, scope 095f3d1..sdd/tfb). Stakes: pin
+   discipline (TF-A's 23 byte-untouched), flip reality (geometry not
+   check edits), island honesty.
+ - USER SEQUENCING DECISION (2026-07-07 evening): platform over the
+   single design. After the in-flight TREEFREE work lands, PIVOT to the
+   ARCH phase (retire imperative mirror → assembly operations →
+   incremental compilation). The un-started zipline STRUCTURE work
+   (tree-end legs, pier blocks, per-post elevations, trunk/cable
+   extension) is DEFERRED WITHOUT LOSS: plans preserved in
+   task-treefree-brief.md + treefree-design.md + task-tfa-handoff.md;
+   the pinned floating-island finding keeps the site honestly DIRTY and
+   render-gated until it resumes (the gate is the guard against
+   mistaking the half-redesigned platform for done). TF-A's done work
+   (rock + tree families, both committed) merges — nothing discarded.
+ - TF-A: impl COMPLETE (da9c61f rock family + 31e2b68 tree family on
+   sdd/tfa). 20 findings flip by design: anchor re-seated +0.75" Y onto
+   real leg centerline + rock post drilled + leg base = boulder top +
+   leg_gap (11); lag connection RETIRED (tree fragment 11→3 parts) +
+   deck NOTCHED around trunk (DeckBoard.trunk_cut) + Y-growth-clearance
+   ge check (9). Suite 492/3 (delta = 2 retired lag tests). Site
+   164→156 parts; remaining findings = trolley 8 + island. Structure
+   work deferred per Joel, leg_gap/derived-length foundations in place.
+   PIN-ARITHMETIC SEAM for merge: TF-A/TF-B partitioned 29 as 20/9 (my
+   briefs said 24/6 — SM3b family labels grouped differently than the
+   pinned code); expect controller reconciliation of the count + the
+   2 leg↔joist bearings + grab-bar dim at the second merge; rev-tfa
+   ordered to report those findings' exact branch state.
+ - rev-tfa DISPATCHED (compact brief review-tfa-brief.md, detached
+   wt-rev-tfa, scope 095f3d1..sdd/tfa). Stakes: flips = design not
+   check-edits (mutation probe on Y-clearance); retired-test honesty;
+   seam facts for reconciliation.
+ - rev-tfb verdict: PASS clean (suite 494/3; pin discipline exact —
+   TF-A's set byte-untouched, rebuilt site = pinned 24; flips are
+   geometry [handle bearing ~11in² on real leg face, screws through the
+   1.5" leg, mesh clearance +0.5"]; island genuinely emitted + pinned;
+   lockstep ≤2e-13; scope clean w/ one disclosed sanctioned nuance:
+   shared count in test_site_views.py). Review: review-tfb.md.
+   MERGE MATH NOW FIRM: post-both-merges expected residual = 4 findings
+   (2 leg↔joist false bearing claims [imagined design's, members 1.5"
+   apart — remove from trolley fragment], grab-bar dim [align expected
+   to adopted 47"], floating island [stays, deferral guard]). First 3 =
+   ownership-crack orphans → controller fixes them in the
+   reconciliation commit with per-line justification.
+ - RETRO-TFA DISPATCHED (Joel-requested, same framework as retro-tfb):
+   confirm/refute the established taxes at 2-family scale, then NEW
+   angles — component-feature authoring cost (DeckBoard.trunk_cut),
+   RETIREMENT cost (is "retire a connection" a missing language
+   operation, inverse of mount?), re-seat cost (one number → how many
+   landing sites; should a site-level re-seat be one edit?), and whether
+   the 20/9-vs-24/6 pin-arithmetic confusion + 3 orphaned findings
+   reveal finding-OWNERSHIP as a missing first-class concept. Output:
+   retro-tfa.md. Learnings to be incorporated on delivery.
+ - RETRO-TFA DELIVERED (retro-tfa.md; agent released). CONFIRMS lockstep
+   ~2x (extends: retirement doubles too; float-bit-exact match required)
+   + placement 4-6 numbers/part. REVISES: prose share 46% not 65% (TF-B
+   inflated by pure-addition change shape). NEW FINDINGS → SCOPE
+   CHANGES:
+   1. Parametric FEATURES have no abstraction (trunk_cut = 5 hand-synced
+      touchpoints + cache_key/float-order landmines) → Construction
+      Language scope grows: feature verbs, not just placement verbs.
+   2. RETIREMENT is not a language op (~9 files hand-unwound; mount has
+      no inverse) → Construction Language gains SUBTRACTION verbs
+      (retire/dissolve), with the compiler unwinding parts/bonds/BOM/
+      fingerprints.
+   3. Snapshot goldens hand-re-baselined (11 test files, ~40% of TF-A's
+      diff; one part-count change ripples ~10 fixtures) → AUTO-DERIVED
+      GOLDENS tooling (emit + review diff) promoted to EARLY ARCH item,
+      alongside 4B — the gating mechanical tax regardless of geometry
+      cost. Generalizes the pins-as-generated-baseline note.
+   4. Finding OWNERSHIP not first-class (24/6-vs-20/9 miscount; both
+      agents re-derived the split; membership = hand-kept Python sets)
+      → deferred-finding primitive scope grows to finding ownership/
+      partition as queryable model data.
+   5. PARTIAL REFUTE: site-level re-seat was ONE edit — SM1's placement
+      abstraction is working; the coupled drill/derive geometry was the
+      inherent cost. (Positive control: the taxes are real where they
+      are, absent where we already fixed them.)
+ - SCOUT (released): no detail registry — details load by file path
+   (platform.py shadows stdlib platform); spec CLI compiles ONE doc;
+   consolidated_report hard-codes the 4 details. validate_assembly fully
+   generic (no per-detail assumptions); interference cache keys RELATIVE
+   transform (reframed subsystems cache-HIT), bearing/contact/through_hole
+   key ABSOLUTE pose (translated subsystems recompute). Inventory:
+   platform 124 parts/0 stubs (canonical), rock_anchor 26/1 (`leg`),
+   tree 11/2 (`beam +Y`,`beam -Y`, via SlottedBeamEnd full_length),
+   trolley 11/0 formal (posts+rim untagged, deduped only by the
+   context-stub-lumber name heuristic — SM3b must formalize their stub
+   tags to bind them). Shared member today = TWO nodes; identities are
+   per-assembly, re-namespaced `platform-lumber-3` at overview composition.
+
+## ★★★★★★★★★ ADOPTED DIRECTION #7 (2026-07-07 evening, USER — the change-reasoning lens) ★★★★★★★★★
+
+1. THE UNIFYING GAP (user, from the two retros): "The compiler is
+   currently much better at constructing models than reasoning about
+   change." Feature ops, retirement, golden regeneration, finding
+   ownership — all EDIT problems, not creation problems.
+2. RETRO LENS (binding): every repeated authoring tax = evidence of a
+   missing compiler abstraction. The question is never "how do we make
+   this edit cheaper?" — it is "WHAT ABSTRACTION WOULD HAVE MADE THIS
+   EDIT MOSTLY DISAPPEAR?"
+3. THESIS EVIDENCE: the anchor re-seat — where the right abstraction
+   exists (site placement), the edit collapsed to ONE line; where it
+   doesn't, the taxes remain. Controlled comparison (same agent/day/
+   codebase/edit-kind). "We're not just reducing effort — we're
+   discovering the right language."
+4. AUTO-DERIVED GOLDENS at the VERY FRONT of ARCH (leverage investment:
+   reduces the cost of every subsequent architectural improvement).
+   [Already position 0 in task #20.]
+5. CONTROLLER SYNTHESIS (accepted into the lens): the change-reasoning
+   gap is the single-node identity move applied to TIME instead of
+   space — SITEMODEL gave a member identity ACROSS VIEWS (drawings
+   can't disagree); the model has no identity ACROSS REVISIONS (every
+   edit is a fresh model; nothing compiled says what persisted/moved/
+   vanished). Retirement unwinding, affected regions, golden diffs,
+   finding ownership are all downstream of IDENTITY ACROSS REVISIONS —
+   candidate substrate for the incremental-compilation track.
+6. RETROS ARE A DATASET (user, 2026-07-07 late): every pain point is
+   classified into exactly one of six categories — missing LANGUAGE
+   abstraction / missing compiler PASS / missing SEMANTIC model /
+   missing TOOLING / MIGRATION debt / INHERENT complexity — and appended
+   to .superpowers/sdd/retro-index.md (seeded with retro-tfb + retro-tfa,
+   15 classified findings + 2 controls; tally maintained). The roadmap
+   is driven by the empirical distribution, not intuition. Every future
+   retro brief includes the classification requirement.
+
+## ★★★★★★★★★ ADOPTED DIRECTION #6 (2026-07-07 evening, USER — queue refinements + the decision filter) ★★★★★★★★★
+
+1. MILESTONE SPLIT: 4A = spec authoring reaches behavioral parity
+   (proven by the equivalence corpus — essentially ACHIEVED today, all 4
+   details byte-identical) / 4B = remove the imperative mirror.
+   Controller note (accepted): at 4B the corpus TRANSFORMS from
+   "two live paths agree" into "one path matches RECORDED truth" —
+   frozen fingerprints/goldens captured from the final imperative build
+   become the permanent regression suite. 4B is not done until that
+   capture exists.
+2. RENAME: the assembly-operations work IS "THE CONSTRUCTION LANGUAGE" —
+   the language people author construction in (mount/attach/fasten/
+   bear/support/align/center/repeat/space; compiler owns transforms;
+   author expresses construction intent). Phase renamed accordingly.
+3. COMPILER PIPELINE made explicit (document in CLAUDE.md during ARCH):
+   Construction Language → Semantic Analysis → Assembly → Physical
+   Validation → Evidence → Presentation → Backends. Semantic Analysis =
+   where the ontology lives = the compiler's TYPE SYSTEM (role exists?
+   components connectable? face exists? capability valid?). Honest gap
+   to state in the doc: Semantic Analysis today is syntax-level (strict
+   schema + did-you-mean); wiring the ontology in IS the
+   validate-at-declaration work.
+4. COMPILER METRICS (extends #5.6): authored vs derived facts, compiler
+   inference ratio, intent density, affected-region size, validation
+   scope, build scope, coverage.
+5. INSPECTOR v2 tweak (amends AD#2 panel): section 4 renamed
+   Relationships → CONSTRUCTION GRAPH.
+6. Progression reading (user): Migration → Construction Language →
+   Incremental Compiler → Inspector → Drawing Compiler. Geometry has
+   become an implementation detail; no Blender/rendering/CAD work in
+   the queue.
+7. THE DECISION FILTER (verbatim, apply to all future platform work):
+   "Does this reduce the amount of construction knowledge an author
+   must explicitly encode while increasing the amount of knowledge the
+   compiler can derive, prove, explain, or communicate? If yes, it's
+   probably the right investment. If not, it probably belongs later."
+
+## ★★★★★★★★★ ADOPTED DIRECTION #5 (2026-07-07 evening, USER — BINDING architectural principles, from the TF-B retro) ★★★★★★★★★
+
+Source: retro-tfb.md + Joel's response (verbatim intent below). Elevates
+the retro from "make this change cheaper" to "what architecture are we
+converging toward."
+
+1. TRANSITIONAL vs ARCHITECTURAL costs are treated differently:
+   - Lockstep tax = TRANSITIONAL (migration overhead). Retiring the
+     imperative mirror is a MILESTONE (already promoted: first
+     post-TREEFREE task).
+   - Low-level placement + whole-world feedback = ARCHITECTURAL. These
+     are long-term principles that decide whether the compiler scales to
+     decks/houses.
+   Controller criterion (accepted): cognitive load GENERATES the split —
+   lockstep doubles typing, not thinking; the other two force thinking
+   about the wrong things.
+2. ASSEMBLY OPERATIONS, not placement abstractions. The language is
+   construction intent, never transforms: mount / attach / fasten /
+   bear / support / align / center / repeat / space. THE COMPILER OWNS
+   THE TRANSFORMS. Mapping note: this vocabulary is partially seeded
+   (ConnectionTypes, bearings/roles, spatial invariants, repeat) but
+   lives validation-side today — the move is from checked-after to
+   GENERATIVE-before (supersedes/absorbs the "generative Connections"
+   roadmap item; same work, wider frame).
+3. AUTHOR COGNITIVE LOAD is an explicit primary optimization target.
+   x/y/z, frame composition, transform math = implementation thinking;
+   the author should think ONLY in construction intent.
+4. VALIDATE-AT-DECLARATION as pipeline principle: declare → IMMEDIATE
+   SEMANTIC VALIDATION → assembly → physical validation → rendering.
+   `mount(handle).to(leg).inner_face` type-checks BEFORE geometry, like
+   a compiler type-checking before codegen. Mapping note: the ontology
+   (roles/capabilities) IS the type system this check runs against.
+5. INCREMENTAL COMPILATION as LOCALITY, not speed: an edit produces an
+   AFFECTED REGION (trolley ✓ leg ✓ nearby railing ✓ fasteners ✓ /
+   platform ✗ anchors ✗ BOM ✗ cut plan ✗); eventually EVERY compiler
+   pass operates on the affected graph, not the whole model. Mapping
+   note: the evidence graph already carries the dependency edges
+   (what_depends_on) — build incrementalism on it, not a new tracker.
+6. NORTH-STAR METRICS (replace LOC/token count): construction intent
+   per authored token; authored vs derived facts; compiler inference
+   ratio; assembly operations per authored declaration; average
+   affected-region size per edit. Success = how LITTLE construction
+   knowledge the author must encode while the compiler derives,
+   validates, explains, audits the rest. (Extends the existing honest
+   compression-ratio practice.)
+7. RETRO MANDATE: future retrospectives look for MISSING ABSTRACTIONS,
+   not missing optimizations.
+
+## ★★★★★★★★★ ADOPTED DIRECTION #4 (2026-07-07 afternoon, USER — BINDING for the drawing-sheets phase) ★★★★★★★★★
+
+### DRAWING SHEETS = COMPILER BACKEND, not a rendering feature
+
+KEY INVARIANT (USER, 2026-07-07, verbatim — the phase's acceptance rule):
+"A sheet element is allowed to exist only if it has a communication
+purpose derived from the Construction Graph or Evidence Graph. No
+decorative blocks. No hand-maintained sheet content. No sheet-only
+truth." Prototype = fixed named-slot template; the goal is proving sheet
+contents compile from purpose-bearing Presentation Graph nodes, not
+clever layout. Audiences are PRESENTATION POLICIES (select + weight
+purposes over the same Presentation Graph), not separate layouts.
+Honesty items — FAIL, UNKNOWN, unresolved assumptions, field-verify
+requirements — are UNSKIPPABLE in every audience profile.
+
+USER DIRECTIVE (verbatim intent): "The goal is not to convert 3D geometry
+into 2D drawings. The goal is to compile the Construction Graph into the
+best possible construction document." Pipeline: Construction Graph →
+Drawing Compiler → Construction Sheet. Geometry is ONE input; construction
+semantics, validation, evidence, annotations, assumptions, documentation
+are equal-rank compiler outputs. "The real product is the semantic model;
+the sheet is one backend."
+
+Adopted elements:
+ 1. SEMANTIC ANNOTATION GENERATED, not handwritten: role:barrier →
+    auto-highlight+label; load-path member → emphasized; UNKNOWN capacity
+    → auto warning note; placeholder-confidence param → field-verify
+    callout; manufacturer-backed connection → auto citation. Semantic
+    model emits ANNOTATION INTENT; drawing compiler decides placement.
+ 2. NARRATIVE SHEETS: information architecture (overview → exploded →
+    critical connection → section → dimensioned view → BOM → install
+    notes → inspection notes). Controller refinement (accepted): start
+    TEMPLATED — fixed skeleton, slots filled by semantic queries
+    ("critical connection" = role + finding-density derived); free-form
+    editorial later via the standard promotion pipeline.
+ 3. SEMANTIC LAYERS as compiler outputs first, toggles later: geometry /
+    dimensions / construction / fasteners / load paths / validation /
+    evidence / assumptions / warnings / documentation.
+ 4. AUDIENCE-AWARE COMPILATION (think, don't build yet): builder /
+    engineer / inspector / client = selection+ordering over layers.
+    HARD RULE (controller, accepted in eval): honesty layers (UNKNOWNs,
+    open FAILs, unverified assumptions) are MANDATORY in every profile —
+    no editorial pass or audience selection may suppress them; editorial
+    judgment chooses HOW LOUDLY, never WHETHER.
+ 5. SINGLE SOURCE OF TRUTH: nothing on a sheet manually authored if the
+    model knows it. Refinement (accepted): authored intent enters the
+    MODEL as source-typed declared facts and the sheet renders it;
+    forbidden is sheet-layer-only content invisible to the model.
+ 6. EDITORIAL JUDGMENT with provenance: every emphasis/de-emphasis
+    decision derived from declared semantics and logged ("this callout
+    exists because…" — sheet-side Because: chains).
+ 7. ARCHITECTURAL CONSEQUENCE (controller eval + USER REFINEMENT
+    2026-07-07 afternoon, BINDING): SheetIR describes COMMUNICATION
+    INTENT, not layout — every sheet element carries a PURPOSE ("orient
+    the reader" / "explain primary load transfer" / "expose hidden
+    geometry" / "communicate unresolved assumptions" / "support
+    procurement" / "communicate verification items"). Full pipeline:
+    Construction Graph → Evidence Graph → PRESENTATION GRAPH → SheetIR →
+    Layout Engine → SVG/HTML/PDF/DXF. Communication, layout, rendering =
+    separate concerns. Guardrails (controller, accepted): (a) the
+    Presentation Graph is COMPILED fresh each build from the two truth
+    graphs, never hand-maintained, its nodes carrying provenance edges
+    back into evidence ("warning block exists BECAUSE Structural=
+    UNKNOWN"); (b) purpose-audit rule — an element with no communication
+    purpose is decoration and doesn't belong (presentation twin of the
+    fake-annotation rule); (c) audiences = PURPOSE selections over the
+    Presentation Graph (warning purposes selected in every audience),
+    one shared layout engine; (d) prototype keeps the layout engine
+    deliberately DUMB (fixed template, named slots) — the thing to prove
+    is the Presentation Graph. build123d HLR + ezdxf research still
+    holds, demoted to the geometry layer's emitter. Sheets consume SM2's
+    views (sheet = view + projection + presentation).
+ 8. STRETCH GOAL (first deliverable of the phase): ONE rock-anchor
+    prototype sheet demonstrating the philosophy (drafting + semantic
+    annotation + validation summary + assumptions + generated notes +
+    synchronized dimensions + BOM + evidence awareness). Demo hook: the
+    standalone anchor is CLEAN; the anchor-in-site view carries the
+    pinned leg-registration FAILs — the sheet refuses to present as
+    clean and prints the divergence as a first-class warning block.
+    Aesthetics explicitly NOT the bar; architecture demonstration is.
+
+Sequencing UNCHANGED: SITEMODEL wrap → TREEFREE → Inspector v2 ∥ Drawing
+Sheets (both are backends over the same semantic model).
+
+## ★★★★★★★★★ NIGHT COMPLETE (2026-07-07 ~08:00) — RESUME HERE ★★★★★★★★★
+OVERNIGHT PLATFORM MISSION: ALL DELIVERED. master @5c3df21, 409 passed/
+3 skipped (was 264/3 at dusk), working tree clean, NO branches/worktrees,
+stall crons deleted, vault untouched (doc regen deferred per mission).
+8 implementation tasks + 6 adversarial reviews + 3 fix rounds, every merge
+suite-verified. Full narrative in the DISPATCH LOG below (this block +
+OVERNIGHT block = tonight's complete record).
+
+SHIPPED (P1-P7 + user's INSPECTOR addition):
+- W3-1 coverage matrix: 7 invariant families, PASS/FAIL/UNKNOWN—NOT
+  ANALYZED, data-driven KIND_TO_FAMILY, wording rule, missing-id
+  SpecReferenceError diagnostic.
+- PROMOTE: FaceMountHanger/ToeScrewed/RailCapScrewed in connection.py +
+  registry; required_hardware confidence + _unpack guards.
+- SPECPLAT: details/platform.spec.yaml compiles BYTE-IDENTICAL (124 parts,
+  ~2e-13); REPEAT construct (count derived); authored bearings/bonds
+  required-proven. HONEST compression 571:129 = 4.4:1 (bookkeeping +
+  escape-hatch facts excluded; 6.2:1 raw-inclusive). KEY FINDING: 116/124
+  parts are raw escape hatches → generative fastener/hanger Connection is
+  the top future inference win (needs assembly/DerivedFact surfaces).
+- EVIDENCE: src/validation/evidence.py queryable graph (declarations→
+  facts→findings→verdicts), source_type dimension (llm_hypothesis
+  non-blocking by construction), what_is/why_here/how_verified/
+  what_depends_on, deterministic serialization, O(degree) queries.
+- ONTOLOGY: Role/LoadClass/TransferCapability + claims on all 5 types
+  (honest provenance); load-path REPRESENTATION proof (rock: "downward-
+  load path REPRESENTED: leg -> angle 0 -> rod 0 -> boulder"); Structural
+  capacity UNKNOWN everywhere, test-enforced.
+- SPATIAL: SymmetricAbout + FacesToward/FacesAway (validation-only);
+  platform declares both paths → Spatial UNKNOWN→PASS (56 findings);
+  rock honestly UNKNOWN; reserved names teach.
+- CLEANUP 9/9 + metrics-honesty fix round (rev-cleanup caught 5.3:1
+  inflation from 111 repeat.instance bookkeeping facts → third bucket,
+  headline 4.4:1, part-count-invariance test).
+- INSPECTOR (Joel's request): outputs/inspector/rock_anchor_inspector.html
+  (committed, 1.5MB, file://-openable, byte-reproducible sha f439c3f…;
+  regen scripts/build_inspector.py). inspector/v1 payload IRs; UI consumes
+  payload only; four-question panel; "Because:" chains; honest UNKNOWNs;
+  live-browser verified. Reviewer: "field-for-field faithful — no room
+  for a confident-wrong-answer." Design write-up (Joel-facing):
+  .superpowers/sdd/inspector-design-writeup.md.
+
+FUTURE QUEUE (new, from tonight's reviews — beyond the pre-existing one):
+ 1. GENERATIVE fastener/hanger Connection (emit geometry from declaration)
+    — converts the 116 raw placements to derived; biggest compression win.
+ 2. Move UNKNOWN-family honesty merge from inspector emit INTO
+    how_verified (no consumer can present a part as safer than it is).
+ 3. consolidated_report.py web_glb_b64: same gzip-mtime leak the inspector
+    fixed — one-line fix for byte-reproducible build docs.
+ 4. Platform role declarations + platform load-path proof (ONTOLOGY seam;
+    rock-only tonight to avoid file collision).
+ 5. Role-less intermediate parts bridge load paths (connector inert to
+    proof) — tighten when a real bug motivates.
+ 6. Inspector polish: click-vs-drag discriminator; section-3 load-path ref
+    reuses "unknown" badge style; repeat.expand-in-numerator judgment call.
+ 7. test_timing wall-clock flake under -n auto (pre-existing, passes
+    isolated).
+
+UNCHANGED / STILL PENDING (pre-existing queue): TREEFREE (brief valid —
+NOW SEQUENCED BEHIND SITEMODEL, see ADOPTED DIRECTIONS block); drawing-
+sheets phase (build123d+ezdxf prototype; consumes SITEMODEL's views);
+Wave 3 continuation (functional/circulation rules, first cited rule pack
+guards/rails AWC DCA6); daemon mode (parked); 6 architect sign-offs
+(12" vs 16" O.C., brace removal, Simpson screw schedule, rail fastening
+spec, flat-vs-edge rail, pier-blocks-on-slope) — human-blocked.
+
+## ★★★★★★★★★ ADOPTED DIRECTIONS (2026-07-07 morning, USER — BINDING) ★★★★★★★★★
+
+### 1. SITE MODEL / VIEWS — one full model, details are views (adopt BEFORE TREEFREE)
+
+USER DECISION (motivated by cross-detail divergence #2 — the same physical
+beam modeled TWICE, platform copy at Y ±15/16.5" vs tree copy tangent at
+±10/11.5", each detail CLEAN in isolation, contradiction caught by the
+USER not the system): **one compiled site model must always exist; a
+"detail" becomes a VIEW of it** (scope selector + zoom + view-local
+annotation intent). A member referenced by two views is ONE node in the
+Construction Graph → cross-view disagreement becomes UNREPRESENTABLE
+(same move as Connections/computed-placement: make the bug inexpressible,
+don't detect it). Cross-detail checks stop being a special hand-written
+category and become ordinary in-model checks; the site-overview panel
+stops being a display composition and becomes THE model.
+
+SEQUENCING (user, verbatim intent): DO THIS BEFORE TREEFREE — "I'm
+optimizing for the software, not the design of this specific zipline
+platform." Acceptance test for the phase: when the platform is rebuilt
+(TREEFREE) on the unified model, the system ITSELF must surface the
+tree-relationship issue the old per-detail structure hid.
+
+Incremental path (from the adopting discussion):
+ a. Shared MEMBERS (not just shared facts) promoted into a shared spec
+    fragment both details reference instead of restate — kills the
+    divergence class for shared members cheaply.
+ b. Details become views: `view_of: site` + part selectors + view-local
+    callouts/annotations. Full site model compiles + validates as ONE
+    assembly (scale is fine post-speed-program: bbox prefilter + caches;
+    full site ≈ 2x platform pair count).
+ c. Ownership discipline shifts from "detail file" to "spec fragment per
+    subsystem" (preserves the parallel-agent workflow).
+ d. Drawing sheets consume the same view abstraction (sheets = views with
+    projection; details = views with scope) — one concept serves both.
+ e. Inspector generalizes: ONE evidence graph for the site; a part
+    inspected from any view gives the same answers + a new panel answer
+    "where else does this appear?".
+
+### 2. INSPECTOR v2 — construction semantics first, compiler second (user review of v1)
+
+USER VERDICT on v1: worth building BECAUSE it exposed something more
+fundamental than a UI problem: "We're not building an inspector for the
+compiler. We're building an inspector FOR THE BUILDING. The compiler is
+the mechanism that explains why the building looks the way it does."
+v1 interleaves two audiences — (1) people understanding the construction,
+(2) people debugging the compiler — and leads with (2). INVERT IT.
+A washer's first answer is NOT "produced by required_hardware()" but
+"distributes the clamping force from the nut across the steel angle and
+prevents localized crushing."
+
+NEW PANEL ORGANIZATION (5 sections, this order):
+ 1. PURPOSE — plain-English: what is this, what role does it serve, why
+    does it exist. (Top rail: "Prevents occupants from falling. Role:
+    barrier. Expected loads: lateral human loads.")
+ 2. CONSTRUCTION — how it participates: supports / supported by /
+    fastened to / bears on / transfers load to / installed after —
+    builder vocabulary, not software "dependencies".
+ 3. VALIDATION — organized by construction QUESTIONS, drill-down to
+    implementation only on click: "Does it physically fit? ✓ / Does it
+    connect correctly? ✓ / Is required hardware present? ✓ (expected 2
+    washers, found 2) / Is a load path represented? ✓ (chain) /
+    Structural capacity UNKNOWN / Code compliance UNKNOWN." Low-level
+    check details (325 interference checks, clearances) live one click
+    down as Evidence.
+ 4. RELATIONSHIPS — rename from "Dependencies"; semantic construction
+    graph edges (same vocabulary as section 2's participation view).
+ 5. COMPILER — internals LAST, for the framework audience: originating
+    DetailSpec declaration, ConnectionType, rule, inference chain,
+    derivation log, provenance. Fully preserved, just demoted.
+
+NEW TERMINOLOGY (replaces authored/derived in all user-facing surfaces):
+ - DECLARED — author specified (platform width, guardrail required,
+   Simpson ABA66Z)
+ - INFERRED — compiler concluded (7 joists, 14 screws, washers required,
+   load path exists, install sequence)
+ - PROVEN — validation established (no collisions, bearing exists,
+   hardware complete)
+ - UNKNOWN — intentionally not analyzed (capacity, code, wind, snow)
+Maps onto existing machinery (authored→Declared, derived→Inferred,
+findings→Proven, coverage-UNKNOWN→Unknown) — presentation-layer renaming
+PLUS the purpose/role knowledge below; internal fact vocabulary can keep
+its names, user-facing surfaces adopt the new four.
+
+### 3. PURPOSE LAYER PRINCIPLE (discussed + endorsed 2026-07-07 morning)
+
+Purpose is not decoration — build it OBLIGATIONS-FIRST: a declared purpose
+implies invariants the compiler must prove or honestly report UNKNOWN
+("role: barrier, purpose: prevents falls" ⇒ generates coverage-along-
+exposed-edges, lateral load-path-REPRESENTED, gap/height checks). Purpose =
+Declared, implied requirements = Inferred, checks = Proven — the v2
+terminology maps onto it exactly. HARD RULE (permits-vs-requires applied
+one layer up): a purpose with no provable obligation is a FAKE annotation —
+every dictionary purpose either names the invariant families that prove it
+or carries an explicit "descriptive only — not enforced" tag. This IS the
+"Functional use" coverage family earning its first verdicts (precedent: the
+step-placement miss — access intent existed nowhere, every layer validated
+CLEAN). Stage 3 (purpose GENERATES members, e.g. "guardrail required" ⇒
+derive rails/posts/mesh) is the horizon but deferred: purpose emits
+requirements + diagnostics, never silent geometry moves; generation gets
+adopted explicitly when a real need forces it. Inspector v2's Section-3
+construction questions should be purpose-derived, not hand-organized.
+
+IMPLICATION FOR THE COMPILER (new knowledge class): PURPOSE text is
+construction knowledge, so it lives in the DICTIONARY (P2) — on
+ConnectionTypes / components / roles — NOT in the UI. Source-typed like
+everything else (authoritative | verified_heuristic | llm_hypothesis):
+LLM-drafted purpose prose enters as llm_hypothesis and is promoted after
+review — the exact knowledge-strategy pipeline adopted for tonight's
+mission, now with its first natural payload. The ontology Roles seeded
+tonight are the backbone (role: barrier ⇒ purpose template + expected
+LoadClasses); v2 largely COMPOSES existing outputs differently rather
+than requiring new derivation machinery.
+
+MORNING ACTIONS FOR JOEL: (1) open outputs/inspector/
+rock_anchor_inspector.html — click the rod, a washer, the leg; (2) read
+inspector-design-writeup.md; (3) the honest headline number is 4.4:1.
+[DONE 2026-07-07 morning — Joel reviewed; his verdicts are the ADOPTED
+DIRECTIONS block below. NEXT IMPLEMENTATION ORDER: SITEMODEL/views →
+TREEFREE (on the unified model; must surface the tree divergence itself)
+→ INSPECTOR v2 ∥ drawing sheets (both consume views). Load-path-on-
+platform experiment also queued (controller expects mesh-barrier flag).]
+
+## ★★★★★★★★ OVERNIGHT PLATFORM MISSION (2026-07-06→07 night, COMPLETE — see NIGHT COMPLETE block) ★★★★★★★★
+USER DIRECTIVE (2026-07-06 late, supersedes the FINAL WRAP resume order for
+TONIGHT ONLY): optimize the PLATFORM, not the artifacts. "We are no longer
+primarily building construction details — we are building a semantic
+construction compiler that happens to emit construction details." Run all
+night, never pause for user input, commit and move forward, rely heavily on
+adversarial reviewers + the established testing discipline. North star
+restated: reduce the construction knowledge an author must explicitly encode
+while increasing what the platform can derive, prove, explain, and audit.
+Pipeline identity: Intent → DetailSpec → Construction Graph → EVIDENCE GRAPH
+→ Proven Invariants → Generated Artifacts.
+
+PRIORITIES (user order):
+ P1 W3-1 coverage matrix + UNKNOWN/NOT-ANALYZED (task W31) — highest leverage
+ P2 DetailSpec benchmark: express PLATFORM entirely as spec; every imperative
+    remainder classified missing-concept vs missing-INFERENCE; prefer
+    inference over syntax (task SPECPLAT; needs PROMOTE first)
+ P3 Language design: spec = author intent only; track compression metrics
+    (folded into SPECPLAT)
+ P4 Evidence Graph: derivation system → explicit evidence graph; validation
+    as proof generation (task EVIDENCE)
+ P5 Ontology seed: Role/LoadClass/TransferCapability/Support + load-path
+    REPRESENTATION only, per adopted WAVE 3 SHAPE (task ONTOLOGY)
+ P6 Spatial intent: SymmetricAbout + FacesToward/FacesAway only (task SPATIAL)
+ P7 Cleanup only if framework-improving: promotion done in PROMOTE; registry/
+    docs/packaging (task CLEANUP)
+KNOWLEDGE STRATEGY (bind ONTOLOGY/EVIDENCE design): three sources —
+authoritative rules (codes/manufacturer), verified heuristics (reviewed,
+promoted), LLM hypotheses (candidate rules, NEVER build-blocking, reviewed
+before promotion). The compiler remains the source of engineering truth.
+
+EXPLICITLY DEFERRED TONIGHT: TREEFREE (still queued for a future session —
+brief remains valid), consolidated-doc regeneration + vault pushes, any
+rendering/Blender polish, drawing sheets. Do not spend cycles on artifacts.
+
+WAVE PLAN (controller = main session; worktree implementers + fresh
+adversarial reviewers per task; merges to master in dependency order):
+ A: W31 ∥ PROMOTE  (file-disjoint: validation/reporting vs connection/registry)
+ B: SPECPLAT ∥ EVIDENCE  (ownership split: spec/** + platform spec vs
+    derivation/evidence machinery; controller resolves any seam)
+ C: ONTOLOGY ∥ SPATIAL  (after W31 tags + SPECPLAT spec.py ownership frees)
+ D: INSPECTOR ∥ CLEANUP → morning wrap (ledger RESUME block + report for
+    Joel; delete stall crons; master green; NO doc regen)
+
+INSPECTOR (user addition, 2026-07-07 ~00:15, runs AFTER platform priorities):
+"Inspector Mode" prototype on ROCK ANCHOR — the HTML output's future is the
+PRIMARY INTERFACE to the compiler (engineering IDE / debugger, not a PDF).
+One polished vertical slice: clickable model → right-hand Inspector panel
+answering: (1) What is this (type/role/material/dims/params/assumptions);
+(2) Why is it here (authored vs derived facts, producing declaration,
+contributing rules); (3) How do we know it's correct (PASS/FAIL/UNKNOWN
+EXPLAINED with evidence/provenance/confidence — never a bare "PASS");
+(4) What depends on it (construction-graph neighbors, load path if
+represented, change impact). COMPILER EMITS THE DATA (define IRs as needed:
+ObjectDescriptor / ValidationSummary / EvidenceSummary / ConstructionGraph /
+DependencyGraph / DerivationLog); the HTML only consumes. Stretch: hover a
+verdict → "Because:" expansion. NOT in scope: sequencing, load-path viz,
+diff mode, editing, multiple inspectors, code/manufacturer refs — but
+architecture leaves them as natural additions. Deliverable includes a short
+design write-up (worked well / awkward / what should become first-class
+compiler outputs / surprisingly valuable interactions / what to change
+before full system). Success = "I want to inspect every construction detail
+this way," not a finished UI.
+SUCCESS CRITERIA (morning): reports more honest; compiler inference
+increased; DetailSpec simpler; Evidence Graph matured; UNKNOWN reporting
+exists; imperative authoring decreased; new semantic concepts reusable.
+
+DISPATCH LOG (update live):
+ - PROMOTE: APPROVED (rev-promote — independent full-content fingerprint,
+   identical SHA256; rider guards attacked, held; one optional non-blocking
+   suggestion re CI guard hashing full content, noted for CLEANUP). MERGED
+   FF to master @0a5dba5; suite on master 278 passed/3 skipped. Review:
+   review-promote.md. impl-promote released.
+ - SPECPLAT: impl COMPLETE (6 commits on sdd/specplat: platform.spec.yaml
+   byte-identical to imperative — 124 parts ~2e-13, 7790 findings
+   identical, CLEAN; rock anchor stays 0.0mm; REPEAT construct added
+   [index-only, count DERIVED]; authored bearings/bonds + span/mid
+   measures; 3 components registered; 294 passed/3 skipped).
+   COMPRESSION: 683 derived : 129 authored = 5.3:1 (4.4:1 excluding raw
+   escape-hatch facts — the honest number). HEADLINE FINDING: 116/124
+   parts (94%) are RAW escape hatches → the next big inference win is a
+   GENERATIVE fastener/hanger Connection (emit geometry from declaration),
+   needs assembly.py + DerivedFact surfaces — QUEUED AS FUTURE WORK, not
+   tonight. Mirror placement left authored pending SPATIAL SymmetricAbout.
+   BOM ≤2e-13 float-ordering residual → CLEANUP formatter rounding.
+   Review (rev-specplat): APPROVED no fixes — equivalence independently
+   rebuilt (worst dev 2.98e-8mm), compression reproduced exactly, false-
+   bearing attack FAILED loudly (required-proven, not permits), mutation
+   attacks caught. Non-blocking recs → CLEANUP: (1) thread {var}={index}
+   into repeated-part provenance facts (P1 granularity), (2) 4.4:1 as
+   format_metrics headline; future: (3) generative hanger (Gap 6).
+   MERGED to master @dcb20a2 (--no-ff); suite 320 passed/3 skipped.
+   impl-specplat + rev-specplat released.
+   Reports: task-specplat-report.md / review-specplat.md.
+ - SPATIAL: brief task-spatial-brief.md — DISPATCHED (impl-spatial,
+   wt-spatial, sdd/spatial, BASE dcb20a2). Ownership: new spatial module,
+   checks.py wiring, coverage.py KIND_TO_FAMILY additions, src/spec/**
+   spatial block, platform declarations both paths; barred from
+   evidence.py/connection.py/base.py (EVIDENCE in review). First Spatial-
+   family activation; rock_anchor must STAY UNKNOWN.
+   impl COMPLETE (5 commits: symmetric_about + faces_toward/faces_away
+   validation-only, both declaration paths, reserved-name teaching
+   errors; platform declares XZ symmetric_about selector (55 pairs) +
+   ladder faces_away → Spatial UNKNOWN→PASS; rock stays UNKNOWN; RAILFIX
+   audit kept; 356 passed/3 skipped). SEAM: re-baselined golden guards
+   in test_platform_promote_equiv.py + test_evidence_equiv.py for the
+   intended +56 spatial findings (new platform fp dd61a7e5…) — reviewer
+   ordered to independently verify the delta is exactly the 56 spatial
+   findings and nothing else. Review (rev-spatial): APPROVED no fixes —
+   re-baseline independently verified (set-diff: exactly +56 spatial,
+   0 removed/modified); all false-pass attacks failed (stronger than
+   centroid; facing read from geometry); coverage honest; validation-only
+   confirmed; mutation caught by 7 tests. Minors → CLEANUP: zero-match
+   mirror selector silently noops (imperative path); test_timing
+   wall-clock flake under -n auto (not in diff, passes isolated).
+   MERGED to master @57243b0; suite 356 passed/3 skipped.
+   impl-spatial + rev-spatial released.
+   Reports: task-spatial-report.md / review-spatial.md.
+ - W31: impl COMPLETE (4 commits on sdd/w31: KIND_TO_FAMILY table in
+   src/validation/coverage.py → 7-family matrix, PASS/FAIL/UNKNOWN with
+   provenance; all 4 details honestly Physical+Construction analyzed,
+   5 families UNKNOWN; wording rule enforced; TRIAGE fix =
+   SpecReferenceError + did-you-mean in assembly._resolve; 287 passed/
+   3 skipped, +23 new). Review (rev-w31): APPROVED WITH 1 REQUIRED FIX —
+   unmapped `connection_override` kind (provenance marker, not a check)
+   crashes coverage_matrix via UnmappedCheckKind on the incremental-
+   Connection-adoption path; fix = documented exclusion set + override-
+   scenario test. All honesty attacks held (fake-pass impossible, fail
+   propagation family-isolated, mutation-proven tests, zero overlap with
+   sdd/promote). Fix round d9350eb (PROVENANCE_ONLY_KINDS exclusion +
+   real override-scenario test + all-details rendering rider) re-verified
+   by rev-w31: APPROVE MERGE. MERGED to master @5703c32 (--no-ff); suite
+   on master 304 passed/3 skipped. impl-w31 + rev-w31 released.
+   WAVE A COMPLETE. Reports: task-w31-report.md / review-w31.md.
+ - EVIDENCE: brief task-evidence-brief.md — DISPATCHED (impl-evidence,
+   wt-evidence, sdd/evidence, BASE 5703c32). Ownership: new evidence
+   module, base.py additive, DerivedFact back-compat extension in
+   connection.py (surgical); barred from src/spec/** (SPECPLAT) and
+   coverage.py internals. Query API contract designed for INSPECTOR.
+   impl COMPLETE (3 commits: src/validation/evidence.py queryable graph
+   [6 node kinds, open typed edges], built from lifecycle outputs only,
+   orphan=EvidenceGraphError, source_type dimension w/ llm_hypothesis
+   non-blocking by construction, what_is/why_here/how_verified/
+   what_depends_on JSON-native; DerivedFact extended additively
+   [source_type+subjects]; base.py lazy evidence_graph + json emit;
+   byte-identical sha256 vs pristine master on rock+platform; rock graph
+   522n/2032e, platform 8550n/33696e; 324 passed/3 skipped). Seams:
+   SPECPLAT compiler facts default verified_heuristic until explicit;
+   INSPECTOR consumes the four queries, how_verified already emits
+   "Because:" chains. Review (rev-evidence): APPROVED no fixes — all 8
+   attack classes held (completeness incl. UNKNOWN-family visibility,
+   truth of 5 chains vs source, structural non-blocking, pure-reader
+   sha256 both details, back-compat, Inspector fitness, scale 3.64s/5.8MB
+   platform, mutation). Advisories → CLEANUP: "sub-second" wording fix,
+   adjacency index if hot. MERGED to master @93d5731 (--no-ff); suite
+   340 passed/3 skipped. WAVE B COMPLETE. impl-evidence + rev-evidence
+   released. Reports: task-evidence-report.md / review-evidence.md.
+ - ONTOLOGY: brief task-ontology-brief.md — DISPATCHED (impl-ontology,
+   wt-ontology, sdd/ontology, BASE 93d5731). Steps 2-4 of Wave 3 shape;
+   transfer claims on the 5 ConnectionTypes; load-path REPRESENTATION
+   proof on rock anchor; platform files barred (SPATIAL owns tonight);
+   spec-schema edits in separate section (merge seam with SPATIAL).
+   impl COMPLETE (4 commits: src/core/ontology.py Role/LoadClass/
+   TransferCapability provable/reserved tiers; claims on all 5 types w/
+   honest "representative" provenance; src/validation/loadpath.py
+   capacity-free reachability gated by transfer claims; roles on rock
+   anchor both paths; additive evidence-graph layer; 363 passed/3
+   skipped, +23). Sample: "downward-load path REPRESENTED: leg -> angle
+   0 -> rod 0 -> boulder"; retag does_not_transfer → FAIL BROKEN naming
+   gap (TDD'd first). Platform fingerprint unchanged, zero ontology
+   nodes; Structural capacity UNKNOWN test-enforced. NEW PRE-EXISTING
+   FINDING for CLEANUP: platform evidence GRAPH non-deterministic across
+   processes (DerivedFact set-ordering); sorted report-findings
+   fingerprint is the stable guard. Reviewer rev-ontology DISPATCHED
+   (scoped 93d5731..sdd/ontology). Review (rev-ontology): APPROVED no
+   fixes — false-load-path attacks all failed (transfer-gated,
+   cycle-safe, chain TRUE vs source), wording rule + capacity-UNKNOWN
+   mutation-proven, claims honest (9x verified_heuristic, no invented
+   citations), role-less details untouched. Honest gap noted: role-less
+   intermediate parts still bridge paths (connector inert to the proof).
+   MERGED @91919e8 — controller resolved 4 additive seams vs SPATIAL by
+   union (schema.py DetailSpecDoc fields, loader.py _take/_build/ctor) +
+   post-merge floor fix @0617bcf (consolidated UNKNOWN count 20→18: a
+   GOOD failure — Spatial(platform)+Load-path(rock) now analyzed). Suite
+   379 passed/3 skipped. WAVE C COMPLETE. impl-ontology + rev-ontology
+   released. Reports: task-ontology-report.md / review-ontology.md.
+ - WAVE D DISPATCHED off master @0617bcf: INSPECTOR (impl-inspector,
+   wt-inspector, sdd/inspector — brief task-inspector-brief.md; consumes
+   evidence.py, never edits; design write-up to
+   inspector-design-writeup.md for Joel) ∥ CLEANUP (impl-cleanup,
+   wt-cleanup, sdd/cleanup — brief task-cleanup-brief.md; 9 items:
+   evidence-graph determinism, full-content CI guards, repeat provenance
+   back-link, honest metrics headline, BOM rounding, zero-match selector
+   diagnostic, wording fix, CLAUDE.md/README refresh, packaging).
+ - INSPECTOR: impl COMPLETE (inspector/v1 JSON payload IRs from evidence
+   queries; UI consumes payload only, zero hardcoded detail knowledge;
+   four-question panel + highlight + neighbor/load-path nav + "Because:"
+   expansion + honest UNKNOWNs; 390 passed/3 skipped, +11 payload tests;
+   artifact committed outputs/inspector/rock_anchor_inspector.html 1.5MB
+   file://-openable, regen scripts/build_inspector.py; design write-up
+   inspector-design-writeup.md). Live-browser verification LATER PASSED
+   (claude-in-chrome vs localhost serve: click-select + highlight, panel
+   populates, honest 3 PASS / 4 NOT ANALYSED strip, 27 explained
+   findings + 2 load-path boxes on leg, console clean) — concern CLOSED;
+   UX nuance noted for future: click-vs-drag discriminator >5px orbits
+   instead of selecting on twitchy clicks. Joel still gets first human
+   reaction. Top rec: move UNKNOWN-family honesty merge from emit layer
+   INTO how_verified. Review (rev-inspector): APPROVED — payload purity
+   (synthetic-payload swap-test clean), truth field-for-field vs evidence
+   graph on 4 parts, UNKNOWN honesty (build RAISES on verdict in
+   un-analysed family), navigation 76 edges/0 dangling, scope clean.
+   Determinism FAIL is INHERITED from evidence.py fact-id renumbering
+   (CLEANUP item 1 fixes; invisible in UI). MERGED to master @4e2757c;
+   390 passed/3 skipped. FOLLOW-UPS QUEUED post-CLEANUP-merge:
+   (1) two-builds-equal payload test, (2) regen committed HTML
+   byte-reproducibly, (minor) load path renders in sections 3+4.
+   MORNING HUMAN EYES: open outputs/inspector/rock_anchor_inspector.html,
+   click rod/washer/leg (implementer's live-browser pass covered this;
+   reviewer wants Joel's own eyes anyway).
+   Reports: task-inspector-report.md / review-inspector.md /
+   inspector-design-writeup.md.
+ - CLEANUP: impl COMPLETE 9/9 (db0633a..e351746, one commit per item:
+   evidence-graph determinism [2-process hash identical] · full-content
+   fingerprint guard [re-baseline = exactly 5 BOM strings] · repeat
+   provenance back-links [+111 facts, findings fingerprints unchanged] ·
+   honest headline · BOM rounding · zero-match selector diagnostic ·
+   adjacency index [Inspector queries 2.28s→0.014s, ~160x] · CLAUDE.md/
+   README refresh · packaging [wheel ships spec + web_viewer, isolated
+   uv build]; 395 passed/3 skipped, +16 tests). NOTE: headline now 5.3:1
+   not 4.4:1 (item 3's new facts measured by item 4) — rev-cleanup
+   ordered to adjudicate whether provenance back-links legitimately
+   count toward compression (morning report quotes this number).
+   test_timing wall-clock flake recurred once (pre-existing, passes
+   isolated). Review (rev-cleanup): APPROVED WITH 1 REQUIRED FIX —
+   METRICS INFLATION CONFIRMED: the 111 spec.repeat.instance facts are
+   bookkeeping (loop-index restatement, scales with part count), whole
+   5.3-vs-4.4 jump is them; morning report must quote ~4.4:1. Fix
+   dispatched: third "bookkeeping" bucket (controller chose over
+   placeholder-confidence mislabel), item-4 test + report updated;
+   repeat.expand (31) stays per reviewer judgment. All 8 other items
+   independently verified (determinism 2-process, re-baseline exactly
+   5 BOM strings, adjacency 0 mismatches, wheel 59 files). TODO
+   post-merge: document INSPECTOR in CLAUDE.md at wrap.
+   Reports: task-cleanup-report.md / review-cleanup.md.
+ - PROMOTE: impl COMPLETE (3342efb..0a5dba5: 3 types promoted + registered
+   [face_mount_hanger/toe_screwed/rail_cap_screwed], riders 4a confidence +
+   4b _require_hardware_roles on all 5 types; 278 passed/3 skipped;
+   fingerprint equivalence diff EMPTY 124/7626/7790/600). Implementer
+   briefly edited MAIN checkout by accident — caught pre-commit, main
+   verified pristine by controller. Reviewer rev-promote DISPATCHED
+   (adversarial, scoped 3342efb..0a5dba5). Report:
+   task-promote-report.md.
+
+## ★★★★★★★ FINAL WRAP (2026-07-06 ~23:25, context limit) — RESUME HERE ★★★★★★★
+User ended session at 69% context. EXACT state:
+- master @ 6f663cd (BEAMFIX merged: 60" beams, cross-detail X invariant,
+  249 passed/3 skipped). Vault doc regenerated FROM MASTER + pushed
+  @cf71c75 — has 60" beams + correct cut plan (does NOT have site
+  overview; does still show the now-retired tree-lag connection).
+- SITEOVERVIEW: COMPLETE — review verdict (Approved, no fixes; trolley
+  placement/dedup/honesty labels/BOM byte-identity all independently
+  verified) arrived just before close; merged FF to master @2f2af01,
+  264 passed/3 skipped, doc regenerated (3.14-ish MB — hash-gate reused
+  4/4 renders) + vault pushed @5872a7c. Reviewer notes for later: don't
+  judge boulder registration from silhouette (irregular rock extends from
+  its origin — check numbers); promote Platform._beam_outer_y to a public
+  property next time platform.py is touched; trolley hang_y_offset=12"
+  inboard is pre-existing real geometry, not a composition bug.
+- TREEFREE: queued, NOT started. Brief COMPLETE at task-treefree-brief.md
+  (incl. req 7: site-overview transforms assume shared Z=0 — must be
+  re-derived for per-post foundations). Runs AFTER siteoverview merges.
+- RESUME ORDER: (1) TREEFREE — the free-standing redesign, the ONLY open
+  implementation item; all decisions made (SITE FACTS + TREE-ATTACHMENT
+  DESIGN DECISION blocks below; brief task-treefree-brief.md incl. the
+  site-overview Z=0 dependency, req 7); (2) regen + vault push;
+  (3) queued phases: drawing sheets planning, W3-1 coverage matrix,
+  CLAUDE.md refresh. Master @2f2af01, 264 passed/3 skipped, no branches,
+  no worktrees, vault current @5872a7c.
+- Research artifacts tonight: research-treeattach.md (free-standing
+  recommendation, cited), research-prior-art.md.
+- Stall-check crons: ALL DELETED at wrap (session-only anyway). Recreate
+  per the process rules in the SESSION CLOSED block when dispatching.
+
+## ★★★★★★ EVENING EXTENSION (2026-07-06 late) — CURRENT FINAL STATE ★★★★★★
+After the first close-out, four more user-driven tasks shipped (same
+pipeline, all reviewed + merged). master @ ~f665951+, 247 passed/3 skipped.
+Vault doc regenerated + pushed @18ecc95 (5.42MB) carrying everything:
+- CUTPLAN: consolidated stock & cut plan section (core/cutplan.py FFD
+  packing, 8/10/12/16ft catalog, kerf 1/8" + end-trim 1/4"; real plan: 9
+  sticks / 82ft / 11% waste; BOM rows gained machine-readable length_mm).
+  Follow-up noted: cutplan stock catalog ⊂ lumber.py STOCK_LENGTHS
+  (14/20ft) — unify if longer members appear; offcut tracking as usable
+  drops = future idea.
+- RAILFIX: -Y top rail unmirrored placement fixed (mirror = improper
+  transform; rotate [X90,Z180] + far-end origin); permanent 20-pair
+  +Y/-Y symmetry audit test; guard engineering-review block (flat-laid
+  2x4 rail ~1450psi vs Fb 875-1400 = MARGINAL, architect-flagged).
+- RAILFASTEN: rails were GRAVITY-SEATED — new RailCapScrewed
+  ConnectionType, 2x 3.5" structural screws per joint x4 joints (+8 BOM),
+  wording-rule compliant ("IS REPRESENTED... CAPACITY NOT ANALYZED").
+  Platform now 124 parts / 7626 pairs.
+- STUBVIZ: stub parts hover shows FULL member (48" beam / 63.5" leg
+  primary; modeled portion secondary), panel-level partial-view notes,
+  stub_of metadata through BOM+payload+spec-yaml (spec/imperative
+  equivalence kept).
+- WAVE 3 SHAPE adopted + recorded (see block below) incl. coverage-matrix
+  requirement and wording rule; W3-1 (UNKNOWN verdicts + coverage matrix)
+  is the next session's FIRST task after drawing-sheets planning — order
+  per user.
+- TRIAGE (new, from RAILFASTEN review, reproduced): removing a part from
+  assembly.parts → unhandled KeyError in _stage_interference via
+  assembly._resolve (checks.py:609 / assembly.py:205) when resolving
+  expected_overlaps naming a missing id — should be a hard DIAGNOSTIC not
+  a crash. Pre-existing, any detail. Fix in W3-1 or a small standalone.
+- ARCHITECT SIGN-OFFS OUTSTANDING (unchanged + one new): 12" vs 16" O.C.;
+  brace removal vs knee brace; Simpson screw schedule; NEW: rail
+  fastening screw spec + flat-vs-edge rail decision.
+- ★★ SITE FACTS (user-supplied 2026-07-06 late — these are SiteContext
+  facts, authoritative over all prior assumptions):
+  * Tree at the top of a small mound; big drop is BEHIND the tree (away
+    from launch). Platform runs tree→launch as modeled; zip exits off the
+    ladder/leg end (models' functional orientation CONFIRMED correct).
+  * Ground under the platform falls ~6-18" from tree base to launch end
+    over the 4ft run (field-measure per post).
+  * ROCK exists under exactly ONE front post (by the ladder); the other
+    front post and both tree-end positions are soil.
+- ★★ TREE-ATTACHMENT DESIGN DECISION (user, 2026-07-06 late, research-
+  backed — resolves cross-detail divergence #2): FREE-STANDING. No tree
+  fasteners; beams clear the trunk (~5"/side = ample growth gap); the
+  lag/slot beam-to-trunk connection RETIRES; tree anchors only the cable
+  (out of platform scope). Platform gains 2 short tree-end legs (2x6,
+  lengths derived from per-post ground elevation, ~4-16") on PRECAST PIER
+  BLOCKS (user preference) with the rock-anchor leveling-nut pattern.
+  Rock-anchor detail survives scoped to the ONE rock post; other front
+  post also moves to a pier block. Per-post ground elevation = field-
+  measured param (placeholder confidence until measured). Research:
+  research-treeattach.md (sandwich geometry = the anti-pattern all
+  primary sources warn against). TASK: TREEFREE (brief pending), queued
+  behind SITEOVERVIEW.
+- ★ CROSS-DETAIL DIVERGENCE #2 (user-caught, controller-probed, OPEN
+  DESIGN DECISION — biggest outstanding item): platform beams at
+  y ±[15,16.5] (30" joist span, non-negotiable for the 33" deck) vs tree
+  detail beams trunk-TANGENT at ±[10,11.5] — a straight 2x6 cannot do
+  both; 5" lateral gap per side. Likely inherited from the ORIGINAL hand
+  drawings (trunk 20" + joist span 30" + "beam bears snug" never
+  reconciled). Candidate resolutions for Joel/architect: (1) ~5" standoff
+  blocking at lag stations (needs ~10-11" lag/threaded rod — 8" field
+  note insufficient); (2) treehouse attachment bolts/standoff brackets
+  (arborist-standard, better for the tree, replaces the tangent-contact
+  connection concept); (3) narrow platform to tangent (deck 33"→~23",
+  probably unacceptable). DO NOT encode any Y cross-detail invariant
+  until decided (BEAMFIX instructed accordingly; its X invariant stands).
+  Divergence #1 (beam length 48→60, X axis) is BEAMFIX, in flight.
+
+## ★★★★★ SESSION CLOSED (2026-07-06 evening) — READ THIS FIRST ★★★★★
+Wave 2 + speed program COMPLETE. master @ 1e23e57; 224 passed / 3 skipped
+(pytest -n auto ~20s). Final whole-branch review (44 commits, f932ae7..):
+"Ready to close" — zero code defects; seams PROVEN (spec==imperative==
+warm-cache findings identical, 378 each; prefilter/expected-overlaps/
+Connection-presence composition sound; registries populate on import).
+Fix-now items done (derivation.md gitignored, CLAUDE.md count).
+
+SHIPPED TODAY: S1 benchmark harness + evidence baseline; S2 hash export-
+order fix; S3a bbox prefilter; S3b hash restructure + solid dedup; S3c
+persistent BREP/digest/verdict caches (4x MET on per-detail basis: platform
+5.0x, rock 4.3x warm; aggregate 3.15x import-floor-bound — daemon mode is
+the only remaining lever, user parked it); W2-6 Connection; W2-8 Registry;
+W2-7 DetailSpec (YAML, oracle-exact, teaching diagnostics); test audit +
+fixes (mutation-proven); pytest-xdist; PLATFORM-REV2 (6 architect items,
+doc regenerated + vault-pushed @1952ec3); viewer UX fix; pitch + research
+docs in vault.
+
+AWAITING JOEL/ARCHITECT SIGN-OFF (platform): 12" vs 16" O.C. (rec: keep
+12"), brace removal vs real knee brace, actual Simpson screw schedule
+(modeled 4+2/hanger is representative; catalog 6-8/3-4).
+
+NEXT SESSION — DRAWING SHEETS PHASE (directive #2), start here:
+1. cat this file + git log --oneline -15. Plan: FRAMEWORK_ROADMAP.md.
+2. Research says: prototype build123d project_to_viewport (OCCT HLR, same
+   OCP stack) + adopt ezdxf for DXF/dimensioning BEFORE hand-wrapping HLR
+   (see research-prior-art.md + vault copy). DetailSpec's views/dimensions
+   seam documented in task-w2-7-report.md.
+3. First deliverable: regenerate the 4-detail zipline set as true sheets.
+4. NEXT-SESSION maintenance queue (final-review triage): CLAUDE.md/README
+   refresh (Connection/spec/registry/cache sections — highest value);
+   promote FaceMountHanger/ToeScrewed from platform.py to connection.py +
+   register (P2, prerequisite for spec-authoring platform);
+   required_hardware confidence scoping; _unpack hard diagnostics;
+   packaging (web_viewer assets); byte-reproducible doc note (GLB gzip
+   payloads rebuilt each run — content-identical, not byte-identical).
+5. Language features queued (from W2-7 review): fastener-insertion mate,
+   datum discoverability, repeat construct (at platform-spec time).
+6. Same execution model. PROCESS RULES learned today: every dispatch
+   commits a liveness marker at start; never remove a possibly-live
+   agent's worktree (re-dispatch into a FRESH path); ping + wait a full
+   cycle before declaring death; reviewers scoped to the diff (user
+   preference); implementer reports carry covering-test evidence.
+
+## ★★★★ ACTIVE SESSION (2026-07-06, Wave 2 + speed) — CURRENT STATE ★★★★
+Fresh session resumed per resume brief. Baseline confirmed: master @ f932ae7,
+108 passed / 3 skipped. Stale viewer worktree + merged sdd/viewer-ab branch
+cleaned up. Session plan (task IDs in session tracker):
+- S1 benchmark harness + baseline (brief task-s1-brief.md) — DISPATCHED
+  (worktree wt-bench, branch sdd/bench, BASE f932ae7)
+- S2 buildinfo hash export-order fix (brief task-s2-brief.md) — DISPATCHED
+  (worktree wt-hashfix, branch sdd/hashfix, BASE f932ae7)
+- S3 speed levers per S1 evidence → then Wave 2: item 8 (registry, brief
+  task-w2-8-brief.md ready) parallel with item 6 (Connection, brief
+  task-w2-6-brief.md ready) → item 7 (DetailSpec, brief written after 6's
+  API lands) → final whole-branch review.
+Per-item fresh adversarial reviewers; merges to master in dependency order.
+- S2: COMPLETE (commits a5875c1+e5d8207, merged FF to master @e5d8207, review
+  Approved — reviewer independently reproduced pre-fix failure, verified hash
+  stability on real 26-part rock anchor across GLB/STL export orders, and
+  byte-identical GLB output post-Clean_s; 110 passed/3 skipped on master).
+  Root cause confirmed: Triangulation_s reuses any cached mesh with achieved
+  deflection <= requested tol. Fix: BRepTools.Clean_s before every hash
+  tessellation. Phase-C workaround removed; replaced with loud assertion at
+  consolidated_report.py:822. Minor (report wording only): oracle jsons DO
+  exist untracked on disk but contain no hash fields — conclusion unaffected.
+  NOTE for S1/S3 benchmarking: every geometry_hash call now forces a remesh —
+  small wall-clock increase is the correctness cost, not a regression.
+- S1: COMPLETE (harness 8b98f8d + baseline 6107e76 + fixes 4f23e75/721bb30,
+  merged to master @6752ff4, review Approved after 1 fix round; 122 passed/
+  3 skipped). Baseline doc: .superpowers/sdd/bench-baseline-2026-07-06.md
+  (committed). KEY EVIDENCE: aggregate no-render build+validate 29.28s across
+  4 details; bbox prefilter (absent today) ~35.3% savings; buildinfo hashing
+  28-44% of wall in every detail; solid dedup ~8.2%. REFUTED: 60-90s/detail
+  and 25-30min doc figures (real: 2.9-11.8s/detail CLI, 83.7s cold doc,
+  ~14s warm). 4x TARGET REBASED to measured baseline: aggregate ~29.3s→~7.3s,
+  cold doc 83.7s→~21s, measured on a FRESH post-S2 master baseline.
+  Fix-round lesson worth keeping: detail modules import checks BY VALUE at
+  module top — instrumentation must patch the detail module's own attr, not
+  just checks_mod (regression test uses a real on-disk module).
+- S3b: COMPLETE (52199a3+0fbb574+c739302+d924d1e, merged FF to master
+  @d924d1e, review Approved after 1 fix round; 129 passed/3 skipped).
+  Hash restructure H(local_digest, transform): hash phase rock_anchor
+  4.25s→0.55s (-87%), platform 6.11s→0.41s (-93%); solid dedup cache
+  build-phase -52%/-71%. Rotation digest at 12 decimals (floor ~2.9e-11°,
+  scale-independent, beats old vertex hash at 20m by ~50x), translation 6
+  decimals; docstrings state floors honestly. consolidated_report hash-gate
+  now compares build_manifest-to-build_manifest. ThreadedRod thread_zones
+  defensively copied. KNOWN QUIRK (reviewer, non-blocking): benchmark.py's
+  _instrument monkeypatches Component.solid uncached, so harness build:*
+  phases can't see the dedup cache — use cli_no_render medians for that
+  lever's effect.
+- S3a: COMPLETE (0f4e0b7..451e555, merged to master @0c6750f, review
+  Approved after 1 fix round — reviewer could not construct a false skip;
+  fix unions prefilter bbox over ALL solids of a part [latent multi-solid
+  false-skip vector], fail-first verified; 136 passed/3 skipped on master).
+  Prefilter: Tolerances.bbox_prefilter_gap = near_miss (0.15mm), audit
+  fields pairs_total/prefiltered/fully_checked/threshold on
+  ValidationReport, counts conserve (rock 325=271+54, platform 990=887+103,
+  deterministic). Measured: platform interference 6.32s→1.24s (-80%), CLI
+  -48%; rock interference -24% (kept pairs are the expensive ones), CLI -12%.
+- POST-S3 AUTHORITATIVE BENCHMARK (outputs/bench-postS3/ vs bench-postS2/):
+  aggregate 28.70s→19.55s (1.47x; rock 1.21x, tree 1.26x, trolley 1.15x,
+  platform 2.12x); doc cold 84.6s→48.5s (1.74x), warm 14.1s→6.7s. Remaining
+  costs: IMPORT ~1.75s/process (7.0s of aggregate — hard floor caching
+  can't fix; fresh-process-per-detail 4x impossible without daemon/import
+  work); rock interference 3.53s (54 expensive fastener-in-wood booleans);
+  bearing ~1.0-1.2s + floating 0.3-0.8s each on big details; hash now small.
+- S3c DISPATCHED (brief task-s3c-brief.md, worktree wt-s3c, branch
+  sdd/s3c-caches off 0c6750f): persistent BREP solid cache (lever b) +
+  per-pair verdict cache (lever d) with complete-input-surface keys,
+  code-version salting, audit counts, kill switch, equivalence tests.
+  Scenarios A/B/C (empty cache / warm repeat / single-param edit).
+- W2-6 DISPATCHED in parallel (brief task-w2-6-brief.md, worktree wt-w26,
+  branch sdd/w26-connection off 0c6750f). File ownership: w26 = connection.py,
+  details/base.py, rock_anchor.py; s3c = diskcache.py, core/base.py,
+  checks.py internals. W2-8 queued behind S3c merge (both touch checks.py).
+- S3 dispatch plan: S3a bbox prefilter (task-s3a-brief.md, checks.py) ∥
+  S3b hash restructure + solid dedup (task-s3b-brief.md, buildinfo/base) —
+  file-disjoint parallel worktrees off 6752ff4. Fresh post-S2 baseline run
+  captured to outputs/bench-postS2/ before S3 merges for honest before/after.
+  Implementer harness numbers are directional; authoritative 4x accounting
+  on merged master, quiet machine. Iterate (lever b persistent BREP cache,
+  lever d verdict cache) if <4x.
+
+## ★★★ FINAL SESSION STATE (2026-07-06 evening) — READ THIS FIRST ★★★
+Everything below "SESSION PHASE COMPLETE" plus these post-pause additions:
+- Steps relocated to launch end + trunk/boulder context (d7a10de) after user
+  caught the access-logic error; contractor voice pass (92d444a+8ad3a5b).
+- INTERACTIVE VIEWER SHIPPED (f932ae7 + e058289; vault a76749c pushed):
+  hover any part → tooltip (dims/material/qty/specs/assumptions), click-pin,
+  dimension callouts, explode slider, dark-theme; doc 2.52MB self-contained;
+  108 tests passing. fmt_frac_in carry bug fixed.
+- ★ SPEED DATA overturning directive #8's premise: full d.render() is only
+  15-18s/detail on current code; cold 4-detail doc regen 55s; warm (hash-
+  gated) 14s. The earlier "25-30 min" figure was multi-process orchestration
+  overhead, NOT geometry cost. Directive #8's benchmark-first order is
+  therefore MANDATORY — profile where time actually goes (single-detail CLI
+  ~60-90s incl. imports+validation; agent authoring loops re-run builds many
+  times) before touching any lever.
+- ★ REPRODUCIBILITY BUG for next session (core/buildinfo): geometry_hash is
+  export-order-dependent — OCCT caches triangulation, so meshing at 0.08
+  (GLB export) before hashing at 0.1 makes the stored assembly_hash
+  irreproducible on fresh runs (hit tree_attachment; phase-C normalized the
+  stored hash to the clean pre-export value as a workaround). ROOT-CAUSE FIX:
+  force a clean re-mesh (or BRepTools::Clean) before hashing in buildinfo.
+  This protects Wave-1 item 5's core guarantee — fix early next session.
+- Viewer runtime lessons: three.js sanitizes node names ("beam +Y"→"beam_+Y")
+  — match through three's sanitizer when joining; glTF default metalness=1
+  renders parts black (set 0). Relevant to drawing-sheet work too.
+
+## ★★ SESSION PHASE COMPLETE — PAUSED FOR WAVE 2 (2026-07-06) ★★
+Everything through the consolidated report is DONE. State at pause:
+- detailgen master @ e97d68e (Wave 1 + 4 details + cross-detail reconcile +
+  north-star docs + report generator). 100 tests green. No worktrees/branches.
+- Consolidated model-backed build document delivered:
+  vault 05_Attachments/Organized/Zipline Platform Drawings/
+  "Zipline Build Document (model-backed) 2026-07-06.html" (vault commit
+  d1df80a, pushed). 4 details, 1445 checks 0 failures, VTK renders,
+  param-derived callouts, combined buy list (27 purchased / 6 existing lines,
+  double-count guard generalized: platform canonical for all lumber;
+  connection details contribute hardware only).
+- Model-vs-original corrections shipped in the doc: 3 joists @ 12" O.C. (not
+  4-5); decking 33" butt-tight (no 3" overhang); deck run 48" (not 65");
+  handle 29" above deck; leg 63.5" modeled / 65-68" field stock; beam
+  underside 22.5".
+- NEXT SESSION: Wave 2 per directives #6 (north star + P1-P4), #2 (drawing
+  sheets after Wave 2), and the Wave-2 guidance notes. Resume brief in
+  directive #3 below. Do not redo anything above this line.
+
+## ★ WAVE 1 COMPLETE — merged to master @ ff30b2e (2026-07-06) ★
+Fix commit 811e5a8 + merge; 77 tests green on master; rock_anchor CLEAN.
+Worktrees removed, wave1/sdd branches deleted. NEXT: 3 zipline details
+(tasks: platform, tree attachment, trolley) → consolidated one-file report →
+PAUSE (user clears context) → Wave 2 (see directives below).
+
+Plan: ~/.claude/plans/you-are-not-creating-happy-sun.md
+Branch: wave1-framework-foundation (from master @ 2664da1)
+Oracle: .superpowers/sdd/oracle_rock_anchor.json (26 parts, captured at 2664da1)
+Baseline: 8 tests green; rock_anchor CLEAN.
+
+Execution order: [4,5 parallel worktrees] -> merge -> 1 -> 2 -> 3 -> final review.
+
+USER DIRECTIVE (2026-07-06): after Wave 1 lands, model the other three zipline
+elements (platform, tree attachment, trolley/launch edge) as Details — source
+dims from JoelBrain vault 01_Projects/03_Dacha/ + 05_Attachments/Organized/
+Zipline Platform Drawings/ — then proceed straight into Wave 2 (items 6, 7, 8;
+8 parallelizable). No approval stops needed.
+
+USER DIRECTIVE (2026-07-06, #8 — GENERATION SPEED, TOP PRIORITY for next
+session): current generate+validate speed is far too slow. TARGET: 4× FASTER
+to generate and validate a moderately complex design. Observed baselines
+(2026-07-06, M-series Mac, this repo): rock_anchor (26 parts) build+validate
+~60-90s; platform (46 parts) ~2-5 min; full 4-detail document regen ~25-30
+min cold (now ~5-8 min warm via the hash-gated reuse path that shipped with
+the viewer). 4× target ≈ platform-class detail build+validate ≤ ~60-75s;
+cold full-doc regen ≤ ~7 min.
+Execution order for next session: (1) BENCHMARK FIRST — build a small timing
+harness (per-phase: component builds / placement / each check type / render)
+so optimization is evidence-driven, then (2) attack the biggest costs.
+Candidate levers, unvalidated, to test against the benchmark:
+  a. Component-solid cache keyed by (type, params-hash) — identical parts
+     (washers/nuts/bolts repeat heavily) currently rebuild N times per
+     assembly; build once + share/copy.
+  b. Persistent param-keyed solid cache across runs (serialize BREPs to
+     outputs/cache/) — the "param-keyed solid cache" already queued in
+     directive #6's Wave-2 notes.
+  c. Validation: cheap bbox/spatial prefilter before expensive BRepExtrema
+     pair checks (verify whether one already exists); skip far pairs.
+  d. Incremental validation: per-pair verdict cache keyed by both parts'
+     geometry hashes + relative transform — unchanged pair = cached verdict
+     (extends the Wave-1 hash machinery that already gates doc regen).
+  e. Parallelism (multiprocessing) for pairwise checks — note OCC objects
+     don't pickle; needs BREP serialization or per-process rebuild; measure
+     before committing.
+This directive outranks feature work in Wave 2 sequencing: do the benchmark +
+top levers BEFORE or ALONGSIDE Connection/DetailSpec, since every future
+authoring loop pays the current cost. Speed work must not weaken validation
+honesty (no skipped checks without a hash-proof of equivalence).
+
+USER DIRECTIVE (2026-07-06, #7 — DOCUMENT VOICE, binds all generated build
+documents incl. the future drawing-sheet package): build documents are
+STANDALONE and CONTRACTOR-FACING — written as if the only document ever
+produced for the build. No references to prior versions/drawings, no
+corrections/errors framing, no model-vs-drawing comparisons. Field-fit items
+phrased as site-verification instructions. Keep validation status block,
+geometry-hash/version footer, simple rev number, and the teaching voice
+(WHY boxes, install notes). Encoded in scripts/consolidated_report.py.
+
+USER DIRECTIVE (2026-07-06, #6 — NORTH STAR, supersedes #5, binds all waves):
+**Every framework improvement should reduce the construction knowledge
+authors must explicitly encode.** Optimize EXPRESSIVENESS: a small
+declarative expression of intent from which the platform infers geometry,
+placement, mating, validation, BOM, installation sequence, exploded views,
+dimensions, rendering defaults, and documentation. DetailSpec is the
+platform's LANGUAGE, not an input format. Architecture = COMPILER, not CAD
+framework: Intent → DetailSpec → Construction Graph → Derived facts with
+provenance → low-level assembly/geometry → Validation/Rendering/Docs.
+Below the Construction Graph = deterministic compilation.
+
+Intent-vs-derived rule: the spec contains ONLY author-intended facts
+(components, relationships, required dimensions, high-level constraints);
+everything else is derived. Schema design test per field: "could the
+compiler infer this?" → if yes, it's out of the spec.
+
+FOUR DESIGN PRINCIPLES (user-confirmed, verbatim intent):
+P1 — Inference must be auditable. Infer aggressively, never silently. Every
+derived fact carries provenance: what was inferred / which authored
+declaration caused it / which rule produced it / what assumptions were used /
+confidence tag (official | inferred | placeholder) / whether author can
+override. Failed or ambiguous inference = HARD DIAGNOSTIC, never a guess.
+Spec minimal; compiled Construction Graph verbose, inspectable, explainable.
+P2 — Extensible dictionary. Connection types encode reusable construction
+knowledge (exemplar: `Simpson ABA66Z` → geometry source, valid mating parts,
+required fasteners, hole pattern, bearing faces, installation order,
+validation rules, assumptions, code/manufacturer refs). Don't wait for a
+complete dictionary — each new connection type enriches the language.
+P3 — Imperative code stays as the escape hatch. DetailSpec = high-level
+language; existing Python assembly system = the "assembly language" for what
+the DSL can't yet express.
+P4 — Compiler diagnostics are a first-class output. Every build emits a
+derivation/diagnostic report ALONGSIDE the validation report answering: what
+did the author specify? what did the framework infer? what assumptions were
+made? what was overridden? what could not be inferred? what warnings/
+ambiguity were found? That report is how inference stays non-magic.
+
+METRICS (record per new detail, in its report):
+- DetailSpec LOC; # explicit placements; # explicit constraints; # explicit
+  validation declarations; # explicit dimensions
+- # relationships/facts inferred automatically (from the derivation log)
+- SPECIFICATION COMPRESSION = derived facts : authored facts (should rise
+  every wave)
+- Secondary: imperative LOC (baseline rock_anchor 845 / platform 625 /
+  trolley 454 / tree 369)
+
+Wave 2 brief implications: item 7 DetailSpec schema designed by the
+intent-vs-derived test + SiteContext (shared site facts details reference,
+not restate); item 6 Connection = the unit of encoded construction knowledge
+powering inference + GENERATES validation (kills hand-written
+validation_spec lists AND the permits-vs-requires trap); item 8 registry
+resolves spec vocabulary → components. All three report the new metrics on a
+re-authored rock-anchor spec — the compression benchmark (~845 imperative
+lines vs the spec's authored-fact count). Also evaluate: param-keyed solid
+cache to cut OCC rebuild time in author loops.
+
+USER DIRECTIVE (2026-07-06, #4 — HARD STOP): the consolidated report MUST be
+fully delivered before any Wave 2 work begins, and Wave 2 runs in a FRESH
+session/subagent after the user clears context. The current session's last
+action is delivering the report + vault copy + final commit. Do NOT dispatch
+any Wave 2 task from the current session.
+
+USER DIRECTIVE (2026-07-06, #3): after the 3 zipline details land, produce ONE
+consolidated report file containing ALL FOUR details (rock anchor + platform +
+tree attachment + trolley) — renders, param-derived callouts, BOMs, validation
+summaries, combined BOM — copied to the vault (05_Attachments/Organized/
+Zipline Platform Drawings/). Then PAUSE: user clears context; a fresh session
+resumes Wave 2 by reading THIS ledger. Resume brief for that session:
+  1. cat this file + `git log --oneline -15` in
+     ~/Code/construction-detail-generator (branch state is authoritative).
+  2. Wave 2 = plan items 6 (Connection), 7 (DetailSpec), 8 (registry; 8 is
+     parallel to 6→7). Plan: ~/.claude/plans/you-are-not-creating-happy-sun.md
+  3. Same execution model: worktree implementers + fresh adversarial
+     reviewers + this ledger. Worktree gotcha: editable install points at the
+     main checkout — use the PYTHONPATH .shim symlink pattern (see task briefs).
+  4. After Wave 2: Drawing Sheet Generation (directive #2), regenerate the
+     consolidated zipline set as true sheets, then Wave 3+.
+
+USER DIRECTIVE (2026-07-06, #2): Drawing Sheet Generation package — true 2D
+drafting (OCCT HLR orthographic projections, line weights, section hatching,
+title blocks, auto-dimensioning from param-derived callouts, on-sheet BOM,
+multi-view sheet composition). Slotted AFTER Wave 2 (it consumes DetailSpec's
+views/dimensions interface), BEFORE Wave 3 — user: "drawings are often the
+most important part." First deliverable: regenerate the 4-element zipline
+drawing set as model-backed sheets. Sequence:
+Wave1 -> 3 zipline details -> Wave2 -> DRAWING SHEETS -> Wave3+.
+
+## Status — zipline details phase (post-Wave 1)
+
+- Specs extracted: spec-platform.md / spec-tree-attachment.md / spec-trolley-launch.md
+  (top ambiguities flagged inside: deck 48" canonical vs 65" legacy; trolley
+  hardware = existing not purchased; lag slot 1.5"×9/16" ASSUMED; leg-to-BEAM
+  bolts are 3/8"×4" carriage — the 2-1/2" ones are rock-anchor scope)
+- Platform detail: COMPLETE (merged to master @f4dddb2, review approved after 1 fix round — trunk-governed joist layout: joist_oc drives 12" O.C., count derives to 3 [4 provably can't fit], shopping-list conflict shipped in report; 100 tests green; worktree/branch cleaned). Key findings shipped in its report: no 3" deck overhang (collides outboard legs); 3 joists not 4-5; stdlib-platform shadowing toolchain note.
+- CROSS-DETAIL note from platform re-review: ~12.25" decking cantilever at the launch edge (highest-load zone) — within 16" norms but worth a report note; shared with trolley detail.
+- Tree attachment detail: COMPLETE (merged FF to master @3a1eaac, review Approved — reviewer empirically forced a floated beam and validation caught it; 84 tests green; worktree/branch cleaned). Minors deferred: docstring overstates bond's role in float-catching (it's the tangent dimension check); beam_depth/THK hardcoded actuals; test_air_gap_opens_away is a math tautology; embedment threshold only >0.25" (2.42" marginal → field note says 8" lag).
+- Trolley/launch detail: COMPLETE (merged to master @35db4bd, review approved after 1 fix round — Critical wheel-cable contact proof added [reviewer independently re-verified], handle-height string param-derived, assumptions surfaced; 90 tests green; worktree/branch cleaned)
+- CROSS-DETAIL CHECKLIST (for consistency pass before consolidated report):
+  * trolley's post_height stub (68", own assumption) + handle 30" above deck vs platform's REAL leg/rail geometry — reconcile
+  * grab-bar height: spec says ~46" above deck — confirm all details agree on deck height (~29")
+  * shared conventions: deck plane datum, trunk dia 20", beam heights across platform/tree details
+  * platform leg length 63.5" (BOM) vs spec range 65-68" + leg bottom at Z=0 vs rock-anchor's ~1/2" air-gap convention — reconcile
+  * platform deck_width must be a multiple of 5.5" for butt-tight decking (default 33"=6 boards exact) — note in report
+- File ownership (no overlaps): platform=components/railing.py; tree=components/tree.py; trolley=components/zipline_hardware.py (+ each: details/<name>.py, tests/test_<name>_detail.py)
+- Then: review each (fresh reviewer) → merge → consolidated ONE-FILE report (directive #3) → PAUSE.
+
+## Status — Wave 1 (complete)
+
+- Task 4 (config): complete (commits 2664da1..ba7e97e, review clean, merged to wave1 branch, 13 tests green)
+- Task 5 (reproducible builds): complete (commits e47f338+3f5a23c, review approved after 1 fix round, merged to wave1 branch, 23 tests green, rock_anchor CLEAN)
+- Task 1 (datum/mate): complete (commits 5036a1e..d3725cd, review approved no fixes, merged to wave1, 44 tests green, rock_anchor CLEAN, oracle 2.440e-9 independently confirmed by controller, verify_constraints unchanged)
+- Task 2 (part identity): complete (commit 6cd76ac, review approved no fixes, merged FF to wave1 @6cd76ac, 56 tests green, rock_anchor CLEAN, oracle 0.0, bom_group spot-check by controller: keys on type|describe(), name-independent)
+- Task 3 (Detail base): complete (commits 6876eb3..7a42398, review approved after 1 fix round [export/document gate bypass closed via non-public hooks], merged FF to wave1 @7a42398, 75 tests green, rock_anchor CLEAN, oracle 0.0)
+- FINAL whole-branch review: verdict "With fixes" — no Critical, 4 Important (all doc/test-level: stale export/document hook names in base.py docstring; CLAUDE.md+README describe pre-wave API; Tolerances-through-Detail seam undocumented/untested; config↔buildinfo tolerance split unexplained) + promoted ledger item (export_manifest "build" key clobber guard). Fix agent dispatched (one commit). Ledger Minor triage: fix-before-merge = manifest guard only; deferred = tie-break comment, bearing gating note, flip assertion, datum surface checks, resolve asymmetry, _type_slug, BOM label comment, name-scoped verb test, Blender W-seed op check, method-not-property comment, re-tessellation note, sign-error softening (folded into CLAUDE.md fix); dropped = _gapped_pair explainer, handles-tuple note, 0→0.0 coercion.
+- Wave 2 guidance from final reviewer: build Connection on Placed handles + datums (never names); DetailSpec should key parts by Placed.id.
+- Wave 2/3 guidance from the STEP-PLACEMENT MISS (user-caught, 2026-07-06): the
+  platform's access steps were modeled at the tree end, but the original doc's
+  access logic (mesh seals tree end + sides; strap gate at launch edge is the
+  ONLY opening; "or use the boulder" = launch end) means access must be at the
+  launch end. Root causes: (1) functional intent (human circulation/access) is
+  not representable anywhere in the pipeline — spec extraction kept parts,
+  dropped purpose; (2) reviewers validated geometry-vs-spec, and the spec was
+  the lossy artifact; (3) the implementer's ASSUMED flag surfaced in its own
+  report but never propagated to the consolidated doc's field-fit list.
+  Lessons to bake in: Construction Graph should carry functional/circulation
+  edges (access_via, entered_through) + rules like "deck reachable from ground
+  through an opening" (Wave 3 rule validation); ASSUMED/placeholder-confidence
+  facts MUST propagate to the final document's check-on-site list (P1/P4).
+  FIXED in-session: steps moved to launch end beside boulder + trunk/boulder
+  context ghosts added to platform.
+- Wave 2 guidance from trolley review (Critical finding): expected_overlaps PERMITS overlap but cannot REQUIRE it — a detached pair passes the interference sweep unconditionally. The Connection object must make declared contact REQUIRED (validation generated from the Connection proves presence, not just permits). Concrete motivating case: trolley wheel 6" off the cable validated CLEAN until a manual check_contact was added.
+
+- W2-6: COMPLETE (2328e33+7d950a4, merged to master @4273fee, review
+  Approved after 1 fix round; 146 passed/3 skipped). Connection owns
+  hardware/bearing/overlap/bond/install-order; validation GENERATED
+  (permits-vs-requires closed — reviewer's own 6mm displacement attack on
+  real geometry failed loudly naming the connection). rock_anchor
+  re-authored via 4 Connections (2x ThreadedRodEpoxyAnchor, 2x BoltedClamp);
+  subsumption exact (20/20 bearings, 8/8 overlaps, 12/12 bonds) + new
+  22 hardware-presence + 38 install/load edges; compression 2.4:1; oracle
+  exact (assemble() untouched). merge_into_spec overrides now recorded
+  (DerivedFact + non-failing connection_override Finding). Follow-up noted:
+  re-author platform's leg-to-beam bolts via BoltedClamp to prove
+  generality.
+- VIEWER UX FIX (user-reported, e5c1e3c + vault 94a446d): activation hides
+  PNG under transparent canvas; Close restores img + Explore button
+  (btn.remove() bug); doc regenerated + pushed. System overview doc for
+  design professionals written to vault (52ff96a).
+
+- S3c: COMPLETE (52e122b..9e91645, merged to master @fa72a7a, review
+  Approved NO fix round — reviewer's stale-hit attacks all failed: allowed-
+  flip keyed, tolerance-field keyed, real source edit invalidates via
+  _CHECKS_FP, world-vs-relative keying correct, corruption=miss, atomic
+  writes; 179 passed/3 skipped). Persistent DiskCache: solid BREP cache +
+  digest cache + per-pair verdict cache (interference/floating relative-
+  keyed; contact/bearing/through_hole world-keyed; dimension declined —
+  pure arithmetic). BONUS ROOT-CAUSE FIX: geometry_hash was mutating its
+  input shape's later exact bbox by ~0.005mm (Clean_s+tessellate on
+  caller's shape; shared _SOLID_CACHE made it cross-part observable) —
+  now tessellates a BRepBuilderAPI_Copy; hash values unchanged.
+- ★ S3 FINAL 4x SCORECARD (authoritative, merged master fa72a7a, vs
+  morning post-S2 baseline): warm per-detail all ~2.2-2.3s = import floor
+  (~1.75s) + ~0.5s. platform 5.0x ✓, rock_anchor 4.3x ✓ — directive's
+  "moderately complex design" target MET. Small details import-floor-bound
+  (tree 1.9x, trolley 1.3x — were already ~3-4s). Aggregate: cold 21.98s
+  (1.31x), warm 9.12s (3.15x) — blocked by 4x1.75s import floor, ONLY
+  remaining lever is a daemon/watch mode (single process, no re-import) =
+  new feature, surfaced to user as optional follow-up. Doc regen: both-warm
+  2.34s (6x), true-cold ~39s (2.2x, render-bound). Directive #8 satisfied
+  on its own phrasing; honesty preserved throughout (all reviews attacked
+  equivalence directly).
+
+- ⚠ PROCESS INCIDENT (2026-07-06 ~19:50, controller error, resolved): declared
+  impl-platform-rev2 dead after 18 quiet minutes, removed its worktree, and
+  re-dispatched (impl-rev2b). Original was ALIVE (long silent read/design
+  phase); both agents converged on wt-rev2b and overwrote each other's
+  platform.py. Original detected it, backed up the other's WIP, restored its
+  validated version, committed c7246c3. rev2b ordered to stop; original owns
+  the task solely. LESSON for stall policy: (1) never remove a
+  possibly-live agent's worktree — re-dispatch into a FRESH path and let the
+  old one orphan; (2) before declaring death, send a ping and wait one full
+  cycle for a reply (idle_notification absence ≠ death, but reply absence
+  after ping + a cycle is strong); (3) require implementers to commit a
+  liveness marker at start (rev2b did; adopt for all future dispatches).
+
+- W2-8: COMPLETE (195b86d..22f4554, merged FF to master, review Approved
+  as-is — reviewer verified BYTE-IDENTICAL behavior incl. full render
+  export diff between branches; 199 passed). Registry[T] + four registries
+  (components 15 / materials 8 / exporters 5 / checks 6), did-you-mean
+  diagnostics, import-time population. Blender = dependency-free mirror
+  table (separate process, can't import detailgen) with loud unknown-tag
+  warning. _STANDARD_PIPELINE explicit tuple (third-party registration
+  can't silently alter default sweep) — reviewer endorsed.
+- TESTFIX: COMPLETE (01ab21a, merged @a240dcb, review Approved — all 21
+  audit verdicts dispositioned, 3 mutation spot-checks reproduced; 196
+  passed). Audit + fix reports in test-audit-report.md/task-testfix-report.md.
+- XDIST: COMPLETE (52ce76f, merged; controller-verified in lieu of reviewer
+  — diff was pins+docs only). pytest -n auto: 75s→~20s, opt-in not default.
+  ZERO code changes needed (cache isolation already worker-safe by design).
+- W2-7: COMPLETE (7d63474..0ef509f, merged @76e2d40, review Approved after
+  1 fix round; 219 passed/3 skipped on master). DetailSpec: YAML surface /
+  dataclass schema / strict teaching diagnostics / compiler onto Connection+
+  mate machinery / P4 derivation report / CLI (python -m detailgen.spec).
+  rock_anchor.spec.yaml oracle EXACT (0.0mm, independently reproduced
+  twice), round-trip identity, negative path fails. Metrics: 337 LOC spec
+  (281 non-comment) vs 845 imperative (159 replaced core) — LARGER in LOC,
+  honest; compression 2.4:1 overall (~4:1 connection layer). Reviewer
+  authoring exercise: NEW detail spec compiled on FIRST attempt; vocabulary
+  layer meets the authoring bar, geometric-placement layer needs the
+  fastener-insertion mate + datum discoverability (see next-wave features).
+- PLATFORM-REV2: COMPLETE (c7246c3+575445d, merged @9aef895, review
+  Approved after 1 fix round; 224 passed/3 skipped). All 6 architect items:
+  full-width ladder (33" rungs between legs), FaceMountHanger Connection
+  (rungs + all joist hangers w/ declared SD screws, 92 hardware findings),
+  end joist at leg_station 45" ToeScrewed (hanger flanges can't fit at true
+  48" end — verified independently by two implementations; cantilever
+  12.25"→2.25"), 16" O.C. analyzed (builds CLEAN, default stays 12",
+  SIGN-OFF PENDING), braces removed (SIGN-OFF PENDING), report samples
+  per-connection-label (truncation fix). Platform now 116 parts/6670 pairs.
+  AWAITING JOEL/ARCHITECT: 12-vs-16 O.C., brace removal, real Simpson screw
+  schedule (modeled 4+2/hanger is representative, catalog is 6-8/3-4).
+  Doc regenerated (76s, 3/4 details cache-reused) + vault pushed @1952ec3.
+  Platform GLB grew 0.30→3.17MB (hardware-rich); doc 4.77MB, under ceiling.
+  DUPLICATE-DISPATCH INCIDENT during this task — see process incident note.
+
+## SPATIAL INTENT layer (adopted direction 2026-07-06 evening, scoped)
+
+Peer-agent proposal, evaluated + adopted with scoping: a new class of
+declarative spatial constraints that GENERATE validation (the Connection
+pattern applied to orientation) — motivated by two real user-caught bugs
+invisible to touch-based checks (ladder at wrong end; rail -Y overhanging
+outboard, see RAILFIX). Scoping decisions (controller, user-reviewed):
+- VALIDATION-ONLY assertions — never a placement solver (computed placement
+  stays canonical; these are declared redundancy that survives the
+  raw-transform escape hatch, where both real bugs lived).
+- Ship TWO first, grow by need: SymmetricAbout (subsumes MirrorPair; would
+  have caught the rail bug) and FacesToward/FacesAway (ladder class).
+  Parallel/Perpendicular/AlignedWith deferred until a real bug motivates.
+- Keep FUNCTIONAL intent (access_via/entered_through circulation rules,
+  Wave 3) a SEPARATE layer — five-layer validation model: Physical →
+  Spatial (new) → Construction → Functional → Engineering.
+- Implementation: check family in the registry + `spatial:` block in
+  DetailSpec + P1 provenance; cheap (frame/bbox arithmetic, no booleans).
+  RAILFIX's symmetry test is the first hand-written instance to generalize.
+- REFINEMENTS (peer-agent round 2, adjudicated): (a) ADOPTED — "invariants"
+  vocabulary: each layer defines invariants the compiled model must
+  satisfy; the validator proves them and attaches provenance (matches the
+  existing honesty-rule semantics; use this framing going forward).
+  (b) REJECTED — pre-defining the full spatial vocabulary compiled to
+  "not yet implemented": a parse-and-noop stub is a FAKE INVARIANT (CLEAN
+  would imply proofs that never ran — the permits-vs-requires trap again),
+  and a hard-error stub adds nothing over unknown-key did-you-mean while
+  freezing speculative semantics. MIDDLE PATH ADOPTED: reserve NAMES only —
+  documented planned vocabulary + a teaching error for reserved words
+  ("reserved for the spatial layer, not yet provable; currently provable:
+  symmetric_about, faces_toward"). Semantics committed one real bug at a
+  time.
+
+## ★ WAVE 3 SHAPE — ADOPTED (user directive 2026-07-06 evening, BINDING) ★
+
+Wave 3 is reshaped around a small construction ONTOLOGY, not per-assembly
+rule packages (supersedes/reframes roadmap items 9-10; prescriptive packs
+become compositions over the ontology). Core concepts: Role (barrier /
+support / access / connector / surface), LoadClass (lateral_push,
+downward_load, pull_out, ... — coarse, no direction initially),
+TransferCapability on ConnectionTypes (transfers / does_not_transfer, each
+claim provenance-tagged official|inferred with reference), Support/ground,
+LoadPath. Names beyond the core are RESERVED (documented, teaching error),
+semantics committed one real bug at a time.
+
+REQUIRED (user, verbatim requirement): every report carries a COVERAGE
+MATRIX by invariant family — Physical geometry / Spatial intent /
+Construction completeness / Functional use / Load-path representation /
+Structural capacity / Code compliance — each marked PASS, FAIL, or
+UNKNOWN / NOT ANALYZED. This prevents "validated clean" from being
+overread.
+
+CRITICAL WORDING RULE (binding on all reports/docs): the system may say
+"a lateral-load path is REPRESENTED" — never "the railing is safe" —
+unless structural capacity and code checks were actually performed. First
+goal is honest semantic coverage (proven / disproven / unknown), not
+structural engineering.
+
+SEQUENCING (user-confirmed):
+1. UNKNOWN / NOT ANALYZED reporting + the coverage matrix (FIRST — makes
+   every existing report honest immediately).
+2. Role, LoadClass, TransferCapability in the semantic model.
+3. Transfer claims on existing ConnectionTypes, with provenance.
+4. Load-path reachability as REPRESENTATION proof only (typed graph
+   reachability role→...→ground; no capacity math).
+5. First cited rule pack later: guards/rails (motivated by the live
+   defect below), citing AWC DCA6 / Simpson deck guide.
+
+MOTIVATING LIVE DEFECT (found during evaluation, real): as modeled, the
+platform's top rails are GRAVITY-SEATED — they bear on posts/legs but NO
+rail-to-post fastener is declared anywhere (rev2 added fastening for
+rungs/joists/legs, not rails). role: barrier + load-path check would flag
+this loudly. Concrete fix queued (RAILFASTEN) ahead of the full ontology.
+
+## Next-wave language features (from W2-7 review's authoring exercise —
+## highest-leverage additions for the spec language, feed into drawing-sheets
+## phase planning)
+
+- FASTENER-INSERTION / THROUGH-HOLE MATE: a first-class mate for "bolt
+  through these plates" — kills the dominant raw-placement source (9/25
+  rock_anchor placements + all 3 of the reviewer's new-detail bugs were raw
+  transforms for fasteners). Also makes the spec's through_holes block
+  derivable (largest remaining schema-shrink target).
+- DATUM DISCOVERABILITY: list available datums in diagnostics/docs + ship a
+  worked board-to-board face-mate example (the most common carpentry mate
+  has no template; reviewer had to read lumber.py source).
+- REPEAT/FOR CONSTRUCT: deferred deliberately (implementer + reviewer
+  agree); revisit when platform.py (46 parts) gets spec'd.
+- Bearing-area connection params: engineering-judgment magic numbers in the
+  authoring surface; candidate to derive from geometry later.
+
+## Wave 2 minors roll-up (for final whole-branch review)
+
+- connection.py required_hardware confidence is hardcoded "official"
+  regardless of which rule produced the list — correct today (both shipped
+  types use the base pass-through) but a future type overriding
+  required_hardware() to INFER extra hardware would be silently mis-tagged.
+  Cheap fix: tag official only when the hook is the base-class one, or have
+  hooks return (part, confidence) pairs. (W2-6 re-reviewer Minor)
+
+- connection.py ThreadedRodEpoxyAnchor._unpack/BoltedClamp._unpack: positional
+  tuple-unpacking of hardware/parts — wrong-order-same-count yields a
+  plausible wrong derived fact instead of a hard diagnostic; documented in
+  docstrings, not enforced. Soft P1 tension. (W2-6 reviewer Minor)
+- Research follow-ups (research-prior-art.md): drawing-sheet phase should
+  prototype build123d project_to_viewport (HLR) + adopt ezdxf before
+  hand-wrapping OCCT HLR; coal/trimesh CollisionManager = evaluate-later
+  narrowphase/swept-volume candidate, NOT a drop-in (mesh-approximate vs our
+  exact B-rep honesty semantics); borrow build123d Joint / Assembly4 LCS
+  vocabulary for W2-7 schema naming.
+
+## Deferred items (post-pause)
+
+- pyproject packaging omits detailgen.rendering.web_viewer + its non-.py assets
+  (vendor/*.js, viewer.js/css) — fine under the PYTHONPATH-shim dev flow, must
+  be fixed before any real pip install. (viewer A+B agent finding)
+- fmt_frac_in rounding-carry bug (Task 3 Minor, confirmed live on boulder
+  length "11-1/1\"") — fix dispatched to viewer phase C agent in-session.
+
+## Minor findings roll-up (for final review)
+
+- Task 4: config.py:103-105 `bearing_area_threshold(min_area)` is a method not a property — add one-line comment why. (reviewer Minor)
+- Task 4: test_config.py:437-443 `_gapped_pair` 1.5*IN offset unexplained (half a 2x4 actual width). (reviewer Minor)
+- Task 4 note: check_bearing pass/fail gates on contact_eps only; near_miss picks the failure message; near_miss IS the gate in check_no_floaters linking. (implementer doc note)
+- Task 5: buildinfo.py:88 vertex tie-break-by-raw-index not geometry-derived — duplicate-coordinate vertices (tessellate doesn't dedup across faces) could in principle swap canonical slots across builds; add comment or dedup by coordinate. (reviewer Minor, residual)
+- Task 5: export.py:465-473 `data.update(extra)` can silently clobber the "build" manifest key. (reviewer Minor)
+- Task 5: geometry_hash re-tessellates independently of STL/PNG/GLB exporters in the same manifest call — fine at 26 parts, note if assemblies grow. (reviewer Minor)
+- Task 5 note: Blender 4D-noise "W"-input seeding is statically verified only; sanity-check on first real Blender render. (implementer concern)
+- Task 1: soften "sign errors unrepresentable" claim to "positional sign errors" (assembly.py:196 + rock_anchor comment). (reviewer Minor)
+- Task 1: test_flip_reverses_normal only asserts z_axis[2]≈−1; give flip an exact-Frame assertion like offset/rotate have. (reviewer Minor)
+- Task 1: non-rock-anchor datums (JoistHanger, PostBase, lumber face_*/end_*, angle up_hole_*, fastener tip/axis) are orthonormality-checked but not surface-validated against geometry. (reviewer Minor)
+- Task 2: validate_assembly pre-resolves bearings then check_no_floaters re-resolves them (harmless, asymmetric with bonds) — add a comment. (reviewer Minor)
+- Task 2: _type_slug CamelCase splitter mis-slugs consecutive capitals (STEPPart → s_t_e_p_part); no current trigger. (reviewer Minor)
+- Task 2 design note: rock_anchor.build() returns (detail, handles) tuple — Task 3's Detail base class should absorb handle threading. (implementer note — ADDRESSED in task-3 brief req 1)
+- Task 3: manifest dimension points serialize 0→0.0 (float coercion in _resolve_point) vs old integer literals — functionally inert, labels/values equal. (reviewer Minor)
+- Task 3: BOM group `item` label changed last-wins→first-wins — inert while bom_group (type+describe) ⊇ bom_label inputs; latent if a future component makes bom_label finer. (reviewer Minor)
+- Task 3 re-review: test_no_public_export_verb_bypasses_the_gate is name-scoped (hardcoded {export,document,render} set) — a differently-named future public writer would slip past; optional polish: scan vars(Detail) for public callables and assert only render writes. (reviewer Minor)

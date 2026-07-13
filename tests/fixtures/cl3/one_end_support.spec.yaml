@@ -1,0 +1,56 @@
+# CL-3 CAT Test 4 — the R21 regression, reconstructed. A walking surface (a 60in
+# deck plank) whose grounded support sits under only ONE end; the far (tree) end
+# overhangs into space with NO declared cantilever. Before the SUPPORT family this
+# exact shape — a long slab bearing on a single block near one end — shipped as
+# CLEAN (R21: a 60in slab validating clean on one 3.5in block). The obligation the
+# `walking_surface` ROLE generates now reports the tree end unsupported and BLOCKS
+# a CLEAN export. CL's contribution is that the obligation arrives via the DECLARED
+# role — the author declares what the deck IS, and the compiler derives its
+# support responsibility; it is not hand-wired.
+name: one end support r21
+type: detail
+units: in
+params:
+  plank_len: 60.0
+components:
+  # the precast block under the launch end — the foundation the leg bears down to.
+  # Its top pad plane sits at Z=0; the leg stands on it.
+  - id: pier
+    type: pier_block
+    name: "pier block"
+    params: {width: "10 in", length: "10 in", height: "12 in"}
+    place: {raw: {at: ["3 in", "0 in", "0 in"]}}
+  # the launch-end leg — a vertical 4x4 standing on the pier (Z 0..12), carrying
+  # the deck's launch end down to the foundation.
+  - id: leg
+    type: lumber
+    name: "launch leg"
+    params: {nominal: "4x4", length: "12 in"}
+    place: {raw: {at: ["3 in", "0 in", "0 in"], rotate: [["Y", -90]]}}
+  # the 60in deck plank — the walking surface. Its underside bears on the leg at
+  # the launch end (X≈3) and cantilevers the whole run to X≈60 with nothing under
+  # the tree end. No cantilever is declared for +X, so the overhang is NOT intended
+  # — the support obligation the walking_surface role generates FAILs (rung 3).
+  - id: deck
+    type: deck_board
+    name: "deck plank"
+    params: {length: "$plank_len"}
+    place: {raw: {at: ["0 in", "0 in", "12 in"]}}
+validation:
+  # the load path the support obligation descends: the deck bears on the leg top,
+  # the leg bears down on the pier pad. These carry the deck's launch end to the
+  # foundation — but ONLY the launch end; the tree end has no such chain.
+  bearings:
+    - {a: deck, b: leg, axis: Z, area: 1000}
+    - {a: leg, b: pier, axis: Z, area: 1000}
+roles:
+  pier: ground
+  leg: support
+  deck:
+    role: walking_surface
+    label: deck
+    members: [deck]
+    # the deck bears on the ONE launch-end leg (which grounds on the pier); the
+    # tree end has no support and no declared cantilever, so the support
+    # obligation FAILs (rung 3).
+    supports: [leg]
