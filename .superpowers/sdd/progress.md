@@ -14,6 +14,64 @@ three-drawer-cabinet branch is the live case): land them on main by
 (unrelated histories; a merge would drag the whole archived ancestry into
 main). Push main after merges.
 
+## ★ SESSION UPDATE 14 (2026-07-14 — STEPDOC/CPG +presentation COMPLETE + MERGED; linked caddy pair DELIVERED)
+
++presentation is COMPLETE and merged to GitHub `main` @`c6a7326`. The caddy
+now ships as two self-contained offline HTML documents generated from one
+compiled detail: the technical/evidence build document and a separate
+five-panel illustrated assembly manual. Relative header/footer links are
+reciprocal; the manual embeds all keyed PNGs and remains portable without its
+asset directory.
+
+The prepare/bond/cure/fasten/join panels are consecutive runs of the one
+canonical reader sequence. Geometry-derived CAT-M stations cover the cup bore,
+both rail positions, both side-board witness relationships, the 6-1/2-inch
+clear opening, and all eight screw centers. A staged 3D viewer snaps parts to
+the same panels, shares reader names with hover, composes with explode, and
+prevents hidden/future parts from raycast or tooltip leakage. Panel PNG caches
+are content-keyed, metadata-validated, and atomically published. Typed inline
+SVGs replace generic hardware/tool bullets.
+
+The increment also closes a live reader-projection defect. Compatible cycles
+in the install-bucket quotient condense to truthful steps; complete unique
+event ownership and forward inter-step edges are now loud invariants. The
+platform's invalid/empty branch-local sequence is corrected to 18 steps with
+five paired-hanger merges, and the unstaged stool derives three steps instead
+of silently emitting none. CAT-L pins staged regrouping, exact reversion,
+geometry identity, and 137 byte-identical validation findings.
+
+Fresh adversarial confirmation found no remaining Critical or Important
+defects (`review-stepdoc-presentation-final.md`). A document-only handyman read
+found every modeled member and screw and its placement gaps drove the final
+geometry-derived registration, dimension, inventory, and selection-gate
+corrections. The remaining safety limits stay explicit: insertion travel,
+stability, sliding resistance, structural capacity, and hot-drink use are not
+proved.
+
+The first full gate correctly caught the stale consolidated text golden: the
+platform Build Sequence changed from empty to the corrected 18-step projection.
+Serial reproduction matched; regeneration changed only that first build-
+sequence section (every byte outside it and the second sequence stayed
+identical). The final frozen tree then passed **1521 passed / 3 skipped / 1
+xfailed** in 900.89s. The clean fast-forward integration tree was byte-identical
+to the gated tree.
+
+Merged generation produced five panel assets and passed a live browser check:
+five embedded images, 15 typed SVG icons, reciprocal links, whole-panel
+navigation, both registration-rail labels, the blocking release rule, no page
+overflow, and only the expected missing-favicon 404. Delivered SHA-256:
+technical `a70f88b423dd9622d1988fbce190b4fded05620e557cfa5a07286d2df8d4c99d`;
+manual `c042ef84379c19830f569958027b4e9aaee7f514b7307a406cb6be176c1bfafb`.
+The exact linked pair is in vault `05_Attachments/Organized/Armchair Caddy
+Drawings/2026-07-14/` and `~/Downloads/Build Documents/`; convenient title-case
+Downloads aliases carry identical bytes.
+
+NEXT: transplant the pre-reset three-drawer cabinetry branch onto current
+single-root `main` without merging histories, close its reader-label and
+consumer-manual gaps on the shared presentation engine, then extend the cabinet
+pack with selected sink/plumbing/service envelopes and floating-wall anchorage
+for the researched double-sink, four-drawer vanity.
+
 ## ★ SESSION UPDATE 13 (2026-07-13 — STEPDOC/CPG +process COMPLETE + MERGED; caddy REDELIVERED)
 
 +process is COMPLETE and merged to GitHub `main` @`a4ebb0b`. The language now

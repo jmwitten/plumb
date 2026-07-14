@@ -90,7 +90,7 @@ structural capacity, code compliance, or hot-drink safety. Product selection,
 shop conditions, and representative validation remain explicit gates rather
 than prose-filled assumptions.
 
-## Verification before the full merge gate
+## Verification and delivery
 
 - Broad presentation/caddy/viewer regression selection:
   **100 passed / 3 skipped**.
@@ -101,5 +101,33 @@ than prose-filled assumptions.
 - Caddy geometry, 122 finding tuples, 13 event identities, the ten legacy view
   PNGs, and the legacy viewer payload remain unchanged.
 
-The one full `pytest -n auto -q` merge gate is recorded in the session ledger
-after it runs on the frozen final implementation tree.
+The first full gate found one deliberate surface drift: the consolidated
+platform golden still carried an empty Build Sequence. The failure reproduced
+serially. Regeneration changed only that first build-sequence section from
+empty to the pinned 18-step projection; every byte outside it and the second
+detail's build sequence stayed identical. The golden selection then passed.
+
+The final frozen tree passed:
+
+```text
+1521 passed, 3 skipped, 1 xfailed in 900.89s (0:15:00)
+```
+
+`origin/main` remained the reviewed base. A standalone `--ff-only` merge in a
+clean integration worktree produced commit `c6a7326`, byte-identical to the
+gated feature tree, and was pushed to GitHub `main`.
+
+Merged generation emitted five keyed panel PNGs plus the linked document pair.
+Live browser QA found five panels/images, 15 typed SVG icons, reciprocal links,
+working panel navigation, both registration-rail labels, the blocking release
+rule, no horizontal overflow, and only the expected missing-favicon 404.
+
+Delivered SHA-256:
+
+- technical: `a70f88b423dd9622d1988fbce190b4fded05620e557cfa5a07286d2df8d4c99d`;
+- manual: `c042ef84379c19830f569958027b4e9aaee7f514b7307a406cb6be176c1bfafb`.
+
+The exact relative-link pair was delivered to vault
+`05_Attachments/Organized/Armchair Caddy Drawings/2026-07-14/` and
+`~/Downloads/Build Documents/`. The vault copies were committed and pushed to
+JoelBrain without staging any of that worktree's unrelated changes.
