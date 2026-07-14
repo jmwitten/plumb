@@ -10,7 +10,9 @@ from ...rendering.instruction_panels import (
     InstructionManual,
     OperationDiagram,
     ProcedureLink,
+    RecordField,
     RelatedDocumentLink,
+    StopNotice,
     build_instruction_manual,
 )
 from ...rendering.part_labels import part_labels
@@ -24,6 +26,43 @@ _PANEL_TITLES = (
     "Build and equip the three drawer boxes",
     "Fit, adjust, label, and remove the drawer fronts",
     "Install and commission the empty cabinet",
+)
+
+_INSTALL_HOLD_TITLE = "Installation HOLD — obtain clearance before anchoring"
+
+_INSTALL_RECORD_FIELDS = (
+    RecordField(
+        "Clearance document / approving authority",
+        "Document id, approving authority, scope, and approval date",
+    ),
+    RecordField(
+        "Verified stud centers",
+        "Actual centers from the wall-left datum; note verification method",
+    ),
+    RecordField(
+        "High-floor and cabinet-top datum",
+        "Measured high point and transferred level datum",
+    ),
+    RecordField(
+        "Wall/floor deviations and shim-bearing locations",
+        "Deviation map plus each stable shim location and thickness",
+    ),
+    RecordField(
+        "Anchor product, count, and final locations",
+        "Installed product/lot and as-built anchor coordinates",
+    ),
+    RecordField(
+        "Level, plumb, diagonals, and drawer reveals",
+        "Final measurements after unloaded drawer cycling",
+    ),
+    RecordField(
+        "Corrections / exceptions",
+        "Every field correction, substitution, unresolved exception, or none",
+    ),
+    RecordField(
+        "Installer, signature, and date",
+        "Printed name, signature, and completion date",
+    ),
 )
 
 _PANEL_ACTIONS = (
@@ -335,6 +374,63 @@ def _fmt_mm_values(values) -> str:
 
 def _fmt_mm_point(point) -> str:
     return "(" + ", ".join(f"{float(value):.3f}" for value in point) + ")"
+
+
+def _drawer_hardware_instructions(project) -> tuple[str, ...]:
+    """Embed the essential order from the selected Blum procedures."""
+
+    bank = project.model.drawer_bank
+    runner = bank.runner
+    lock = bank.locking_device
+    rack_lengths = {
+        row.length_mm for row in project.model.machining
+        if row.kind == "stabilizer_gear_rack_cut"
+    }
+    rod_lengths = {
+        row.length_mm for row in project.model.machining
+        if row.kind == "stabilizer_linkage_rod_cut"
+    }
+    if len(rack_lengths) != 1 or len(rod_lengths) != 1:
+        raise ValueError(
+            "drawer-hardware instructions require one common rack and linkage "
+            "rod cut length across the drawer bank"
+        )
+    rack_length = next(iter(rack_lengths))
+    rod_length = next(iter(rod_lengths))
+    return (
+        "1. Mount each handed T51.7601 locking device at its matching front "
+        f"underside corner: {lock.left_sku} left and {lock.right_sku} right. "
+        f"Use template {lock.template_sku}; seat each device flush and drive "
+        f"{lock.installation_screw_quantity_per_device} × {lock.installation_screw_sku} "
+        f"screws at the template-controlled {lock.installation_angle_deg:g}° angle.",
+        "2. Attach the left and right pinion housings to their matching MOVENTO "
+        "runners: insert the housing locating pins and press the orange locking "
+        "clips until both housings are locked.",
+        "3. Slide one gear rack into each pinion housing, install its locating "
+        "tabs in the runner-bottom cut-outs, slide the rack backward to lock, "
+        f"and cut/verify each rack at the compiled {rack_length:.3f} mm length.",
+        "4. Install the left/right runner pair on its identity row at the "
+        "generated cabinet-side stations; keep the cabinet-front datum, and "
+        f"drive {runner.installation_screws_per_runner} "
+        f"{runner.installation_screw_sku} screws per runner.",
+        "5. With both runners closed, cut and verify the linkage rod at the "
+        f"compiled {rod_length:.3f} mm length.",
+        "6. Press one pinion adapter into each end of the cut linkage rod; keep "
+        "the adapter pair oriented as shown in the selected stabilizer procedure.",
+        "7. Slide the right adapter onto the right pinion, then slide the linkage "
+        "assembly left onto the left pinion while both runners remain closed.",
+        "8. Install both locking clips on the linkage adapters and verify that "
+        "the rod cannot disengage before moving either runner.",
+        "9. Extend both runners fully, set the identity-matched drawer onto the "
+        "pair, and close it until both locking devices engage; verify the rear "
+        "hooks, both front locks, and synchronized travel before fitting fronts.",
+        "10. Adjust side-to-side, height, tilt, and depth only after the applied "
+        "fronts are mounted in Panel 5; record the accepted setting before the "
+        "drawer is removed for shipping.",
+        "The linked current Blum manufacturer procedure controls the template "
+        "angles, handed component orientation, clip engagement, and insertion/"
+        "removal details; stop if the delivered hardware or instructions differ.",
+    )
 
 
 def _toe_platform_diagram(project) -> OperationDiagram:
@@ -949,6 +1045,67 @@ def _drawer_hardware_diagram(project) -> OperationDiagram:
     )
 
 
+def _stabilizer_sequence_diagram(project) -> OperationDiagram:
+    """Redraw the selected Blum stabilizer's nine essential operations."""
+
+    rack = next(
+        row for row in _machining(project, "stabilizer_gear_rack_cut")
+        if ".bottom." in row.feature_id
+    )
+    rod = next(
+        row for row in _machining(project, "stabilizer_linkage_rod_cut")
+        if ".bottom." in row.feature_id
+    )
+    steps = (
+        "1 HOUSINGS", "2 INSERT RACKS", "3 LOCK TO RUNNERS",
+        "4 CUT RACKS", "5 INSTALL RUNNERS", "6 CUT ROD",
+        "7 PRESS ADAPTERS", "8 ENGAGE BOTH", "9 LOCKING CLIPS",
+    )
+    primitives = []
+    for index, label in enumerate(steps):
+        row, column = divmod(index, 3)
+        x = 4.0 + column * 32.0
+        y = 5.0 + row * 31.0
+        primitives.append(_mark(
+            "rect", x, y, 28.0, 22.0, role="hardware",
+            label=label,
+            fact_ref=project.model.drawer_bank.stabilizer.product_id,
+        ))
+        primitives.append(_mark(
+            "text", x + 14.0, y + 12.0, role="datum", label=label,
+            fact_ref=project.model.drawer_bank.stabilizer.product_id,
+        ))
+        if column < 2:
+            primitives.append(_mark(
+                "arrow", x + 28.5, y + 11.0, x + 31.0, y + 11.0,
+                role="motion", label=f"Continue after {label}",
+                fact_ref=project.model.drawer_bank.stabilizer.product_id,
+            ))
+        elif row < 2:
+            primitives.append(_mark(
+                "arrow", x + 14.0, y + 22.5, x + 14.0, y + 29.0,
+                role="motion", label=f"Continue after {label}",
+                fact_ref=project.model.drawer_bank.stabilizer.product_id,
+            ))
+    return OperationDiagram(
+        diagram_id="stabilizer-install-sequence",
+        title="Lateral stabilizer — nine-operation installation order",
+        caption=(
+            "Repeat this left/right sequence for each drawer set. The selected "
+            f"gear racks are {rack.length_mm:.3f} mm and the linkage rod is "
+            f"{rod.length_mm:.3f} mm. Keep both runners closed for rod engagement; "
+            "the selected Blum instruction remains controlling for component "
+            "orientation, clip engagement, and removal."
+        ),
+        primitives=tuple(primitives),
+        source_refs=(
+            rack.feature_id,
+            rod.feature_id,
+            project.model.drawer_bank.stabilizer.product_id,
+        ),
+    )
+
+
 def _applied_front_diagram(project) -> OperationDiagram:
     fronts = (
         ("top", project.model.part("drawer_front_top"),
@@ -1195,6 +1352,7 @@ def _operation_diagrams(project) -> tuple[tuple[OperationDiagram, ...], ...]:
             _drawer_box_diagram(project),
             _runner_pattern_diagram(project),
             _drawer_hardware_diagram(project),
+            _stabilizer_sequence_diagram(project),
         ),
         (_applied_front_diagram(project),),
         (_wall_anchor_diagram(project),),
@@ -1272,10 +1430,13 @@ def build_cabinetry_instruction_manual(
         )
         if index == 0:
             instructions = (
-                "Before assembly, complete and sign off every pre-band cut, "
-                "edge-band, machining, and material row in the fabrication packet.",
+                "Before assembly, complete and sign the purchasing/cutting "
+                "release record plus every pre-band cut, edge-band, machining, "
+                "and material row in the fabrication packet.",
                 *instructions,
             )
+        elif index == 3:
+            instructions = (*instructions[:2], *_drawer_hardware_instructions(project))
         quantity_overrides = (
             {"carcass_confirmat_system": confirmat_panel_quantities[index]}
             if index < 3 else {}
@@ -1305,10 +1466,24 @@ def build_cabinetry_instruction_manual(
                     "input, not permission to test or use the cabinet. "
                     + policy.reader_notice(released=False),
                 )
+        if index == 5 and not project.installation_use_ready:
+            action = "hold"
+            title = _INSTALL_HOLD_TITLE
+            stop_notice = StopNotice(
+                "DO NOT ANCHOR / INSTALL / LOAD",
+                "Installation/use release is HOLD. Obtain and identify signed, "
+                "project-specific clearance for the cabinet, toe, anchor, "
+                "countertop, and service-load path before staging anchors or "
+                "performing any site installation or commissioning action.",
+            )
+        else:
+            action = _PANEL_ACTIONS[index]
+            title = _PANEL_TITLES[index]
+            stop_notice = None
         panels.append(replace(
             panel,
-            action=_PANEL_ACTIONS[index],
-            title=_PANEL_TITLES[index],
+            action=action,
+            title=title,
             instructions=instructions,
             rationales=(stages[index].why,),
             honesty=honesty,
@@ -1316,6 +1491,11 @@ def build_cabinetry_instruction_manual(
             tools=_PANEL_TOOLS[index],
             procedure_links=_procedure_links(panel_procedure_items),
             diagrams=operation_diagrams[index],
+            stop_notice=stop_notice,
+            record_title=(
+                "Signed installation and fit record" if index == 5 else ""
+            ),
+            record_fields=_INSTALL_RECORD_FIELDS if index == 5 else (),
         ))
 
     return replace(manual, panels=tuple(panels), inventory=_inventory(project))

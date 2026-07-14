@@ -49,6 +49,22 @@ class RelatedDocumentLink:
 
 
 @dataclass(frozen=True)
+class StopNotice:
+    """An unavoidable action gate rendered before a panel's resources."""
+
+    heading: str
+    body: str
+
+
+@dataclass(frozen=True)
+class RecordField:
+    """One printable closeout field attached to an instruction panel."""
+
+    label: str
+    guidance: str = ""
+
+
+@dataclass(frozen=True)
 class DiagramPrimitive:
     """One allow-listed vector mark in a reader-facing operation diagram.
 
@@ -119,6 +135,9 @@ class InstructionPanel:
     procedure_links: tuple[ProcedureLink, ...] = ()
     diagrams: tuple[OperationDiagram, ...] = ()
     stations: tuple[PlacementStation, ...] = ()
+    stop_notice: StopNotice | None = None
+    record_title: str = ""
+    record_fields: tuple[RecordField, ...] = ()
     content_key: str = ""
 
 

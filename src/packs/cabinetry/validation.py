@@ -154,10 +154,16 @@ class CabinetReport:
             f"{count} {severity} {verdict.lower()}"
             for (severity, verdict), count in sorted(counts.items())
         ]
-        if self.fabrication_ready and not self.installation_use_ready:
-            readiness = "fabrication ready; installation/use held"
+        if self.fabrication_ready:
+            readiness = (
+                "model/shop data checks pass; purchasing/cutting requires "
+                "separate clearance; installation/use checks pass"
+                if self.installation_use_ready else
+                "model/shop data checks pass; purchasing/cutting and "
+                "installation/use require separate clearance"
+            )
         else:
-            readiness = "ready" if self.release_ready else "blocked"
+            readiness = "blocked"
         return (
             f"Cabinet {self.mode} validation: {readiness}; "
             f"{', '.join(pieces)}. KCMA physical testing: not performed."

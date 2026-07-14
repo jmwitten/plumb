@@ -3,7 +3,8 @@ from .export import (
 )
 from .overlay import draw_dimensions
 from .instruction_panels import (
-    InstructionManual, InstructionPanel, PlacementStation,
+    InstructionManual, InstructionPanel, PlacementStation, RecordField,
+    StopNotice,
     build_instruction_manual, panel_part_schedule,
 )
 from .caddy_stations import attach_caddy_stations
@@ -16,6 +17,7 @@ __all__ = [
     "export_step", "export_stl", "export_png", "export_all",
     "export_glb", "export_manifest", "draw_dimensions",
     "InstructionManual", "InstructionPanel", "PlacementStation",
+    "RecordField", "StopNotice",
     "build_instruction_manual", "panel_part_schedule",
     "attach_caddy_stations", "panel_content_key",
     "render_instruction_images", "render_instruction_panel",

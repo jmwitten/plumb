@@ -164,10 +164,10 @@ def test_manual_uses_six_canonical_cpg_milestones_and_excludes_only_site_studs()
         "Close the captured back and attach the toe platform",
         "Build and equip the three drawer boxes",
         "Fit, adjust, label, and remove the drawer fronts",
-        "Install and commission the empty cabinet",
+        "Installation HOLD — obtain clearance before anchoring",
     ]
     assert [panel.action for panel in manual.panels] == [
-        "fabricate", "assemble", "assemble", "equip", "fit", "install",
+        "fabricate", "assemble", "assemble", "equip", "fit", "hold",
     ]
     scheduled = {part_id for part_id, _panel in manual.part_schedule}
     excluded = set(manual.excluded_part_ids)
@@ -189,7 +189,12 @@ def test_manual_operation_diagrams_are_typed_and_derived_from_release_facts():
         ["toe-platform-plan"],
         ["open-carcass-sequence"],
         ["captured-back-close", "toe-attachment-pattern"],
-        ["drawer-box-joinery", "runner-fixing-pattern", "drawer-hardware-plan"],
+        [
+            "drawer-box-joinery",
+            "runner-fixing-pattern",
+            "drawer-hardware-plan",
+            "stabilizer-install-sequence",
+        ],
         ["applied-front-pattern"],
         ["wall-anchor-path"],
     ]
@@ -264,6 +269,15 @@ def test_manual_operation_diagrams_are_typed_and_derived_from_release_facts():
                for primitive in hardware.primitives) == 4
     assert "4 template-controlled screws per drawer × 3 drawers = 12" \
         in hardware.caption
+    stabilizer = manual.panels[3].diagrams[3]
+    assert [
+        primitive.label for primitive in stabilizer.primitives
+        if primitive.kind == "text"
+    ] == [
+        "1 HOUSINGS", "2 INSERT RACKS", "3 LOCK TO RUNNERS",
+        "4 CUT RACKS", "5 INSTALL RUNNERS", "6 CUT ROD",
+        "7 PRESS ADAPTERS", "8 ENGAGE BOTH", "9 LOCKING CLIPS",
+    ]
 
     toe = manual.panels[2].diagrams[1]
     toe_stations = [
@@ -392,6 +406,60 @@ def test_manual_instructions_and_inventory_are_pack_model_backed():
     assert "30 screw — blum_606n" in panel_hardware[3]
 
 
+def test_db40_manual_stops_before_installation_and_provides_fit_record(tmp_path):
+    project, manual = _manual()
+    install = manual.panels[5]
+
+    assert install.stop_notice is not None
+    assert install.stop_notice.heading == "DO NOT ANCHOR / INSTALL / LOAD"
+    assert "signed" in install.stop_notice.body.lower()
+    assert install.action == "hold"
+    assert "Install and commission" not in install.title
+    assert install.record_title == "Signed installation and fit record"
+    assert {field.label for field in install.record_fields} == {
+        "Clearance document / approving authority",
+        "Verified stud centers",
+        "High-floor and cabinet-top datum",
+        "Wall/floor deviations and shim-bearing locations",
+        "Anchor product, count, and final locations",
+        "Level, plumb, diagonals, and drawer reveals",
+        "Corrections / exceptions",
+        "Installer, signature, and date",
+    }
+
+    rendered = _render_manual(tmp_path, project.detail, manual)
+    panel_6 = rendered.split('id="panel-6"', 1)[1]
+    stop_at = panel_6.index('class="stop-notice"')
+    resources_at = panel_6.index('class="resources"')
+    image_at = panel_6.index('class="scene"')
+    assert stop_at < resources_at < image_at
+    assert "Signed installation and fit record" in panel_6
+    assert "\n  show(currentFromHash(), false);\n" not in rendered
+    assert 'if (location.hash.match(/^#panel-' in rendered
+    assert "show(currentFromHash(), true);" in rendered
+
+
+def test_db40_drawer_hardware_panel_embeds_essential_manufacturer_order():
+    _project, manual = _manual()
+    instructions = manual.panels[3].instructions
+    text = "\n".join(instructions)
+
+    for marker in (
+        "1. Mount each handed T51.7601",
+        "2. Attach the left and right pinion housings",
+        "3. Slide one gear rack into each pinion housing",
+        "4. Install the left/right runner pair",
+        "5. With both runners closed",
+        "6. Press one pinion adapter into each end",
+        "7. Slide the right adapter onto the right pinion",
+        "8. Install both locking clips",
+        "9. Extend both runners fully",
+        "10. Adjust side-to-side, height, tilt, and depth",
+    ):
+        assert marker in text
+    assert "manufacturer procedure controls" in text
+
+
 def test_real_document_set_has_relative_links_and_six_shared_panel_assets(
         tmp_path, monkeypatch):
     scripts = ROOT / "scripts"
@@ -494,7 +562,7 @@ def test_real_document_set_has_relative_links_and_six_shared_panel_assets(
         1, 2, 3, 4, 5, 6,
     ]
     assert manual.count('class="instruction-panel"') == 6
-    assert manual.count('class="operation-diagram"') == 9
+    assert manual.count('class="operation-diagram"') == 10
     # Exact station facts must be visible and keyboard/screen-reader readable;
     # hover-only SVG titles are not an instruction surface.
     assert manual.count('class="diagram-coordinate-key"') == 9

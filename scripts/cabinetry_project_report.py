@@ -348,9 +348,20 @@ def installation_drawing_facts(project) -> dict[str, object]:
             )
 
     anchor_strip = one_part("anchor_strip", component_type="plywood_panel")
+    expected_anchor_strip_at = (
+        cabinet_x0 + carcass_t,
+        cabinet_front_y + carcass_depth - model.profile.back_thickness_mm,
+        cabinet_base_z + cabinet.height_mm - carcass_t
+        - model.profile.stretcher_depth_mm,
+    )
     if not (
         anchor_strip.rotate == (("X", 90.0),)
-        and abs(anchor_strip.at_mm[0] - (cabinet_x0 + carcass_t)) <= tolerance
+        and all(
+            abs(actual - expected) <= tolerance
+            for actual, expected in zip(
+                anchor_strip.at_mm, expected_anchor_strip_at,
+            )
+        )
         and abs(anchor_strip.length_mm - inside_width) <= tolerance
         and abs(anchor_strip.width_mm - model.profile.stretcher_depth_mm) <= tolerance
         and abs(anchor_strip.thickness_mm - carcass_t) <= tolerance
@@ -393,6 +404,10 @@ def installation_drawing_facts(project) -> dict[str, object]:
         if abs(part.width_mm - cabinet.toe_kick_height_mm) > tolerance:
             raise ValueError(
                 f"{role} height does not match the declared toe-kick height"
+            )
+        if abs(part.at_mm[2] - cabinet_base_z) > tolerance:
+            raise ValueError(
+                f"{role} must bear on the compiled floor high point"
             )
         toe_plan_bounds[role] = (x_bounds, y_bounds)
 
@@ -498,6 +513,16 @@ def installation_drawing_facts(project) -> dict[str, object]:
         expected_stud_id = f"site.{wall.wall_id}.{stud_id}"
         expected_anchor_id = f"cabinetry.{cabinet.cabinet_id}.wall_anchor_{stud_id}"
         center_x = wall.plane_origin_mm[0] + survey.position_mm
+        expected_stud_at = (
+            center_x - wall.stud_width_mm / 2,
+            wall.plane_origin_mm[1] + wall.finish_thickness_mm,
+            wall.plane_origin_mm[2],
+        )
+        expected_stud_dimensions = (
+            wall.height_mm,
+            wall.stud_width_mm,
+            wall.stud_depth_mm,
+        )
         placed_stud_center = stud.at_mm[0] + stud.width_mm / 2
         local_x = anchor.at_mm[0] - cabinet_x0
         local_z = anchor.at_mm[2] - cabinet_base_z
@@ -505,6 +530,18 @@ def installation_drawing_facts(project) -> dict[str, object]:
         if (
             stud.part_id != expected_stud_id
             or anchor.part_id != expected_anchor_id
+            or stud.rotate != (("Y", -90.0), ("Z", -90.0))
+            or any(
+                abs(actual - expected) > tolerance
+                for actual, expected in zip(stud.at_mm, expected_stud_at)
+            )
+            or any(
+                abs(actual - expected) > tolerance
+                for actual, expected in zip(
+                    (stud.length_mm, stud.width_mm, stud.thickness_mm),
+                    expected_stud_dimensions,
+                )
+            )
             or abs(placed_stud_center - center_x) > tolerance
             or anchor.rotate != (("X", 90.0),)
             or abs(anchor.at_mm[0] - center_x) > tolerance
@@ -592,13 +629,13 @@ def installation_drawing_facts(project) -> dict[str, object]:
 
     countertop_lane = cabinet.height_mm + 13.0
     anchor_callout_lanes = tuple(
-        cabinet.height_mm + 44.0 + index * 34.0
+        cabinet.height_mm + 75.0 + index * 65.0
         for index, _anchor in enumerate(anchors)
     )
     front_annotation_lanes = {
         "countertop": countertop_lane,
         "anchor_callouts": anchor_callout_lanes,
-        "plot_top": max(anchor_callout_lanes) + 38.0,
+        "plot_top": max(anchor_callout_lanes) + 55.0,
     }
 
     released = bool(project.installation_use_ready)
@@ -694,6 +731,46 @@ def reader_labels_by_part_id(project) -> dict[str, str]:
             )
         result[part.part_id] = labels[placed.id].display_name
     return result
+
+
+def _render_cutting_release_record(project) -> str:
+    """Render the per-part material/face/grain choices that remain unmodeled."""
+
+    labels = reader_labels_by_part_id(project)
+    blank = '<span class="record-blank">________________</span>'
+    rows = tuple(
+        (
+            f'{_esc(labels[item.part_id])}<br><code>{_esc(item.part_id)}</code>',
+            blank,
+            blank,
+            blank,
+            blank,
+            blank,
+        )
+        for item in project.artifacts.cut_list
+    )
+    return (
+        '<section class="release-record"><h2>Purchasing and cutting release record</h2>'
+        '<p><strong>This blank record is not authorization.</strong> Before buying '
+        'or cutting, assign every fabricated part its selected panel product and '
+        'lot; mark the finish face as inside, outside/show, hidden, or N/A; mark '
+        'grain as vertical, horizontal, matched sequence, or N/A; identify its '
+        'nesting orientation; and obtain the named approval/date. Do not infer '
+        'grain or face direction from a drawing that does not show it.</p>'
+        + _table(
+            (
+                "Part / family",
+                "Panel product / lot",
+                "Finish face",
+                "Grain direction",
+                "Nesting sheet / orientation",
+                "Approved by / date",
+            ),
+            rows,
+            css_class="release-record-table",
+        )
+        + '</section>'
+    )
 
 
 def _render_part_key(project) -> str:
@@ -1128,7 +1205,8 @@ def _release_banner(project) -> str:
     )
     return (
         '<div class="status-grid">'
-        f'<div class="status pass"><b>Model/shop-data gate: PASS</b>{_esc(project.report.summary)}</div>'
+        '<div class="status pass"><b>MODEL DATA PASS — DO NOT BUY OR CUT</b>'
+        f'{_esc(project.report.summary)}</div>'
         '<div class="status unknown"><b>Purchasing/cutting preflight: OPEN</b>'
         'Sheet nesting and the final edge-band order remain open.</div>'
         f'<div class="status unknown"><b>Whole-cabinet structural capacity: {_esc(whole_verdict)}</b>'
@@ -1341,6 +1419,7 @@ def build_cabinetry_fabrication_html(
         f'fabrication, assembly, and shipping records.</p>{nav}</div>'
         f'<div>{_release_banner(project)}</div></header>',
         _procurement_preflight(project),
+        _render_cutting_release_record(project),
         _render_before_start(project),
         _shop_drawings(images),
         f'<section>{_render_part_key(project)}</section>',
@@ -1501,7 +1580,7 @@ def _render_front_drawing(project, path: Path) -> None:
     cabinet = model.section.cabinets[0]
     labels = front_annotation_labels(project)
     facts = installation_drawing_facts(project)
-    fig, ax = plt.subplots(figsize=(8, 7), dpi=150)
+    fig, ax = plt.subplots(figsize=(8, 8.5), dpi=150)
     ax.add_patch(Rectangle((0, 0), cabinet.width_mm, cabinet.height_mm,
                            fill=False, linewidth=2.2, edgecolor="#18212b"))
     ax.plot((0, cabinet.width_mm), (cabinet.toe_kick_height_mm,
@@ -1593,6 +1672,9 @@ def _render_front_drawing(project, path: Path) -> None:
         cabinet.width_mm / 2, annotation_lanes["countertop"],
         "FIELD INSTALLED / BY OTHERS / HOLD — COUNTERTOP BOUNDARY",
         ha="center", va="center", fontsize=7, color="#9b3a24", weight="bold",
+        zorder=7,
+        bbox={"facecolor": "white", "edgecolor": "none", "alpha": .94,
+              "pad": 1.5},
     )
     ax.set_xlim(-180, cabinet.width_mm + 180)
     ax.set_ylim(-50, annotation_lanes["plot_top"])
@@ -1762,9 +1844,9 @@ def _render_anchor_section_drawing(project, path: Path) -> None:
     ax.plot((-24, depth + wall_finish + stud_depth + 24), (0, 0),
             color="#17633b", linewidth=1.4)
     ax.text(
-        depth * .50, 18,
+        depth * .50, -15,
         "FIELD-VERIFY LEVEL BEARING; RECORD SHIMS ONLY AT ACTUAL TOE MEMBERS",
-        ha="center", va="bottom", fontsize=6.5, color="#8a5200",
+        ha="center", va="top", fontsize=6.5, color="#8a5200",
     )
     ax.add_patch(Rectangle(
         (0, height), depth, 30, fill=False, linestyle=(0, (5, 4)),
@@ -1782,16 +1864,21 @@ def _render_anchor_section_drawing(project, path: Path) -> None:
         xytext=(depth * .38, anchor_z - 105), ha="center", va="top",
         fontsize=8, arrowprops={"arrowstyle": "-", "color": "#9b3a24"},
     )
-    ax.text(
-        depth + wall_finish / 2, height * .55,
+    ax.annotate(
         f"WALL FINISH {_fmt(wall_finish)}\nNO ANCHORAGE CREDIT",
-        ha="center", va="center", rotation=90, fontsize=7,
-        color="#9b3a24", weight="bold",
+        xy=(depth + wall_finish / 2, height * .62),
+        xytext=(depth * .70, height * .68),
+        ha="center", va="center", fontsize=7, color="#9b3a24", weight="bold",
+        bbox={"facecolor": "white", "edgecolor": "#9b3a24", "pad": 3},
+        arrowprops={"arrowstyle": "-", "color": "#9b3a24"},
     )
-    ax.text(
-        stud_front + stud_depth / 2, height * .52,
+    ax.annotate(
         f"SURVEYED STUD\nMODELED EMBEDMENT {_fmt(facts['stud_embedment_mm'])}",
-        ha="center", va="center", rotation=90, fontsize=7, color="#493a2e",
+        xy=(stud_front + stud_depth / 2, height * .52),
+        xytext=(stud_front + stud_depth + 90, height * .52),
+        ha="left", va="center", fontsize=7, color="#493a2e",
+        bbox={"facecolor": "white", "edgecolor": "#493a2e", "pad": 3},
+        arrowprops={"arrowstyle": "-", "color": "#493a2e"},
     )
     ax.text(
         head_y + facts["modeled_stack_mm"] / 2, anchor_z + 30,
@@ -1804,11 +1891,11 @@ def _render_anchor_section_drawing(project, path: Path) -> None:
         ha="center", va="center", fontsize=7,
     )
     ax.text(
-        depth * .5, -48, facts["drawing_stamp"],
+        depth * .5, -62, facts["drawing_stamp"],
         ha="center", va="center", fontsize=8, color="#9b3a24", weight="bold",
     )
-    ax.set_xlim(-35, depth + wall_finish + stud_depth + 40)
-    ax.set_ylim(-70, height + 90)
+    ax.set_xlim(-35, depth + wall_finish + stud_depth + 190)
+    ax.set_ylim(-90, height + 90)
     ax.set_aspect("equal")
     ax.axis("off")
     ax.set_title(
@@ -1830,30 +1917,50 @@ def _render_exploded_drawing(project, path: Path) -> None:
     labels = reader_labels_by_part_id(project)
     fig, axes = plt.subplots(1, 2, figsize=(15, 7), dpi=150)
     ax = axes[0]
-    ax.add_patch(Rectangle((0, 0), cabinet.width_mm, cabinet.height_mm,
-                           fill=False, linewidth=2, edgecolor="#18212b"))
     if hasattr(model, "drawer_bank"):
-        for index, cell in enumerate(reversed(model.drawer_bank.cells)):
+        max_front_height = max(
+            model.part(f"drawer_front_{cell.cell_id}").width_mm
+            for cell in model.drawer_bank.cells
+        )
+        for index, cell in enumerate(model.drawer_bank.cells):
             front = model.part(f"drawer_front_{cell.cell_id}")
-            shift = 80 + index * 80
-            z = front.at_mm[2] - model.shell.base_z_mm
-            ax.add_patch(Rectangle((shift, z), front.length_mm * .82,
-                                   front.width_mm, facecolor="#d4b18a",
-                                   edgecolor="#493a2e", alpha=.9))
-            ax.add_patch(Rectangle((shift + 20, z + 18),
-                                   model.drawer_bank.outside_box_width_mm * .72,
-                                   cell.box_height_mm, fill=False,
-                                   edgecolor="#9b3a24", linewidth=1.5))
-            ax.text(
-                shift + 5, z + front.width_mm + 10,
-                labels[front.part_id], color="#9b3a24", fontsize=8,
-                weight="bold",
+            lane_y = 55 + (2 - index) * 260
+            front_h = 55 + 35 * front.width_mm / max_front_height
+            front_x = 55
+            front_w = cabinet.width_mm * .74
+            box_x = 210
+            box_y = lane_y + 10
+            box_w = model.drawer_bank.outside_box_width_mm * .62
+            box_h = 40 + 40 * cell.box_height_mm / max_front_height
+            front_y = lane_y + 120
+            ax.add_patch(Rectangle(
+                (front_x, front_y), front_w, front_h,
+                facecolor="#d4b18a", edgecolor="#493a2e", alpha=.9,
+            ))
+            ax.add_patch(Rectangle(
+                (box_x, box_y), box_w, box_h, fill=False,
+                edgecolor="#9b3a24", linewidth=1.5,
+            ))
+            ax.annotate(
+                f"{labels[front.part_id]}\n"
+                f"{_fmt(front.length_mm)} W × {_fmt(front.width_mm)} H",
+                xy=(front_x, front_y + front_h / 2),
+                xytext=(5, front_y + front_h / 2),
+                ha="left", va="center", fontsize=7.5, color="#493a2e",
+                bbox={"facecolor": "white", "edgecolor": "none", "alpha": .9},
+                arrowprops={"arrowstyle": "-", "color": "#493a2e"},
             )
-    ax.set_xlim(-40, cabinet.width_mm + 280)
-    ax.set_ylim(-40, cabinet.height_mm + 70)
-    ax.set_aspect("equal")
+            ax.text(
+                box_x + box_w + 18, box_y + box_h / 2,
+                f"{cell.cell_id.upper()} DRAWER BOX\n"
+                f"{_fmt(model.drawer_bank.outside_box_width_mm)} W × "
+                f"{_fmt(cell.box_height_mm)} H",
+                color="#9b3a24", fontsize=7.5, va="center", weight="bold",
+            )
+    ax.set_xlim(-10, cabinet.width_mm + 220)
+    ax.set_ylim(0, 840)
     ax.axis("off")
-    ax.set_title("Drawer-bank groups — offsets are diagrammatic")
+    ax.set_title("Drawer groups — separate lanes; dimensions control")
 
     detail = axes[1]
     if hasattr(model, "drawer_bank"):
@@ -1888,8 +1995,8 @@ def _render_exploded_drawing(project, path: Path) -> None:
             "applied": ((.50, .08), (.50, -.02), "center", "top"),
             "front": ((.50, .26), (.50, .17), "center", "top"),
             "bottom": ((.50, .51), (.50, .51), "center", "center"),
-            "left": ((.17, .57), (.02, .57), "left", "center"),
-            "right": ((.83, .57), (.98, .57), "right", "center"),
+            "left": ((.17, .57), (-.03, .57), "right", "center"),
+            "right": ((.83, .57), (1.03, .57), "left", "center"),
             "back": ((.50, .80), (.50, .92), "center", "bottom"),
         }
         for key, (xy, text_xy, horizontal, vertical) in callouts.items():
@@ -1905,8 +2012,8 @@ def _render_exploded_drawing(project, path: Path) -> None:
             transform=detail.transAxes, ha="center", va="top", fontsize=8,
             color="#48392e",
         )
-    detail.set_xlim(0, 1)
-    detail.set_ylim(-.08, 1.02)
+    detail.set_xlim(-.14, 1.14)
+    detail.set_ylim(-.10, 1.04)
     detail.set_aspect("equal")
     detail.axis("off")
     detail.set_title("Typical drawer — exploded construction map")

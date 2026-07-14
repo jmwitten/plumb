@@ -220,6 +220,30 @@ def _panel_html(detail, panel, image_path: Path, total: int) -> str:
             + "".join(_diagram_html(diagram) for diagram in panel.diagrams)
             + "</section>"
         )
+    stop_notice = ""
+    if panel.stop_notice is not None:
+        stop_notice = (
+            '<aside class="stop-notice" role="alert">'
+            f'<h3>{_e(panel.stop_notice.heading)}</h3>'
+            f'<p>{_e(panel.stop_notice.body)}</p></aside>'
+        )
+    record = ""
+    if panel.record_fields:
+        rows = "".join(
+            '<tr><th scope="row">'
+            f'{_e(field.label)}</th><td>{_e(field.guidance)}</td>'
+            '<td class="record-entry" aria-label="Blank field">&nbsp;</td></tr>'
+            for field in panel.record_fields
+        )
+        record = (
+            '<section class="record-form">'
+            f'<h3>{_e(panel.record_title or "Completion record")}</h3>'
+            '<p>Complete in ink or in the controlled project record; blank '
+            'fields do not constitute approval.</p>'
+            '<table><thead><tr><th>Field</th><th>What to record</th>'
+            f'<th>Recorded value</th></tr></thead><tbody>{rows}</tbody></table>'
+            '</section>'
+        )
 
     return f"""
     <article class="instruction-panel" id="panel-{panel.index}"
@@ -231,6 +255,7 @@ def _panel_html(detail, panel, image_path: Path, total: int) -> str:
         </div>
         <div class="panel-number">{panel.index}</div>
       </header>
+      {stop_notice}
       <div class="resources">
         {_rows(panel.hardware, "hardware")}
         {_rows(panel.tools, "tools")}
@@ -255,6 +280,7 @@ def _panel_html(detail, panel, image_path: Path, total: int) -> str:
       {stations}
       {why}
       {honesty}
+      {record}
       <nav class="panel-nav" aria-label="Panel navigation">
         <a href="#panel-{max(1, panel.index - 1)}"
            class="{'disabled' if panel.index == 1 else ''}">&larr; Previous</a>
@@ -318,7 +344,7 @@ def render_instruction_manual_html(detail, manual, image_paths: dict[int, Path])
     if (event.key === "ArrowRight") show(Number(slider.value) + 1);
   });
   addEventListener("hashchange", () => show(currentFromHash(), false));
-  show(currentFromHash(), false);
+  if (location.hash.match(/^#panel-\\d+$/)) show(currentFromHash(), true);
 })();
 </script>""".replace("__TOTAL__", str(total))
 
@@ -363,6 +389,8 @@ h1{{font-size:clamp(2rem,5vw,3.25rem);line-height:1.05;margin:.35rem 0 .75rem}} 
 .lede{{max-width:760px;color:#dbeafe;font-size:1.07rem}} .manual-link{{display:inline-block;margin-top:.8rem;padding:.65rem .85rem;border:1px solid #93c5fd;border-radius:7px;color:white;font-weight:750;text-decoration:none}}
 {related_document_styles}.generated{{margin-top:1rem;font-size:.78rem;color:#94a3b8}}
 .safety-banner{{margin:0;padding:.7rem 1.2rem;background:#fff7ed;border-bottom:2px solid #c2410c;color:#7c2d12;font-weight:750}}
+.stop-notice{{margin:0;padding:1rem 1.2rem;background:var(--red-soft);border-bottom:4px solid #b91c1c;color:var(--red)}}
+.stop-notice h3{{margin:0 0 .25rem;font-size:1.2rem;letter-spacing:.04em}} .stop-notice p{{margin:0;font-weight:800}}
 .overview{{padding:1.4rem 2.25rem;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1.1fr 1fr;gap:1.25rem}}
 .overview h2{{margin:.1rem 0 .55rem;font-size:1.05rem}} .inventory{{margin:.2rem 0;list-style:none;padding:0}} .inventory li{{display:flex;align-items:center;gap:.5rem;margin:.4rem 0}}
 .panel-index{{display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem}}
@@ -412,6 +440,10 @@ text.diagram-mark.role-hold{{fill:#dc2626;stroke:none;font-size:3px}}
 .procedure-links h3{{font-size:1rem;margin:.1rem 0 .35rem}} .procedure-links ul{{margin:.2rem 0;padding-left:1.2rem}}
 .procedure-links a{{color:var(--blue);font-weight:750;overflow-wrap:anywhere}}
 .honesty{{background:var(--red-soft);border-left:5px solid #dc2626}} .panel-nav{{display:flex;justify-content:space-between;padding:.8rem 1.2rem;border-top:1px solid var(--line)}}
+.record-form{{margin:1rem 1.2rem;padding:.8rem 1rem;border:2px solid var(--ink);border-radius:7px;overflow-x:auto}}
+.record-form h3{{margin:.1rem 0 .25rem}} .record-form p{{margin:.2rem 0 .7rem;color:var(--muted)}}
+.record-form table{{width:100%;border-collapse:collapse;font-size:.86rem}} .record-form th,.record-form td{{border:1px solid var(--line);padding:.5rem;text-align:left;vertical-align:top}}
+.record-entry{{min-width:14rem;height:2.2rem;background:#fff}}
 .panel-nav a{{color:var(--blue);font-weight:750;text-decoration:none}} .panel-nav .disabled{{visibility:hidden}}
 .manual-foot{{padding:1.5rem 2.25rem 2rem;border-top:1px solid var(--line);background:#f8fafc}} .manual-foot a{{color:var(--blue);font-weight:800}}
 @media(max-width:700px){{.overview{{grid-template-columns:1fr}}.instruction-panel{{margin:1rem .5rem}}.manual-head,.overview{{padding-left:1rem;padding-right:1rem}}.panel-index{{grid-template-columns:repeat(3,1fr)}}.render-legend{{width:100%;margin-left:0}}.panel-controls{{grid-template-columns:auto 1fr auto}}#panel-progress{{grid-column:1/-1;text-align:center}}.diagram-coordinate-key ol{{columns:1}}}}

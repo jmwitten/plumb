@@ -30,7 +30,6 @@ DB40_UNKNOWN_VERDICTS = (
     ("cabinetry.performance.whole_cabinet_capacity", "UNKNOWN"),
 )
 DB40_STATUS_MATRIX = (
-    ("Model/shop-data gate", "PASS"),
     ("Purchasing/cutting preflight", "OPEN"),
     ("Whole-cabinet structural capacity", "UNKNOWN"),
     ("Installation/use release", "HOLD"),
@@ -138,6 +137,8 @@ def test_db40_primary_sheet_owns_review_and_installation_within_reader_budget():
         for component, status in DB40_STATUS_MATRIX
         if f"{component}: {status}" not in visible
     )
+    if "MODEL DATA PASS — DO NOT BUY OR CUT" not in visible:
+        missing_status_pairs += (("MODEL DATA", "PASS — DO NOT BUY OR CUT"),)
     missing_unknown_rows = tuple(
         (rule, verdict)
         for rule, verdict in DB40_UNKNOWN_VERDICTS
@@ -273,14 +274,16 @@ def test_review_requires_base_validation_and_projects_typed_release_state():
         )
 
     db40 = _review_html(compile_project_file(DB40))
-    assert "Model/shop-data gate: PASS" in db40
+    assert "MODEL DATA PASS — DO NOT BUY OR CUT" in db40
     assert "Purchasing/cutting preflight: OPEN" in db40
+    assert "fabrication ready" not in db40.lower()
     assert "Fabrication/model gate" not in db40
     assert "Installation/use release: HOLD" in db40
 
     b30 = _review_html(compile_project_file(B30))
-    assert "Model/shop-data gate: PASS" in b30
+    assert "MODEL DATA PASS — DO NOT BUY OR CUT" in b30
     assert "Purchasing/cutting preflight: OPEN" in b30
+    assert "fabrication ready" not in b30.lower()
     assert "Fabrication/model gate" not in b30
     assert "Installation/use release: PASS" in b30
     assert "Installation/use release: HOLD" not in b30
@@ -326,6 +329,9 @@ def test_future_db40_capacity_clearance_flips_typed_banner_without_html_edit():
         basename="db40_manual.html",
     )
     assert "INSTALLATION/USE HOLD" not in manual.lede
+    assert manual.panels[5].stop_notice is None
+    assert manual.panels[5].action == "install"
+    assert manual.panels[5].title == "Install and commission the empty cabinet"
     assert all(
         "INSTALLATION/USE HOLD" not in item
         for item in manual.panels[5].honesty
@@ -337,8 +343,9 @@ def test_db40_review_contains_release_boundary_views_and_exact_dimensions():
     project = compile_project_file(DB40)
     html = _review_html(project)
 
-    assert "Model/shop-data gate: PASS" in html
+    assert "MODEL DATA PASS — DO NOT BUY OR CUT" in html
     assert "Purchasing/cutting preflight: OPEN" in html
+    assert "fabrication ready" not in html.lower()
     assert "Fabrication/model gate" not in html
     assert "Installation/use release: HOLD" in html
     assert "Do not load, commission, or put the cabinet into service" in html
@@ -373,6 +380,27 @@ def test_db40_release_cards_stay_compact_without_dropping_the_safety_notice():
     assert full_notice not in _audit_html(project)
     assert policy.source_url in _review_html(project)
     assert policy.scope_source_url in _review_html(project)
+
+
+def test_fabrication_packet_has_unsigned_cutting_release_record():
+    project = compile_project_file(DB40)
+    html = _fabrication_html(project)
+    visible = _visible_text(html)
+
+    assert "Purchasing and cutting release record" in visible
+    assert "This blank record is not authorization" in visible
+    for heading in (
+        "Part / family",
+        "Panel product / lot",
+        "Finish face",
+        "Grain direction",
+        "Nesting sheet / orientation",
+        "Approved by / date",
+    ):
+        assert heading in visible
+    labels = CPR.reader_labels_by_part_id(project)
+    for item in project.artifacts.cut_list:
+        assert labels[item.part_id] in visible
 
 
 def test_fabrication_projects_shop_sources_and_owned_process_phases():
@@ -691,6 +719,25 @@ def test_installation_drawing_facts_reject_missing_or_collapsed_toe_sleepers(
         CPR.installation_drawing_facts(project)
 
 
+def test_installation_drawing_facts_reject_collectively_raised_toe_frame():
+    project = compile_project_file(DB40)
+    toe_roles = {"toe_front", "toe_rear", "toe_left", "toe_right"}
+    project.model = replace(
+        project.model,
+        parts=tuple(
+            replace(
+                part,
+                at_mm=(part.at_mm[0], part.at_mm[1], part.at_mm[2] + 100.0),
+            )
+            if part.role in toe_roles else part
+            for part in project.model.parts
+        ),
+    )
+
+    with pytest.raises(ValueError, match="toe"):
+        CPR.installation_drawing_facts(project)
+
+
 def test_installation_drawing_facts_reject_moved_cabinet_side():
     project = compile_project_file(DB40)
     side = project.model.part("left_end")
@@ -730,6 +777,48 @@ def test_installation_drawing_facts_reject_incoherent_anchor_strip(mutation):
     )
 
     with pytest.raises(ValueError, match="anchor strip"):
+        CPR.installation_drawing_facts(project)
+
+
+def test_installation_drawing_facts_reject_collectively_shifted_anchor_path():
+    project = compile_project_file(DB40)
+    shifted_roles = {
+        "anchor_strip",
+        *(f"wall_anchor_{stud_id}" for stud_id in project.model.anchor_stud_ids),
+    }
+    project.model = replace(
+        project.model,
+        parts=tuple(
+            replace(
+                part,
+                at_mm=(part.at_mm[0], part.at_mm[1] - 10.0, part.at_mm[2] + 100.0),
+            )
+            if part.role in shifted_roles else part
+            for part in project.model.parts
+        ),
+    )
+
+    with pytest.raises(ValueError, match="anchor strip"):
+        CPR.installation_drawing_facts(project)
+
+
+def test_installation_drawing_facts_reject_shifted_or_resized_stud():
+    project = compile_project_file(DB40)
+    stud = project.model.part("wall_stud_stud_32")
+    changed = replace(
+        stud,
+        at_mm=(stud.at_mm[0], stud.at_mm[1] + 500.0, stud.at_mm[2] + 100.0),
+        thickness_mm=stud.thickness_mm + 50.0,
+    )
+    project.model = replace(
+        project.model,
+        parts=tuple(
+            changed if part.role == stud.role else part
+            for part in project.model.parts
+        ),
+    )
+
+    with pytest.raises(ValueError, match="stud/anchor path"):
         CPR.installation_drawing_facts(project)
 
 

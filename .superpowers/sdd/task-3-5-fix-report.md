@@ -3,7 +3,7 @@
 Date: 2026-07-14  
 Review addressed: `task-3-5-review.md`
 
-## Closure
+## Initial closure
 
 The single Critical and four Important findings are fixed in one round. The
 three small correctness/readability findings that were adjacent to the fix are
@@ -76,11 +76,54 @@ Desktop browser QA at 1440 × 1000 found no horizontal overflow; the cover is
 overflow, while the 900 px installation drawing canvas remains intentionally
 pannable and all three full-resolution links are present.
 
-## Remaining work
+## Remaining after the final local fix
 
-- Fresh adversarial confirmation of this fix.
-- Naive-reader review of the regenerated landing/manual.
+- Fresh adversarial and no-context-builder confirmation of the final fix.
 - One full-suite gate on the frozen final tree, then final regeneration,
   delivery, commit/push, and ledger update.
 - The 1,900-line report module should be extracted only in a later, separately
   reviewed refactor.
+
+## Confirmation and naive-reader closure
+
+The first adversarial confirmation found one remaining Important projection
+hole: toe members could move together in Z, the strip and anchors could move
+together in Y/Z, and a stud could move or resize while the drawing silently
+recreated its expected geometry. Three RED mutations now pin those cases. The
+projection checks every toe against the floor high point, the strip against its
+absolute cabinet/wall frame, and each stud against the surveyed wall origin,
+rotation, height, width, and depth.
+
+The no-context builder review then failed the package on two Critical and four
+Important reader problems. The consolidated fix:
+
+- replaces the contradictory `fabrication ready` wording with the unavoidable
+  `MODEL DATA PASS — DO NOT BUY OR CUT` boundary;
+- adds a per-part purchasing/cutting release record for product/lot, finish
+  face, grain direction, nesting orientation, and approval;
+- prevents the manual from auto-jumping past its cover and inventory;
+- changes held Panel 6 to `Installation HOLD`, places a full-width
+  `DO NOT ANCHOR / INSTALL / LOAD` alert before hardware or imagery, and adds a
+  printable signed installation/fit record;
+- expands the selected MOVENTO/ZS7M686MU work into ten executable substeps plus
+  a nine-operation stabilizer sequence diagram derived from the selected Blum
+  procedure and model cut lengths; and
+- redraws the front, anchor-section, and exploded views with separated
+  annotation lanes and non-overlapping drawer groups.
+
+Focused and broad verification after that round:
+
+```text
+52 passed in 28.98s
+```
+
+for the complete cabinetry report and manual suites, and:
+
+```text
+318 passed, 3 skipped in 74.06s
+```
+
+for affected cabinetry, drawer, instruction, presentation, and viewer suites.
+Direct browser QA confirmed that an unfragmented manual opens at the cover with
+an empty hash and zero scroll, while direct `#panel-6` navigation reaches the
+stop-first held installation panel.
