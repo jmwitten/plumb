@@ -736,6 +736,24 @@ def parse_double_vanity_project(doc) -> DoubleVanitySection:
         wastes=rough_ins("wastes"),
         supplies=rough_ins("supplies"),
     )
+    declared_geometry = (
+        ("wall_length", assumed_site.wall_length_mm, site.wall.length_mm,
+         "site.wall.length"),
+        ("wall_height", assumed_site.wall_height_mm, site.wall.height_mm,
+         "site.wall.height"),
+        ("finish_thickness", assumed_site.finish_thickness_mm,
+         site.wall.finish_thickness_mm, "site.wall.finish_thickness"),
+        ("floor_elevation", assumed_site.floor_elevation_mm,
+         site.floor.high_point_elevation_mm, "site.floor.high_point_elevation"),
+        ("vanity_left", assumed_site.vanity_left_mm, from_left,
+         "double_vanity.placement.from_left_datum"),
+    )
+    for key, assumed_value, declared_value, declared_at in declared_geometry:
+        if abs(assumed_value - declared_value) > 1e-6:
+            raise ProjectSchemaError(
+                f"double_vanity.assumed_conditions.{key} must match "
+                f"{declared_at}"
+            )
     width = 72 * IN
     x0 = site.wall.plane_origin_mm[0] + from_left
     if from_left < 0 or from_left + width > site.wall.length_mm:

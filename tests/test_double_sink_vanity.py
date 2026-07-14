@@ -6,6 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+import yaml
 
 from detailgen.core.registry import components, materials
 from detailgen.packs import (
@@ -25,12 +26,21 @@ def _project():
     return compile_project_file(FIXTURE)
 
 
+def _project_with_assumption(tmp_path, key, value):
+    raw = yaml.safe_load(FIXTURE.read_text())
+    raw["double_vanity"]["assumed_conditions"][key] = value
+    path = tmp_path / f"dv72-{key}.project.yaml"
+    path.write_text(yaml.safe_dump(raw, sort_keys=False))
+    return compile_project_file(path)
+
+
 def test_owner_assumptions_are_explicit_and_never_field_verified():
     model = _project().model
     assert model.assumed_site.provenance == "owner_assumed"
     assert not model.assumed_site.field_verified
     assert model.assumed_site.wall_length_mm == pytest.approx(144 * 25.4)
     assert all(not stud.verified for stud in model.section.site.wall.studs)
+    assert not model.section.site.floor.verified
 
 
 def test_assumed_rough_ins_match_the_approved_schedule():
@@ -40,6 +50,33 @@ def test_assumed_rough_ins_match_the_approved_schedule():
     assert [p.x_mm for p in basis.supplies] == pytest.approx(
         [38 * 25.4, 46 * 25.4, 74 * 25.4, 82 * 25.4]
     )
+
+
+@pytest.mark.parametrize(
+    ("key", "value", "match"),
+    (
+        ("wall_length", 145, "wall_length"),
+        ("wall_height", 95, "wall_height"),
+        ("finish_thickness", 0.625, "finish_thickness"),
+        ("floor_elevation", 1, "floor_elevation"),
+        ("vanity_left", 25, "vanity_left"),
+    ),
+)
+def test_assumed_site_contradictions_fail_loudly(tmp_path, key, value, match):
+    with pytest.raises(ProjectSchemaError, match=match):
+        _project_with_assumption(tmp_path, key, value)
+
+
+@pytest.mark.parametrize(
+    ("key", "value", "match"),
+    (
+        ("provenance", "field_verified", "provenance"),
+        ("field_verified", True, "field_verified"),
+    ),
+)
+def test_assumptions_reject_false_authority(tmp_path, key, value, match):
+    with pytest.raises(ProjectSchemaError, match=match):
+        _project_with_assumption(tmp_path, key, value)
 
 
 def test_registry_exposes_double_sink_pack_without_mutating_base_registries():
