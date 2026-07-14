@@ -72,7 +72,7 @@ def test_validation_owns_all_release_rows_without_omnibus_duplication():
     )
 
     assert len(release_findings) == 9
-    assert validation.count('data-release-rule="double_vanity.release.') == 9
+    assert validation.count('data-release-rule="double_vanity.release.') == 8
     for finding in release_findings:
         assert finding.rule in validation
         assert finding.message in validation
@@ -93,6 +93,27 @@ def test_validation_names_pinned_plumbing_runner_and_comparative_mount_authority
     assert "450 lb evenly distributed static load" in html
     assert "comparative reference only" in html
     assert "does not establish DV72 capacity" in html
+
+
+def test_handyman_review_findings_are_resolved_without_overclaiming_access():
+    documents = _documents()
+    joined = "\n".join(documents.values())
+    review = documents["dv72_review_installation.html"]
+    assembly = documents["dv72_assembly_service.html"]
+    validation = documents["dv72_validation_sources.html"]
+
+    assert "independent independent" not in joined
+    assert "remain reachable" not in joined
+    assert "proposed service-access concept" in review
+    assert "Proposed shell assembly" in assembly
+    assert "Build and square" not in assembly
+    assert "34.50 in" in review
+    assert "11.00 in" in review
+    assert "site-wall zero datum" in review
+    assert "Issue date" in joined
+    assert validation.count('data-release-rule="double_vanity.release.') == 8
+    assert 'data-commissioning-rule="double_vanity.release.commissioning"' in validation
+    assert "Post-install commissioning hold" in validation
 
 
 def test_generator_compiles_once_and_writes_deterministic_inventory(tmp_path):

@@ -42,7 +42,12 @@ def _shell(title: str, current: str, purpose: str, body: str) -> str:
 <header><div><div class="eyebrow">DV72 · vanity.double_sink@1</div><h1>{title}</h1><p>{purpose}</p></div>
 <div class="hold"><b>DESIGN HOLD</b><p>Coordination geometry only. Do not purchase, cut, drill, fabricate, load, or install until the named release gates are closed.</p></div></header>
 {_nav(current)}{body}{_nav(current)}<footer>One analytic model; four reader projections. UNKNOWN is a release hold, never a concealed approval.</footer>
+<p class="metric">Issue date: 2026-07-14 · Revision: 1 · Status: DESIGN HOLD · Model: vanity.double_sink@1.0.0</p>
 </main></body></html>"""
+
+
+def _dual(mm: float) -> str:
+    return f"{mm:.1f} mm / {mm / 25.4:.2f} in"
 
 
 def _system_section(project) -> str:
@@ -53,19 +58,21 @@ def _system_section(project) -> str:
     path = model.plumbing_paths[0]
     upper = model.drawer("left", "upper")
     lower = model.drawer("left", "lower")
+    counter_top = vanity.bottom_elevation_mm + vanity.body_height_mm + vanity.countertop_thickness_mm
     return f"""
 <section><h2>Sink, plumbing, drawers, counter, and wall mount</h2>
 <p>Representative section through one of two symmetric bays. Yellow is the removable service envelope, not storage. Dimensions are model facts; the accepted field rough-in must re-derive the drawer voids before fabrication.</p>
-<figure class="diagram"><figcaption>Bay section · counter top {study._mm(vanity.bottom_elevation_mm + vanity.body_height_mm + vanity.countertop_thickness_mm)} AFF · upper box {study._mm(upper.box_depth_mm)} deep · lower box {study._mm(lower.box_depth_mm)} deep · rear service chase {study._mm(model.service_chase_depth_mm)}</figcaption>
+<p><b>Field vertical targets—not release dimensions:</b> cabinet bottom {_dual(vanity.bottom_elevation_mm)} AFF; counter top {_dual(counter_top)} AFF. The site-wall zero datum is the left end of the surveyed wall run; verify it, the floor datum, wall flatness, framing, and every plumbing centerline before release.</p>
+<figure class="diagram"><figcaption>Bay section · counter top {_dual(counter_top)} AFF · upper box {study._mm(upper.box_depth_mm)} deep · lower box {study._mm(lower.box_depth_mm)} deep · rear service chase {study._mm(model.service_chase_depth_mm)}</figcaption>
 <svg viewBox="0 0 900 520" role="img" aria-label="Section through sink, drain, trap, drawers, counter, rear rail, wall and anchors">
 <rect data-section-system="wall" x="790" y="25" width="55" height="455" class="wall"/><rect data-section-system="rear-rail" x="730" y="178" width="60" height="42" class="rail"/>
 <rect data-section-system="countertop" x="90" y="55" width="700" height="32" class="countertop"/><path data-section-system="fixture" d="M260 87h360l-35 116H295z" class="fixture"/>
 <path data-section-system="drain" d="M440 203v65" class="pipe"/><path data-section-system="p-trap" d="M440 268v48q0 45 52 45t52-45v-8h185" class="pipe"/>
 <rect data-section-system="service-envelope" x="335" y="188" width="400" height="205" class="service"/>
 <path data-section-system="upper-drawer" d="M110 248h205v145h420v-42H355V248z" class="drawer"/><rect data-section-system="lower-drawer" x="110" y="402" width="430" height="68" class="drawer"/>
-<circle data-section-system="candidate-anchor" cx="807" cy="199" r="8" fill="#8e2d24"/><text x="450" y="505">Both drawers remove from the front; trap cleanout, slip joints, shutoffs, rail and anchors remain reachable.</text>
+<circle data-section-system="candidate-anchor" cx="807" cy="199" r="8" fill="#8e2d24"/><text x="450" y="505">proposed service-access concept; hand and tool paths remain unverified.</text>
 </svg></figure></section>
-<section><h2>Drawer-removal service sequence</h2><ol><li>Empty and remove the upper U drawer using the selected runner locking devices.</li><li>Remove the lower drawer when rear-wall, rail, or anchor access is required.</li><li>Place a pan below each independent {study._e(path.topology.replace('_', ' '))}; service the cleanout/slip joints and both shutoffs without cutting the case.</li><li>Leak-test supplies, overflow drain, tailpiece, trap, and trap arm before either drawer returns.</li><li>Reinstall, adjust reveals, cycle closed/full-extension/removal states, and record commissioning.</li></ol></section>
+<section><h2>Drawer-removal service sequence</h2><ol><li>Empty and remove the upper U drawer using the selected runner locking devices.</li><li>Remove the lower drawer when rear-wall, rail, or anchor access is required.</li><li>Place a pan below each independent P-trap; service the cleanout/slip joints and both shutoffs only after field verification proves the proposed hand and tool paths.</li><li>Leak-test supplies, overflow drain, tailpiece, trap, and trap arm before either drawer returns.</li><li>Reinstall, adjust reveals, cycle closed/full-extension/removal states, and record commissioning.</li></ol></section>
 """
 
 
@@ -86,7 +93,7 @@ def build_double_vanity_review_html(project) -> str:
 
 def build_double_vanity_assembly_html(project) -> str:
     body = "".join((
-        '<section><h2>Assembly logic</h2><p>Build and square the two-bay shell around the center divider and continuous rear rail. Drawer dimensions remain coordination targets until the accepted trap, rough-in, runner SKU, and service sweeps close their gates.</p></section>',
+        '<section><h2>Proposed shell assembly</h2><p>After fabrication release, square the two-bay shell around the center divider and continuous rear rail. Drawer dimensions remain coordination targets until the accepted trap, rough-in, runner SKU, and service sweeps close their gates.</p></section>',
         '<section><h2>Bay-by-bay plumbing and drawer interaction</h2><div class="diagram-grid">',
         study._bay_interaction(project, "left"),
         study._bay_interaction(project, "right"), "</div></section>",
@@ -138,10 +145,41 @@ def _product_evidence(project) -> str:
 </tbody></table></div></section>"""
 
 
+def _phased_release_gates(project) -> str:
+    preinstall = []
+    commissioning = None
+    for finding in project.report.findings:
+        if not finding.rule.startswith("double_vanity.release."):
+            continue
+        if finding.rule == "double_vanity.release.commissioning":
+            commissioning = finding
+            continue
+        preinstall.append(
+            f'<tr data-release-rule="{study._e(finding.rule)}"><td><code>{study._e(finding.rule)}</code></td>'
+            f'<td class="unknown">{study._e(finding.verdict)}</td><td>{study._e(finding.message)}</td></tr>'
+        )
+    postinstall = ""
+    if commissioning is not None:
+        postinstall = (
+            '<section class="release-gates"><h2>Post-install commissioning hold</h2>'
+            '<p>This hold does not block an installation released by the eight pre-install gates; it blocks use and closeout until testing is recorded.</p>'
+            '<div class="table-wrap"><table><tbody>'
+            f'<tr data-commissioning-rule="{study._e(commissioning.rule)}"><td><code>{study._e(commissioning.rule)}</code></td>'
+            f'<td class="unknown">{study._e(commissioning.verdict)}</td><td>{study._e(commissioning.message)}</td></tr>'
+            '</tbody></table></div></section>'
+        )
+    return (
+        '<section class="release-gates"><h2>Eight pre-install release gates</h2>'
+        '<p>Every row is required and UNKNOWN. Close all eight before purchase, fabrication, loading, or installation.</p>'
+        '<div class="table-wrap"><table><thead><tr><th>Rule</th><th>Verdict</th><th>Evidence still required</th></tr></thead><tbody>'
+        + "".join(preinstall) + '</tbody></table></div></section>' + postinstall
+    )
+
+
 def build_double_vanity_validation_html(project) -> str:
     body = "".join((
         _product_evidence(project), _all_findings(project),
-        study._release_gates(project),
+        _phased_release_gates(project),
         study._facts_tables(project), study._asset_boundary(project),
     ))
     return _shell(

@@ -643,11 +643,11 @@ def parse_double_vanity_project(doc) -> DoubleVanitySection:
         wall_id=site.wall.wall_id,
         x0_mm=x0,
         width_mm=width,
-        body_height_mm=20 * IN,
+        body_height_mm=22 * IN,
         body_depth_mm=21 * IN,
         countertop_depth_mm=22 * IN,
         countertop_thickness_mm=1.5 * IN,
-        bottom_elevation_mm=10 * IN,
+        bottom_elevation_mm=11 * IN,
     )
     return DoubleVanitySection(
         mode="study",

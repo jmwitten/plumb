@@ -140,7 +140,13 @@ def test_dv72_expands_to_two_independent_service_bays_and_four_drawers():
     model = project.model
 
     assert model.section.vanity.width_mm == pytest.approx(72 * 25.4)
-    assert model.section.vanity.body_height_mm == pytest.approx(20 * 25.4)
+    assert model.section.vanity.body_height_mm == pytest.approx(22 * 25.4)
+    assert model.section.vanity.bottom_elevation_mm == pytest.approx(11 * 25.4)
+    assert (
+        model.section.vanity.bottom_elevation_mm
+        + model.section.vanity.body_height_mm
+        + model.section.vanity.countertop_thickness_mm
+    ) == pytest.approx(34.5 * 25.4)
     assert model.section.vanity.body_depth_mm == pytest.approx(21 * 25.4)
     assert [bay.bay_id for bay in model.sink_bays] == ["left", "right"]
     assert [bay.sink_center_x_mm for bay in model.sink_bays] == pytest.approx(
