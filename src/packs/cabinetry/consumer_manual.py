@@ -266,6 +266,7 @@ def consumer_action_frames(
     specs = (
         FrameSpec(
             frame_id="assembly.toe_base.frame",
+            detail_diagram_ids=("toe-platform-plan",),
             panel_index=1,
             caption=(
                 f"Fasten the toe-kick rails and both returns square on a "
@@ -280,6 +281,7 @@ def consumer_action_frames(
         ),
         FrameSpec(
             frame_id="assembly.carcass.open.frame",
+            detail_diagram_ids=("open-carcass-sequence",),
             panel_index=2,
             caption=(
                 "Glue and fasten the left side, cabinet bottom, and front "
@@ -295,6 +297,7 @@ def consumer_action_frames(
         ),
         FrameSpec(
             frame_id="assembly.carcass.close.frame",
+            detail_diagram_ids=("captured-back-close",),
             panel_index=3,
             caption=(
                 "Slide the captured back into its open grooves, add the "
@@ -311,6 +314,7 @@ def consumer_action_frames(
         ),
         FrameSpec(
             frame_id="assembly.toe_attach.frame",
+            detail_diagram_ids=("toe-attachment-pattern",),
             panel_index=3,
             caption=(
                 "Seat the cabinet on the leveled toe platform, align the "
@@ -327,6 +331,7 @@ def consumer_action_frames(
         ),
         FrameSpec(
             frame_id="assembly.drawer_boxes.frame",
+            detail_diagram_ids=("drawer-box-joinery",),
             panel_index=4,
             caption=(
                 f"Assemble each drawer box square with {box_screws} "
@@ -343,6 +348,7 @@ def consumer_action_frames(
         ),
         FrameSpec(
             frame_id="assembly.drawer_runners.frame",
+            detail_diagram_ids=("runner-fixing-pattern",),
             panel_index=4,
             caption=(
                 f"Clip the stabilizer set's ({stabilizer}) pinion housings "
@@ -363,6 +369,7 @@ def consumer_action_frames(
         ),
         FrameSpec(
             frame_id="assembly.drawer_lockdevices.frame",
+            detail_diagram_ids=("stabilizer-install-sequence",),
             panel_index=4,
             caption=(
                 f"Fit the set's ({stabilizer}) cut linkage rod, pinion "
@@ -385,6 +392,7 @@ def consumer_action_frames(
         ),
         FrameSpec(
             frame_id="assembly.fronts_pulls.frame",
+            detail_diagram_ids=("applied-front-pattern",),
             panel_index=5,
             caption=(
                 "Clamp each front level on its spacers, drive "
@@ -474,6 +482,7 @@ def consumer_action_frames(
         ),
         FrameSpec(
             frame_id="install.anchor.frame",
+            detail_diagram_ids=("wall-anchor-path",),
             panel_index=6,
             caption=(
                 f"Drive {anchors} cabinet anchor screws ({anchor}) through "
@@ -558,30 +567,55 @@ def build_cabinetry_consumer_manual(
 
 
 def consumer_part_rows(project):
-    """Short kit-card part rows: count × reader name, nothing else.
+    """Kit-card part rows: count × reader name plus the typed cut size.
 
-    Dimensions, materials, and finish/grain data live in the fabrication
-    packet; the prepared-kit gate guarantees parts arrive cut and labeled,
-    so the consumer card identifies parts by their label names only.
+    Cut sizes come from the released cut list (pre-band blank sizes — the
+    numbers a builder would actually cut to); material, grain, and finish
+    data stay in the fabrication packet. Fastener-shaped components are
+    already on the lettered hardware card, so the parts card lists panels
+    and assemblies only.
     """
     from ...rendering.instruction_panels import DisplayRow
 
     labels = part_labels(project.detail.assembly.parts)
     roles = project.detail.roles()
-    counts: dict[str, list[str]] = {}
+    cut_by_description = {
+        item.description: item for item in project.artifacts.cut_list}
+
+    def _cut_text(part) -> str:
+        item = cut_by_description.get(part.name)
+        if item is None:
+            return ""
+        dims = " × ".join(
+            f"{round(value, 1):g}"
+            for value in (item.length_mm, item.width_mm, item.thickness_mm))
+        return f" — cut {dims} mm"
+
+    grouped: dict[str, list[str]] = {}
     for part in project.detail.assembly.parts:
         if roles.get(part.name) == "existing":
             continue
-        # Fastener-shaped components are already on the lettered hardware
-        # card; the parts card lists panels and assemblies only.
         if hasattr(part.component, "head_height"):
             continue
-        counts.setdefault(labels[part.id].reader_name, []).append(part.id)
+        key = f"{labels[part.id].reader_name}{_cut_text(part)}"
+        grouped.setdefault(key, []).append(part.id)
     return tuple(
-        DisplayRow("part", f"{len(ids)} × {name}", count=len(ids),
+        DisplayRow("part",
+                   (f"{len(ids)} × {label}" if len(ids) > 1
+                    else f"1 × {label}"),
+                   count=len(ids),
                    source_part_ids=tuple(ids))
-        for name, ids in counts.items()
+        for label, ids in grouped.items()
     )
+
+
+def consumer_diagrams(panels_manual) -> dict:
+    """Typed operation diagrams keyed by id, for frame detail rendering."""
+    return {
+        diagram.diagram_id: diagram
+        for panel in panels_manual.panels
+        for diagram in panel.diagrams
+    }
 
 
 def consumer_panels_manual(project):

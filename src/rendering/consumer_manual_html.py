@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import base64
 import html
+import json
 from pathlib import Path
 
 from .action_frames import FrameContractError
 from .consumer_pages import ConsumerManual
-from .instruction_manual import _icon_svg
+from .instruction_manual import _diagram_primitive_svg, _icon_svg
 from .part_labels import part_labels
 
 
@@ -27,12 +28,52 @@ def _data_uri(path: Path) -> str:
     return f"data:image/png;base64,{payload}"
 
 
+def _as_data_uri(value) -> str:
+    """Accept a PNG path or an already-encoded ``data:image/…`` string."""
+    if isinstance(value, str) and value.startswith("data:image/"):
+        return value
+    return _data_uri(value)
+
+
 def _letter_chip(letter: str, quantity: int) -> str:
     return (f'<span class="chip hardware-chip">'
             f'<b>{_e(letter)}</b> &times;{quantity}</span>')
 
 
-def _frame_html(detail, frame, number: int | None, image_path: Path) -> str:
+def _consumer_diagram_html(diagram) -> str:
+    """One typed operation diagram in the consumer register: title + marks.
+
+    The technical surfaces keep the long captions and compiled coordinate
+    keys; here the diagram itself is the payload — it shows where the
+    fasteners and stations go.
+    """
+    import re as _re
+
+    marker_id = "carrow-" + "".join(
+        ch if ch.isalnum() else "-" for ch in diagram.diagram_id)
+    marks = "".join(
+        _diagram_primitive_svg(primitive, marker_id)
+        for primitive in diagram.primitives)
+    # The consumer register carries no machine part names: drop the
+    # technical hover titles and per-mark aria labels (station identities
+    # remain machine-traceable via data-fact-ref attributes).
+    marks = _re.sub(r"<title>.*?</title>", "", marks, flags=_re.S)
+    marks = _re.sub(r' aria-label="[^"]*"', "", marks)
+    return (
+        f'<figure class="op-diagram" data-diagram-id="'
+        f'{_e(diagram.diagram_id)}">'
+        f"<figcaption>{_e(diagram.title)}</figcaption>"
+        f'<svg viewBox="0 0 100 100" role="img" '
+        f'aria-label="{_e(diagram.title)}" '
+        'preserveAspectRatio="xMidYMid meet">'
+        f'<defs><marker id="{_e(marker_id)}" markerWidth="7" '
+        'markerHeight="7" refX="6" refY="3.5" orient="auto">'
+        '<path d="M0,0 L7,3.5 L0,7 z"/></marker></defs>'
+        f"{marks}</svg></figure>")
+
+
+def _frame_html(detail, frame, number: int | None, image_path: Path,
+                diagrams=None) -> str:
     labels = part_labels(detail.assembly.parts)
     chips = "".join(
         _letter_chip(row.letter, row.quantity) for row in frame.hardware)
@@ -75,13 +116,22 @@ def _frame_html(detail, frame, number: int | None, image_path: Path) -> str:
             f'{header}{warning}'
             f'<p class="caption">{_e(frame.caption)}</p>'
             "</article>")
+    diagram_html = ""
+    for diagram_id in frame.detail_diagram_ids:
+        if diagrams is None or diagram_id not in diagrams:
+            raise FrameContractError(
+                f"frame {frame.frame_id!r} references diagram "
+                f"{diagram_id!r} but no such typed diagram was supplied")
+        diagram_html += _consumer_diagram_html(diagrams[diagram_id])
+    scene = (f'<figure class="scene-figure">'
+             f'<img src="{_data_uri(image_path)}" '
+             f'alt="Assembly view: step {number}">'
+             f"{inset}</figure>")
     return (
         f'<article class="frame" data-frame-id="{_e(frame.frame_id)}" '
         f'data-step-ids="{_e(",".join(frame.source_step_ids))}">'
         f"{header}"
-        f'<figure><img src="{_data_uri(image_path)}" '
-        f'alt="Assembly view: step {number}">'
-        f"{inset}</figure>"
+        f'<div class="figures">{scene}{diagram_html}</div>'
         f'<p class="caption">{_e(frame.caption)}</p>'
         f"{tool}{warning}{hold}"
         f'<ul class="picture-key">{picture_key}</ul>'
@@ -194,8 +244,39 @@ ul.tools li::before { content: "\\2022"; margin-right: 0.4rem; }
 .repeat-badge { background: var(--ink); color: var(--paper); }
 .repeat-badge small { font-weight: 600; }
 .frame figure { margin: 0; }
+.frame .figures { display: flex; gap: 0.35rem; align-items: center;
+  justify-content: center; }
+.frame .scene-figure { flex: 1 1 55%; min-width: 0; }
 .frame img { display: block; max-width: 100%; max-height: 2.6in;
   width: auto; height: auto; margin: 0 auto; background: var(--paper); }
+.op-diagram { flex: 0 1 42%; min-width: 0; margin: 0;
+  border: 1.5px solid var(--ink); border-radius: 6px; overflow: hidden; }
+.op-diagram figcaption { padding: 0.15rem 0.4rem; font-size: 0.68rem;
+  font-weight: 700; border-bottom: 1.5px solid var(--ink);
+  background: #f2f2f2; }
+.op-diagram svg { display: block; width: 100%; height: auto;
+  max-height: 2.3in; background: var(--paper); }
+.diagram-mark { vector-effect: non-scaling-stroke; stroke: var(--ink);
+  stroke-width: 1.1; fill: #cfcfcf; }
+.diagram-mark.role-prior { fill: #ececec; stroke: #777; }
+.diagram-mark.role-receiver { fill: #e2e2e2; stroke: var(--ink);
+  stroke-width: 1.4; }
+.diagram-mark.role-hold { fill: none; stroke: var(--ink);
+  stroke-dasharray: 4 3; }
+.diagram-mark.role-groove { fill: none; stroke: var(--ink);
+  stroke-width: 2.2; }
+.diagram-mark.role-motion { fill: none; stroke: var(--ink);
+  stroke-width: 1.8; }
+.diagram-mark.role-fastener { fill: var(--ink); stroke: var(--paper);
+  stroke-width: 0.7; }
+.diagram-mark.role-station { fill: var(--ink); stroke: var(--paper);
+  stroke-width: 0.7; }
+.diagram-mark.role-hardware { fill: #9a9a9a; stroke: var(--ink);
+  stroke-width: 1; }
+text.diagram-mark, .diagram-mark.role-datum { fill: var(--ink);
+  stroke: none; font-size: 3px; font-weight: 800; }
+text.diagram-mark.role-hold { fill: var(--ink); stroke: none; }
+.op-diagram marker path { fill: var(--ink); }
 .inset-note { font-size: 0.8rem; color: var(--line); }
 .caption { font-size: 0.98rem; margin: 0.35rem 0 0.15rem; }
 .tool { margin: 0.1rem 0; font-size: 0.82rem; color: #222; }
@@ -230,7 +311,19 @@ ul.tools li::before { content: "\\2022"; margin-right: 0.4rem; }
     box-shadow: none; overflow: visible; }
   .sheet:last-of-type { break-after: auto; }
   .frame { margin-bottom: 0.4rem; }
+  .viewer-section { display: none; }
 }
+.viewer-section { max-width: 8.5in; margin: 0.35rem auto 1.2rem;
+  padding: 0.55in; background: var(--paper); box-shadow: 0 1px 8px #0003; }
+.viewer-section h2 { margin: 0 0 0.4rem; }
+.viewer-section p { font-size: 0.9rem; }
+.viewer-slot { position: relative; aspect-ratio: 4/3; background: #f6f6f4;
+  overflow: hidden; }
+.viewer-slot img { display: block; width: 100%; height: auto; }
+.viewer-btn { position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%); padding: 0.6rem 1.1rem;
+  font-size: 1rem; font-weight: 800; border: 2px solid var(--ink);
+  border-radius: 8px; background: var(--paper); cursor: pointer; }
 """
 
 
@@ -241,8 +334,16 @@ def render_consumer_manual_html(
     *,
     cover_image: str | Path,
     inventory_rows=(),
+    diagrams=None,
+    viewer=None,
 ) -> str:
-    """Compose the self-contained consumer manual HTML."""
+    """Compose the self-contained consumer manual HTML.
+
+    ``diagrams`` maps diagram ids to the typed OperationDiagrams referenced
+    by frames. ``viewer``, when supplied as ``{"payload": dict, "glb_b64":
+    str, "isometric": Path}``, appends the screen-only interactive 3D
+    section (explode + per-milestone isolation); print output is unaffected.
+    """
     cover_image = Path(cover_image)
     frame_ids = [frame.frame_id for page in consumer.pages
                  for frame in page.frames if not frame.is_hold_gate]
@@ -278,7 +379,8 @@ def render_consumer_manual_html(
             for frame in page.frames:
                 number += 1
                 body.append(_frame_html(
-                    detail, frame, number, Path(image_paths[frame.frame_id])))
+                    detail, frame, number, Path(image_paths[frame.frame_id]),
+                    diagrams=diagrams))
             sheets.append(
                 f'<section class="sheet frames" data-page="{page.number}">'
                 + "".join(body) + "</section>")
@@ -291,11 +393,42 @@ def render_consumer_manual_html(
         numbered.append(sheet.replace("</section>", footer + "</section>", 1))
     sheets = numbered
 
+    viewer_html = ""
+    viewer_style = ""
+    viewer_script = ""
+    if viewer is not None:
+        from .web_viewer import vendor_js, viewer_css, viewer_js
+
+        payload = viewer["payload"]
+        slug = payload["slug"]
+        payload_json = json.dumps(
+            payload, separators=(",", ":")).replace("</", "<\\/")
+        viewer_style = viewer_css()
+        viewer_html = (
+            '<section class="viewer-section" aria-label="Interactive 3D">'
+            "<h2>Explore the build in 3D</h2>"
+            "<p>Screen only — this section does not print. Use the explode "
+            "control to separate the compiled parts and the milestone "
+            "steps to isolate what each stage adds; click any part for its "
+            "size. Purchased hardware remains schedule items, not false "
+            "geometry.</p>"
+            f'<div class="viewer-slot" data-detail="{_e(slug)}">'
+            f'<img src="{_as_data_uri(viewer["isometric"])}" '
+            'alt="Interactive assembly preview">'
+            '<button type="button" class="viewer-btn">Explore in 3D'
+            "</button></div></section>"
+            f'<script type="application/json" id="detail-data-{_e(slug)}">'
+            f"{payload_json}</script>"
+            f'<script type="text/plain" id="detail-glb-{_e(slug)}">'
+            f'{viewer["glb_b64"]}</script>'
+        )
+        viewer_script = f"<script>{vendor_js()}\n{viewer_js()}</script>"
+
     return (
         "<!doctype html>\n"
         '<html lang="en"><head><meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
         '<link rel="icon" href="data:,">\n'
         f"<title>{_e(consumer.title)}</title>\n"
-        f"<style>{_STYLE}</style></head>\n"
-        f"<body>{''.join(sheets)}</body></html>")
+        f"<style>{_STYLE}{viewer_style}</style></head>\n"
+        f"<body>{''.join(sheets)}{viewer_html}{viewer_script}</body></html>")

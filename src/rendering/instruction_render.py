@@ -48,13 +48,14 @@ _STYLES = {
         edge_color=(0.0, 0.0, 0.0),
         edge_width=1.0,
     ),
-    # Consumer manual register: current work dark, prior assembly light
-    # gray, black outlines, grayscale-print legible.
+    # Consumer manual register: current work a readable mid gray under
+    # black feature edges, prior assembly near-white, grayscale-print
+    # legible. (Owner feedback: near-black fills hid grooves and notches.)
     "high_contrast": InstructionStyle(
         name="high_contrast",
         use_material_color=False,
-        work_color=(0.16, 0.17, 0.19),
-        prior_color=(0.88, 0.88, 0.88),
+        work_color=(0.44, 0.45, 0.47),
+        prior_color=(0.93, 0.93, 0.93),
         prior_opacity=1.0,
         edge_visibility=True,
         edge_color=(0.0, 0.0, 0.0),
@@ -156,9 +157,9 @@ def panel_content_key(
     if style != "technical":
         payload["style"] = style
         # Bumped when a non-default style's scene composition changes
-        # (e.g. feature-edge outlines); the technical register keeps its
-        # pre-style keys and cached renders.
-        payload["style_impl"] = 2
+        # (e.g. feature-edge outlines, palette revisions); the technical
+        # register keeps its pre-style keys and cached renders.
+        payload["style_impl"] = 3
     if not callouts:
         payload["callouts_drawn"] = False
     canonical = json.dumps(

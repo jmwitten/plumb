@@ -345,10 +345,13 @@ def test_high_contrast_style_is_dark_work_on_light_prior():
 
     style = instruction_style("high_contrast")
     assert style.use_material_color is False
-    assert luminance(style.work_color) < 0.25
-    assert luminance(style.prior_color) > 0.7
+    # Owner feedback 2026-07-14: near-black work fills hid the very features
+    # the captions name. Work stays a mid gray — dark enough to read as
+    # "current work", light enough to show geometry under black edges.
+    assert 0.3 < luminance(style.work_color) < 0.5
+    assert luminance(style.prior_color) > 0.85
     # grayscale printing: fills must be far apart in luminance
-    assert luminance(style.prior_color) - luminance(style.work_color) >= 0.5
+    assert luminance(style.prior_color) - luminance(style.work_color) >= 0.45
     assert style.prior_opacity == 1.0
     assert style.edge_color == (0.0, 0.0, 0.0)
     assert style.edge_visibility is True

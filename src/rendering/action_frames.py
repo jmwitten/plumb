@@ -107,6 +107,7 @@ class ActionFrame:
     hold: str = ""
     warning: str = ""
     illustration: FrameIllustration | None = None
+    detail_diagram_ids: tuple[str, ...] = ()
     is_hold_gate: bool = False
     record_title: str = ""
     record_fields: tuple[RecordField, ...] = ()
@@ -227,6 +228,7 @@ class FrameSpec:
     allowed_numbers: frozenset[str] = frozenset()
     diagram_id: str = ""
     inset: str = ""
+    detail_diagram_ids: tuple[str, ...] = ()
     is_hold_gate: bool = False
     record_title: str = ""
     record_fields: tuple[RecordField, ...] = ()
@@ -291,12 +293,20 @@ def project_action_frames(
                 f"panel {panel_index}: wildcard event ownership is only "
                 "legal when no sibling frame claims events; wildcard "
                 f"{wildcards[0].frame_id!r} conflicts")
+        panel_diagram_ids = {
+            diagram.diagram_id for diagram in getattr(panel, "diagrams", ())}
         for spec in panel_specs:
             for row in spec.hardware:
                 if row.letter not in known_letters:
                     raise FrameContractError(
                         f"frame {spec.frame_id!r} references hardware "
                         f"letter {row.letter!r} that was never assigned")
+            for diagram_id in spec.detail_diagram_ids:
+                if diagram_id not in panel_diagram_ids:
+                    raise FrameContractError(
+                        f"frame {spec.frame_id!r} references diagram "
+                        f"{diagram_id!r} that its source panel "
+                        f"{spec.panel_index} does not carry")
             validate_caption(
                 spec.caption,
                 allowed_numbers=spec.allowed_numbers,
@@ -336,6 +346,7 @@ def project_action_frames(
                     diagram_id=spec.diagram_id,
                     inset=spec.inset,
                 ),
+                detail_diagram_ids=spec.detail_diagram_ids,
                 is_hold_gate=spec.is_hold_gate,
                 record_title=spec.record_title,
                 record_fields=spec.record_fields,

@@ -16,11 +16,16 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO / "src") not in sys.path:
     sys.path.insert(0, str(_REPO / "src"))
+if str(_REPO / "scripts") not in sys.path:
+    sys.path.insert(0, str(_REPO / "scripts"))
+
+import cabinetry_project_report as CPR  # noqa: E402
 
 from detailgen.packs import compile_project_file  # noqa: E402
 from detailgen.packs.cabinetry.consumer_manual import (  # noqa: E402
     build_cabinetry_consumer_manual,
     consumer_action_frames,
+    consumer_diagrams,
     consumer_hardware_letters,
     consumer_panels_manual,
     consumer_part_rows,
@@ -89,11 +94,22 @@ def build_cabinetry_consumer_document(
         project.detail, panels_manual, image_dir,
         size=image_size, style="high_contrast")
 
+    viewer_assets = CPR.render_shared_product_assets(
+        project, out_dir / "consumer_viewer",
+        instruction_manual=panels_manual)
+    viewer = {
+        "payload": viewer_assets.viewer_payload,
+        "glb_b64": CPR._glb_b64(viewer_assets.glb_bytes),
+        "isometric": viewer_assets.images["isometric"],
+    }
+
     output_path.write_text(
         render_consumer_manual_html(
             project.detail, consumer, image_paths,
             cover_image=cover_image,
             inventory_rows=consumer_part_rows(project),
+            diagrams=consumer_diagrams(panels_manual),
+            viewer=viewer,
         ),
         encoding="utf-8",
     )

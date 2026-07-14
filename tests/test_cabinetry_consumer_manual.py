@@ -218,9 +218,10 @@ class TestMutation:
 
 
 @pytest.fixture(scope="module")
-def rendered(project, consumer, tmp_path_factory):
+def rendered(project, consumer, panels_manual, tmp_path_factory):
     from PIL import Image
 
+    from detailgen.packs.cabinetry.consumer_manual import consumer_diagrams
     from detailgen.rendering.consumer_manual_html import (
         render_consumer_manual_html,
     )
@@ -235,7 +236,8 @@ def rendered(project, consumer, tmp_path_factory):
     cover = image_dir / "cover.png"
     Image.new("RGB", (4, 3), "white").save(cover)
     return render_consumer_manual_html(
-        project.detail, consumer, image_paths, cover_image=cover)
+        project.detail, consumer, image_paths, cover_image=cover,
+        diagrams=consumer_diagrams(panels_manual))
 
 
 def _visible_text(html_text: str) -> str:
@@ -362,3 +364,66 @@ class TestPrintBreaks:
         assert counts, "no page tree found in printed PDF"
         # one printed Letter page per composed sheet: no frame splits/spill
         assert max(counts) == len(consumer.pages)
+
+
+class TestIteration2:
+    """Owner feedback round: cut sizes, screw-station diagrams, 3D viewer."""
+
+    def test_parts_card_shows_typed_cut_sizes(self, project):
+        from detailgen.packs.cabinetry.consumer_manual import (
+            consumer_part_rows,
+        )
+        rows = consumer_part_rows(project)
+        assert rows
+        for row in rows:
+            assert "cut" in row.label and "mm" in row.label, row.label
+        bottom = next(r for r in rows if "Cabinet bottom" in r.label)
+        assert "977.9" in bottom.label and "580.5" in bottom.label
+
+    def test_screw_frames_carry_their_panel_diagrams(self, consumer,
+                                                     panels_manual):
+        from detailgen.packs.cabinetry.consumer_manual import (
+            consumer_diagrams,
+        )
+        available = consumer_diagrams(panels_manual)
+        by_id = {f.frame_id: f for f in _frames(consumer)}
+        expected = {
+            "assembly.toe_base.frame": "toe-platform-plan",
+            "assembly.drawer_boxes.frame": "drawer-box-joinery",
+            "assembly.drawer_runners.frame": "runner-fixing-pattern",
+            "install.anchor.frame": "wall-anchor-path",
+        }
+        for frame_id, diagram_id in expected.items():
+            assert by_id[frame_id].detail_diagram_ids == (diagram_id,)
+            assert diagram_id in available
+
+    def test_rendered_frames_embed_station_diagrams(self, rendered):
+        for diagram_id in ("runner-fixing-pattern", "drawer-box-joinery",
+                           "wall-anchor-path"):
+            assert f'data-diagram-id="{diagram_id}"' in rendered
+
+    def test_unsupplied_diagram_fails_closed(self, project, consumer,
+                                             tmp_path):
+        from PIL import Image
+
+        from detailgen.rendering.action_frames import FrameContractError
+        from detailgen.rendering.consumer_manual_html import (
+            render_consumer_manual_html,
+        )
+        image_paths = {}
+        for page in consumer.pages:
+            for frame in page.frames:
+                path = tmp_path / f"{frame.frame_id}.png"
+                Image.new("RGB", (2, 2), "white").save(path)
+                image_paths[frame.frame_id] = path
+        cover = tmp_path / "cover.png"
+        Image.new("RGB", (2, 2), "white").save(cover)
+        with pytest.raises(FrameContractError, match="diagram"):
+            render_consumer_manual_html(
+                project.detail, consumer, image_paths, cover_image=cover,
+                diagrams={})
+
+    def test_viewer_section_absent_without_assets_and_hidden_in_print(
+            self, rendered):
+        assert '<div class="viewer-slot"' not in rendered
+        assert ".viewer-section { display: none; }" in rendered
