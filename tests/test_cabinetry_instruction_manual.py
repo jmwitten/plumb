@@ -291,6 +291,9 @@ def test_real_document_set_has_relative_links_and_six_shared_panel_assets(
     monkeypatch.setattr(
         documents, "compile_project_file", counted_compile_project_file,
     )
+    monkeypatch.setattr(
+        documents.CPR, "compile_project_file", counted_compile_project_file,
+    )
     monkeypatch.setattr(documents.CPR, "_render_views", counted_render_views)
 
     result = documents.build_cabinetry_document_pair(
@@ -333,26 +336,23 @@ def test_real_document_set_has_relative_links_and_six_shared_panel_assets(
     assert len(result["panel_images"]) == 6
     assert len(set(result["asset_keys"])) == 6
     assert all(Path(path).is_file() for path in result["panel_images"])
-    required_links = {
+    required_link_keys = {
         "technical_path": (
-            expected_basenames["manual_path"],
-            expected_basenames["fabrication_path"],
-            expected_basenames["audit_path"],
+            "manual_path", "fabrication_path", "audit_path",
         ),
         "manual_path": (
-            expected_basenames["technical_path"],
-            expected_basenames["fabrication_path"],
-            expected_basenames["audit_path"],
+            "technical_path", "fabrication_path", "audit_path",
         ),
-        "fabrication_path": (
-            expected_basenames["technical_path"],
-            expected_basenames["manual_path"],
-        ),
-        "audit_path": (expected_basenames["technical_path"],),
+        "fabrication_path": ("technical_path", "manual_path"),
+        "audit_path": ("technical_path",),
     }
-    for source_key, targets in required_links.items():
-        for target in targets:
-            assert f'href="{target}"' in documents_by_key[source_key]
+    for source_key, target_keys in required_link_keys.items():
+        for target_key in target_keys:
+            target_basename = expected_basenames[target_key]
+            linked_path = paths[source_key].parent / target_basename
+            assert f'href="{target_basename}"' in documents_by_key[source_key]
+            assert linked_path.resolve() == paths[target_key].resolve()
+            assert linked_path.is_file()
     viewer_markers = ('id="detail-data-', 'id="detail-glb-', "THREE.GLTFLoader")
     for marker in viewer_markers:
         assert marker in technical

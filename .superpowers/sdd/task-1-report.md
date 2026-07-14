@@ -133,3 +133,34 @@ expected `fabrication_*` and `audit_*` return keys are absent; its new
 compile-once and render-once assertions pass before that missing-output check.
 There are no syntax, import, collection, fixture, legacy-contract, or production
 regressions. No production file was changed.
+
+## Second re-review fix
+
+Addressed both blockers and the Minor item recorded in the Task 1 re-review:
+
+- S1+ and R1 negative ownership now extracts normalized values from rendered
+  `<code>` elements and compares exact identifier tokens. This distinguishes
+  the installation step `install.countertop` from the required audit finding
+  `cabinetry.install.countertop_support` while preserving exact negatives for
+  installation steps, finding rules, and evidence ids.
+- The document-set compile counter now patches both
+  `documents.compile_project_file` and
+  `documents.CPR.compile_project_file` through the same counted wrapper. A
+  compile through either imported module boundary contributes to the one-call
+  limit; the existing module-wide product-view render counter remains intact.
+- Every required companion href is now resolved from its source document's
+  parent directory, compared with the corresponding returned target path, and
+  required to exist as a file. This makes filesystem link closure explicit in
+  addition to the existing href, basename, hash, and file checks.
+
+The exact focused command after the second re-review fixes produced:
+
+```text
+16 failed, 8 passed in 23.35s
+```
+
+The failure shape remains coherent RED: fifteen failures are missing focused
+composers, and the document-set failure is the four absent fabrication/audit
+path and hash keys after the strengthened compile/render count has passed. The
+suite compiled cleanly, `git diff --check` was clean, and no production file was
+changed.

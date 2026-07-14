@@ -61,6 +61,17 @@ def _headings(document: str) -> tuple[str, ...]:
     )
 
 
+def _code_tokens(document: str) -> frozenset[str]:
+    return frozenset(
+        _visible_text(body)
+        for body in re.findall(
+            r"<code\b[^>]*>(.*?)</code\s*>",
+            document,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+    )
+
+
 def _images() -> dict[str, str]:
     return {view: PIXEL for view in CPR.REQUIRED_VIEWS}
 
@@ -206,12 +217,13 @@ def test_fabrication_composer_owns_complete_shop_and_assembly_ledgers():
         "Source map",
     }
     assert forbidden_headings.isdisjoint(_headings(html))
+    code_tokens = _code_tokens(html)
     for step in project.artifacts.installation_steps:
-        assert step.step_id not in html
+        assert step.step_id not in code_tokens
     for finding in project.report.findings:
-        assert finding.rule not in html
+        assert finding.rule not in code_tokens
     for evidence in project.report.evidence:
-        assert evidence.evidence_id not in html
+        assert evidence.evidence_id not in code_tokens
     for marker in VIEWER_MARKERS:
         assert marker not in html
 
@@ -236,12 +248,13 @@ def test_audit_composer_owns_complete_findings_evidence_and_source_map():
         "Dimensions",
     }
     assert forbidden_headings.isdisjoint(_headings(html))
+    code_tokens = _code_tokens(html)
     for step in (
         *project.artifacts.fabrication_steps,
         *project.artifacts.assembly_steps,
         *project.artifacts.installation_steps,
     ):
-        assert step.step_id not in html
+        assert step.step_id not in code_tokens
     for marker in VIEWER_MARKERS:
         assert marker not in html
 
