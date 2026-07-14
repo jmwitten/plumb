@@ -1,6 +1,6 @@
 # Precedent-First Design Selection
 
-**Status:** proposed for owner review
+**Status:** approved by owner on 2026-07-14
 
 **Date:** 2026-07-14
 
