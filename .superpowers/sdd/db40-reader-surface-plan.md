@@ -12,6 +12,7 @@
 
 - Preserve `frameless_three_drawer_40_build_document.html` as the landing-page basename.
 - DB40 installation/use remains HOLD; no UNKNOWN may become PASS.
+- Label `fabrication_ready` as model/shop-data readiness only; show unresolved purchasing/cutting preflight separately.
 - No cabinetry geometry, pack validation, or CPG order change is authorized.
 - Every displayed installation dimension comes from the compiled model or selected catalog record.
 - The document set compiles once and renders product views once.
@@ -32,7 +33,7 @@
 
 - [ ] **Step 1: Add a visible-text helper and failing primary-sheet test**
 
-  Strip `<script>` and `<style>` blocks before counting words. Assert the DB40 primary sheet has no more than 2,500 visible words, 80 `<tr>` rows, or eight tables; includes release state, active UNKNOWN rules, key dimensions, field checks, and installation steps; and excludes `Cut list`, `Machining schedule`, `Fabrication`, `Validation findings`, `Evidence register`, and `Source map` headings.
+  Strip `<script>` and `<style>` blocks before counting words. Assert the DB40 primary sheet has no more than 2,500 visible words, 80 `<tr>` rows, or eight tables; includes the four-part model/procurement/structure/install status matrix, active UNKNOWN rules, key dimensions, field checks, and installation steps; and excludes `Cut list`, `Machining schedule`, `Fabrication`, `Validation findings`, `Evidence register`, and `Source map` headings.
 
 - [ ] **Step 2: Add failing fabrication and audit ownership tests**
 
@@ -130,7 +131,7 @@
 
 - [ ] **Step 2: Compose A0/I1 review/install sheet**
 
-  Include typed release summary, active non-PASS gates, concise dimensions, installation drawings, field/signed-clearance checklist, installation-only hardware/source, installation/commissioning steps, optional isometric/3D viewer, and companion links. Exclude shop and audit ledgers.
+  Include typed release summary, shared procurement-preflight holds, active non-PASS gates, concise dimensions, installation drawings, field/signed-clearance checklist, installation-only hardware/source, installation/commissioning steps, optional isometric/3D viewer, and companion links. Call the passing gate `Model/shop-data gate`, never the broader `Fabrication ready`. Exclude shop and audit ledgers.
 
 - [ ] **Step 3: Compose S1+ fabrication packet**
 

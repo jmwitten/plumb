@@ -49,7 +49,8 @@ Visible-content budget on DB40: at most 2,500 words, 80 table rows, and eight ta
 
 Required content:
 
-- dynamic fabrication and installation/use release state;
+- a four-part status matrix: design/model data PASS, purchasing/cutting preflight OPEN, whole-cabinet structural capacity UNKNOWN, and installation/use HOLD;
+- dynamic fabrication and installation/use release state without relabeling procurement readiness as a model verdict;
 - plain-language release boundary and the three active UNKNOWN findings;
 - overall cabinet dimensions and the small set of drawer/front dimensions needed to review fit and appearance;
 - dedicated installed front/setout elevation;
@@ -149,11 +150,12 @@ The platform-level renderer exposes focused pure functions:
 - `build_cabinetry_audit_html(...)` — R1;
 - `installation_drawing_facts(project)` — single drawing-fact projection.
 
-Existing detailed table renderers remain reusable but are composed only into their owned surface. A validated immutable basename/link object owns every reciprocal document relationship. The shared instruction-manual type gains additive related-document links with an empty default, leaving non-cabinetry consumers unchanged. `build_cabinetry_html(...)` remains a compatibility wrapper for the new A0/I1 composer, and `generate_released_build_document(...)` continues to support single-document callers. `build_cabinetry_document_set(...)` becomes the normal DB40 delivery path; the old pair function remains as a compatibility alias during this increment.
+Existing detailed table renderers remain reusable but are composed only into their owned surface. One shared procurement-preflight projection owns sheet-nesting, unresolved product/SKU, and by-others exclusions so the landing sheet, shop packet, and manual cannot phrase those boundaries independently. A validated immutable basename/link object owns every reciprocal document relationship. The shared instruction-manual type gains additive related-document links with an empty default, leaving non-cabinetry consumers unchanged. `build_cabinetry_html(...)` remains a compatibility wrapper for the new A0/I1 composer, and `generate_released_build_document(...)` continues to support single-document callers. `build_cabinetry_document_set(...)` becomes the normal DB40 delivery path; the old pair function remains as a compatibility alias during this increment.
 
 ## Truth and safety rules
 
 - Presentation changes no model, graph, verdict, or release state.
+- `fabrication_ready` is labeled as a model/shop-data gate, not a purchasing or cutting authorization; unresolved procurement preflight is shown separately.
 - The default sheet derives release language from `InstallationUsePolicy`; no independent PASS/HOLD prose may drift.
 - A held project must show the hold before any installation instruction.
 - The 40 lb/drawer value is a design input, not an authorized commissioning load.
@@ -166,6 +168,7 @@ Existing detailed table renderers remain reusable but are composed only into the
 
 - DB40 A0/I1 stays within its visible word/table/row budgets.
 - The primary sheet excludes all S1+/R1-only headings and includes all active non-PASS findings.
+- The DB40 status matrix exposes the open sheet-nesting and edge-band procurement decisions without converting them into validation verdicts.
 - S1+ contains every cut, edge-band, hardware, and machining record and all fabrication/assembly step IDs.
 - R1 contains every finding, evidence record, and source-map target.
 - The four documents link to the correct companions using relative basenames.
