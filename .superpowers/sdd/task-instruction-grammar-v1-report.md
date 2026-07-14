@@ -74,7 +74,7 @@ locking-device roles (42) — labeled from typed catalog products
 | Criterion | Status |
 |---|---|
 | ≤ 12 printed Letter pages | **11 composed sheets = 11 printed PDF pages** (Chrome print, verified) |
-| ≤ 1,500 visible instructional words | **623** (excl. inventory + signed record) |
+| ≤ 1,500 visible instructional words | **640** (excl. inventory + signed record) |
 | No instruction paragraph > 50 words | enforced at build time (`validate_caption`) |
 | Every frame has traceable sources | every frame carries owned events and/or resolvable artifact step ids (tested) |
 | Every source event owned exactly once | `validate_frame_ownership` on all six panels (tested) |
@@ -110,9 +110,29 @@ page, the signed installation/fit record, and per-frame provenance
 
 ## Review outcomes
 
-- Adversarial review: PENDING — see `review-instruction-grammar-v1.md`
-- No-context builder review: PENDING — see
-  `review-instruction-grammar-v1-builder.md`
+- **Adversarial review (fresh context): zero Critical, zero Important,
+  four Minor** — see `review-instruction-grammar-v1.md`. Two minors fixed
+  post-review (panel-multiset event ownership; `repeat_subject` audited),
+  one retained deliberately (`_test_caption_override` seam — it is the
+  loud-failure proof), one accepted as intended altitude (kit-register
+  captions drop dimensions the fabrication packet retains; reviewer
+  confirmed nothing action-changing was lost).
+- **No-context builder review: conditional PASS** — see
+  `review-instruction-grammar-v1-builder.md`. "A careful builder can
+  finish it: captions are accurate, sequence is disciplined, hardware
+  accounting is exact" and the hardware-letter bookkeeping reconciled to
+  the piece ("better than most big-box manuals"); the illustration
+  grammar (exploded views, motion arrows, adjustment diagrams) does not
+  yet meet the West Elm/Blum bar. Fixed from this round: drywall-anchor
+  line promoted to a ⚠ warning box, label-dependency stated at the kit
+  gate, stabilizer components attributed to their letter, page numbers
+  added. Remaining illustration findings are documented v1 scope limits —
+  motion/exploded states are not modeled facts, and this branch may not
+  invent them or change geometry.
+
+After both fix rounds: 11 pages / **640** visible instructional words;
+consumer sha256
+`2ae10ec3efb9ba9d1442500845ac6605b97b193cde2b5a6c97aff99a3cf3c522`.
 
 ## Honest gaps and notes
 

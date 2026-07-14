@@ -194,7 +194,7 @@ ul.tools li::before { content: "\\2022"; margin-right: 0.4rem; }
 .repeat-badge { background: var(--ink); color: var(--paper); }
 .repeat-badge small { font-weight: 600; }
 .frame figure { margin: 0; }
-.frame img { display: block; max-width: 100%; max-height: 2.7in;
+.frame img { display: block; max-width: 100%; max-height: 2.6in;
   width: auto; height: auto; margin: 0 auto; background: var(--paper); }
 .inset-note { font-size: 0.8rem; color: var(--line); }
 .caption { font-size: 0.98rem; margin: 0.35rem 0 0.15rem; }
@@ -215,8 +215,10 @@ ul.tools li::before { content: "\\2022"; margin-right: 0.4rem; }
 .record th, .record td { border: 1.5px solid var(--ink); padding: 0.45rem;
   text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 .record .entry { width: 30%; height: 2.4rem; }
-.page-number { text-align: right; font-size: 0.72rem; color: #555;
-  padding-top: 0.25rem; }
+.sheet { position: relative; }
+.page-number { position: absolute; right: 0.55in; bottom: 0.16in;
+  font-size: 0.72rem; color: #555; margin: 0; }
+@media print { .page-number { right: 0.12in; bottom: 0.02in; } }
 @media (max-width: 700px) {
   .sheet { width: 100%; min-height: 0; padding: 4vw; }
   ul.letters { grid-template-columns: 1fr; }
