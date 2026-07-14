@@ -3615,3 +3615,4 @@ this loudly. Concrete fix queued (RAILFASTEN) ahead of the full ontology.
 ## DV72 assumed-condition release — 2026-07-14
 
 - Task 1: complete (commits c0de122..2168946, review clean). Owner-assumed wall and rough-ins are typed, never field-verified, and contradictions with geometry-driving site declarations fail loudly; 30 model tests passed.
+- Task 2: complete (commits e2f47e8..475f301, review clean after one fix wave). K-7124-A/K-8998 drive connected gross plumbing envelopes, both exact MOVENTO SKUs are pinned, runner fit uses the physical span, and rough-ins have unique bay ownership; 39 scoped and 54 downstream tests passed.
