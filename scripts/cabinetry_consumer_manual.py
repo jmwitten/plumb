@@ -23,6 +23,7 @@ from detailgen.packs.cabinetry.consumer_manual import (  # noqa: E402
     consumer_action_frames,
     consumer_hardware_letters,
     consumer_panels_manual,
+    consumer_part_rows,
 )
 from detailgen.rendering.consumer_manual_html import (  # noqa: E402
     render_consumer_manual_html,
@@ -92,7 +93,7 @@ def build_cabinetry_consumer_document(
         render_consumer_manual_html(
             project.detail, consumer, image_paths,
             cover_image=cover_image,
-            inventory_rows=panels_manual.inventory,
+            inventory_rows=consumer_part_rows(project),
         ),
         encoding="utf-8",
     )

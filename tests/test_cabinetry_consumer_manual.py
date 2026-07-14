@@ -330,3 +330,35 @@ class TestGeneratorScript:
         # the accepted four-document set is not rewritten by this script
         assert not (tmp_path / "frameless_three_drawer_40_assembly_manual"
                     ".html").exists()
+
+
+@pytest.mark.skipif(
+    __import__("os").environ.get("DETAILGEN_PRINT_QA") != "1",
+    reason="print-break QA needs headless Chrome; set DETAILGEN_PRINT_QA=1",
+)
+class TestPrintBreaks:
+    def test_printed_pdf_page_count_matches_composed_pages(
+            self, consumer, tmp_path):
+        import re
+        import subprocess
+
+        chrome = ("/Applications/Google Chrome.app/Contents/MacOS/"
+                  "Google Chrome")
+        document = (ROOT / "outputs/frameless_three_drawer_40/"
+                    "frameless_three_drawer_40_consumer_manual.html")
+        if not Path(chrome).exists() or not document.exists():
+            pytest.skip("chrome or generated manual not available")
+        pdf = tmp_path / "consumer.pdf"
+        subprocess.run(
+            [chrome, "--headless=new", "--disable-gpu", "--no-sandbox",
+             "--no-first-run", "--virtual-time-budget=25000",
+             "--timeout=40000", f"--user-data-dir={tmp_path}/profile",
+             f"--print-to-pdf={pdf}", "--no-pdf-header-footer",
+             f"file://{document}"],
+            check=True, capture_output=True, timeout=120)
+        data = pdf.read_bytes()
+        counts = [int(c) for c in re.findall(
+            rb"/Type\s*/Pages[^>]*?/Count\s+(\d+)", data)]
+        assert counts, "no page tree found in printed PDF"
+        # one printed Letter page per composed sheet: no frame splits/spill
+        assert max(counts) == len(consumer.pages)

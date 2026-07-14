@@ -554,6 +554,33 @@ def build_cabinetry_consumer_manual(
     )
 
 
+def consumer_part_rows(project):
+    """Short kit-card part rows: count × reader name, nothing else.
+
+    Dimensions, materials, and finish/grain data live in the fabrication
+    packet; the prepared-kit gate guarantees parts arrive cut and labeled,
+    so the consumer card identifies parts by their label names only.
+    """
+    from ...rendering.instruction_panels import DisplayRow
+
+    labels = part_labels(project.detail.assembly.parts)
+    roles = project.detail.roles()
+    counts: dict[str, list[str]] = {}
+    for part in project.detail.assembly.parts:
+        if roles.get(part.name) == "existing":
+            continue
+        # Fastener-shaped components are already on the lettered hardware
+        # card; the parts card lists panels and assemblies only.
+        if hasattr(part.component, "head_height"):
+            continue
+        counts.setdefault(labels[part.id].reader_name, []).append(part.id)
+    return tuple(
+        DisplayRow("part", f"{len(ids)} × {name}", count=len(ids),
+                   source_part_ids=tuple(ids))
+        for name, ids in counts.items()
+    )
+
+
 def consumer_panels_manual(project):
     """The panel manual whose imagery backs the consumer frames."""
     return build_cabinetry_instruction_manual(

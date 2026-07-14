@@ -123,6 +123,7 @@ def panel_content_key(
     size: tuple[int, int] = DEFAULT_SIZE,
     *,
     style: str = "technical",
+    callouts: bool = True,
 ) -> str:
     """Hash only image-relevant geometry, order, camera, and station inputs."""
     instruction_style(style)
@@ -154,6 +155,8 @@ def panel_content_key(
     # the payload keeps every existing content key (and cached PNG) stable.
     if style != "technical":
         payload["style"] = style
+    if not callouts:
+        payload["callouts_drawn"] = False
     canonical = json.dumps(
         payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -239,13 +242,14 @@ def _draw_overlay(
     vtk,
     size: tuple[int, int],
     key: str,
+    callouts: bool = True,
 ) -> None:
     from PIL import Image, ImageDraw
     from PIL.PngImagePlugin import PngInfo
 
     centers = _part_centers(detail)
     labels = part_labels(detail.assembly.parts)
-    callout_ids = panel_callout_ids(detail, panel)
+    callout_ids = panel_callout_ids(detail, panel) if callouts else ()
     callout_font = _font(34)
     dimension_font = _font(19)
 
@@ -360,12 +364,14 @@ def render_instruction_panel(
     *,
     size: tuple[int, int] = DEFAULT_SIZE,
     style: str = "technical",
+    callouts: bool = True,
 ) -> Path:
     """Render one ghost/arrival panel and reuse an exact content-key hit."""
     import vtk
 
     palette = instruction_style(style)
-    key = panel_content_key(detail, panel, size=size, style=style)
+    key = panel_content_key(detail, panel, size=size, style=style,
+                            callouts=callouts)
     output = Path(out_dir) / f"{key}.png"
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists() and _is_valid_cached_panel(output, key=key, size=size):
@@ -449,7 +455,7 @@ def render_instruction_panel(
         writer.Write()
         _draw_overlay(
             temporary, detail=detail, panel=panel, renderer=renderer, vtk=vtk,
-            size=size, key=key)
+            size=size, key=key, callouts=callouts)
         if not _is_valid_cached_panel(temporary, key=key, size=size):
             raise RuntimeError(
                 f"instruction panel {panel.index} did not produce a complete "
@@ -519,7 +525,7 @@ def render_cover_image(
         stations=(),
     )
     return render_instruction_panel(
-        detail, pseudo, out_dir, size=size, style=style)
+        detail, pseudo, out_dir, size=size, style=style, callouts=False)
 
 
 def render_instruction_images(
