@@ -735,9 +735,7 @@ def build_double_vanity_model(
     lower_base_z = z0 + 25.0
     study_clearance = 0.5 * IN
     sink_center_y = wall_y - PURIST_WALL.nominal_wall_to_drain_mm
-    countertop_top_z = (
-        z0 + vanity.body_height_mm + vanity.countertop_thickness_mm
-    )
+    countertop_underside_z = z0 + vanity.body_height_mm
     upper_runner = StudyRunner(
         family_id="blum_movento_763_4570s@2026.1",
         soft_close=True,
@@ -795,10 +793,10 @@ def build_double_vanity_model(
             "fixture_body",
             center - K20000.overall_width_mm / 2,
             sink_center_y - K20000.overall_depth_mm / 2,
-            countertop_top_z - K20000.overall_height_mm,
+            countertop_underside_z - K20000.overall_height_mm,
             center + K20000.overall_width_mm / 2,
             sink_center_y + K20000.overall_depth_mm / 2,
-            countertop_top_z,
+            countertop_underside_z,
             authority="manufacturer_dimensions_provisional_placement",
         )
         tailpiece_radius = max(K20000.tailpiece_od_mm / 2, 25.0)
@@ -1562,16 +1560,18 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
                 )
             )
         coordination_ok = coordination_ok and physical_matches
+    coordination_verdict = "UNKNOWN" if coordination_ok else "FAIL"
     add(
         "double_vanity.geometry.fixture_plumbing_drawer",
-        "PASS" if coordination_ok else "FAIL", "required",
-        "Manufacturer-sized fixture envelopes, provisional tailpiece/trap-arm/"
-        "supply/shutoff solids, service envelopes, and physical U-drawer voids "
-        "share one project coordinate frame. Dynamic runner/removal truth remains "
-        "UNKNOWN until selected hardware and rough-ins replace study assumptions."
+        coordination_verdict, "required",
+        "The manufacturer-sized fixture, provisional plumbing solids, service "
+        "envelopes, and physical drawer voids are internally consistent, but the "
+        "selected drain and trap dimensions do not drive those provisional solids. "
+        "Product fit, rough-in, tool access, and dynamic runner/removal therefore "
+        "remain UNKNOWN."
         if coordination_ok else
         "Fixture, plumbing, service, and drawer study geometry do not agree.",
-        "calculated",
+        "unknown" if coordination_ok else "calculated",
     )
 
     incompatible_runners = []
@@ -1659,9 +1659,9 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
     add(
         "double_vanity.mount.representation",
         "PASS" if mount_ok else "FAIL", "required",
-        "A continuous rear rail, surveyed wall studs, and candidate fastener axes "
-        "share verified X axes and represent the load path; representation does "
-        "not establish capacity."
+        "A continuous rear rail, study-declared stud axes, and candidate fastener "
+        "axes share X coordinates and represent a proposed load path; this does "
+        "not establish a field survey or capacity."
         if mount_ok else
         "The rail, verified studs, and candidate fastener axes do not form a "
         "complete represented load path.",

@@ -60,6 +60,9 @@ def test_review_owns_the_useful_sink_plumbing_drawer_mount_section():
     assert 'data-section-system="rear-rail"' in review
     assert 'data-section-system="wall"' in review
     assert "Drawer-removal service sequence" in review
+    assert "IMG_7670.HEIC" in review
+    assert "warm figured wood" in review
+    assert "visual intent only" in review
 
 
 def test_validation_owns_all_release_rows_without_omnibus_duplication():
@@ -114,6 +117,10 @@ def test_handyman_review_findings_are_resolved_without_overclaiming_access():
     assert validation.count('data-release-rule="double_vanity.release.') == 8
     assert 'data-commissioning-rule="double_vanity.release.commissioning"' in validation
     assert "Post-install commissioning hold" in validation
+    assert "Proposed sequence—conditional" in assembly
+    assert "If runner validation proves" in assembly
+    assert "surveyed wall studs" not in validation
+    assert "study-declared stud axes" in validation
 
 
 def test_generator_compiles_once_and_writes_deterministic_inventory(tmp_path):

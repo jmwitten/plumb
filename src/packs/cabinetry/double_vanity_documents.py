@@ -72,12 +72,13 @@ def _system_section(project) -> str:
 <path data-section-system="upper-drawer" d="M110 248h205v145h420v-42H355V248z" class="drawer"/><rect data-section-system="lower-drawer" x="110" y="402" width="430" height="68" class="drawer"/>
 <circle data-section-system="candidate-anchor" cx="807" cy="199" r="8" fill="#8e2d24"/><text x="450" y="505">proposed service-access concept; hand and tool paths remain unverified.</text>
 </svg></figure></section>
-<section><h2>Drawer-removal service sequence</h2><ol><li>Empty and remove the upper U drawer using the selected runner locking devices.</li><li>Remove the lower drawer when rear-wall, rail, or anchor access is required.</li><li>Place a pan below each independent P-trap; service the cleanout/slip joints and both shutoffs only after field verification proves the proposed hand and tool paths.</li><li>Leak-test supplies, overflow drain, tailpiece, trap, and trap arm before either drawer returns.</li><li>Reinstall, adjust reveals, cycle closed/full-extension/removal states, and record commissioning.</li></ol></section>
+<section><h2>Drawer-removal service sequence</h2><p><b>Proposed sequence—conditional on runner validation.</b> This is not a current service instruction.</p><ol><li>If runner validation proves the removal motion and locking-device access, empty and remove the upper U drawer.</li><li>If the selected lower runner proves removable, remove the lower drawer when rear-wall, rail, or anchor access is required.</li><li>Place a pan below each independent P-trap; service the cleanout/slip joints and both shutoffs only after field verification proves the proposed hand and tool paths.</li><li>Leak-test supplies, overflow drain, tailpiece, trap, and trap arm before either drawer returns.</li><li>Reinstall only under the validated hardware procedure, adjust reveals, cycle closed/full-extension/removal states, and record commissioning.</li></ol></section>
 """
 
 
 def build_double_vanity_review_html(project) -> str:
     body = "".join((
+        '<section><h2>Reference-image intent</h2><p><code>IMG_7670.HEIC</code> controls visual intent only: warm figured wood, four flush slab fronts with dark reveals, brass half-moon pulls, a pale substantial counter, broad rectangular sinks, and a clean floating shadow line. It has no dimensional, structural, plumbing, or fabrication authority.</p></section>',
         _system_section(project),
         '<section><h2>Overall review geometry</h2><div class="diagram-grid">',
         study._overall_elevation(project), study._overall_plan(project),

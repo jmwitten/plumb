@@ -48,7 +48,7 @@ def test_study_projects_fixture_plumbing_drawer_and_code_facts_from_model():
     html = _html()
 
     for value in (
-        "1828.8 mm", "508.0 mm", "533.4 mm", "558.8 mm", "38.1 mm",
+        "1828.8 mm", "558.8 mm", "533.4 mm", "38.1 mm",
         "514.0 × 398.0 × 186.0 mm", "448.0 × 334.0 × 135.0 mm",
         "44.0 mm", "31.75 mm", "1281904-7", "229.0 mm",
         "1219.2 mm", "609.6 mm", "381.0 mm", "762.0 mm", "533.4 mm",

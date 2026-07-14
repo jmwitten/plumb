@@ -243,6 +243,10 @@ def test_unchanged_base_language_builds_and_has_no_unmodeled_geometry_failure():
 
 def test_service_geometry_is_derived_from_fixture_and_plumbing_envelopes():
     model = _project().model
+    countertop_underside = (
+        model.section.vanity.bottom_elevation_mm
+        + model.section.vanity.body_height_mm
+    )
 
     for bay, path in zip(model.sink_bays, model.plumbing_paths):
         upper = model.drawer(bay.bay_id, "upper")
@@ -264,6 +268,7 @@ def test_service_geometry_is_derived_from_fixture_and_plumbing_envelopes():
         }
         assert not upper.dynamic_verified
         assert not lower.dynamic_verified
+        assert path.fixture_envelope.z1_mm == pytest.approx(countertop_underside)
 
 
 def test_fixture_dimensions_drive_path_and_drawer_geometry(monkeypatch):
@@ -284,6 +289,34 @@ def test_fixture_dimensions_drive_path_and_drawer_geometry(monkeypatch):
         baseline.part("drawer_left_upper_bottom_bridge").width_mm
     )
     assert changed.derived_fact_manifest() != baseline.derived_fact_manifest()
+
+
+def test_selected_drain_and_trap_do_not_receive_fake_geometry_pass():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    impossible = replace(
+        model,
+        drain=replace(
+            model.drain, body_height_mm=800.0, connection_od_mm=70.0,
+        ),
+        trap=replace(
+            model.trap,
+            inlet_od_mm=70.0,
+            outlet_od_mm=70.0,
+            overall_length_mm=800.0,
+            overall_height_mm=500.0,
+        ),
+    )
+    findings = {
+        finding.rule: finding
+        for finding in validate_double_vanity_model(impossible).findings
+    }
+    coordination = findings[
+        "double_vanity.geometry.fixture_plumbing_drawer"
+    ]
+    assert coordination.verdict == "UNKNOWN"
+    assert "do not drive" in coordination.message
 
 
 def test_impossible_fixture_fails_loudly_instead_of_emitting_fake_clearance(
@@ -547,7 +580,7 @@ def test_dynamic_verification_state_is_orthogonal_to_static_coordination():
     }
     assert findings[
         "double_vanity.geometry.fixture_plumbing_drawer"
-    ].verdict == "PASS"
+    ].verdict == "UNKNOWN"
 
 
 def test_unreleased_drawer_parts_are_not_emitted_as_cut_list_dimensions():
@@ -594,11 +627,13 @@ def test_all_nine_study_release_gates_are_required_unknown_and_block_release():
     assert findings[
         "double_vanity.drawer.runner_applicability"
     ].severity == "advisory"
-    assert len(project.report.blocking) == 9
-    assert all(
-        finding.rule.startswith("double_vanity.release.")
-        for finding in project.report.blocking
-    )
+    assert len(project.report.blocking) == 10
+    assert findings[
+        "double_vanity.geometry.fixture_plumbing_drawer"
+    ].verdict == "UNKNOWN"
+    assert {finding.rule for finding in project.report.blocking} == expected | {
+        "double_vanity.geometry.fixture_plumbing_drawer"
+    }
     assert not project.report.fabrication_ready
     with pytest.raises(ProjectReleaseError, match="fixture_template"):
         project.require_release()
