@@ -10,8 +10,10 @@ mechanism is exercised in isolation from any shipped spec.
 from __future__ import annotations
 
 import ast
+from dataclasses import replace
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -29,8 +31,8 @@ from detailgen.assemblies.event_graph import (
     ResolvedProcessRef, ResolvedStage, ResolvedStaging, ResolvedUnit,
     build_event_graph,
     derive_reader_steps, linearize, unordered_parts,
+    validate_reader_step_order,
 )
-import detailgen.assemblies.event_graph as event_graph_module
 from detailgen.assemblies.installation import straight_screw_group
 from detailgen.components import (
     HexBolt, HexNut, JoistHanger, Lumber, StructuralScrew, Washer,
@@ -852,6 +854,7 @@ def test_reader_steps_condense_entangled_stool_installs_without_dropping_work():
 
     assert len(linearize(graph)) == len(graph.events) == 11
     steps = derive_reader_steps(graph)
+    validate_reader_step_order(graph, steps)
 
     assert len(steps) == 3
     assert steps[0].connections == graph.conn_labels[:2]
@@ -955,6 +958,47 @@ def test_reader_steps_restore_platform_sequence_with_five_honest_merges():
     assert set(emitted) == set(graph.conn_labels)
 
 
+def test_reader_order_gate_rejects_the_shipped_platform_23_step_grouping():
+    """Replay the plausible delivered defect: paired hanger connections were
+    split while a shared hung member was folded into the first side's step."""
+    from detailgen.spec.compiler import compile_spec_file
+
+    root = Path(__file__).resolve().parents[1]
+    detail = compile_spec_file(root / "details" / "platform.spec.yaml")
+    detail.validate()
+    graph = detail._connection_checks.event_graph
+    corrected = derive_reader_steps(graph)
+    shipped = []
+    for step in corrected:
+        if len(step.connections) != 2 or " + " not in step.title:
+            shipped.append(step)
+            continue
+        for label in step.connections:
+            parts = tuple(
+                part_id for part_id in step.parts_placed
+                if next(
+                    candidate for candidate in graph.conn_labels
+                    if part_id in graph.members_of[candidate]
+                ) == label
+            )
+            shipped.append(replace(
+                step,
+                title=f"install {label}",
+                connections=(label,),
+                parts_placed=parts,
+            ))
+
+    assert len(shipped) == 23
+    with pytest.raises(ReaderStepProjectionError) as caught:
+        validate_reader_step_order(graph, tuple(shipped))
+
+    message = str(caught.value)
+    pairs = set(re.findall(r"step (\d+) -> step (\d+)", message))
+    assert pairs == {("2", "1"), ("4", "3"), ("6", "5"),
+                     ("8", "7"), ("10", "9")}
+    assert "technique_default" in message
+
+
 def test_reader_step_order_validator_rejects_backward_model_edges():
     """Every reader surface must pin the claim that its printed sequence is
     one valid graph linearization, not leave that check to the panel renderer."""
@@ -965,13 +1009,57 @@ def test_reader_step_order_validator_rejects_backward_model_edges():
     detail.validate()
     graph = detail._connection_checks.event_graph
     steps = derive_reader_steps(graph)
-    validator = getattr(event_graph_module, "validate_reader_step_order", None)
-
-    assert validator is not None, (
-        "the shared reader-step derivation has no order-validity gate")
-    validator(graph, steps)
+    validate_reader_step_order(graph, steps)
     with pytest.raises(ReaderStepProjectionError, match="backward graph edge"):
-        validator(graph, tuple(reversed(steps)))
+        validate_reader_step_order(graph, tuple(reversed(steps)))
+
+
+def test_reader_step_order_validator_rejects_incomplete_step_sequences():
+    """The standalone gate must not pass vacuously when a document drops
+    reader steps, including the empty-sequence starvation shape."""
+    from detailgen.spec.compiler import compile_spec_file
+
+    root = Path(__file__).resolve().parents[1]
+    detail = compile_spec_file(root / "details" / "platform.spec.yaml")
+    detail.validate()
+    graph = detail._connection_checks.event_graph
+    steps = derive_reader_steps(graph)
+
+    for incomplete in (steps[:-1], steps[1:], ()):
+        with pytest.raises(
+            ReaderStepProjectionError,
+            match="missing required reader event",
+        ):
+            validate_reader_step_order(graph, incomplete)
+
+
+def test_reader_step_order_validator_rejects_unknown_step_references():
+    """Corrupt reader fields must produce teaching errors rather than being
+    silently skipped by the shared ownership reconstruction."""
+    from detailgen.spec.compiler import compile_spec_file
+
+    root = Path(__file__).resolve().parents[1]
+    detail = compile_spec_file(root / "details" / "platform.spec.yaml")
+    detail.validate()
+    graph = detail._connection_checks.event_graph
+    steps = derive_reader_steps(graph)
+    connection_index = next(
+        index for index, step in enumerate(steps) if step.connections)
+    original = steps[connection_index]
+    mutations = (
+        (replace(original, parts_placed=(*original.parts_placed, "missing-part")),
+         "unknown part 'missing-part'"),
+        (replace(original, connections=(*original.connections, "missing-joint")),
+         "unknown connection 'missing-joint'"),
+        (replace(original, joins=(*original.joins, "missing-unit")),
+         "unknown join unit 'missing-unit'"),
+    )
+
+    for mutated, message in mutations:
+        bad_steps = (*steps[:connection_index], mutated,
+                     *steps[connection_index + 1:])
+        with pytest.raises(ReaderStepProjectionError, match=message):
+            validate_reader_step_order(graph, bad_steps)
 
 
 def test_reader_steps_fail_when_a_required_event_was_never_mapped():

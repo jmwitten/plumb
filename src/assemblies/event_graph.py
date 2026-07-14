@@ -1217,24 +1217,58 @@ def linearize(graph: EventGraph) -> tuple[Event, ...]:
     return tuple(out)
 
 
-def validate_reader_step_order(
+def _required_reader_events(graph: EventGraph) -> set[Event]:
+    """Events a complete reader-step projection must own."""
+    ordered_part_ids = set(graph.unit_of)
+    for stage in graph.stages:
+        ordered_part_ids.update(stage.parts)
+    for members in graph.members_of.values():
+        ordered_part_ids.update(members)
+    required = {event for event in graph.events if event.kind != "place"}
+    required.update(
+        event for part_id in ordered_part_ids
+        if (event := graph.event_of.get(part_id)) is not None
+        and event.kind == "place")
+    return required
+
+
+def reader_step_event_map(
     graph: EventGraph,
     steps: tuple[ReaderStep, ...],
-) -> None:
-    """Raise when a printed reader-step order reverses a model edge."""
+) -> dict[Event, int]:
+    """Return strict, complete event ownership for reader steps.
+
+    This is the single reconstruction used by core order validation and
+    presentation consumers. It validates completeness and field references;
+    it does not decide whether the step order is canonical or edge-valid.
+    """
     event_to_step: dict[Event, int] = {}
     for index, step in enumerate(steps):
         events = []
-        events.extend(
-            graph.event_of[part_id] for part_id in step.parts_placed
-            if part_id in graph.event_of)
+        for part_id in step.parts_placed:
+            if part_id not in graph.event_of:
+                raise ReaderStepProjectionError(
+                    f"reader step {index + 1} names unknown part "
+                    f"{part_id!r}.")
+            events.append(graph.event_of[part_id])
         for label in step.connections:
-            events.extend(graph.drives_of.get(label, ()))
+            if label not in graph.drives_of:
+                raise ReaderStepProjectionError(
+                    f"reader step {index + 1} names unknown connection "
+                    f"{label!r}.")
+            events.extend(graph.drives_of[label])
         if step.process_event is not None:
+            if step.process_event not in graph.events:
+                raise ReaderStepProjectionError(
+                    f"reader step {index + 1} names unknown process event "
+                    f"{step.process_event!r}.")
             events.append(step.process_event)
-        events.extend(
-            graph.join_of[unit] for unit in step.joins
-            if unit in graph.join_of)
+        for unit in step.joins:
+            if unit not in graph.join_of:
+                raise ReaderStepProjectionError(
+                    f"reader step {index + 1} names unknown join unit "
+                    f"{unit!r}.")
+            events.append(graph.join_of[unit])
         for event in events:
             prior = event_to_step.get(event)
             if prior is not None and prior != index:
@@ -1243,6 +1277,27 @@ def validate_reader_step_order(
                     f"steps: {event!r} appears in steps {prior + 1} and "
                     f"{index + 1}.")
             event_to_step[event] = index
+
+    missing = _required_reader_events(graph) - set(event_to_step)
+    if missing:
+        raise ReaderStepProjectionError(
+            "reader-step order is missing required reader event(s): "
+            f"{sorted(missing, key=repr)!r}; refusing to validate an "
+            "incomplete or empty printed sequence.")
+    return event_to_step
+
+
+def validate_reader_step_order(
+    graph: EventGraph,
+    steps: tuple[ReaderStep, ...],
+) -> None:
+    """Validate a complete printed sequence as one valid linearization.
+
+    Completeness and event ownership are mandatory. Graph edges may remain
+    within one condensed step or point forward, never backward. Independent
+    steps may be swapped: this checks validity, not canonical tie-breaking.
+    """
+    event_to_step = reader_step_event_map(graph, steps)
 
     backwards = []
     for edge in graph.edges:
@@ -1477,16 +1532,7 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
                     f"{event!r} to both {prior!r} and {key!r}; reader work "
                     "must have exactly one presentation owner.")
             event_bucket[event] = key
-    ordered_part_ids = set(graph.unit_of)
-    ordered_part_ids.update(stage_of_part)
-    for members in graph.members_of.values():
-        ordered_part_ids.update(members)
-    required_events = {event for event in graph.events
-                       if event.kind != "place"}
-    required_events.update(
-        event for part_id in ordered_part_ids
-        if (event := graph.event_of.get(part_id)) is not None
-        and event.kind == "place")
+    required_events = _required_reader_events(graph)
     unmapped = required_events - set(event_bucket)
     if unmapped:
         raise ReaderStepProjectionError(
