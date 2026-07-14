@@ -187,6 +187,11 @@ Blum does **not** provide a universal plumbing-void size.
 Sources:
 [Blum sink cabinet overview](https://www.blum.com/us/en/products/cabinet-applications/sinkunit/overview/) and
 [Blum TANDEMBOX sink pull-out memo](https://d2.blum.com/services/BEC003/box1551-fl-349_fl_dok_bau_%24sen_%24aof_%24v1.pdf).
+Blum's current wraparound instructions also show that a physical U box needs
+inside profiles/dividers and their fixings, not just two narrow floor wings.
+That construction check directly informed the study's front floor bridge and
+two inner return walls; the exact joinery remains gated with the runner system.
+Source: [Blum wraparound drawer instructions](https://www.blum.com/file/cme105788_ma_dok_bus?country=us&language=en).
 
 Hettich likewise publishes an AvanTech YOU drawer with a bottom cutout and says
 other configurations are possible. Its Banio frame provides a useful bound on
@@ -229,11 +234,73 @@ The rear-chase depth remains a project-derived dimension. A provisional
 studies only; it is not released until the real fittings, connection arcs,
 service hand clearance, and drawer travel have been collision-checked.
 
+The current DV72 analytic path produces a much shorter lower envelope than
+that early 15 in assumption. It must **not** inherit MOVENTO by vocabulary:
+Blum's current US guide starts at a 305 mm / 12 in drawer length and publishes
+corresponding minimum inside depths. Until the plumbing is re-coordinated to
+retain that depth or a documented short-depth system is selected, the lower
+runner family remains explicitly unselected; only the full-extension and
+soft-close performance requirement survives.
+
 Sources:
 [Hafele Matrix Box S](https://www.hafele.co.uk/en/product/matrix-box-s-drawer-set-35-kg-84-mm-high/P-01298679/) and
-[Blum MOVENTO](https://www.blum.com/us/en/products/runnersystems/movento/programme/).
+[Blum MOVENTO](https://www.blum.com/us/en/products/runnersystems/movento/programme/) and
+[Blum MOVENTO US planning guide](https://d2.blum.com/services/BEC003/movento_ep_dok_bus_%24sen-us_%24aof_%24v7.pdf).
 
-## 5. Geometry the engine must keep separate
+### D. Manufacturer-integrated space-saving drain — known alternative, not v1
+
+Geberit ONE uses a coordinated basin and space-saving drainage system that
+removes the conventional trap cutout from the drawer. This is the most
+storage-efficient researched topology because it moves the waste path into a
+manufacturer-designed rear zone instead of wrapping a generic drawer around a
+generic trap. It is also a tightly coupled fixture/plumbing choice: its benefit
+cannot be transferred to the selected Kohler basin by copying the shape or
+using an unverified bottle trap.
+
+Source: [Geberit ONE washplace and drawer system](https://www.geberit.com/en/insights/new-design-possibilities-at-the-washplace/).
+
+The engine should eventually support a `space_saving_manufacturer_system`
+strategy whose fixture, drain, trap, wall connection, service access, and
+jurisdiction approval arrive as one selected adapter. For this DV72 increment,
+the robust default remains the ordinary, independently trapped P-trap topology
+plus derived U/short drawers; the Geberit path is recorded so a future owner can
+trade catalog lock-in for more storage without redesigning the base language.
+
+## 5. Floating wall-mount patterns from current manufacturer guides
+
+Two current Kohler wall-hung vanity guides establish a useful comparison
+pattern, while remaining product-specific instructions rather than a capacity
+claim for DV72:
+
+- Prepare verified stud framing or continuous 2x6 backing before the wall is
+  closed. One guide calls for at least two studs, including framing at both
+  ends of the rear rail, and added 2x6 support where that pattern is absent.
+- Route the planned waste and supplies while the wall is open; plumbing and
+  backing are one coordination problem because neither may remove the other's
+  required space.
+- Use a full-width temporary support while positioning a wall-hung body. Set
+  the case level and plumb before drilling or installing the heavy top.
+- Drill the rear rail at its ends and at every available stud/backing location,
+  then fasten through the rail into the verified structure. One Kohler guide
+  specifies 5/16 in lag bolts with a 500 lb load-bearing rating and derives
+  length from backing, wallboard, and rail thickness. Those values are evidence
+  of the connection facts an engine must carry; they are **not** DV72 fastener
+  selection or capacity.
+- Install the top only after the wall-hung case is secure and level. Include the
+  top, two basins, water, drawers, contents, and foreseeable service loads in
+  the project-specific load case.
+
+Primary sources:
+[Kohler wall-hung vanity installation guide 1216526-2](https://techcomm.kohler.com/techcomm/pdf/1216526-2.pdf) and
+[Kohler vanity installation guide 1527256-2](https://resources.kohler.com/webassets/kpna/catalog/pdf/en/1527256-2.pdf).
+
+The reusable engine consequence is a `WallMountAssembly` with explicit wall
+survey, backing, continuous rail, fastener axes, pilot holes, embedment,
+edge/end distances, temporary-support method, level/plumb checks, top-load
+state, and commissioning evidence. A generic screw SKU and three cylinders in
+a rendering cannot establish the connection.
+
+## 6. Geometry the engine must keep separate
 
 For each sink bay, model at least these distinct envelopes:
 
@@ -253,7 +320,7 @@ Passing only a static solid-intersection test is insufficient. A trap can fit
 behind a closed drawer yet be impossible to assemble, tighten, inspect, or
 remove.
 
-## 6. Blocking release gates
+## 7. Blocking release gates
 
 Keep the vanity at **NOT RELEASED / UNKNOWN**, and suppress fabrication- and
 installation-ready language, until all of the following are true:

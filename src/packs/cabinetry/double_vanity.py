@@ -96,13 +96,37 @@ class CatalogAssetRef:
     def may_embed(self) -> bool:
         return self.redistribution == "permitted"
 
+    @property
+    def may_use_locally(self) -> bool:
+        return (
+            self.redistribution != "unknown"
+            and self.license_class in {
+                "local_project_use_only", "permissive", "manufacturer_project_use",
+            }
+        )
+
     def allows_consumer(self, consumer: str) -> bool:
-        if consumer == "renderer":
-            return self.asset_role in {"visual_reference", "collision_hint"}
+        if consumer == "local_preview_renderer":
+            return (
+                self.may_use_locally
+                and self.byte_length > 0
+                and self.sha256_raw != _EMPTY_SHA256
+                and self.asset_role in {"visual_reference", "collision_hint"}
+            )
+        if consumer in {
+            "renderer", "publish_renderer", "self_contained_renderer",
+        }:
+            return (
+                self.may_embed
+                and self.asset_role in {"visual_reference", "collision_hint"}
+            )
         if consumer == "cutout_template":
             return (
                 self.asset_role == "cutout_template"
                 and self.authority == "manufacturer_template"
+                and self.may_use_locally
+                and self.byte_length > 0
+                and self.sha256_raw != _EMPTY_SHA256
             )
         return False
 
@@ -111,10 +135,71 @@ class CatalogAssetRef:
 
 
 @dataclass(frozen=True)
-class ServiceEnvelope:
-    width_mm: float
-    depth_mm: float
-    height_mm: float
+class AnalyticEnvelope:
+    """Axis-aligned, project-frame study geometry with explicit authority."""
+
+    envelope_id: str
+    bay_id: str
+    kind: str
+    x0_mm: float
+    y0_mm: float
+    z0_mm: float
+    x1_mm: float
+    y1_mm: float
+    z1_mm: float
+    authority: str = "provisional_study_target"
+
+    def __post_init__(self):
+        if not (
+            self.x1_mm > self.x0_mm
+            and self.y1_mm > self.y0_mm
+            and self.z1_mm > self.z0_mm
+        ):
+            raise ValueError(
+                f"analytic envelope {self.envelope_id!r} must have positive bounds"
+            )
+
+    @property
+    def width_mm(self) -> float:
+        return self.x1_mm - self.x0_mm
+
+    @property
+    def depth_mm(self) -> float:
+        return self.y1_mm - self.y0_mm
+
+    @property
+    def height_mm(self) -> float:
+        return self.z1_mm - self.z0_mm
+
+    def intersects_z(self, z0_mm: float, z1_mm: float) -> bool:
+        return min(self.z1_mm, z1_mm) > max(self.z0_mm, z0_mm)
+
+    def touches_or_intersects(self, other: "AnalyticEnvelope") -> bool:
+        return (
+            min(self.x1_mm, other.x1_mm) >= max(self.x0_mm, other.x0_mm)
+            and min(self.y1_mm, other.y1_mm) >= max(self.y0_mm, other.y0_mm)
+            and min(self.z1_mm, other.z1_mm) >= max(self.z0_mm, other.z0_mm)
+        )
+
+    def within_xy(
+        self, x0_mm: float, x1_mm: float, y0_mm: float, y1_mm: float,
+    ) -> bool:
+        return (
+            self.x0_mm >= x0_mm
+            and self.x1_mm <= x1_mm
+            and self.y0_mm >= y0_mm
+            and self.y1_mm <= y1_mm
+        )
+
+    def contains(self, other: "AnalyticEnvelope") -> bool:
+        return (
+            other.x0_mm >= self.x0_mm
+            and other.y0_mm >= self.y0_mm
+            and other.z0_mm >= self.z0_mm
+            and other.x1_mm <= self.x1_mm
+            and other.y1_mm <= self.y1_mm
+            and other.z1_mm <= self.z1_mm
+        )
 
 
 @dataclass(frozen=True)
@@ -156,18 +241,26 @@ class PlumbingCodeProfile:
     outlet_to_trap_weir_vertical_max_mm: float
     concealed_access_min_mm: float
     source_url: str
+    trap_source_url: str
 
 
 _CODE_PROFILES = {
     "nyc_2022": PlumbingCodeProfile(
         "nyc_2022", "New York City", "2022 Plumbing Code",
         15 * IN, 30 * IN, 21 * IN, 48 * IN, 12 * IN,
-        "https://www.nyc.gov/site/buildings/codes/2022-construction-codes.page",
+        "https://www.nyc.gov/assets/buildings/codes-pdf/cons_codes_2022/"
+        "2022PC_Chapter4_FixturesWBwm.pdf",
+        "https://www.nyc.gov/assets/buildings/codes-pdf/cons_codes_2022/"
+        "2022PC_Chapter10_TrapsWBwm.pdf",
     ),
     "ipc_2024": PlumbingCodeProfile(
         "ipc_2024", "International model code", "2024 IPC",
         15 * IN, 30 * IN, 21 * IN, 24 * IN, 12 * IN,
-        "https://codes.iccsafe.org/content/IPC2024P1",
+        "https://codes.iccsafe.org/content/IPC2024V2.0/"
+        "chapter-4-fixtures-faucets-and-fixture-fittings",
+        "https://codes.iccsafe.org/s/IPC2024P1/"
+        "chapter-10-traps-interceptors-and-separators/"
+        "IPC2024P1-Ch10-Sec1002.1",
     ),
 }
 
@@ -249,6 +342,8 @@ class StudyRunner:
     full_extension: bool
     selected_sku: str
     source_url: str
+    minimum_drawer_length_mm: float | None
+    minimum_inside_depth_mm: float | None
 
 
 @dataclass(frozen=True)
@@ -264,9 +359,10 @@ class DrawerStudy:
     u_void_depth_mm: float
     removable: bool
     runner: StudyRunner
-    closed_clearance_mm: float
-    full_extension_clearance_mm: float
-    removal_clearance_mm: float
+    closed_clearance_mm: float | None
+    full_extension_clearance_mm: float | None
+    removal_clearance_mm: float | None
+    dynamic_verified: bool
 
 
 @dataclass(frozen=True)
@@ -274,7 +370,9 @@ class PlumbingPath:
     path_id: str
     bay_id: str
     trap_count: int
-    service_envelope: ServiceEnvelope
+    fixture_envelope: AnalyticEnvelope
+    elements: tuple[AnalyticEnvelope, ...]
+    service_envelope: AnalyticEnvelope
     access_min_mm: float
     topology: str = "independent_p_trap_to_wall"
 
@@ -285,7 +383,12 @@ class SinkBay:
     sink_center_x_mm: float
     bay_left_x_mm: float
     bay_right_x_mm: float
-    measured_service_opening_width_mm: float
+    clear_opening_width_mm: float
+    clear_opening_height_mm: float
+
+    @property
+    def service_opening_smallest_mm(self) -> float:
+        return min(self.clear_opening_width_mm, self.clear_opening_height_mm)
 
 
 @dataclass(frozen=True)
@@ -328,7 +431,8 @@ class DoubleVanityModel:
         return {
             "sink": self.sink.adapter_id,
             "faucet": self.faucet.adapter_id,
-            "drawer_motion": self.drawers[0].runner.family_id,
+            "upper_drawer_motion": self.drawer("left", "upper").runner.family_id,
+            "lower_drawer_motion": self.drawer("left", "lower").runner.family_id,
             "wall_anchor_candidate": "grk_rss_5_16x4@2026.1",
         }
 
@@ -337,8 +441,10 @@ class DoubleVanityModel:
             "sink": self.sink.specification_url,
             "faucet_trim": self.faucet.specification_urls[0],
             "faucet_valve": self.faucet.specification_urls[1],
-            "drawer_motion": self.drawers[0].runner.source_url,
+            "upper_drawer_motion": self.drawer("left", "upper").runner.source_url,
+            "lower_drawer_motion": self.drawer("left", "lower").runner.source_url,
             "plumbing_code": self.code_profile.source_url,
+            "plumbing_traps": self.code_profile.trap_source_url,
         }
 
     def catalog_asset_manifest(self) -> list[dict]:
@@ -350,6 +456,34 @@ class DoubleVanityModel:
                 bay.bay_id: bay.sink_center_x_mm for bay in self.sink_bays
             },
             "service_chase_depth_mm": self.service_chase_depth_mm,
+            "plumbing_paths": {
+                path.path_id: {
+                    "bay_id": path.bay_id,
+                    "fixture_bounds_mm": (
+                        path.fixture_envelope.x0_mm,
+                        path.fixture_envelope.y0_mm,
+                        path.fixture_envelope.z0_mm,
+                        path.fixture_envelope.x1_mm,
+                        path.fixture_envelope.y1_mm,
+                        path.fixture_envelope.z1_mm,
+                    ),
+                    "service_bounds_mm": (
+                        path.service_envelope.x0_mm,
+                        path.service_envelope.y0_mm,
+                        path.service_envelope.z0_mm,
+                        path.service_envelope.x1_mm,
+                        path.service_envelope.y1_mm,
+                        path.service_envelope.z1_mm,
+                    ),
+                    "elements": tuple(
+                        (element.kind, element.x0_mm, element.y0_mm,
+                         element.z0_mm, element.x1_mm, element.y1_mm,
+                         element.z1_mm)
+                        for element in path.elements
+                    ),
+                }
+                for path in self.plumbing_paths
+            },
             "drawers": {
                 drawer.drawer_id: {
                     "kind": drawer.kind,
@@ -357,6 +491,7 @@ class DoubleVanityModel:
                     "box_depth_mm": drawer.box_depth_mm,
                     "u_void_width_mm": drawer.u_void_width_mm,
                     "u_void_depth_mm": drawer.u_void_depth_mm,
+                    "runner_family": drawer.runner.family_id,
                     "runner_selected": bool(drawer.runner.selected_sku),
                 }
                 for drawer in self.drawers
@@ -504,49 +639,196 @@ def build_double_vanity_model(
     front_y = wall_y - vanity.body_depth_mm
     z0 = vanity.bottom_elevation_mm
     bay_width = vanity.width_mm / 2
-    service_envelope = ServiceEnvelope(12 * IN, 13 * IN, 12 * IN)
-    service_chase_depth = 8 * IN
     drawer_clear_width = bay_width - 2 * t - 42.0
-    runner = StudyRunner(
+    drawer_side_t = 15.0
+    box_front_y = front_y + 22.0
+    upper_depth = 18 * IN
+    upper_height = 5 * IN
+    lower_height = 6 * IN
+    upper_base_z = z0 + vanity.body_height_mm / 2 + 25.0
+    lower_base_z = z0 + 25.0
+    study_clearance = 0.5 * IN
+    sink_center_y = wall_y - PURIST_WALL.nominal_wall_to_drain_mm
+    countertop_top_z = (
+        z0 + vanity.body_height_mm + vanity.countertop_thickness_mm
+    )
+    upper_runner = StudyRunner(
         family_id="blum_movento_sink_drawer_family@study",
         soft_close=True,
         full_extension=True,
         selected_sku="",
         source_url=(
-            "https://www.blum.com/us/en/products/cabinet-applications/"
-            "sinkunit/overview/"
+            "https://d2.blum.com/services/BEC003/"
+            "movento_ep_dok_bus_%24sen-us_%24aof_%24v7.pdf"
         ),
+        minimum_drawer_length_mm=305.0,
+        minimum_inside_depth_mm=328.0,
+    )
+    lower_runner = StudyRunner(
+        family_id="unselected_short_depth_runner@study",
+        soft_close=True,
+        full_extension=True,
+        selected_sku="",
+        source_url="",
+        minimum_drawer_length_mm=None,
+        minimum_inside_depth_mm=None,
     )
 
     bays: list[SinkBay] = []
     paths: list[PlumbingPath] = []
     drawers: list[DrawerStudy] = []
+    chase_depths: list[float] = []
     for index, bay_id in enumerate(("left", "right")):
         bay_left = vanity.x0_mm + index * bay_width
         bay_right = bay_left + bay_width
         center = (bay_left + bay_right) / 2
+        clear_opening_width = bay_width - 1.5 * t
+        clear_opening_height = vanity.body_height_mm - 2 * t
         bays.append(SinkBay(
-            bay_id, center, bay_left, bay_right, service_envelope.width_mm,
+            bay_id, center, bay_left, bay_right,
+            clear_opening_width, clear_opening_height,
         ))
+
+        def envelope(
+            kind: str,
+            x0_: float,
+            y0_: float,
+            z0_: float,
+            x1_: float,
+            y1_: float,
+            z1_: float,
+            *,
+            authority: str = "provisional_study_target",
+        ) -> AnalyticEnvelope:
+            return AnalyticEnvelope(
+                f"{vanity.vanity_id}.{bay_id}.{kind}", bay_id, kind,
+                x0_, y0_, z0_, x1_, y1_, z1_, authority,
+            )
+
+        fixture = envelope(
+            "fixture_body",
+            center - K20000.overall_width_mm / 2,
+            sink_center_y - K20000.overall_depth_mm / 2,
+            countertop_top_z - K20000.overall_height_mm,
+            center + K20000.overall_width_mm / 2,
+            sink_center_y + K20000.overall_depth_mm / 2,
+            countertop_top_z,
+            authority="manufacturer_dimensions_provisional_placement",
+        )
+        tailpiece_radius = max(K20000.tailpiece_od_mm / 2, 25.0)
+        tailpiece = envelope(
+            "tailpiece", center - tailpiece_radius,
+            sink_center_y - tailpiece_radius,
+            fixture.z0_mm - 185.0,
+            center + tailpiece_radius,
+            sink_center_y + tailpiece_radius,
+            fixture.z0_mm,
+        )
+        p_trap = envelope(
+            "p_trap", center - 100.0, sink_center_y - 50.0,
+            fixture.z0_mm - 255.0, center + 100.0,
+            sink_center_y + 100.0, fixture.z0_mm - 135.0,
+        )
+        trap_arm = envelope(
+            "trap_arm", center - 35.0, sink_center_y + 70.0,
+            fixture.z0_mm - 205.0, center + 35.0, wall_y,
+            fixture.z0_mm - 155.0,
+        )
+        hot_supply = envelope(
+            "hot_supply", center - 115.0, wall_y - 80.0,
+            fixture.z0_mm - 215.0, center - 85.0, wall_y,
+            fixture.z0_mm - 55.0,
+        )
+        cold_supply = envelope(
+            "cold_supply", center + 85.0, wall_y - 80.0,
+            fixture.z0_mm - 215.0, center + 115.0, wall_y,
+            fixture.z0_mm - 55.0,
+        )
+        hot_shutoff = envelope(
+            "hot_shutoff", center - 135.0, wall_y - 125.0,
+            fixture.z0_mm - 180.0, center - 65.0, wall_y - 55.0,
+            fixture.z0_mm - 110.0,
+        )
+        cold_shutoff = envelope(
+            "cold_shutoff", center + 65.0, wall_y - 125.0,
+            fixture.z0_mm - 180.0, center + 135.0, wall_y - 55.0,
+            fixture.z0_mm - 110.0,
+        )
+        elements = (
+            fixture, tailpiece, p_trap, trap_arm, hot_supply, cold_supply,
+            hot_shutoff, cold_shutoff,
+        )
+
+        upper_z1 = upper_base_z + upper_height
+        upper_obstacles = tuple(
+            item for item in elements
+            if item.intersects_z(upper_base_z, upper_z1)
+        )
+        if not upper_obstacles:
+            raise ProjectSchemaError(
+                f"{bay_id} sink study has no obstacle geometry at upper drawer"
+            )
+        obstacle_x0 = min(item.x0_mm for item in upper_obstacles)
+        obstacle_x1 = max(item.x1_mm for item in upper_obstacles)
+        obstacle_y0 = min(item.y0_mm for item in upper_obstacles)
+        upper_box_rear = box_front_y + upper_depth
+        service = envelope(
+            "service_access",
+            obstacle_x0 - study_clearance,
+            obstacle_y0 - study_clearance,
+            min(item.z0_mm for item in elements) - study_clearance,
+            obstacle_x1 + study_clearance,
+            wall_y,
+            max(item.z1_mm for item in elements) + study_clearance,
+        )
+        u_width = service.width_mm
+        u_depth = upper_box_rear - service.y0_mm
+        interior_width = drawer_clear_width - 2 * drawer_side_t
+        wing = (interior_width - u_width) / 2
+        bridge_depth = upper_depth - u_depth
+        if wing <= drawer_side_t or bridge_depth <= drawer_side_t:
+            raise ProjectSchemaError(
+                f"{bay_id} fixture/plumbing envelope cannot form a positive "
+                "U-drawer within the 36 in study bay"
+            )
+
+        lower_z1 = lower_base_z + lower_height
+        lower_obstacles = tuple(
+            item for item in elements
+            if item.intersects_z(lower_base_z, lower_z1)
+        )
+        if not lower_obstacles:
+            raise ProjectSchemaError(
+                f"{bay_id} plumbing study has no lower-drawer obstacle geometry"
+            )
+        lower_obstacle_front = min(item.y0_mm for item in lower_obstacles)
+        lower_depth = lower_obstacle_front - box_front_y - study_clearance
+        if lower_depth <= 8 * IN:
+            raise ProjectSchemaError(
+                f"{bay_id} plumbing envelope leaves no useful lower drawer depth"
+            )
+        chase_depths.append(vanity.body_depth_mm - 22.0 - lower_depth)
+
         paths.append(PlumbingPath(
             f"plumbing.{vanity.vanity_id}.{bay_id}", bay_id, 1,
-            service_envelope, code.concealed_access_min_mm,
+            fixture, elements, service, code.concealed_access_min_mm,
         ))
         drawers.extend((
             DrawerStudy(
                 f"{bay_id}.upper", bay_id, "upper", "upper_u_service",
-                drawer_clear_width, 18 * IN, 5 * IN,
-                service_envelope.width_mm, service_envelope.depth_mm,
-                True, runner, 0.5 * IN, 2 * IN, 2 * IN,
+                drawer_clear_width, upper_depth, upper_height,
+                u_width, u_depth, True, upper_runner,
+                study_clearance, None, None, False,
             ),
             DrawerStudy(
                 f"{bay_id}.lower", bay_id, "lower", "lower_short_service",
-                drawer_clear_width,
-                vanity.body_depth_mm - service_chase_depth - IN,
-                6 * IN, 0.0, 0.0, True, runner,
-                0.5 * IN, 2 * IN, 2 * IN,
+                drawer_clear_width, lower_depth, lower_height,
+                0.0, 0.0, True, lower_runner,
+                study_clearance, None, None, False,
             ),
         ))
+
+    service_chase_depth = max(chase_depths)
 
     parts: list[PartModel] = []
     source_map: dict[str, Provenance] = {}
@@ -630,7 +912,8 @@ def build_double_vanity_model(
                 surface="exposed_exterior", bands=("left", "right", "top", "bottom"),
             )
 
-    # Physical removable drawer boxes. Upper boxes are seven-piece U forms;
+    # Physical removable drawer boxes. Each upper box expresses the derived
+    # void with two bottom wings, a front bridge, and two inner return walls;
     # lower boxes are conventional five-piece shallow-depth boxes.
     for index, bay_id in enumerate(("left", "right")):
         bay_left = vanity.x0_mm + index * bay_width + t + 21.0
@@ -680,6 +963,8 @@ def build_double_vanity_model(
             else:
                 wing = (drawer.box_width_mm - 2 * side_t
                         - drawer.u_void_width_mm) / 2
+                void_left_x = bay_left + side_t + wing
+                bridge_depth = drawer.box_depth_mm - drawer.u_void_depth_mm
                 for side, x in (
                     ("left", bay_left + side_t),
                     ("right", bay_left + side_t + wing + drawer.u_void_width_mm),
@@ -697,12 +982,33 @@ def build_double_vanity_model(
                         thickness=bottom_t, at=(x, box_front_y, base_z),
                         rule="double_vanity.drawer.u_bottom_wing",
                     )
+                add_panel(
+                    f"drawer_{bay_id}_{level}_bottom_bridge",
+                    length=drawer.u_void_width_mm, width=bridge_depth,
+                    thickness=bottom_t,
+                    at=(void_left_x, box_front_y, base_z),
+                    rule="double_vanity.drawer.u_bottom_bridge",
+                )
+                for side, x in (
+                    ("left", void_left_x - side_t),
+                    ("right", void_left_x + drawer.u_void_width_mm),
+                ):
+                    add_panel(
+                        f"drawer_{bay_id}_{level}_inner_return_{side}",
+                        length=drawer.u_void_depth_mm,
+                        width=drawer.box_height_mm,
+                        thickness=side_t,
+                        at=(x, box_front_y + bridge_depth, base_z),
+                        rotate=(("X", 90.0), ("Z", 90.0)),
+                        rule="double_vanity.drawer.u_inner_return",
+                    )
 
     anchor = get_wall_anchor_product("grk_rss_5_16x4@2026.1")
+    rail_x0 = vanity.x0_mm + t
+    rail_x1 = vanity.x0_mm + vanity.width_mm - t
     anchor_studs = tuple(
         stud for stud in wall.studs
-        if vanity.x0_mm <= wall.plane_origin_mm[0] + stud.position_mm
-        <= vanity.x0_mm + vanity.width_mm
+        if rail_x0 <= wall.plane_origin_mm[0] + stud.position_mm <= rail_x1
     )
     anchor_z = z0 + vanity.body_height_mm - 3 * IN
     for stud in wall.studs:
@@ -773,7 +1079,11 @@ def lower_double_vanity_model(model: DoubleVanityModel) -> DetailSpecDoc:
         ("rear_mounting_rail", "right_end"),
     )
     bonds = [BondSpec(cid(a), cid(b)) for a, b in shell_pairs]
-    contacts = [ContactSpec(item.a, item.b) for item in bonds]
+    # The study records intended joinery connectivity but does not claim a
+    # released bearing-face/contact detail. Several simplified panel solids
+    # deliberately intersect at their future joint zone; name only those
+    # intersections so the base sweep can distinguish them from a collision.
+    contacts: list[ContactSpec] = []
     drawer_parts = [
         part for part in model.parts if part.role.startswith("drawer_")
         and not part.role.startswith("drawer_front_")
@@ -786,7 +1096,30 @@ def lower_double_vanity_model(model: DoubleVanityModel) -> DetailSpecDoc:
         root = next(item for item in part_ids if item.endswith("_front"))
         bonds.extend(BondSpec(root, item) for item in part_ids if item != root)
 
-    overlaps = []
+    intentional_intersections = (
+        ("center_divider", "bottom_left"),
+        ("center_divider", "front_stretcher_left"),
+        ("center_divider", "rear_mounting_rail"),
+        ("right_end", "bottom_right"),
+        ("right_end", "front_stretcher_right"),
+        ("right_end", "rear_mounting_rail"),
+        ("drawer_left_upper_back_left", "drawer_left_upper_bottom_left"),
+        ("drawer_left_upper_back_left", "drawer_left_upper_inner_return_left"),
+        ("drawer_left_upper_back_right", "drawer_left_upper_bottom_right"),
+        ("drawer_left_upper_back_right", "drawer_left_upper_inner_return_right"),
+        ("drawer_left_upper_bottom_left", "drawer_left_upper_inner_return_left"),
+        ("drawer_left_upper_bottom_right", "drawer_left_upper_inner_return_right"),
+        ("drawer_left_lower_back", "drawer_left_lower_bottom"),
+        ("drawer_right_upper_back_left", "drawer_right_upper_bottom_left"),
+        ("drawer_right_upper_back_left", "drawer_right_upper_inner_return_left"),
+        ("drawer_right_upper_back_right", "drawer_right_upper_bottom_right"),
+        ("drawer_right_upper_back_right", "drawer_right_upper_inner_return_right"),
+        ("drawer_right_upper_bottom_left", "drawer_right_upper_inner_return_left"),
+        ("drawer_right_upper_bottom_right", "drawer_right_upper_inner_return_right"),
+        ("drawer_right_lower_back", "drawer_right_lower_bottom"),
+    )
+    overlaps = [OverlapSpec(cid(a), cid(b))
+                for a, b in intentional_intersections]
     for stud_id in model.anchor_stud_ids:
         screw = cid(f"wall_anchor_{stud_id}")
         overlaps.extend((
@@ -869,6 +1202,136 @@ _RELEASE_GATES = (
 )
 
 
+_REQUIRED_PATH_KINDS = frozenset({
+    "fixture_body", "tailpiece", "p_trap", "trap_arm",
+    "hot_supply", "cold_supply", "hot_shutoff", "cold_shutoff",
+})
+
+
+def _path_is_complete_and_connected(
+    path: PlumbingPath,
+    bay: SinkBay,
+    *,
+    front_y_mm: float,
+    wall_y_mm: float,
+) -> bool:
+    kinds = [element.kind for element in path.elements]
+    if (
+        set(kinds) != _REQUIRED_PATH_KINDS
+        or len(kinds) != len(_REQUIRED_PATH_KINDS)
+        or len({element.envelope_id for element in path.elements}) != len(kinds)
+    ):
+        return False
+    by_kind = {element.kind: element for element in path.elements}
+    if by_kind["fixture_body"] != path.fixture_envelope:
+        return False
+    if not all(
+        element.bay_id == path.bay_id
+        and element.within_xy(
+            bay.bay_left_x_mm, bay.bay_right_x_mm, front_y_mm, wall_y_mm,
+        )
+        for element in path.elements
+    ):
+        return False
+    if not path.service_envelope.within_xy(
+        bay.bay_left_x_mm, bay.bay_right_x_mm, front_y_mm, wall_y_mm,
+    ):
+        return False
+    if not all(
+        path.service_envelope.contains(element) for element in path.elements
+    ):
+        return False
+    fixture_center_x = (
+        path.fixture_envelope.x0_mm + path.fixture_envelope.x1_mm
+    ) / 2
+    if abs(fixture_center_x - bay.sink_center_x_mm) > 1e-6:
+        return False
+    required_adjacencies = (
+        ("fixture_body", "tailpiece"),
+        ("tailpiece", "p_trap"),
+        ("p_trap", "trap_arm"),
+        ("hot_supply", "hot_shutoff"),
+        ("cold_supply", "cold_shutoff"),
+    )
+    if not all(
+        by_kind[left].touches_or_intersects(by_kind[right])
+        for left, right in required_adjacencies
+    ):
+        return False
+    return abs(by_kind["trap_arm"].y1_mm - wall_y_mm) <= 1e-6
+
+
+def _physical_upper_void_bounds(
+    model: DoubleVanityModel, bay_id: str,
+) -> tuple[float, float, float, float, float, float] | None:
+    try:
+        bridge = model.part(f"drawer_{bay_id}_upper_bottom_bridge")
+        left = model.part(f"drawer_{bay_id}_upper_inner_return_left")
+        right = model.part(f"drawer_{bay_id}_upper_inner_return_right")
+        back_left = model.part(f"drawer_{bay_id}_upper_back_left")
+        back_right = model.part(f"drawer_{bay_id}_upper_back_right")
+    except KeyError:
+        return None
+    x0 = left.at_mm[0] + left.thickness_mm
+    x1 = right.at_mm[0]
+    y0 = left.at_mm[1]
+    y1 = left.at_mm[1] + left.length_mm
+    z0 = left.at_mm[2]
+    z1 = left.at_mm[2] + left.width_mm
+    coherent = (
+        x1 > x0
+        and y1 > y0
+        and abs(right.at_mm[1] - y0) <= 1e-6
+        and abs(right.length_mm - left.length_mm) <= 1e-6
+        and abs(bridge.at_mm[0] - x0) <= 1e-6
+        and abs(bridge.length_mm - (x1 - x0)) <= 1e-6
+        and abs(bridge.at_mm[1] + bridge.width_mm - y0) <= 1e-6
+        and abs(back_left.at_mm[1] + back_left.thickness_mm - y1) <= 1e-6
+        and abs(back_right.at_mm[1] + back_right.thickness_mm - y1) <= 1e-6
+    )
+    return (x0, y0, z0, x1, y1, z1) if coherent else None
+
+
+def _physical_lower_box_bounds(
+    model: DoubleVanityModel, bay_id: str,
+) -> tuple[float, float, float] | None:
+    try:
+        left = model.part(f"drawer_{bay_id}_lower_side_left")
+        right = model.part(f"drawer_{bay_id}_lower_side_right")
+        front = model.part(f"drawer_{bay_id}_lower_front")
+        back = model.part(f"drawer_{bay_id}_lower_back")
+        bottom = model.part(f"drawer_{bay_id}_lower_bottom")
+    except KeyError:
+        return None
+    front_y = left.at_mm[1]
+    rear_y = front_y + left.length_mm
+    max_rear_y = max(
+        left.at_mm[1] + left.length_mm,
+        right.at_mm[1] + right.length_mm,
+        front.at_mm[1] + front.thickness_mm,
+        back.at_mm[1] + back.thickness_mm,
+        bottom.at_mm[1] + bottom.width_mm,
+    )
+    coherent = (
+        abs(right.at_mm[1] - front_y) <= 1e-6
+        and abs(right.length_mm - left.length_mm) <= 1e-6
+        and abs(front.at_mm[1] - front_y) <= 1e-6
+        and abs(bottom.at_mm[1] - front_y) <= 1e-6
+        and abs(back.at_mm[1] + back.thickness_mm - rear_y) <= 1e-6
+        and abs(bottom.at_mm[1] + bottom.width_mm - back.at_mm[1]) <= 1e-6
+        and abs(front.at_mm[0] - (left.at_mm[0] + left.thickness_mm)) <= 1e-6
+        and abs(front.at_mm[0] + front.length_mm - right.at_mm[0]) <= 1e-6
+        and abs(bottom.at_mm[0] - front.at_mm[0]) <= 1e-6
+        and abs(bottom.length_mm - front.length_mm) <= 1e-6
+        and abs(back.at_mm[0] - front.at_mm[0]) <= 1e-6
+        and abs(back.length_mm - front.length_mm) <= 1e-6
+        and abs(max_rear_y - rear_y) <= 1e-6
+    )
+    if not coherent:
+        return None
+    return (left.at_mm[2], left.at_mm[2] + left.width_mm, rear_y)
+
+
 def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
     findings: list[CabinetFinding] = []
     evidence: list[EvidenceRecord] = []
@@ -884,6 +1347,9 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
         ))
 
     vanity = model.section.vanity
+    wall_y = model.section.site.wall.plane_origin_mm[1]
+    front_y = wall_y - vanity.body_depth_mm
+    bays_by_id = {bay.bay_id: bay for bay in model.sink_bays}
     add(
         "double_vanity.geometry.two_bays", "PASS", "required",
         f"The {vanity.width_mm:.1f} mm study splits into two equal "
@@ -893,9 +1359,20 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
     topology_ok = (
         len(model.plumbing_paths) == 2
         and len({path.path_id for path in model.plumbing_paths}) == 2
+        and {path.bay_id for path in model.plumbing_paths} == {"left", "right"}
         and all(path.trap_count == 1 for path in model.plumbing_paths)
         and all(path.topology == "independent_p_trap_to_wall"
                 for path in model.plumbing_paths)
+        and all(
+            _path_is_complete_and_connected(
+                path, bays_by_id[path.bay_id],
+                front_y_mm=front_y, wall_y_mm=wall_y,
+            )
+            for path in model.plumbing_paths
+        )
+        and not model.plumbing_paths[0].service_envelope.touches_or_intersects(
+            model.plumbing_paths[1].service_envelope
+        )
     )
     add(
         "double_vanity.plumbing.independent_traps",
@@ -923,27 +1400,194 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
         "calculated", source=model.code_profile.source_url,
     )
     service_ok = all(
-        bay.measured_service_opening_width_mm >= path.access_min_mm
+        bay.bay_id == path.bay_id
+        and bay.service_opening_smallest_mm >= path.access_min_mm
         for bay, path in zip(model.sink_bays, model.plumbing_paths)
+    )
+    opening_summary = ", ".join(
+        f"{bay.bay_id} {bay.clear_opening_width_mm:.1f} x "
+        f"{bay.clear_opening_height_mm:.1f} mm "
+        f"(smallest {bay.service_opening_smallest_mm:.1f} mm)"
+        for bay in model.sink_bays
     )
     add(
         "double_vanity.geometry.service_openings",
         "PASS" if service_ok else "FAIL", "required",
-        "Both modeled drawer-removal openings meet the selected profile's "
-        "provisional 12 in minimum dimension; final fitting/tool access remains gated.",
+        f"Drawer-removed case openings derive from the shell: {opening_summary}. "
+        "The static smallest dimension meets the selected profile; actual "
+        "fitting/tool paths remain gated.",
         "calculated", source=model.code_profile.source_url,
     )
+
+    coordination_ok = topology_ok
+    for path in model.plumbing_paths:
+        if path.bay_id not in bays_by_id:
+            coordination_ok = False
+            continue
+        drawer = model.drawer(path.bay_id, "upper")
+        void = _physical_upper_void_bounds(model, path.bay_id)
+        if void is None:
+            coordination_ok = False
+            continue
+        x0, y0, z0_, x1, y1, z1_ = void
+        service = path.service_envelope
+        upper_obstacles = tuple(
+            element for element in path.elements
+            if element.intersects_z(z0_, z1_)
+        )
+        physical_matches = (
+            abs((x1 - x0) - drawer.u_void_width_mm) <= 1e-6
+            and abs((y1 - y0) - drawer.u_void_depth_mm) <= 1e-6
+            and abs(service.x0_mm - x0) <= 1e-6
+            and abs(service.x1_mm - x1) <= 1e-6
+            and abs(service.y0_mm - y0) <= 1e-6
+            and service.y1_mm >= y1
+            and upper_obstacles
+            and all(
+                obstacle.x0_mm > x0
+                and obstacle.x1_mm < x1
+                and obstacle.y0_mm > y0
+                for obstacle in upper_obstacles
+            )
+        )
+        lower_bounds = _physical_lower_box_bounds(model, path.bay_id)
+        if lower_bounds is None:
+            physical_matches = False
+        else:
+            lower = model.drawer(path.bay_id, "lower")
+            lower_z0, lower_top, lower_rear = lower_bounds
+            lower_obstacles = tuple(
+                element for element in path.elements
+                if element.intersects_z(lower_z0, lower_top)
+            )
+            physical_matches = physical_matches and (
+                abs(
+                    lower_rear
+                    - model.part(
+                        f"drawer_{path.bay_id}_lower_side_left"
+                    ).at_mm[1]
+                    - lower.box_depth_mm
+                ) <= 1e-6
+                and lower_obstacles
+                and all(
+                    obstacle.y0_mm > lower_rear
+                    for obstacle in lower_obstacles
+                )
+            )
+        coordination_ok = coordination_ok and physical_matches
     add(
-        "double_vanity.mount.representation", "PASS", "required",
+        "double_vanity.geometry.fixture_plumbing_drawer",
+        "PASS" if coordination_ok else "FAIL", "required",
+        "Manufacturer-sized fixture envelopes, provisional tailpiece/trap-arm/"
+        "supply/shutoff solids, service envelopes, and physical U-drawer voids "
+        "share one project coordinate frame. Dynamic runner/removal truth remains "
+        "UNKNOWN until selected hardware and rough-ins replace study assumptions."
+        if coordination_ok else
+        "Fixture, plumbing, service, and drawer study geometry do not agree.",
+        "calculated",
+    )
+
+    incompatible_runners = []
+    unknown_runners = []
+    for drawer in model.drawers:
+        runner = drawer.runner
+        if (
+            runner.family_id.startswith("unselected_")
+            or runner.minimum_drawer_length_mm is None
+            or runner.minimum_inside_depth_mm is None
+        ):
+            unknown_runners.append(drawer.drawer_id)
+            continue
+        if (
+            drawer.box_depth_mm < runner.minimum_drawer_length_mm
+            or vanity.body_depth_mm < runner.minimum_inside_depth_mm
+        ):
+            incompatible_runners.append(drawer.drawer_id)
+    runner_verdict = (
+        "FAIL" if incompatible_runners else
+        "UNKNOWN" if unknown_runners else "PASS"
+    )
+    add(
+        "double_vanity.drawer.runner_applicability",
+        runner_verdict, "advisory",
+        f"Incompatible runner studies: {incompatible_runners}; unselected "
+        f"runner families: {unknown_runners}. MOVENTO's 305 mm drawer-length "
+        "study family applies only to the upper U drawers; each lower drawer "
+        "requires a separately selected short-depth full-extension soft-close "
+        "system before release.",
+        "calculated" if runner_verdict != "UNKNOWN" else "unknown",
+        source=model.drawer("left", "upper").runner.source_url,
+    )
+
+    rail_parts = [part for part in model.parts if part.role == "rear_mounting_rail"]
+    anchor_parts = {
+        part.role.removeprefix("wall_anchor_"): part
+        for part in model.parts if part.role.startswith("wall_anchor_")
+    }
+    site_parts = {
+        part.role.removeprefix("wall_stud_"): part
+        for part in model.parts if part.role.startswith("wall_stud_")
+    }
+    surveyed = {stud.stud_id: stud for stud in model.section.site.wall.studs}
+    mount_ok = len(rail_parts) == 1
+    if mount_ok:
+        rail = rail_parts[0]
+        rail_x0 = rail.at_mm[0]
+        rail_x1 = rail_x0 + rail.length_mm
+        rail_z0 = rail.at_mm[2]
+        rail_z1 = rail_z0 + rail.width_mm
+        wall = model.section.site.wall
+        expected_targets = {
+            stud.stud_id
+            for stud in wall.studs
+            if stud.verified
+            and rail_x0 <= wall.plane_origin_mm[0] + stud.position_mm <= rail_x1
+        }
+        target_axes = sorted(
+            wall.plane_origin_mm[0] + surveyed[stud_id].position_mm
+            for stud_id in expected_targets
+        )
+        mount_ok = (
+            len(expected_targets) >= 2
+            and set(model.anchor_stud_ids) == expected_targets
+            and set(anchor_parts) == expected_targets
+            and expected_targets <= set(site_parts)
+            and target_axes[0] - rail_x0 <= 16 * IN
+            and rail_x1 - target_axes[-1] <= 16 * IN
+            and all(
+            rail_x0 <= anchor_parts[stud_id].at_mm[0] <= rail_x1
+            and rail_z0 <= anchor_parts[stud_id].at_mm[2] <= rail_z1
+            and abs(anchor_parts[stud_id].at_mm[0]
+                    - site_parts[stud_id].at_mm[0]
+                    - model.section.site.wall.stud_width_mm / 2) <= 1e-6
+            and anchor_parts[stud_id].at_mm[1] <= wall.plane_origin_mm[1]
+            and (
+                anchor_parts[stud_id].at_mm[1]
+                + anchor_parts[stud_id].length_mm
+                >= wall.plane_origin_mm[1] + wall.finish_thickness_mm
+            )
+                for stud_id in expected_targets
+            )
+        )
+    add(
+        "double_vanity.mount.representation",
+        "PASS" if mount_ok else "FAIL", "required",
         "A continuous rear rail, surveyed wall studs, and candidate fastener axes "
-        "represent the load path; representation does not establish capacity.",
+        "share verified X axes and represent the load path; representation does "
+        "not establish capacity."
+        if mount_ok else
+        "The rail, verified studs, and candidate fastener axes do not form a "
+        "complete represented load path.",
         "derived",
     )
     for rule, message in _RELEASE_GATES:
         sources = {
             "double_vanity.release.fixture_template": model.sink.specification_url,
             "double_vanity.release.faucet": " | ".join(model.faucet.specification_urls),
-            "double_vanity.release.plumbing_approval": model.code_profile.source_url,
+            "double_vanity.release.plumbing_approval": (
+                f"{model.code_profile.source_url} | "
+                f"{model.code_profile.trap_source_url}"
+            ),
             "double_vanity.release.drawer_derivation": model.drawers[0].runner.source_url,
         }
         add(rule, "UNKNOWN", "required", message, "unknown",
@@ -959,7 +1603,9 @@ def build_double_vanity_artifacts(
     model: DoubleVanityModel, report: CabinetReport,
 ) -> CabinetArtifacts:
     fabricated = tuple(
-        part for part in model.parts if part.component_type == "plywood_panel"
+        part for part in model.parts
+        if part.component_type == "plywood_panel"
+        and not part.role.startswith("drawer_")
     )
     cut_list = tuple(CutListItem(
         part_id=part.part_id,
@@ -1041,4 +1687,3 @@ class DoubleSinkVanityPack:
             pack_version=self.version,
             expanded_project_doc=doc,
         )
-

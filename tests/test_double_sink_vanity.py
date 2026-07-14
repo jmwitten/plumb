@@ -8,7 +8,11 @@ from pathlib import Path
 import pytest
 
 from detailgen.core.registry import components, materials
-from detailgen.packs import ProjectReleaseError, compile_project_file
+from detailgen.packs import (
+    ProjectReleaseError,
+    ProjectSchemaError,
+    compile_project_file,
+)
 
 
 FIXTURE = (
@@ -67,14 +71,37 @@ def test_catalog_asset_reference_is_metadata_only_and_authority_limited():
         analytic_adapter="kohler_k20000_v1",
     )
 
-    assert asset.allows_consumer("renderer")
-    for forbidden in ("cut_list", "machining", "plumbing", "structure", "code"):
+    assert asset.allows_consumer("local_preview_renderer")
+    for forbidden in (
+        "renderer", "publish_renderer", "self_contained_renderer",
+        "cut_list", "machining", "plumbing", "structure", "code",
+    ):
         assert not asset.allows_consumer(forbidden)
     assert not asset.may_embed
     with pytest.raises(ValueError, match="64-character"):
         replace(asset, sha256_raw="not-a-digest")
     with pytest.raises(ValueError, match="three calibration anchors"):
         replace(asset, calibration_anchors=("drain_center",))
+    unknown_terms = replace(
+        asset, license_class="unknown", redistribution="unknown",
+    )
+    assert not unknown_terms.allows_consumer("local_preview_renderer")
+    unfetched_template = replace(
+        unknown_terms,
+        asset_role="cutout_template",
+        authority="manufacturer_template",
+        byte_length=0,
+        sha256_raw=(
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        ),
+    )
+    assert not unfetched_template.allows_consumer("cutout_template")
+    pinned_template = replace(
+        asset,
+        asset_role="cutout_template",
+        authority="manufacturer_template",
+    )
+    assert pinned_template.allows_consumer("cutout_template")
 
 
 def test_dv72_expands_to_two_independent_service_bays_and_four_drawers():
@@ -99,6 +126,15 @@ def test_dv72_expands_to_two_independent_service_bays_and_four_drawers():
     assert all(drawer.removable for drawer in model.drawers)
     assert all(drawer.runner.soft_close for drawer in model.drawers)
     assert all(drawer.runner.full_extension for drawer in model.drawers)
+    for bay in ("left", "right"):
+        upper = model.drawer(bay, "upper")
+        lower = model.drawer(bay, "lower")
+        assert upper.runner.family_id.startswith("blum_movento")
+        assert upper.runner.minimum_drawer_length_mm == pytest.approx(305.0)
+        assert upper.box_depth_mm >= upper.runner.minimum_drawer_length_mm
+        assert lower.runner.family_id == "unselected_short_depth_runner@study"
+        assert lower.runner.minimum_drawer_length_mm is None
+        assert not lower.runner.selected_sku
 
 
 def test_geometry_contains_four_physical_boxes_fronts_and_no_toe_kick():
@@ -120,6 +156,9 @@ def test_geometry_contains_four_physical_boxes_fronts_and_no_toe_kick():
             f"drawer_{bay}_upper_back_right",
             f"drawer_{bay}_upper_bottom_left",
             f"drawer_{bay}_upper_bottom_right",
+            f"drawer_{bay}_upper_bottom_bridge",
+            f"drawer_{bay}_upper_inner_return_left",
+            f"drawer_{bay}_upper_inner_return_right",
             f"drawer_{bay}_lower_side_left",
             f"drawer_{bay}_lower_side_right",
             f"drawer_{bay}_lower_front",
@@ -127,6 +166,41 @@ def test_geometry_contains_four_physical_boxes_fronts_and_no_toe_kick():
             f"drawer_{bay}_lower_bottom",
         } <= roles
     assert project.lowered_doc.type == "vanity_double_sink_floating_study"
+
+
+def test_physical_upper_drawer_void_uses_declared_width_and_depth():
+    model = _project().model
+
+    for bay in ("left", "right"):
+        drawer = model.drawer(bay, "upper")
+        bridge = model.part(f"drawer_{bay}_upper_bottom_bridge")
+        return_left = model.part(f"drawer_{bay}_upper_inner_return_left")
+        return_right = model.part(f"drawer_{bay}_upper_inner_return_right")
+
+        assert bridge.length_mm == pytest.approx(drawer.u_void_width_mm)
+        assert bridge.width_mm == pytest.approx(
+            drawer.box_depth_mm - drawer.u_void_depth_mm
+        )
+        assert return_left.length_mm == pytest.approx(drawer.u_void_depth_mm)
+        assert return_right.length_mm == pytest.approx(drawer.u_void_depth_mm)
+        assert return_right.at_mm[0] - (
+            return_left.at_mm[0] + return_left.thickness_mm
+        ) == pytest.approx(drawer.u_void_width_mm)
+
+
+def test_unchanged_base_language_builds_and_has_no_unmodeled_geometry_failure():
+    project = _project()
+    assembly = project.build()
+    base = project.validate()
+
+    assert len(assembly.parts) == len(project.model.parts)
+    assert base.ok, "\n".join(str(item) for item in base.blocking)
+    assert not [
+        finding for finding in project.report.findings
+        if finding.verdict == "FAIL"
+    ]
+    assert not project.report.fabrication_ready
+    assert not project.release_ready
 
 
 def test_service_geometry_is_derived_from_fixture_and_plumbing_envelopes():
@@ -138,16 +212,312 @@ def test_service_geometry_is_derived_from_fixture_and_plumbing_envelopes():
         assert upper.u_void_width_mm == pytest.approx(
             path.service_envelope.width_mm
         )
-        assert upper.u_void_depth_mm >= path.service_envelope.depth_mm
+        assert upper.u_void_depth_mm < path.service_envelope.depth_mm
         assert lower.box_depth_mm + model.service_chase_depth_mm \
             <= model.section.vanity.body_depth_mm
-        assert bay.measured_service_opening_width_mm >= path.access_min_mm
-        assert upper.closed_clearance_mm > 0
-        assert upper.full_extension_clearance_mm > 0
-        assert upper.removal_clearance_mm > 0
-        assert lower.closed_clearance_mm > 0
-        assert lower.full_extension_clearance_mm > 0
-        assert lower.removal_clearance_mm > 0
+        assert bay.service_opening_smallest_mm == pytest.approx(
+            min(bay.clear_opening_width_mm, bay.clear_opening_height_mm)
+        )
+        assert bay.service_opening_smallest_mm >= path.access_min_mm
+        assert path.service_envelope.authority == "provisional_study_target"
+        assert {element.kind for element in path.elements} >= {
+            "fixture_body", "tailpiece", "p_trap", "trap_arm",
+            "hot_supply", "cold_supply", "hot_shutoff", "cold_shutoff",
+        }
+        assert not upper.dynamic_verified
+        assert not lower.dynamic_verified
+
+
+def test_fixture_dimensions_drive_path_and_drawer_geometry(monkeypatch):
+    import detailgen.packs.cabinetry.double_vanity as dv
+
+    baseline = _project().model
+    wider = replace(
+        dv.K20000, overall_width_mm=650.0, overall_depth_mm=450.0,
+    )
+    monkeypatch.setattr(dv, "K20000", wider)
+    changed = _project().model
+
+    assert changed.plumbing_paths[0].fixture_envelope.width_mm == pytest.approx(650.0)
+    assert changed.drawer("left", "upper").u_void_width_mm > (
+        baseline.drawer("left", "upper").u_void_width_mm
+    )
+    assert changed.part("drawer_left_upper_bottom_bridge").width_mm != (
+        baseline.part("drawer_left_upper_bottom_bridge").width_mm
+    )
+    assert changed.derived_fact_manifest() != baseline.derived_fact_manifest()
+
+
+def test_impossible_fixture_fails_loudly_instead_of_emitting_fake_clearance(
+    monkeypatch,
+):
+    import detailgen.packs.cabinetry.double_vanity as dv
+
+    monkeypatch.setattr(
+        dv, "K20000",
+        replace(dv.K20000, overall_width_mm=1200.0, overall_depth_mm=900.0),
+    )
+    with pytest.raises(ProjectSchemaError, match="cannot form a positive U-drawer"):
+        _project()
+
+
+def test_duplicate_path_bay_ownership_and_missing_mount_parts_fail_validation():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    baseline_findings = {
+        finding.rule: finding
+        for finding in validate_double_vanity_model(model).findings
+    }
+    assert baseline_findings[
+        "double_vanity.mount.representation"
+    ].verdict == "PASS"
+    duplicate = replace(
+        model,
+        plumbing_paths=(model.plumbing_paths[0], replace(
+            model.plumbing_paths[1], bay_id="left",
+        )),
+    )
+    duplicate_findings = {
+        finding.rule: finding for finding in validate_double_vanity_model(duplicate).findings
+    }
+    assert duplicate_findings["double_vanity.plumbing.independent_traps"].verdict == "FAIL"
+
+    mutations = (
+        replace(
+            model,
+            parts=tuple(
+                part for part in model.parts if part.role != "rear_mounting_rail"
+            ),
+        ),
+        replace(
+            model,
+            parts=tuple(
+                part for part in model.parts
+                if part.role != f"wall_anchor_{model.anchor_stud_ids[0]}"
+            ),
+        ),
+        replace(
+            model,
+            parts=tuple(
+                part for part in model.parts
+                if part.role != f"wall_stud_{model.anchor_stud_ids[0]}"
+            ),
+        ),
+        replace(model, anchor_stud_ids=()),
+    )
+    for no_mount in mutations:
+        mount_findings = {
+            finding.rule: finding
+            for finding in validate_double_vanity_model(no_mount).findings
+        }
+        assert mount_findings[
+            "double_vanity.mount.representation"
+        ].verdict == "FAIL"
+
+
+def test_domain_geometry_checks_physical_u_void_and_named_bay_ownership():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+
+    moved_returns = replace(
+        model,
+        parts=tuple(
+            replace(part, at_mm=(
+                part.at_mm[0] + (
+                    100.0 if part.role.endswith("inner_return_left")
+                    else -100.0
+                ),
+                part.at_mm[1], part.at_mm[2],
+            ))
+            if part.role in {
+                "drawer_left_upper_inner_return_left",
+                "drawer_left_upper_inner_return_right",
+            }
+            else part
+            for part in model.parts
+        ),
+    )
+    physical = {
+        finding.rule: finding
+        for finding in validate_double_vanity_model(moved_returns).findings
+    }
+    assert physical[
+        "double_vanity.geometry.fixture_plumbing_drawer"
+    ].verdict == "FAIL"
+
+    right = model.plumbing_paths[1]
+
+    def shift(envelope, dx):
+        return replace(
+            envelope,
+            x0_mm=envelope.x0_mm + dx,
+            x1_mm=envelope.x1_mm + dx,
+        )
+
+    dx = -model.section.vanity.width_mm / 2
+    shifted = replace(
+        right,
+        fixture_envelope=shift(right.fixture_envelope, dx),
+        elements=tuple(shift(element, dx) for element in right.elements),
+        service_envelope=shift(right.service_envelope, dx),
+    )
+    wrong_bay = replace(
+        model, plumbing_paths=(model.plumbing_paths[0], shifted),
+    )
+    wrong_bay_findings = {
+        finding.rule: finding
+        for finding in validate_double_vanity_model(wrong_bay).findings
+    }
+    assert wrong_bay_findings[
+        "double_vanity.geometry.fixture_plumbing_drawer"
+    ].verdict == "FAIL"
+    assert wrong_bay_findings[
+        "double_vanity.plumbing.independent_traps"
+    ].verdict == "FAIL"
+
+
+def test_plumbing_path_requires_every_element_and_connected_adjacencies():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    required = {
+        "fixture_body", "tailpiece", "p_trap", "trap_arm",
+        "hot_supply", "cold_supply", "hot_shutoff", "cold_shutoff",
+    }
+    left = model.plumbing_paths[0]
+    assert {item.kind for item in left.elements} == required
+
+    for omitted in sorted(required):
+        path = replace(
+            left,
+            elements=tuple(
+                item for item in left.elements if item.kind != omitted
+            ),
+        )
+        broken = replace(
+            model, plumbing_paths=(path, model.plumbing_paths[1]),
+        )
+        findings = {
+            finding.rule: finding
+            for finding in validate_double_vanity_model(broken).findings
+        }
+        assert findings[
+            "double_vanity.plumbing.independent_traps"
+        ].verdict == "FAIL", omitted
+
+    displaced_elements = tuple(
+        replace(item, y0_mm=item.y0_mm + 5000, y1_mm=item.y1_mm + 5000)
+        if item.kind == "p_trap" else item
+        for item in left.elements
+    )
+    disconnected = replace(
+        model,
+        plumbing_paths=(
+            replace(left, elements=displaced_elements),
+            model.plumbing_paths[1],
+        ),
+    )
+    disconnected_findings = {
+        finding.rule: finding
+        for finding in validate_double_vanity_model(disconnected).findings
+    }
+    assert disconnected_findings[
+        "double_vanity.plumbing.independent_traps"
+    ].verdict == "FAIL"
+
+    escaped_elements = tuple(
+        replace(item, z0_mm=item.z0_mm - 500.0)
+        if item.kind == "hot_supply" else item
+        for item in left.elements
+    )
+    escaped = replace(
+        model,
+        plumbing_paths=(
+            replace(left, elements=escaped_elements),
+            model.plumbing_paths[1],
+        ),
+    )
+    escaped_findings = {
+        finding.rule: finding
+        for finding in validate_double_vanity_model(escaped).findings
+    }
+    assert escaped_findings[
+        "double_vanity.plumbing.independent_traps"
+    ].verdict == "FAIL"
+
+
+def test_lower_physical_box_checks_every_side_bottom_and_back():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    moved_right_side = replace(
+        model,
+        parts=tuple(
+            replace(
+                part,
+                at_mm=(part.at_mm[0], part.at_mm[1] + 100.0, part.at_mm[2]),
+            )
+            if part.role == "drawer_left_lower_side_right" else part
+            for part in model.parts
+        ),
+    )
+    findings = {
+        finding.rule: finding
+        for finding in validate_double_vanity_model(moved_right_side).findings
+    }
+    assert findings[
+        "double_vanity.geometry.fixture_plumbing_drawer"
+    ].verdict == "FAIL"
+
+
+def test_mount_expected_targets_come_from_the_survey_not_self_reported_ids():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    keep = model.anchor_stud_ids[0]
+    reduced = replace(
+        model,
+        parts=tuple(
+            part for part in model.parts
+            if not part.role.startswith("wall_anchor_")
+            or part.role == f"wall_anchor_{keep}"
+        ),
+        anchor_stud_ids=(keep,),
+    )
+    findings = {
+        finding.rule: finding
+        for finding in validate_double_vanity_model(reduced).findings
+    }
+    assert findings["double_vanity.mount.representation"].verdict == "FAIL"
+
+
+def test_dynamic_verification_state_is_orthogonal_to_static_coordination():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    verified = replace(
+        model,
+        drawers=tuple(
+            replace(drawer, dynamic_verified=True) for drawer in model.drawers
+        ),
+    )
+    findings = {
+        finding.rule: finding
+        for finding in validate_double_vanity_model(verified).findings
+    }
+    assert findings[
+        "double_vanity.geometry.fixture_plumbing_drawer"
+    ].verdict == "PASS"
+
+
+def test_unreleased_drawer_parts_are_not_emitted_as_cut_list_dimensions():
+    project = _project()
+
+    assert not any(
+        item.role.startswith("drawer_") for item in project.artifacts.cut_list
+    )
 
 
 def test_nyc_and_ipc_profiles_pin_deliberate_vertical_trap_difference():
@@ -180,6 +550,17 @@ def test_all_nine_study_release_gates_are_required_unknown_and_block_release():
     assert expected <= findings.keys()
     assert all(findings[rule].severity == "required" for rule in expected)
     assert all(findings[rule].verdict == "UNKNOWN" for rule in expected)
+    assert findings[
+        "double_vanity.drawer.runner_applicability"
+    ].verdict == "UNKNOWN"
+    assert findings[
+        "double_vanity.drawer.runner_applicability"
+    ].severity == "advisory"
+    assert len(project.report.blocking) == 9
+    assert all(
+        finding.rule.startswith("double_vanity.release.")
+        for finding in project.report.blocking
+    )
     assert not project.report.fabrication_ready
     with pytest.raises(ProjectReleaseError, match="fixture_template"):
         project.require_release()
@@ -194,5 +575,8 @@ def test_analytic_study_is_deterministic_with_no_external_asset_cache(monkeypatc
     assert first.lowered_doc == second.lowered_doc
     assert first.manifest_json() == second.manifest_json()
     assert all(not ref.may_embed for ref in first.model.catalog_assets)
+    assert all(
+        not ref.allows_consumer("local_preview_renderer")
+        for ref in first.model.catalog_assets
+    )
     assert "local_path" not in first.manifest_json()
-
