@@ -8,6 +8,7 @@ machine vocabulary leaking into the manual register.
 from pathlib import Path
 
 import pytest
+import yaml
 
 from detailgen.assemblies.event_graph import (
     ReaderStepProjectionError,
@@ -40,6 +41,12 @@ def _text(manual) -> str:
         rows.extend(row.label for row in panel.hardware)
         rows.extend(row.label for row in panel.tools)
     return "\n".join(rows)
+
+
+def _write_ungoverned_variant(path, text):
+    raw = yaml.safe_load(text)
+    raw.pop("design_review", None)
+    path.write_text(yaml.safe_dump(raw, sort_keys=False))
 
 
 def test_caddy_manual_is_a_separate_relative_companion(caddy):
@@ -219,11 +226,14 @@ def test_prepare_translates_the_cup_bore_into_shop_dimensions_without_jargon(
 
 def test_titles_compose_from_current_reader_labels(tmp_path):
     variant_path = tmp_path / SPEC.name
-    variant_path.write_text(SPEC.read_text().replace(
-        "reader_name: Registration rail",
-        "reader_name: Locator batten",
-        1,
-    ))
+    _write_ungoverned_variant(
+        variant_path,
+        SPEC.read_text().replace(
+            "reader_name: Registration rail",
+            "reader_name: Locator batten",
+            1,
+        ),
+    )
     detail = compile_spec_file(variant_path)
     detail.validate()
 
@@ -325,7 +335,7 @@ def test_deleting_cross_rail_cure_claim_reverts_to_seven_canonical_panels(
     after = after.replace(
         '        - cure: "rail +X -> top underside (glued)"\n', "", 1)
     variant_path = tmp_path / SPEC.name
-    variant_path.write_text(before + after)
+    _write_ungoverned_variant(variant_path, before + after)
     detail = compile_spec_file(variant_path)
     detail.validate()
 

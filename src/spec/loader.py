@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import difflib
 import json
-from dataclasses import replace
 from pathlib import Path
 
 import yaml
@@ -108,8 +107,12 @@ def load_spec_file(path: str | Path) -> DetailSpecDoc:
     (``.yaml``/``.yml``) the YAML parser."""
     path = Path(path)
     fmt = "json" if path.suffix.lower() == ".json" else "yaml"
-    return replace(load_spec_text(path.read_text(), fmt=fmt),
-                   source_path=path.resolve())
+    doc = load_spec_text(path.read_text(), fmt=fmt)
+    # File location is loader context, not DetailSpec data. Attach it outside
+    # the dataclass fields so legacy ``asdict`` projections and content hashes
+    # remain byte-for-byte stable.
+    object.__setattr__(doc, "source_path", path.resolve())
+    return doc
 
 
 def _build_doc(raw: dict) -> DetailSpecDoc:

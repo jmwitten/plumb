@@ -27,6 +27,7 @@ from collections import Counter
 from pathlib import Path
 
 import pytest
+import yaml
 
 from detailgen.spec.compiler import compile_spec_file, compile_spec
 from detailgen.spec.loader import load_spec_file, load_spec_text
@@ -61,6 +62,13 @@ def _install(report, kind=None):
 
 def _verdicts(report):
     return Counter((f.check, f.verdict) for f in _install(report))
+
+
+def _ungoverned_doc(text):
+    """Keep low-level geometry mutation tests independent of delivery policy."""
+    raw = yaml.safe_load(text)
+    raw.pop("design_review", None)
+    return load_spec_text(yaml.safe_dump(raw, sort_keys=False))
 
 
 # -- flavor (a): the caddy — glued rail->top joints (GLUE arc) -----------------
@@ -175,7 +183,7 @@ def test_caddy_driven_straight_reversion_is_still_caught(swept):
     assert anchor_comp in text and anchor_conn in text
     mutated = text.replace(anchor_comp, _GHOST_COMPONENT + anchor_comp)
     mutated = mutated.replace(anchor_conn, _GHOST_CONNECTION + anchor_conn)
-    report = compile_spec(load_spec_text(mutated)).validate()
+    report = compile_spec(_ungoverned_doc(mutated)).validate()
 
     ghost_a = [f for f in _install(report, "install_access")
                if "ghost" in f.subject]
@@ -206,8 +214,8 @@ def test_caddy_synthetic_overlong_side_screw_fails_naming_show_face(swept):
     mutation — the shipped spec keeps its honest 1.25in screws."""
     text = (ROOT / "details" / "armchair_caddy.spec.yaml").read_text()
     assert "screw_len_h: 1.25" in text  # the shipped value this mutates
-    doc = load_spec_text(text.replace("screw_len_h: 1.25",
-                                      "screw_len_h: 1.75"))
+    doc = _ungoverned_doc(text.replace("screw_len_h: 1.25",
+                                       "screw_len_h: 1.75"))
     report = compile_spec(doc).validate()
     side = [f for f in _install(report, "install_termination")
             if "rail-side screw" in f.subject]
@@ -460,13 +468,12 @@ def _mutated_spec(name, mutate):
     """Compile a spec-TEXT mutation of one shipped detail (the
     install-sweep mutation pattern — the shipped file is untouched):
     ``mutate`` edits the parsed YAML mapping in place."""
-    import yaml as _yaml
-
-    raw = _yaml.safe_load((ROOT / "details" / f"{name}.spec.yaml").read_text())
+    raw = yaml.safe_load((ROOT / "details" / f"{name}.spec.yaml").read_text())
+    raw.pop("design_review", None)
     mutate(raw)
     # sort_keys=False: the derived: block resolves in declaration order,
     # so re-serializing must preserve it.
-    return compile_spec(load_spec_text(_yaml.safe_dump(raw, sort_keys=False)))
+    return compile_spec(load_spec_text(yaml.safe_dump(raw, sort_keys=False)))
 
 
 def _mutated_platform(mutate):

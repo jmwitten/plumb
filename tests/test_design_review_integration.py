@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from pathlib import Path
 
 import pytest
@@ -73,6 +74,12 @@ def test_ungoverned_spec_round_trips_and_uses_existing_delivery_gate():
     assert detail.design_governance is None
     assert detail.require_modeling_approval() is detail
     assert detail.require_delivery_ready().ok
+
+
+def test_loader_path_context_does_not_change_legacy_dataclass_projection():
+    doc = load_spec_file(BASE_SPEC)
+
+    assert "source_path" not in asdict(doc)
 
 
 def test_governed_draft_compiles_but_cannot_be_promoted(tmp_path):

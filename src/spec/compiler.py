@@ -163,7 +163,8 @@ class SpecDetail(Detail):
         self.doc = doc
         self.design_governance = None
         if doc.design_review is not None:
-            if doc.source_path is None:
+            source_path = getattr(doc, "source_path", None)
+            if source_path is None:
                 raise SpecCompileError(
                     "a governed DetailSpec requires its file path to resolve "
                     "design_review.record; load it with load_spec_file() or "
@@ -176,7 +177,7 @@ class SpecDetail(Detail):
             )
             from .serialize import spec_to_dict
 
-            review_path = doc.source_path.parent / doc.design_review.record
+            review_path = source_path.parent / doc.design_review.record
             try:
                 review = load_design_review_file(review_path)
             except (OSError, DesignReviewSchemaError) as error:

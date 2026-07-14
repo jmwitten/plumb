@@ -4,6 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+import yaml
 
 from detailgen.rendering.caddy_stations import attach_caddy_stations
 from detailgen.rendering.instruction_panels import (
@@ -38,6 +39,12 @@ def stationed(caddy):
 
 def _panel(manual, action):
     return next(panel for panel in manual.panels if panel.action == action)
+
+
+def _write_ungoverned_variant(path, text):
+    raw = yaml.safe_load(text)
+    raw.pop("design_review", None)
+    path.write_text(yaml.safe_dump(raw, sort_keys=False))
 
 
 def test_instruction_rendering_api_is_public():
@@ -144,8 +151,10 @@ def test_moving_authored_screw_offset_moves_raw_stations_and_rekeys(
     caddy, stationed, tmp_path,
 ):
     changed_spec = tmp_path / SPEC.name
-    changed_spec.write_text(
-        SPEC.read_text().replace("screw_dy_h: 0.6", "screw_dy_h: 0.8"))
+    _write_ungoverned_variant(
+        changed_spec,
+        SPEC.read_text().replace("screw_dy_h: 0.6", "screw_dy_h: 0.8"),
+    )
     changed = compile_spec_file(changed_spec)
     changed.validate()
     changed_manual = attach_caddy_stations(
@@ -170,13 +179,16 @@ def test_asymmetric_screw_pair_without_a_physical_end_anchor_fails_closed(
     caddy, tmp_path,
 ):
     changed_spec = tmp_path / SPEC.name
-    changed_spec.write_text(SPEC.read_text().replace(
-        'place: {raw: {at: ["$rail_inner_x", "$screw_dy_h", '
-        '"$sidescrew_z_u"], rotate: [["Y", -90]]}}',
-        'place: {raw: {at: ["$rail_inner_x", "= screw_dy_h + 0.2", '
-        '"$sidescrew_z_u"], rotate: [["Y", -90]]}}',
-        1,
-    ))
+    _write_ungoverned_variant(
+        changed_spec,
+        SPEC.read_text().replace(
+            'place: {raw: {at: ["$rail_inner_x", "$screw_dy_h", '
+            '"$sidescrew_z_u"], rotate: [["Y", -90]]}}',
+            'place: {raw: {at: ["$rail_inner_x", "= screw_dy_h + 0.2", '
+            '"$sidescrew_z_u"], rotate: [["Y", -90]]}}',
+            1,
+        ),
+    )
     changed = compile_spec_file(changed_spec)
     changed.validate()
 

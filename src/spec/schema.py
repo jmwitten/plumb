@@ -20,8 +20,7 @@ silent fill here.
 from __future__ import annotations
 
 import difflib
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import InitVar, dataclass, field
 
 # The install-contract closed vocabularies (task INSTALL v1) are owned by the
 # leaf contract module — the spec surface names the SAME sets, imported (never
@@ -1175,14 +1174,15 @@ class DetailSpecDoc:
     # unchanged. Plumbing only here — no event graph, no axis-3 semantics;
     # this is the parsed+validated authoring surface the next task consumes.
     sequence: SequenceSpec = field(default_factory=SequenceSpec)
-    # Optional pre-model design-selection governance. The review remains a
-    # sidecar so research can exist before production geometry.
-    design_review: DesignReviewSpec | None = None
-    # Loader context for resolving the sidecar. It is not authored, serialized,
-    # compared, or fingerprinted.
-    source_path: Path | None = field(default=None, compare=False, repr=False)
+    # Optional pre-model design-selection governance. ``InitVar`` keeps the new
+    # binding out of legacy dataclass/asdict projections; ``__post_init__``
+    # retains the typed value for the compiler and explicit serializer.
+    design_review: InitVar[DesignReviewSpec | None] = None
     # Whether ``units`` was omitted (defaulted to ``in``) — a provenance flag the
     # compiler records as an inferred fact (P1: a silent default that scales
     # every length 25.4x is exactly the kind of assumption the log must surface).
     # Excluded from equality so a spec round-trips identically either way.
     units_defaulted: bool = field(default=False, compare=False)
+
+    def __post_init__(self, design_review: DesignReviewSpec | None) -> None:
+        object.__setattr__(self, "design_review", design_review)
