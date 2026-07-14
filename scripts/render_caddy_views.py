@@ -1,117 +1,144 @@
-"""Rasterize shaded views of the caddy assembly with matplotlib (no Blender).
+"""Rasterize shaded views of a compiled caddy assembly with matplotlib.
 
-Tessellates each part's world solid and draws it as a lit Poly3DCollection, from
-a set of primary + zoom camera angles, saving one PNG per view. Used to produce
-images for the adversarial visual review (task 8) in an environment without a
-Blender/GPU render path.
+The callable renderer accepts the already-compiled detail used by the document
+pair.  The CLI remains available for standalone regeneration.
 """
+
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 
-import numpy as np
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import LightSource
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import numpy as np
 
 from detailgen.spec.compiler import compile_spec_file
 
-OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else (Path(__file__).resolve().parents[1] / "outputs" / "armchair_caddy" / "views")
-OUT.mkdir(parents=True, exist_ok=True)
 
-SPEC = Path(__file__).resolve().parents[1] / "details" / "armchair_caddy.spec.yaml"
-d = compile_spec_file(SPEC)
-d.build()
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_OUT = ROOT / "outputs" / "armchair_caddy" / "views"
+SPEC = ROOT / "details" / "armchair_caddy.spec.yaml"
 
-# per-part face color by role/material (RGB 0..1)
 COLOR = {
-    "sofa arm": (0.78, 0.75, 0.70),        # existing context — pale stone/tan
-    "side board +X": (0.80, 0.62, 0.42),   # SPF wood
+    "sofa arm": (0.78, 0.75, 0.70),
+    "side board +X": (0.80, 0.62, 0.42),
     "side board -X": (0.80, 0.62, 0.42),
-    "top board": (0.66, 0.48, 0.30),       # PT decking, darker
-    "registration rail +X": (0.86, 0.72, 0.50),   # 1x6 rail — lighter wood so it reads apart
+    "top board": (0.66, 0.48, 0.30),
+    "registration rail +X": (0.86, 0.72, 0.50),
     "registration rail -X": (0.86, 0.72, 0.50),
 }
-SCREW = (0.55, 0.57, 0.60)                 # galvanized steel
+SCREW = (0.55, 0.57, 0.60)
+LIGHT = LightSource(azdeg=-35, altdeg=55)
 
-ls = LightSource(azdeg=-35, altdeg=55)
 
-
-def part_polys(part):
+def _part_polys(part):
     verts, tris = part.world_solid().val().tessellate(0.05)
-    V = np.array([[v.x, v.y, v.z] for v in verts])
-    faces = [V[list(t)] for t in tris]
-    return V, faces
+    vertices = np.array([[value.x, value.y, value.z] for value in verts])
+    faces = [vertices[list(triangle)] for triangle in tris]
+    return vertices, faces
 
 
-def shade(base, faces):
+def _shade(base, faces):
     """Flat-shade each triangle by its normal against the light source."""
-    cols = []
-    for f in faces:
-        n = np.cross(f[1] - f[0], f[2] - f[0])
-        ln = np.linalg.norm(n)
-        n = n / ln if ln > 1e-9 else np.array([0, 0, 1.0])
-        lv = np.array([-0.4, -0.5, 0.9]); lv = lv / np.linalg.norm(lv)
-        s = 0.45 + 0.55 * max(0.0, float(np.dot(n, lv)))
-        cols.append((base[0] * s, base[1] * s, base[2] * s, 1.0))
-    return cols
+    colors = []
+    for face in faces:
+        normal = np.cross(face[1] - face[0], face[2] - face[0])
+        length = np.linalg.norm(normal)
+        normal = normal / length if length > 1e-9 else np.array([0, 0, 1.0])
+        light = np.array([-0.4, -0.5, 0.9])
+        light = light / np.linalg.norm(light)
+        strength = 0.45 + 0.55 * max(0.0, float(np.dot(normal, light)))
+        colors.append((*[channel * strength for channel in base], 1.0))
+    return colors
 
 
-PARTS = []
-allV = []
-for p in d.assembly.parts:
-    base = COLOR.get(p.name, SCREW)
-    V, faces = part_polys(p)
-    allV.append(V)
-    PARTS.append((p.name, base, faces))
-allV = np.vstack(allV)
-gmin, gmax = allV.min(0), allV.max(0)
+def render_caddy_views(detail, out_dir: str | Path = DEFAULT_OUT) -> tuple[Path, ...]:
+    """Render the ten registered legacy views from one compiled detail."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    detail.build()
+
+    parts = []
+    all_vertices = []
+    for part in detail.assembly.parts:
+        vertices, faces = _part_polys(part)
+        all_vertices.append(vertices)
+        parts.append((part.name, COLOR.get(part.name, SCREW), faces))
+    vertices = np.vstack(all_vertices)
+    global_min, global_max = vertices.min(0), vertices.max(0)
+    written = []
+
+    def draw(filename, elev, azim, title, lims=None, hide=()):
+        figure = plt.figure(figsize=(7, 6), dpi=130)
+        ax = figure.add_subplot(111, projection="3d")
+        for name, base, faces in parts:
+            if name in hide:
+                continue
+            collection = Poly3DCollection(
+                faces,
+                facecolors=_shade(base, faces),
+                edgecolors=(0, 0, 0, 0.18),
+                linewidths=0.2,
+            )
+            ax.add_collection3d(collection)
+        if lims is None:
+            low, high = global_min, global_max
+        else:
+            low, high = np.array(lims[0]), np.array(lims[1])
+        ax.set_xlim(low[0], high[0])
+        ax.set_ylim(low[1], high[1])
+        ax.set_zlim(low[2], high[2])
+        ax.set_box_aspect((high[0] - low[0], high[1] - low[1], high[2] - low[2]))
+        ax.view_init(elev=elev, azim=azim)
+        ax.set_xlabel("X (across arm)")
+        ax.set_ylabel("Y (along arm)")
+        ax.set_zlabel("Z up")
+        ax.set_title(title, fontsize=10)
+        figure.tight_layout()
+        path = out_dir / filename
+        figure.savefig(path)
+        plt.close(figure)
+        written.append(path)
+
+    draw("v1_iso.png", 22, -55, "ISO — whole caddy saddling the arm")
+    draw("v2_front.png", 6, -89, "FRONT (along -Y): straddle, cup-hole edge, sides hang free")
+    draw("v3_end.png", 6, 1, "END: arm length, side-board 7in drop")
+    draw("v4_top.png", 88, -90, "TOP (-Z): cup-hole opening — clean show face, NO fasteners")
+    draw("z1_cup.png", 55, -60, "ZOOM cup-hole interior (top board notch)",
+         lims=([-60, -60, -20], [60, 60, 40]))
+    draw("z2_joint.png", 26, -55,
+         "ZOOM registration-rail corner: hidden full-depth 1x6 rail, face-grain screws (2 pairs)",
+         lims=([40, -55, -155], [125, 55, 40]))
+    draw("z3_gap.png", 8, -89,
+         "ZOOM arm-clearance fit (registration rail holds the 0.25in reveal off the arm)",
+         lims=([55, -75, -160], [125, 75, 35]))
+    draw("g1_iso.png", 24, -55,
+         "ISO (arm hidden) — 3 boards + 2 hidden full-depth registration rails",
+         hide=("sofa arm",))
+    draw("g2_joint.png", 30, -60,
+         "ZOOM registration-rail corner (arm hidden): 1x6 rail glued to the top + screwed into the side face (upper + lower)",
+         lims=([40, -60, -155], [125, 60, 40]), hide=("sofa arm",))
+    draw("g3_underside.png", -35, -55,
+         "UNDERSIDE (arm hidden): deep rails register + fasten the top to the sides, no show-face screws",
+         hide=("sofa arm",))
+    return tuple(written)
 
 
-def draw(fname, elev, azim, title, lims=None, hide=()):
-    fig = plt.figure(figsize=(7, 6), dpi=130)
-    ax = fig.add_subplot(111, projection="3d")
-    for name, base, faces in PARTS:
-        if name in hide:
-            continue
-        pc = Poly3DCollection(faces, facecolors=shade(base, faces),
-                              edgecolors=(0, 0, 0, 0.18), linewidths=0.2)
-        ax.add_collection3d(pc)
-    if lims is None:
-        lo, hi = gmin, gmax
-    else:
-        lo, hi = np.array(lims[0]), np.array(lims[1])
-    ax.set_xlim(lo[0], hi[0]); ax.set_ylim(lo[1], hi[1]); ax.set_zlim(lo[2], hi[2])
-    ax.set_box_aspect((hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]))
-    ax.view_init(elev=elev, azim=azim)
-    ax.set_xlabel("X (across arm)"); ax.set_ylabel("Y (along arm)"); ax.set_zlabel("Z up")
-    ax.set_title(title, fontsize=10)
-    fig.tight_layout()
-    fig.savefig(OUT / fname)
-    plt.close(fig)
-    print("wrote", fname)
+def main(argv=None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    out_dir = Path(args[0]) if args else DEFAULT_OUT
+    detail = compile_spec_file(SPEC)
+    detail.build()
+    for path in render_caddy_views(detail, out_dir):
+        print("wrote", path.name)
+    print("done")
+    return 0
 
 
-IN = 25.4
-# primary views
-draw("v1_iso.png", 22, -55, "ISO — whole caddy saddling the arm")
-draw("v2_front.png", 6, -89, "FRONT (along -Y): straddle, cup-hole edge, sides hang free")
-draw("v3_end.png", 6, 1, "END: arm length, side-board 7in drop")
-draw("v4_top.png", 88, -90, "TOP (-Z): cup-hole opening — clean show face, NO fasteners")
-# zoom views
-draw("z1_cup.png", 55, -60, "ZOOM cup-hole interior (top board notch)",
-     lims=([-60, -60, -20], [60, 60, 40]))
-draw("z2_joint.png", 26, -55, "ZOOM registration-rail corner: hidden full-depth 1x6 rail, face-grain screws (2 pairs)",
-     lims=([40, -55, -155], [125, 55, 40]))
-draw("z3_gap.png", 8, -89, "ZOOM arm-clearance fit (registration rail holds the 0.25in reveal off the arm)",
-     lims=([55, -75, -160], [125, 75, 35]))
-print("done")
-
-# --- arm-ghosted variants (context hidden so the joinery is inspectable) ------
-draw("g1_iso.png", 24, -55, "ISO (arm hidden) — 3 boards + 2 hidden full-depth registration rails",
-     hide=("sofa arm",))
-draw("g2_joint.png", 30, -60, "ZOOM registration-rail corner (arm hidden): 1x6 rail glued to the top + screwed into the side face (upper + lower)",
-     lims=([40, -60, -155], [125, 60, 40]), hide=("sofa arm",))
-draw("g3_underside.png", -35, -55, "UNDERSIDE (arm hidden): deep rails register + fasten the top to the sides, no show-face screws",
-     hide=("sofa arm",))
+if __name__ == "__main__":
+    raise SystemExit(main())

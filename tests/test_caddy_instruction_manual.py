@@ -79,6 +79,42 @@ def test_pair_compiles_the_detail_only_once(monkeypatch, tmp_path):
     assert calls == [SDR.CADDY_SPEC]
 
 
+def test_pair_compiles_once_when_ignored_legacy_views_are_missing(
+    monkeypatch, tmp_path,
+):
+    calls = []
+    rendered_details = []
+    real_compile = CD.compile_spec_file
+    consumer = SDR.CONSUMERS[SDR.CADDY_SPEC.name]
+    missing_views = tmp_path / "clean-checkout-views"
+
+    def counted_compile(path):
+        calls.append(Path(path))
+        return real_compile(path)
+
+    def render_from_compiled(detail, out_dir):
+        rendered_details.append(detail)
+        out_dir.mkdir(parents=True)
+        for basename in consumer["view_files"].values():
+            (out_dir / basename).write_bytes(b"model-backed-test-view")
+
+    monkeypatch.setattr(CD, "compile_spec_file", counted_compile)
+    monkeypatch.setattr(SDR, "compile_spec_file", counted_compile)
+    monkeypatch.setitem(consumer, "views_dir", missing_views)
+    monkeypatch.setitem(consumer, "render_views", render_from_compiled)
+    monkeypatch.setitem(
+        consumer,
+        "ensure_views",
+        lambda: pytest.fail("clean pair must not launch a compiling subprocess"),
+    )
+
+    CD.build_caddy_document_pair(tmp_path / "pair", image_size=(320, 240))
+
+    assert calls == [SDR.CADDY_SPEC]
+    assert len(rendered_details) == 1
+    assert rendered_details[0].report is not None
+
+
 def test_ordinary_technical_header_has_no_broken_companion_link():
     detail = SDR.compile_spec_file(SDR.CADDY_SPEC)
     detail.validate()
@@ -115,6 +151,20 @@ def test_manual_is_self_contained_and_has_one_model_backed_panel_per_cohort(pair
     assert "ArrowLeft" in html and "ArrowRight" in html
     assert "hashchange" in html
     assert "@media print" in html and ".panel-controls{display:none}" in html
+
+
+def test_manual_renders_typed_resource_icons_and_release_boundary(pair):
+    html = Path(pair["manual_path"]).read_text()
+    visible = _visible_text(html)
+
+    for icon in ("screw", "adhesive", "clamp", "driver"):
+        assert f'data-icon="{icon}"' in html
+        assert f'aria-label="{icon} icon"' in html
+    assert html.count('class="resource-icon"') >= 4
+    assert "A blocking modeled failure blocks release" in visible
+    assert "Prototype only" in visible
+    assert html.count(f'href="{Path(pair["technical_path"]).name}"') == 2
+    assert '<footer class="manual-foot">' in html
 
 
 def test_manual_carries_typed_gates_stations_rationales_and_declared_trust(pair):

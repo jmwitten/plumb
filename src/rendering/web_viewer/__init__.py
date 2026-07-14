@@ -27,6 +27,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ...details.base import fmt_frac_in
+from ..instruction_panels import reader_dimensions
 from ..part_labels import part_labels
 
 _HERE = Path(__file__).parent
@@ -171,6 +172,8 @@ def build_viewer_payload(detail, instruction_manual=None) -> dict:
             specs.append([label, formatted])
         stub = c.stub_of()
         dims = c.describe()
+        if instruction_manual is not None:
+            dims = reader_dimensions(c)
         if stub is not None:
             # A stub's PRIMARY dims line is the full piece, not the modeled
             # portion — the tooltip's whole reason for existing here (see

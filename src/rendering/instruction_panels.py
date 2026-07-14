@@ -199,9 +199,20 @@ def _fabrication_instructions(component, display_name: str) -> tuple[str, ...]:
             radius = fmt_frac_in(step.param("radius") / 25.4)
             instructions.append(
                 f"Ease the long edges of {display_name} to a {radius} radius.")
+        elif step.kind == "bore":
+            parameters = step.params_dict()
+            radius = parameters["radius"]
+            diameter_text = fmt_frac_in(2 * radius / 25.4)
+            radius_text = fmt_frac_in(radius / 25.4)
+            feature = parameters.get("feature", "bore")
+            instructions.append(
+                f"Bore the {feature} in {display_name} at the placement station "
+                f"shown: {diameter_text} diameter ({radius_text} radius), clean "
+                "through the stock. The cutter type is not represented; select "
+                "a clamped setup suitable for this stock and cut.")
 
     fab = record.fab_note()
-    if fab:
+    if fab and not any(step.kind == "bore" for step in record.steps):
         instructions.append(f"Machine {display_name}: {fab}.")
     return tuple(instructions)
 
@@ -268,7 +279,7 @@ def _panel_title(detail, action, graph, steps, cohort, labels) -> str:
     return action.title()
 
 
-def _reader_dimensions(component) -> str:
+def reader_dimensions(component) -> str:
     """Use construction fractions for headed fasteners on every manual surface."""
     if (hasattr(component, "diameter") and hasattr(component, "length")
             and hasattr(component, "head_height")):
@@ -284,14 +295,16 @@ def _hardware_rows(detail, installs) -> tuple[DisplayRow, ...]:
     if not ids:
         return ()
     first = by_id[ids[0]].component
-    size = _reader_dimensions(first)
+    size = reader_dimensions(first)
     head_key = installs[0].contract.head
     head = _HEAD_TEXT.get(head_key, head_key.replace("_", " "))
     labels = part_labels(detail.assembly.parts)
     reader_name = labels[ids[0]].reader_name
     return (DisplayRow(
         "screw",
-        f"{len(ids)} × {reader_name} — {size}, {head}",
+        f"{len(ids)} × {reader_name} — {size}, {head}; builder-selected "
+        "fastener system, with maker/model and drilling requirements selected "
+        "before work begins",
         count=len(ids), source_part_ids=tuple(ids)),)
 
 
@@ -318,19 +331,43 @@ def _constraint_whys(graph, *, connections=(), process_events=()) -> tuple[str, 
     return tuple(result)
 
 
+def _actual_finished_dimensions(component) -> str | None:
+    record_fn = getattr(component, "fabrication_record", None)
+    record = record_fn() if record_fn is not None else None
+    if record is None or record.stock.form != "linear_stick":
+        return None
+    box = component.bounding_box()
+    dimensions = sorted((box.xlen, box.ylen, box.zlen))
+    return " × ".join(fmt_frac_in(value / 25.4) for value in dimensions)
+
+
 def _inventory(detail, labels) -> tuple[DisplayRow, ...]:
     grouped = {}
     for part in detail.assembly.parts:
         if part.component.bom_label().endswith("(existing)"):
             continue
         key = (labels[part.id].reader_name, labels[part.id].item,
-               _reader_dimensions(part.component))
+               reader_dimensions(part.component),
+               _actual_finished_dimensions(part.component))
         grouped.setdefault(key, []).append(part)
-    return tuple(
-        DisplayRow("part", f"{len(parts)} × {reader_name} — {item}; {dimensions}",
-                   count=len(parts),
-                   source_part_ids=tuple(part.id for part in parts))
-        for (reader_name, item, dimensions), parts in grouped.items())
+    rows = []
+    for (reader_name, item, dimensions, actual), parts in grouped.items():
+        actual_text = f"; actual {actual}" if actual is not None else ""
+        rows.append(DisplayRow(
+            "part",
+            f"{len(parts)} × {reader_name} — {item}; {dimensions}{actual_text}",
+            count=len(parts),
+            source_part_ids=tuple(part.id for part in parts)))
+    return tuple(rows)
+
+
+def _consumable_inventory(graph) -> tuple[DisplayRow, ...]:
+    if any(event.group == "cure" for event in graph.process_facts):
+        return (DisplayRow(
+            "adhesive",
+            "Required consumable — selected wood adhesive; product selection "
+            "required before work begins"),)
+    return ()
 
 
 def _panel_content(detail, graph, steps, cohort, action, labels,
@@ -351,9 +388,11 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
         prepared_ids = tuple(pid for i in cohort for pid in steps[i].parts_placed)
         for part_id in prepared_ids:
             part = by_id[part_id]
+            actual = _actual_finished_dimensions(part.component)
+            actual_text = f"; actual {actual}" if actual is not None else ""
             line = (f"Prepare {_display(labels, part_id)} — "
-                    f"{labels[part_id].item}; modeled finished dimensions "
-                    f"{part.component.describe()}.")
+                    f"{labels[part_id].item}; purchase profile and cut length "
+                    f"{part.component.describe()}{actual_text}.")
             instructions.append(line)
             instructions.extend(_fabrication_instructions(
                 part.component, _display(labels, part_id)))
@@ -571,7 +610,7 @@ def build_instruction_manual(
         step_edges=step_edges,
         part_schedule=tuple((p.id, schedule[p.id])
                             for p in detail.assembly.parts),
-        inventory=_inventory(detail, labels),
+        inventory=(*_inventory(detail, labels), *_consumable_inventory(graph)),
     )
 
 

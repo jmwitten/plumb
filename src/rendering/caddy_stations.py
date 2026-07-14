@@ -128,6 +128,7 @@ def _bond_stations(detail, panel, by_id, labels, graph):
     top_bb = _bbox(by_id[top_id])
     length = top_bb.xmax - top_bb.xmin
     result = []
+    rail_inner_faces = []
     for connection in panel.connections:
         members = graph.members_of.get(connection, ())
         rails = [pid for pid in members
@@ -142,9 +143,11 @@ def _bond_stations(detail, panel, by_id, labels, graph):
         if rail_center[0] >= 0:
             end_x, station_x = top_bb.xmax, rail_bb.xmax
             near, far = end_x - station_x, station_x - top_bb.xmin
+            rail_inner_faces.append(rail_bb.xmin)
         else:
             end_x, station_x = top_bb.xmin, rail_bb.xmin
             near, far = station_x - end_x, top_bb.xmax - station_x
+            rail_inner_faces.append(rail_bb.xmax)
         front_flush = abs(rail_bb.ymin - top_bb.ymin) <= _RECONCILE_TOL_MM
         back_flush = abs(rail_bb.ymax - top_bb.ymax) <= _RECONCILE_TOL_MM
         underside_flush = abs(rail_bb.zmax - top_bb.zmin) <= _RECONCILE_TOL_MM
@@ -154,9 +157,10 @@ def _bond_stations(detail, panel, by_id, labels, graph):
                 "missing the compiled front/back/top-underside flush datums")
         result.append(PlacementStation(
             feature="registration rail placement",
-            label=(f"Set {labels[rail_id].display_name} {_fmt_mm(near)} in "
-                   "from its top-board end, with front/back edges flush and "
-                   "its top edge flush to the top underside."),
+            label=(f"Locate {labels[rail_id].display_name}'s side-board "
+                   f"contact face {_fmt_mm(near)} in from the nearest "
+                   "top-board end, with front/back edges flush and its top "
+                   "edge flush to the top underside."),
             reference_part_id=top_id,
             near_mm=near,
             far_mm=far,
@@ -165,7 +169,58 @@ def _bond_stations(detail, panel, by_id, labels, graph):
             p0=(end_x, rail_center[1], top_bb.zmin),
             p1=(station_x, rail_center[1], top_bb.zmin),
         ))
+    if len(rail_inner_faces) == 2:
+        clear = max(rail_inner_faces) - min(rail_inner_faces)
+        result[0] = replace(
+            result[0],
+            label=(result[0].label + f" This leaves {_fmt_mm(clear)} clear "
+                   "between the rails' inside faces."),
+        )
     return tuple(result)
+
+
+def _side_registration_instructions(
+    panel, by_id, labels, graph, top_id,
+) -> tuple[str, ...]:
+    """Name every compiled witness face used to register a caddy side board."""
+    top_bb = _bbox(by_id[top_id])
+    instructions = []
+    for connection in panel.connections:
+        members = graph.members_of.get(connection, ())
+        rail_ids = [pid for pid in members
+                    if labels[pid].reader_name == "Registration rail"]
+        side_ids = [pid for pid in members
+                    if labels[pid].reader_name == "Side board"]
+        if len(rail_ids) != 1 or len(side_ids) != 1:
+            raise InstructionPresentationError(
+                f"panel {panel.index} connection {connection!r} does not "
+                "resolve to one registration rail and one side board")
+        rail_id, side_id = rail_ids[0], side_ids[0]
+        rail_bb, side_bb = _bbox(by_id[rail_id]), _bbox(by_id[side_id])
+        positive = _center(side_bb)[0] >= 0
+        top_end = top_bb.xmax if positive else top_bb.xmin
+        side_outside = side_bb.xmax if positive else side_bb.xmin
+        side_inside = side_bb.xmin if positive else side_bb.xmax
+        rail_contact = rail_bb.xmax if positive else rail_bb.xmin
+        registered = (
+            abs(side_outside - top_end) <= _RECONCILE_TOL_MM
+            and abs(side_inside - rail_contact) <= _RECONCILE_TOL_MM
+            and abs(side_bb.zmax - top_bb.zmin) <= _RECONCILE_TOL_MM
+            and abs(side_bb.ymin - top_bb.ymin) <= _RECONCILE_TOL_MM
+            and abs(side_bb.ymax - top_bb.ymax) <= _RECONCILE_TOL_MM
+        )
+        if not registered:
+            raise InstructionPresentationError(
+                f"panel {panel.index} side registration for {side_id!r} has "
+                "no compiled top/end/front/back/rail witness set")
+        instructions.append(
+            f"Before drilling, place {labels[side_id].display_name} with its "
+            "top edge against the top underside, front/back edges flush with "
+            "the top, outside face flush with the nearest top-board end, and "
+            f"inside face tight to {labels[rail_id].display_name}. Drill from "
+            "the rail's inside face into the side board; keep the countersunk "
+            "head on the rail side.")
+    return tuple(instructions)
 
 
 def _fastener_stations(detail, panel, by_id, labels, graph, checks):
@@ -221,7 +276,8 @@ def _fastener_stations(detail, panel, by_id, labels, graph, checks):
             reader_name = labels[pair[0][0]].reader_name
             result.append(PlacementStation(
                 feature="symmetric rail-to-side screw pair",
-                label=(f"{reader_name} pair: mark one center "
+                label=(f"{labels[rail_id].display_name}: mark one {reader_name} "
+                       "center "
                        f"{_fmt_mm(near)} from each rail end and "
                        f"{_fmt_mm(drop)} below the top underside."),
                 reference_part_id=rail_id,
@@ -265,6 +321,15 @@ def attach_caddy_stations(detail, manual: InstructionManual) -> InstructionManua
         elif panel.action == "fasten":
             stations = _fastener_stations(
                 detail, panel, by_id, labels, graph, checks)
+            top_id = _single_reader_id(detail, "Top board")
+            panel = replace(
+                panel,
+                instructions=(
+                    *_side_registration_instructions(
+                        panel, by_id, labels, graph, top_id),
+                    *panel.instructions,
+                ),
+            )
         else:
             stations = ()
         panels.append(_with_reconciled(panel, stations))

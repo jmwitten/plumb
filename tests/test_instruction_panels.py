@@ -157,6 +157,22 @@ def test_prepare_instructions_and_inventory_include_modeled_part_dimensions(cadd
         assert dimensions in inventory
 
 
+def test_inventory_separates_nominal_stock_from_actual_finished_dimensions(
+    caddy,
+):
+    manual = build_instruction_manual(caddy)
+    inventory = "\n".join(row.label for row in manual.inventory)
+
+    assert 'actual 3/4" × 5-1/2" × 7"' in inventory
+    assert 'actual 1" × 5-1/2" × 9-1/2"' in inventory
+    assert any(
+        row.icon == "adhesive"
+        and "required consumable" in row.label.lower()
+        and "product selection required" in row.label.lower()
+        for row in manual.inventory
+    )
+
+
 def test_prepare_instructions_derive_crosscuts_and_edge_easing(caddy):
     manual = build_instruction_manual(caddy)
     prepare = next(panel for panel in manual.panels if panel.action == "prepare")
@@ -169,6 +185,18 @@ def test_prepare_instructions_derive_crosscuts_and_edge_easing(caddy):
     assert 'Ease the long edges of Top board to a 1/8" radius.' in instructions
     assert "Ease the long edges of Registration rail" not in instructions
     assert "|X" not in instructions
+
+
+def test_prepare_translates_the_cup_bore_into_shop_dimensions_without_jargon(
+    caddy,
+):
+    manual = build_instruction_manual(caddy)
+    prepare = next(panel for panel in manual.panels if panel.action == "prepare")
+    instructions = "\n".join(prepare.instructions)
+
+    assert '3-1/2" diameter (1-3/4" radius)' in instructions
+    assert "cutter type is not represented" in instructions
+    assert "full-cylinder" not in instructions
 
 
 def test_titles_compose_from_current_reader_labels(tmp_path):
@@ -200,6 +228,8 @@ def test_hardware_label_uses_typed_geometry_without_inventing_a_gauge(caddy):
     assert "#10" not in label
     assert "3/16\" dia × 1-1/4\"" in inventory_label
     assert '1.2"' not in inventory_label
+    assert "builder-selected" in label
+    assert "maker/model" in label
 
 
 def test_cure_and_fasten_both_print_each_authored_constraint_why(caddy):

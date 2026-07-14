@@ -38,6 +38,9 @@ def test_viewer_payload_adds_panel_schedule_only_when_explicitly_supplied(
     assert staged["parts"]["top board"]["first_panel"] == 1
     assert staged["parts"]["rail-side screw +X upper 0"]["first_panel"] == 4
     assert staged["parts"]["sofa arm"]["first_panel"] == 5
+    screw = "rail-side screw +X upper 0"
+    assert legacy["parts"][screw]["dims"] == '0.19" dia x 1.2"'
+    assert staged["parts"][screw]["dims"] == '3/16" dia × 1-1/4"'
 
     assert set(staged["instruction_panels"][0]["arrivals"]) == {
         "side board +X", "side board -X", "top board",
@@ -86,3 +89,14 @@ def test_panel_input_changes_visibility_without_changing_explode_value():
             'assembly.addEventListener("input"') + 700]
     assert 'explode.addEventListener("input"' in js
 
+
+def test_hidden_future_parts_cannot_be_picked_or_leak_pinned_tooltips():
+    js = viewer_js()
+
+    assert "function objectIsVisible" in js
+    assert "function isPartVisible" in js
+    assert "if (!objectIsVisible(hits[i].object)) continue;" in js
+    assert "if (partName && isPartVisible(partName)) return partName;" in js
+    assert "if (!pinned || !pinnedPoint || !isPartVisible(pinned))" in js
+    assert "renderPinnedTooltip();" in js
+    assert "if (hovered && !isPartVisible(hovered))" in js

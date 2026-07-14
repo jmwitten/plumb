@@ -873,6 +873,12 @@ TREB_DESIGN_LEDE = (
     "deferred to ANALYSIS-v1; DS4 (cleat_screwed's noun stretched to face-laps) is "
     "adopted with per-connection disclosure and filed as CL v2 vocabulary material.")
 
+
+def _render_compiled_caddy_views(detail, out_dir: Path) -> None:
+    from render_caddy_views import render_caddy_views
+
+    render_caddy_views(detail, out_dir)
+
 CONSUMERS = {
     "armchair_caddy.spec.yaml": {
         "name": "armchair_caddy",
@@ -889,6 +895,7 @@ CONSUMERS = {
         "buy_lede": CADDY_BUY_LEDE,
         "footer": CADDY_FOOTER,
         "cut_note_context": _CUT_NOTE_CONTEXT,
+        "render_views": _render_compiled_caddy_views,
         "ensure_views": lambda: _ensure_views(
             VIEWS_DIR, VIEW_FILES, _REPO / "scripts" / "render_caddy_views.py"),
     },
@@ -1355,6 +1362,28 @@ def _ensure_views(views_dir: Path, view_files: dict, render_script: Path) -> Non
         subprocess.run([sys.executable, str(render_script)], check=True)
 
 
+def _views_complete(consumer: dict) -> bool:
+    views_dir = consumer["views_dir"]
+    needed = set(consumer["view_files"].values())
+    return views_dir.exists() and needed.issubset(
+        path.name for path in views_dir.glob("*.png"))
+
+
+def _ensure_consumer_views(consumer: dict, detail) -> None:
+    """Fill a clean view directory without recompiling when a renderer exists."""
+    if _views_complete(consumer):
+        return
+    renderer = consumer.get("render_views")
+    if renderer is not None:
+        renderer(detail, consumer["views_dir"])
+        if not _views_complete(consumer):
+            raise RuntimeError(
+                f"{consumer['name']} view renderer did not produce every "
+                "registered view")
+        return
+    consumer["ensure_views"]()
+
+
 def _consumer_for(spec_path: Path) -> dict:
     """Look up the registered single-detail consumer for ``spec_path`` (keyed by
     spec filename). Errors helpfully — naming how to register — for an
@@ -1380,13 +1409,13 @@ def build_document(out: Path, spec_path: Path = CADDY_SPEC,
     progression harness calls to report on the REAL HTML."""
     spec_path = Path(spec_path)
     consumer = _consumer_for(spec_path)
-    consumer["ensure_views"]()
     detail = compiled_detail
     if detail is None:
         detail = compile_spec_file(consumer["spec"])
         report = detail.validate()
     else:
         report = detail.report or detail.validate()
+    _ensure_consumer_views(consumer, detail)
 
     with tempfile.TemporaryDirectory() as td:
         html = build_single_detail_html(

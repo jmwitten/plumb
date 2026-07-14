@@ -364,8 +364,27 @@
     var pendingPointer = null; // {x,y} slot-local, consumed on next frame
     var hovered = null; // partName currently emissive-lit
     var pinned = null; // partName pinned open
+    var pinnedPoint = null; // slot-local point retained while a pin is hidden
     var currentPanel = 1;
     var arrivalNames = {};
+
+    function objectIsVisible(object) {
+      var cursor = object;
+      while (cursor) {
+        if (cursor.visible === false) return false;
+        if (cursor === model) return true;
+        cursor = cursor.parent;
+      }
+      return false;
+    }
+
+    function isPartVisible(partName) {
+      var row = payload.parts[partName];
+      var entry = partNodes[partName];
+      if (!row || !entry) return false;
+      if (row.first_panel && row.first_panel > currentPanel) return false;
+      return entry.tops.some(objectIsVisible);
+    }
 
     function setEmissive(partName, hex) {
       var entry = partNodes[partName];
@@ -395,24 +414,34 @@
     }
 
     function showTooltipFor(partName, sx, sy) {
-      if (fillTooltip(tip, payload, partName)) {
+      if (isPartVisible(partName) && fillTooltip(tip, payload, partName)) {
         positionTooltip(tip, slot, sx, sy);
       }
     }
 
+    function renderPinnedTooltip() {
+      if (!pinned || !pinnedPoint || !isPartVisible(pinned)) {
+        tip.style.display = "none";
+        return;
+      }
+      fillTooltip(tip, payload, pinned);
+      tip.innerHTML += '<div class="v-tip-pinhint">Pinned — Esc or click empty space to clear</div>';
+      positionTooltip(tip, slot, pinnedPoint.x, pinnedPoint.y);
+    }
+
     function pin(partName, sx, sy) {
       pinned = partName;
+      pinnedPoint = { x: sx, y: sy };
       refreshPartEmissive(partName);
       tip.classList.add("pinned");
-      fillTooltip(tip, payload, partName);
-      tip.innerHTML += '<div class="v-tip-pinhint">Pinned — Esc or click empty space to clear</div>';
-      positionTooltip(tip, slot, sx, sy);
+      renderPinnedTooltip();
     }
 
     function unpin() {
       if (!pinned) return;
       var previous = pinned;
       pinned = null;
+      pinnedPoint = null;
       refreshPartEmissive(previous);
       tip.classList.remove("pinned");
       tip.style.display = "none";
@@ -424,11 +453,17 @@
       raycaster.setFromCamera(pointer, camera);
       var hits = raycaster.intersectObject(model, true);
       for (var i = 0; i < hits.length; i++) {
+        if (!objectIsVisible(hits[i].object)) continue;
         var o = hits[i].object;
+        var partName = null;
         while (o) {
-          if (o.userData && o.userData.partName) return o.userData.partName;
+          if (o.userData && o.userData.partName) {
+            partName = o.userData.partName;
+            break;
+          }
           o = o.parent;
         }
+        if (partName && isPartVisible(partName)) return partName;
       }
       return null;
     }
@@ -564,6 +599,12 @@
         entry.tops.forEach(function (node) { node.visible = visible; });
         refreshPartEmissive(name);
       });
+      if (hovered && !isPartVisible(hovered)) {
+        var hiddenHover = hovered;
+        hovered = null;
+        refreshPartEmissive(hiddenHover);
+      }
+      renderPinnedTooltip();
       applyExplode();
     }
 

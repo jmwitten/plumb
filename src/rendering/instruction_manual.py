@@ -20,11 +20,37 @@ def _data_uri(path: Path) -> str:
     return "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode()
 
 
+_ICON_GEOMETRY = {
+    "part": '<path d="M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/>',
+    "saw": '<path d="M3 15h11l6-8H9zM4 15l2 4 2-4 2 4 2-4"/>',
+    "ease": '<path d="M4 18h7a7 7 0 007-7V4M6 14h5a3 3 0 003-3V6"/>',
+    "drill": '<path d="M3 8h11v7H3zM14 10h5v3h-5M6 15l-2 6h5l1-6M19 11.5h3"/>',
+    "adhesive": '<path d="M9 3h6v4l2 3v11H7V10l2-3zM9 12h6v5H9z"/>',
+    "clamp": '<path d="M18 4H9a5 5 0 00-5 5v6a5 5 0 005 5h9M15 2v5M15 17v5M12 5h6M12 19h6"/>',
+    "screw": '<path d="M5 5l4-3 4 4-3 4M9 9l10 10M13 11l-3 3M16 14l-3 3M19 17l-3 3"/>',
+    "driver": '<path d="M3 7h11v7H3zM14 9h5v3h-5M6 14l-2 7h5l1-7M19 10.5h3"/>',
+    "countersink": '<path d="M4 5h16M7 5l5 8 5-8M12 13v8M9 18l3 3 3-3"/>',
+    "fit": '<path d="M4 8h16M4 16h16M7 5L4 8l3 3M17 13l3 3-3 3"/>',
+}
+
+
+def _icon_svg(icon: str) -> str:
+    geometry = _ICON_GEOMETRY.get(icon)
+    if geometry is None:
+        raise InstructionPresentationError(
+            f"manual has no vetted SVG for resource icon {icon!r}")
+    return (
+        f'<svg class="resource-icon" role="img" '
+        f'aria-label="{_e(icon)} icon" viewBox="0 0 24 24">'
+        f'{geometry}</svg>')
+
+
 def _rows(rows, class_name: str) -> str:
     if not rows:
         return ""
     body = "".join(
-        f'<li data-icon="{_e(row.icon)}"><span>{_e(row.label)}</span></li>'
+        f'<li data-icon="{_e(row.icon)}">{_icon_svg(row.icon)}'
+        f'<span>{_e(row.label)}</span></li>'
         for row in rows)
     return f'<ul class="{class_name}">{body}</ul>'
 
@@ -125,9 +151,7 @@ def render_instruction_manual_html(detail, manual, image_paths: dict[int, Path])
         raise InstructionPresentationError(
             f"manual panel images are missing: {missing!r}")
 
-    inventory = "".join(
-        f'<li data-icon="{_e(row.icon)}">{_e(row.label)}</li>'
-        for row in manual.inventory)
+    inventory = _rows(manual.inventory, "inventory")
     nav = "".join(
         f'<a href="#panel-{panel.index}"><b>{panel.index}</b>'
         f'<span>{_e(panel.action)}</span></a>'
@@ -186,7 +210,7 @@ h1{{font-size:clamp(2rem,5vw,3.25rem);line-height:1.05;margin:.35rem 0 .75rem}} 
 .lede{{max-width:760px;color:#dbeafe;font-size:1.07rem}} .manual-link{{display:inline-block;margin-top:.8rem;padding:.65rem .85rem;border:1px solid #93c5fd;border-radius:7px;color:white;font-weight:750;text-decoration:none}}
 .generated{{margin-top:1rem;font-size:.78rem;color:#94a3b8}}
 .overview{{padding:1.4rem 2.25rem;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1.1fr 1fr;gap:1.25rem}}
-.overview h2{{margin:.1rem 0 .55rem;font-size:1.05rem}} .inventory{{margin:.2rem 0;padding-left:1.25rem}}
+.overview h2{{margin:.1rem 0 .55rem;font-size:1.05rem}} .inventory{{margin:.2rem 0;list-style:none;padding:0}} .inventory li{{display:flex;align-items:center;gap:.5rem;margin:.4rem 0}}
 .panel-index{{display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem}}
 .panel-index a{{padding:.55rem .25rem;border:1px solid var(--line);border-radius:6px;text-align:center;text-decoration:none;color:var(--ink)}}
 .panel-index b,.panel-index span{{display:block}} .panel-index span{{font-size:.72rem;text-transform:uppercase;color:var(--muted)}}
@@ -198,8 +222,8 @@ h1{{font-size:clamp(2rem,5vw,3.25rem);line-height:1.05;margin:.35rem 0 .75rem}} 
 .panel-head h2{{margin:.15rem 0;font-size:1.45rem}} .panel-kicker{{font-size:.76rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}}
 .panel-number{{font-size:2.6rem;font-weight:900;line-height:1}}
 .resources{{display:flex;align-items:center;flex-wrap:wrap;gap:.65rem;padding:.55rem 1.2rem;background:#f8fafc;border-bottom:1px solid var(--line)}}
-.resources ul{{display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;list-style:none;margin:0;padding:0}} .resources li{{font-weight:700;font-size:.9rem}}
-.resources li:before{{content:"•";color:var(--blue);margin-right:.45rem}} .badge{{font-size:.74rem;font-weight:850;text-transform:uppercase;padding:.25rem .5rem;border-radius:999px;background:#e2e8f0}}
+.resources ul{{display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;list-style:none;margin:0;padding:0}} .resources li{{display:flex;align-items:center;gap:.4rem;font-weight:700;font-size:.9rem}}
+.resource-icon{{width:1.45rem;height:1.45rem;flex:0 0 auto;fill:none;stroke:var(--blue);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}} .badge{{font-size:.74rem;font-weight:850;text-transform:uppercase;padding:.25rem .5rem;border-radius:999px;background:#e2e8f0}}
 .hard-stop{{background:#fee2e2;color:#991b1b}} figure{{margin:0}} img.scene{{display:block;width:100%;height:auto;background:white}}
 figcaption{{display:flex;align-items:center;flex-wrap:wrap;gap:.6rem 1rem;padding:.55rem 1rem;background:#f8fafc;border-top:1px solid var(--line);font-size:.86rem}}
 .picture-key{{display:flex;gap:.8rem 1.15rem;flex-wrap:wrap;list-style:none;margin:0;padding:0}} .picture-key li{{display:flex;align-items:center;gap:.35rem}}
@@ -210,15 +234,16 @@ figcaption{{display:flex;align-items:center;flex-wrap:wrap;gap:.6rem 1rem;paddin
 .station-box ul{{margin:.2rem 0;padding-left:1.2rem}} .why{{background:var(--amber-soft);border-left:5px solid #d97706}} .why p,.honesty p{{margin:.3rem 0}}
 .honesty{{background:var(--red-soft);border-left:5px solid #dc2626}} .panel-nav{{display:flex;justify-content:space-between;padding:.8rem 1.2rem;border-top:1px solid var(--line)}}
 .panel-nav a{{color:var(--blue);font-weight:750;text-decoration:none}} .panel-nav .disabled{{visibility:hidden}}
+.manual-foot{{padding:1.5rem 2.25rem 2rem;border-top:1px solid var(--line);background:#f8fafc}} .manual-foot a{{color:var(--blue);font-weight:800}}
 @media(max-width:700px){{.overview{{grid-template-columns:1fr}}.instruction-panel{{margin:1rem .5rem}}.manual-head,.overview{{padding-left:1rem;padding-right:1rem}}.panel-index{{grid-template-columns:repeat(3,1fr)}}.render-legend{{width:100%;margin-left:0}}.panel-controls{{grid-template-columns:auto 1fr auto}}#panel-progress{{grid-column:1/-1;text-align:center}}}}
 @media print{{body{{background:white}}.manual{{box-shadow:none;max-width:none}}.instruction-panel{{break-inside:avoid;margin:1rem 0}}.panel-nav{{display:none}}.panel-controls{{display:none}}.manual-link{{color:white}}}}
 </style></head><body><main class="manual">
 <header class="manual-head"><div class="eyebrow">Model-backed · illustrated assembly</div>
 <h1>{_e(manual.title)}</h1>
-<p class="lede">This is one machine-checked build order from the validated construction process graph. Its phase boundary includes {_e(declared_constraints)} authored process-order constraints; their declared reasons are printed where they apply. Deterministic tie-breaks between otherwise independent events are a readable build choice, not proof that no other valid order exists. Colored parts are current work, pale gray parts are already present, and blue marks share the compiled measurements used by the placement text.</p>
+<p class="lede">This is one machine-checked build order from the validated construction process graph. A blocking modeled failure blocks release. Its phase boundary includes {_e(declared_constraints)} authored process-order constraints; their declared reasons are printed where they apply. Deterministic tie-breaks between otherwise independent events are a readable build choice, not proof that no other valid order exists. Colored parts are current work, pale gray parts are already present, and blue marks share the compiled measurements used by the placement text. Prototype only: structural capacity, stability, sliding resistance, insertion travel, and hot-drink use remain unproved; do not treat it as load-bearing or use it for hot liquids until a representative build is validated.</p>
 <a class="manual-link" href="{_e(manual.technical_href)}">Open the technical build document &rarr;</a>
 <div class="generated">Generated {_e(generated)} · Offline/self-contained</div></header>
-<section class="overview"><div><h2>Modeled parts</h2><ul class="inventory">{inventory}</ul></div>
+<section class="overview"><div><h2>Parts and required consumables</h2>{inventory}</div>
 <div><h2>Five-panel build path</h2><nav class="panel-index">{nav}</nav></div></section>
 <nav class="panel-controls" aria-label="Assembly panel navigator">
   <button id="panel-prev" type="button">&larr;</button>
@@ -228,4 +253,5 @@ figcaption{{display:flex;align-items:center;flex-wrap:wrap;gap:.6rem 1rem;paddin
   <output id="panel-progress" for="panel-slider">Panel 1 of {total}</output>
 </nav>
 {panels}
+<footer class="manual-foot"><a href="{_e(manual.technical_href)}">&larr; Return to the technical build document</a></footer>
 </main>{navigation_script}</body></html>"""

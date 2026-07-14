@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import tempfile
 
 from ..core.buildinfo import build_manifest
 from ..core.buildinfo import MESH_TOL_ANGULAR, MESH_TOL_LINEAR
@@ -12,7 +13,7 @@ from ..details.base import fmt_frac_in
 from .part_labels import part_labels
 
 
-RENDERER_VERSION = "instruction-panel-v1"
+RENDERER_VERSION = "instruction-panel-v2"
 DEFAULT_SIZE = (1500, 1100)
 
 CALLOUT_INK = (17, 24, 39)
@@ -141,6 +142,34 @@ def _fmt_dimension(mm: float) -> str:
     return f'{inches:.2f}"'
 
 
+def _stations_for_overlay(panel) -> tuple[tuple, tuple]:
+    """Return every station that must be marked and dimensioned in the image."""
+    dimensions = tuple(panel.stations)
+    markers = dimensions if panel.action == "fasten" else ()
+    return markers, dimensions
+
+
+def _is_valid_cached_panel(
+    path: Path,
+    *,
+    key: str,
+    size: tuple[int, int],
+) -> bool:
+    """Accept only a complete overlaid PNG for this exact render request."""
+    from PIL import Image
+
+    try:
+        with Image.open(path) as image:
+            image.verify()
+        with Image.open(path) as image:
+            return (
+                image.size == size
+                and image.info.get("detailgen_panel_key") == key
+            )
+    except (OSError, ValueError):
+        return False
+
+
 def _draw_overlay(
     path: Path,
     *,
@@ -187,21 +216,7 @@ def _draw_overlay(
              y - (box[3] - box[1]) / 2 - box[1]),
             text, fill=CALLOUT_INK, font=callout_font)
 
-    stations_to_draw = panel.stations
-    station_markers = ()
-    if panel.action == "fasten" and panel.stations:
-        positive_side = max(station.p1[0] for station in panel.stations)
-        station_markers = tuple(
-            station for station in panel.stations
-            if abs(station.p1[0] - positive_side) < 0.5)
-        by_drop = {}
-        for station in station_markers:
-            drop_key = round(station.secondary_mm or 0.0, 4)
-            if (drop_key not in by_drop
-                    or station.near_mm < by_drop[drop_key].near_mm):
-                by_drop[drop_key] = station
-        stations_to_draw = tuple(
-            by_drop[drop_key] for drop_key in sorted(by_drop))
+    station_markers, stations_to_draw = _stations_for_overlay(panel)
 
     for station in station_markers:
         for point in (station.p1, station.mirror_p1):
@@ -264,6 +279,10 @@ def _draw_overlay(
     metadata.add_text("detailgen_panel_key", key)
     metadata.add_text("detailgen_callout_count", str(len(callout_ids)))
     metadata.add_text("detailgen_station_count", str(len(panel.stations)))
+    metadata.add_text(
+        "detailgen_drawn_station_reference_ids",
+        ",".join(dict.fromkeys(
+            station.reference_part_id for station in stations_to_draw)))
     metadata.add_text("detailgen_visible_part_ids", ",".join(panel.visible_part_ids))
     metadata.add_text("detailgen_arrival_count", str(len(panel.arrival_part_ids)))
     metadata.add_text("detailgen_focus_count", str(len(panel.focus_part_ids)))
@@ -287,8 +306,10 @@ def render_instruction_panel(
     key = panel_content_key(detail, panel, size=size)
     output = Path(out_dir) / f"{key}.png"
     output.parent.mkdir(parents=True, exist_ok=True)
-    if output.exists():
+    if output.exists() and _is_valid_cached_panel(output, key=key, size=size):
         return output
+    if output.exists():
+        output.unlink()
 
     renderer = vtk.vtkRenderer()
     renderer.SetBackground(1.0, 1.0, 1.0)
@@ -336,6 +357,7 @@ def render_instruction_panel(
     window.SetOffScreenRendering(1)
     window.SetSize(*size)
     window.AddRenderer(renderer)
+    temporary = None
     try:
         camera = renderer.GetActiveCamera()
         camera.SetPosition(*panel_camera(panel))
@@ -349,14 +371,26 @@ def render_instruction_panel(
         grabber.SetInput(window)
         grabber.Update()
         writer = vtk.vtkPNGWriter()
-        writer.SetFileName(str(output))
+        with tempfile.NamedTemporaryFile(
+            prefix=f".{key}.", suffix=".png", dir=output.parent, delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+        writer.SetFileName(str(temporary))
         writer.SetInputConnection(grabber.GetOutputPort())
         writer.Write()
         _draw_overlay(
-            output, detail=detail, panel=panel, renderer=renderer, vtk=vtk,
+            temporary, detail=detail, panel=panel, renderer=renderer, vtk=vtk,
             size=size, key=key)
+        if not _is_valid_cached_panel(temporary, key=key, size=size):
+            raise RuntimeError(
+                f"instruction panel {panel.index} did not produce a complete "
+                "keyed PNG")
+        temporary.replace(output)
+        temporary = None
     finally:
         window.Finalize()
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
     return output
 
 

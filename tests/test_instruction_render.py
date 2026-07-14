@@ -11,8 +11,10 @@ from detailgen.rendering.instruction_panels import (
     build_instruction_manual,
 )
 from detailgen.rendering.instruction_render import (
+    _stations_for_overlay,
     panel_content_key,
     render_instruction_images,
+    render_instruction_panel,
 )
 from detailgen.spec.compiler import compile_spec_file
 
@@ -85,6 +87,9 @@ def test_bond_stations_locate_each_rail_from_top_and_flush_datums(stationed):
         assert "front/back edges flush" in station.label
         assert "top underside" in station.label
         assert "+X" not in station.label and "-X" not in station.label
+    labels = "\n".join(station.label for station in bond.stations)
+    assert "side-board contact face" in labels
+    assert '6-1/2" clear between the rails\' inside faces' in labels
 
 
 def test_fasten_stations_locate_symmetric_pairs_from_either_rail_end(stationed):
@@ -110,6 +115,29 @@ def test_fasten_stations_locate_symmetric_pairs_from_either_rail_end(stationed):
     assert "from each rail end" in labels
     assert "front rail end" not in labels and "back rail end" not in labels
     assert "+X" not in labels and "-X" not in labels
+    assert "Registration rail (1 of 2)" in labels
+    assert "Registration rail (2 of 2)" in labels
+
+    instructions = "\n".join(fasten.instructions)
+    for index in (1, 2):
+        assert f"Side board ({index} of 2)" in instructions
+        assert f"Registration rail ({index} of 2)" in instructions
+    assert "top edge against the top underside" in instructions
+    assert "front/back edges flush with the top" in instructions
+    assert "outside face flush with the nearest top-board end" in instructions
+    assert "Drill from the rail's inside face into the side board" in instructions
+
+
+def test_fasten_overlay_draws_every_station_on_both_registration_rails(
+    stationed,
+):
+    fasten = _panel(stationed, "fasten")
+
+    markers, dimensions = _stations_for_overlay(fasten)
+
+    assert markers == fasten.stations
+    assert dimensions == fasten.stations
+    assert len({station.reference_part_id for station in markers}) == 2
 
 
 def test_moving_authored_screw_offset_moves_raw_stations_and_rekeys(
@@ -212,6 +240,51 @@ def test_renderer_writes_stable_keyed_png_for_every_panel(
     assert repeated == paths
     assert all((path.read_bytes(), path.stat().st_mtime_ns) == value
                for path, value in before.items())
+
+
+def test_overlay_failure_does_not_publish_or_poison_a_content_key(
+    caddy, stationed, tmp_path, monkeypatch,
+):
+    from PIL import Image
+    import detailgen.rendering.instruction_render as renderer_module
+
+    panel = _panel(stationed, "fasten")
+    key = panel_content_key(caddy, panel, size=(320, 240))
+    expected = tmp_path / f"{key}.png"
+    real_draw_overlay = renderer_module._draw_overlay
+
+    def interrupted_overlay(*args, **kwargs):
+        raise RuntimeError("simulated overlay interruption")
+
+    monkeypatch.setattr(renderer_module, "_draw_overlay", interrupted_overlay)
+    with pytest.raises(RuntimeError, match="simulated overlay interruption"):
+        render_instruction_panel(
+            caddy, panel, tmp_path, size=(320, 240))
+    assert not expected.exists()
+
+    monkeypatch.setattr(renderer_module, "_draw_overlay", real_draw_overlay)
+    retried = render_instruction_panel(
+        caddy, panel, tmp_path, size=(320, 240))
+    with Image.open(retried) as image:
+        assert image.info["detailgen_panel_key"] == key
+
+
+def test_invalid_cached_png_is_rebuilt_instead_of_reused(
+    caddy, stationed, tmp_path,
+):
+    from PIL import Image
+
+    panel = _panel(stationed, "prepare")
+    size = (320, 240)
+    key = panel_content_key(caddy, panel, size=size)
+    poisoned = tmp_path / f"{key}.png"
+    Image.new("RGB", size, "white").save(poisoned)
+
+    rebuilt = render_instruction_panel(caddy, panel, tmp_path, size=size)
+
+    with Image.open(rebuilt) as image:
+        assert image.info["detailgen_panel_key"] == key
+        assert int(image.info["detailgen_callout_count"]) > 0
 
 
 def test_process_and_join_panels_render_their_semantic_roles(
