@@ -10,6 +10,7 @@ from ...rendering.instruction_panels import (
     InstructionManual,
     OperationDiagram,
     ProcedureLink,
+    RelatedDocumentLink,
     build_instruction_manual,
 )
 from ...rendering.part_labels import part_labels
@@ -1205,6 +1206,7 @@ def build_cabinetry_instruction_manual(
     *,
     technical_href: str,
     basename: str,
+    related_documents: tuple[RelatedDocumentLink, ...] = (),
 ) -> InstructionManual:
     """Enrich canonical CPG panels with the compiled cabinetry artifacts."""
 
@@ -1231,6 +1233,7 @@ def build_cabinetry_instruction_manual(
         technical_href,
         title=f"{project.project_doc.name} — Illustrated Assembly Manual",
         basename=basename,
+        related_documents=related_documents,
         excluded_part_ids=excluded,
         lede=(
             "This is the shop-assembly and installation-planning companion to the technical "
@@ -1270,8 +1273,7 @@ def build_cabinetry_instruction_manual(
         if index == 0:
             instructions = (
                 "Before assembly, complete and sign off every pre-band cut, "
-                "edge-band, machining, and material row in the technical build "
-                "document.",
+                "edge-band, machining, and material row in the fabrication packet.",
                 *instructions,
             )
         quantity_overrides = (

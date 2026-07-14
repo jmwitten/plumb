@@ -1,11 +1,13 @@
 """Cabinetry adapter over the shared CPG instruction-panel engine."""
 
+from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
 import json
 import re
 import sys
 
+import pytest
 import yaml
 
 from detailgen.packs import compile_project_file
@@ -13,6 +15,20 @@ from detailgen.packs import compile_project_file
 
 ROOT = Path(__file__).parents[1]
 DB40 = ROOT / "tests/fixtures/cabinetry/frameless_three_drawer_40.project.yaml"
+CADDY = ROOT / "details/armchair_caddy.spec.yaml"
+
+
+def _render_manual(tmp_path, detail, manual):
+    from detailgen.rendering.instruction_manual import (
+        render_instruction_manual_html,
+    )
+
+    image_paths = {}
+    for panel in manual.panels:
+        path = tmp_path / f"panel-{panel.index}.png"
+        path.write_bytes(b"model-backed-test-image")
+        image_paths[panel.index] = path
+    return render_instruction_manual_html(detail, manual, image_paths)
 
 
 def _manual():
@@ -28,6 +44,108 @@ def _manual():
         basename="frameless_three_drawer_40_assembly_manual.html",
     )
     return project, manual
+
+
+def test_related_document_links_require_relative_html_basenames():
+    from detailgen.packs.cabinetry.instruction_manual import (
+        build_cabinetry_instruction_manual,
+    )
+    from detailgen.rendering.instruction_panels import RelatedDocumentLink
+
+    project = compile_project_file(DB40)
+    project.require_fabrication_release()
+    for bad in (
+        "../review_trace.html",
+        "/tmp/review_trace.html",
+        "folder/review_trace.html",
+        "review_trace.pdf",
+    ):
+        with pytest.raises(ValueError, match="relative HTML basename"):
+            build_cabinetry_instruction_manual(
+                project,
+                technical_href="db40_build.html",
+                basename="db40_manual.html",
+                related_documents=(RelatedDocumentLink("Review trace", bad),),
+            )
+
+
+def test_related_document_links_are_revalidated_during_rendering(tmp_path):
+    from detailgen.rendering.instruction_panels import RelatedDocumentLink
+
+    project, manual = _manual()
+    manual = replace(
+        manual,
+        related_documents=(
+            RelatedDocumentLink("Review trace", "folder/review_trace.html"),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="relative HTML basename"):
+        _render_manual(tmp_path, project.detail, manual)
+
+
+def test_related_document_links_render_db40_navigation_and_owned_copy(tmp_path):
+    from detailgen.packs.cabinetry.instruction_manual import (
+        build_cabinetry_instruction_manual,
+    )
+    from detailgen.rendering.instruction_panels import RelatedDocumentLink
+
+    project = compile_project_file(DB40)
+    project.require_fabrication_release()
+    links = (
+        RelatedDocumentLink(
+            "Review & installation sheet",
+            "frameless_three_drawer_40_build_document.html",
+        ),
+        RelatedDocumentLink(
+            "Fabrication packet",
+            "frameless_three_drawer_40_fabrication_packet.html",
+        ),
+        RelatedDocumentLink(
+            "Review trace",
+            "frameless_three_drawer_40_review_trace.html",
+        ),
+    )
+    manual = build_cabinetry_instruction_manual(
+        project,
+        technical_href="frameless_three_drawer_40_build_document.html",
+        basename="frameless_three_drawer_40_assembly_manual.html",
+        related_documents=links,
+    )
+    rendered = _render_manual(tmp_path, project.detail, manual)
+
+    assert manual.related_documents == links
+    assert rendered.count('class="related-documents"') == 2
+    for link in links:
+        assert rendered.count(f'href="{link.href}"') == 2
+    assert rendered.count("Review &amp; installation sheet") == 2
+    assert rendered.count("Fabrication packet") == 2
+    assert rendered.count("Review trace") == 2
+    assert "Open the technical build document" not in rendered
+    assert "Return to the technical build document" not in rendered
+    assert "material row in the fabrication packet" \
+        in manual.panels[0].instructions[0]
+    assert "material row in the technical build document" \
+        not in manual.panels[0].instructions[0]
+
+
+def test_related_documents_default_preserves_caddy_manual_navigation(tmp_path):
+    from detailgen.rendering.instruction_panels import build_instruction_manual
+    from detailgen.spec.compiler import compile_spec_file
+
+    detail = compile_spec_file(CADDY)
+    detail.validate()
+    manual = build_instruction_manual(detail)
+    rendered = _render_manual(tmp_path, detail, manual)
+
+    assert manual.related_documents == ()
+    assert 'class="related-documents"' not in rendered
+    assert ".related-documents" not in rendered
+    assert rendered.count(
+        'href="armchair_caddy_build_document.html"'
+    ) == 2
+    assert "Open the technical build document &rarr;" in rendered
+    assert "&larr; Return to the technical build document" in rendered
 
 
 def test_manual_uses_six_canonical_cpg_milestones_and_excludes_only_site_studs():

@@ -41,6 +41,14 @@ class ProcedureLink:
 
 
 @dataclass(frozen=True)
+class RelatedDocumentLink:
+    """One relative link to another document in the delivered set."""
+
+    label: str
+    href: str
+
+
+@dataclass(frozen=True)
 class DiagramPrimitive:
     """One allow-listed vector mark in a reader-facing operation diagram.
 
@@ -125,6 +133,7 @@ class InstructionManual:
     inventory: tuple[DisplayRow, ...]
     lede: str
     excluded_part_ids: tuple[str, ...] = ()
+    related_documents: tuple[RelatedDocumentLink, ...] = ()
 
 
 _CADDY_MANUAL_LEDE = (
@@ -586,11 +595,21 @@ def build_instruction_manual(
     title: str = "Armchair Coffee Caddy — Illustrated Assembly Manual",
     basename: str = "armchair_caddy_assembly_manual.html",
     lede: str = _CADDY_MANUAL_LEDE,
+    related_documents: tuple[RelatedDocumentLink, ...] = (),
     excluded_part_ids: tuple[str, ...] = (),
 ) -> InstructionManual:
     """Build the pure instruction-manual model for a validated detail."""
     technical_href = _relative_html_basename(technical_href, "technical_href")
     basename = _relative_html_basename(basename, "basename")
+    related_documents = tuple(
+        replace(
+            link,
+            href=_relative_html_basename(
+                link.href, f"related_documents[{index}].href"
+            ),
+        )
+        for index, link in enumerate(related_documents)
+    )
     if not isinstance(title, str) or not title.strip():
         raise ValueError("title must be non-empty")
     if not isinstance(lede, str) or not lede.strip():
@@ -701,6 +720,7 @@ def build_instruction_manual(
                             if p.id not in excluded),
         inventory=(*_inventory(detail, labels), *_consumable_inventory(graph)),
         lede=lede,
+        related_documents=related_documents,
         excluded_part_ids=excluded,
     )
 

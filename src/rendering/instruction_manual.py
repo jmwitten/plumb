@@ -7,7 +7,10 @@ import html
 from datetime import datetime
 from pathlib import Path
 
-from .instruction_panels import InstructionPresentationError
+from .instruction_panels import (
+    InstructionPresentationError,
+    _relative_html_basename,
+)
 from .instruction_render import panel_callout_ids
 from .part_labels import part_labels
 
@@ -66,6 +69,19 @@ def _procedure_links(rows) -> str:
     return (
         '<aside class="procedure-links"><h3>Manufacturer procedures and product references</h3>'
         f'<ul>{body}</ul></aside>')
+
+
+def _related_documents(links, aria_label: str) -> str:
+    rows = []
+    for index, link in enumerate(links):
+        href = _relative_html_basename(
+            link.href, f"related_documents[{index}].href"
+        )
+        rows.append(f'<li><a href="{_e(href)}">{_e(link.label)}</a></li>')
+    return (
+        f'<nav class="related-documents" aria-label="{_e(aria_label)}">'
+        f'<ul>{"".join(rows)}</ul></nav>'
+    )
 
 
 def _callout_rows(detail, panel) -> str:
@@ -306,6 +322,30 @@ def render_instruction_manual_html(detail, manual, image_paths: dict[int, Path])
 })();
 </script>""".replace("__TOTAL__", str(total))
 
+    if manual.related_documents:
+        header_documents = _related_documents(
+            manual.related_documents, "Related documents"
+        )
+        footer_documents = _related_documents(
+            manual.related_documents, "Related documents footer"
+        )
+        related_document_styles = (
+            ".related-documents ul{display:flex;flex-wrap:wrap;gap:.45rem 1rem;"
+            "list-style:none;margin:.8rem 0 0;padding:0}\n"
+            ".related-documents a{font-weight:800} "
+            ".manual-head .related-documents a{color:white}\n"
+        )
+    else:
+        header_documents = (
+            f'<a class="manual-link" href="{_e(manual.technical_href)}">'
+            "Open the technical build document &rarr;</a>"
+        )
+        footer_documents = (
+            f'<a href="{_e(manual.technical_href)}">'
+            "&larr; Return to the technical build document</a>"
+        )
+        related_document_styles = ""
+
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -321,7 +361,7 @@ body{{margin:0;background:#e2e8f0;color:var(--ink);font:16px/1.48 -apple-system,
 .eyebrow{{font-size:.78rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#93c5fd}}
 h1{{font-size:clamp(2rem,5vw,3.25rem);line-height:1.05;margin:.35rem 0 .75rem}} h2,h3{{line-height:1.2}}
 .lede{{max-width:760px;color:#dbeafe;font-size:1.07rem}} .manual-link{{display:inline-block;margin-top:.8rem;padding:.65rem .85rem;border:1px solid #93c5fd;border-radius:7px;color:white;font-weight:750;text-decoration:none}}
-.generated{{margin-top:1rem;font-size:.78rem;color:#94a3b8}}
+{related_document_styles}.generated{{margin-top:1rem;font-size:.78rem;color:#94a3b8}}
 .safety-banner{{margin:0;padding:.7rem 1.2rem;background:#fff7ed;border-bottom:2px solid #c2410c;color:#7c2d12;font-weight:750}}
 .overview{{padding:1.4rem 2.25rem;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1.1fr 1fr;gap:1.25rem}}
 .overview h2{{margin:.1rem 0 .55rem;font-size:1.05rem}} .inventory{{margin:.2rem 0;list-style:none;padding:0}} .inventory li{{display:flex;align-items:center;gap:.5rem;margin:.4rem 0}}
@@ -380,7 +420,7 @@ text.diagram-mark.role-hold{{fill:#dc2626;stroke:none;font-size:3px}}
 <header class="manual-head"><div class="eyebrow">Model-backed · illustrated assembly</div>
 <h1>{_e(manual.title)}</h1>
 <p class="lede">{_e(lede)}</p>
-<a class="manual-link" href="{_e(manual.technical_href)}">Open the technical build document &rarr;</a>
+{header_documents}
 <div class="generated">Generated {_e(generated)} · Core document embedded; external manufacturer links require internet</div></header>
 <aside class="safety-banner" role="note"><strong>Safety throughout.</strong>
 Wear safety glasses for cutting, drilling, routing, and powered fastening; use
@@ -396,5 +436,5 @@ respiratory protection. Follow every tool and product manufacturer instruction.<
   <output id="panel-progress" for="panel-slider">Panel 1 of {total}</output>
 </nav>
 {panels}
-<footer class="manual-foot"><a href="{_e(manual.technical_href)}">&larr; Return to the technical build document</a></footer>
+<footer class="manual-foot">{footer_documents}</footer>
 </main>{navigation_script}</body></html>"""
