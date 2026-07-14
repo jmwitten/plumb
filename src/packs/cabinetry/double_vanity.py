@@ -220,6 +220,46 @@ class SinkFixtureAdapter:
 
 
 @dataclass(frozen=True)
+class DrainProduct:
+    adapter_id: str
+    manufacturer: str
+    sku: str
+    with_overflow: bool
+    connection_od_mm: float
+    body_height_mm: float
+    specification_url: str
+
+
+@dataclass(frozen=True)
+class TrapProduct:
+    adapter_id: str
+    manufacturer: str
+    sku: str
+    inlet_od_mm: float
+    outlet_od_mm: float
+    overall_length_mm: float
+    overall_height_mm: float
+    slip_joint: bool
+    cleanout: bool
+    specification_url: str
+
+
+@dataclass(frozen=True)
+class MountReference:
+    adapter_id: str
+    manufacturer: str
+    sku: str
+    width_mm: float
+    depth_mm: float
+    static_capacity_lb: float
+    capacity_basis: str
+    required_screws_per_bracket: int
+    maximum_spacing_mm: float
+    authority: str
+    specification_url: str
+
+
+@dataclass(frozen=True)
 class WallFaucetAdapter:
     adapter_id: str
     trim_sku: str
@@ -292,6 +332,26 @@ K20000 = SinkFixtureAdapter(
         "https://resources.kohler.com/webassets/kpna/catalog/pdf/en/"
         "K-20000_spec_US-CA_Kohler_en.pdf"
     ),
+)
+
+K7124_A = DrainProduct(
+    "kohler_k7124_a@2018-09-28", "Kohler", "K-7124-A", True,
+    1.25 * IN, 130.0,
+    "https://resources.kohler.com/onlinecatalog/pdf/K-7124-A_spec.pdf",
+)
+
+K8998 = TrapProduct(
+    "kohler_k8998@2026-07-14", "Kohler", "K-8998",
+    1.25 * IN, 1.25 * IN, 298.0, 111.0, True, True,
+    "https://la.kohler.com/en/product-detail/8998?skuid=K-8998-CP",
+)
+
+RAKKS_EH_1818_LV = MountReference(
+    "rakks_eh_1818_lv@2022.1.0", "Rakks", "EH-1818-LV",
+    18 * IN, 21.5 * IN, 450.0, "evenly_distributed_static_load",
+    4, 48 * IN, "comparative_reference_only",
+    "https://www.rakks.com/install/support-hardware/"
+    "Rakks_EH_Vanity_Support_Bracket_2022.1.0.pdf",
 )
 
 PURIST_WALL = WallFaucetAdapter(
@@ -398,7 +458,10 @@ class DoubleVanityModel:
     profile: object
     section: DoubleVanitySection
     sink: SinkFixtureAdapter
+    drain: DrainProduct
+    trap: TrapProduct
     faucet: WallFaucetAdapter
+    mount_reference: MountReference
     code_profile: PlumbingCodeProfile
     sink_bays: tuple[SinkBay, ...]
     plumbing_paths: tuple[PlumbingPath, ...]
@@ -430,21 +493,27 @@ class DoubleVanityModel:
     def catalog_manifest(self) -> dict[str, str]:
         return {
             "sink": self.sink.adapter_id,
+            "drain": self.drain.adapter_id,
+            "trap": self.trap.adapter_id,
             "faucet": self.faucet.adapter_id,
             "upper_drawer_motion": self.drawer("left", "upper").runner.family_id,
             "lower_drawer_motion": self.drawer("left", "lower").runner.family_id,
             "wall_anchor_candidate": "grk_rss_5_16x4@2026.1",
+            "comparative_mount": self.mount_reference.adapter_id,
         }
 
     def catalog_source_manifest(self) -> dict[str, str]:
         return {
             "sink": self.sink.specification_url,
+            "drain": self.drain.specification_url,
+            "trap": self.trap.specification_url,
             "faucet_trim": self.faucet.specification_urls[0],
             "faucet_valve": self.faucet.specification_urls[1],
             "upper_drawer_motion": self.drawer("left", "upper").runner.source_url,
             "lower_drawer_motion": self.drawer("left", "lower").runner.source_url,
             "plumbing_code": self.code_profile.source_url,
             "plumbing_traps": self.code_profile.trap_source_url,
+            "comparative_mount": self.mount_reference.specification_url,
         }
 
     def catalog_asset_manifest(self) -> list[dict]:
@@ -456,6 +525,23 @@ class DoubleVanityModel:
                 bay.bay_id: bay.sink_center_x_mm for bay in self.sink_bays
             },
             "service_chase_depth_mm": self.service_chase_depth_mm,
+            "drain": {
+                "sku": self.drain.sku,
+                "connection_od_mm": self.drain.connection_od_mm,
+                "body_height_mm": self.drain.body_height_mm,
+            },
+            "trap": {
+                "sku": self.trap.sku,
+                "overall_length_mm": self.trap.overall_length_mm,
+                "overall_height_mm": self.trap.overall_height_mm,
+                "cleanout": self.trap.cleanout,
+            },
+            "comparative_mount": {
+                "sku": self.mount_reference.sku,
+                "static_capacity_lb": self.mount_reference.static_capacity_lb,
+                "capacity_basis": self.mount_reference.capacity_basis,
+                "authority": self.mount_reference.authority,
+            },
             "plumbing_paths": {
                 path.path_id: {
                     "bay_id": path.bay_id,
@@ -653,16 +739,16 @@ def build_double_vanity_model(
         z0 + vanity.body_height_mm + vanity.countertop_thickness_mm
     )
     upper_runner = StudyRunner(
-        family_id="blum_movento_sink_drawer_family@study",
+        family_id="blum_movento_763_4570s@2026.1",
         soft_close=True,
         full_extension=True,
-        selected_sku="",
+        selected_sku="763.4570S",
         source_url=(
             "https://d2.blum.com/services/BEC003/"
             "movento_ep_dok_bus_%24sen-us_%24aof_%24v7.pdf"
         ),
-        minimum_drawer_length_mm=305.0,
-        minimum_inside_depth_mm=328.0,
+        minimum_drawer_length_mm=457.0,
+        minimum_inside_depth_mm=477.0,
     )
     lower_runner = StudyRunner(
         family_id="unselected_short_depth_runner@study",
@@ -1051,7 +1137,8 @@ def build_double_vanity_model(
         )
 
     return DoubleVanityModel(
-        project_name, section.mode, profile, section, K20000, PURIST_WALL, code,
+        project_name, section.mode, profile, section, K20000, K7124_A, K8998,
+        PURIST_WALL, RAKKS_EH_1818_LV, code,
         tuple(bays), tuple(paths), tuple(drawers), service_chase_depth,
         tuple(parts), (), (), (), source_map,
         tuple(stud.stud_id for stud in anchor_studs), _catalog_assets(),
@@ -1511,8 +1598,8 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
         "double_vanity.drawer.runner_applicability",
         runner_verdict, "advisory",
         f"Incompatible runner studies: {incompatible_runners}; unselected "
-        f"runner families: {unknown_runners}. MOVENTO's 305 mm drawer-length "
-        "study family applies only to the upper U drawers; each lower drawer "
+        f"runner families: {unknown_runners}. The selected 18-inch MOVENTO "
+        "runner applies only to the upper U drawers; each lower drawer "
         "requires a separately selected short-depth full-extension soft-close "
         "system before release.",
         "calculated" if runner_verdict != "UNKNOWN" else "unknown",

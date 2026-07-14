@@ -36,6 +36,37 @@ def test_registry_exposes_double_sink_pack_without_mutating_base_registries():
     assert tuple(materials.names()) == before_materials
 
 
+def test_real_drain_trap_runner_and_mount_references_are_pinned_without_capacity_claim():
+    project = _project()
+    model = project.model
+    catalog = model.catalog_manifest()
+    sources = model.catalog_source_manifest()
+
+    assert catalog["drain"] == "kohler_k7124_a@2018-09-28"
+    assert model.drain.sku == "K-7124-A"
+    assert model.drain.with_overflow
+    assert model.drain.connection_od_mm == pytest.approx(1.25 * 25.4)
+    assert model.drain.body_height_mm == pytest.approx(130.0)
+    assert "K-7124-A_spec.pdf" in sources["drain"]
+
+    assert catalog["trap"] == "kohler_k8998@2026-07-14"
+    assert model.trap.sku == "K-8998"
+    assert model.trap.inlet_od_mm == pytest.approx(1.25 * 25.4)
+    assert model.trap.overall_length_mm == pytest.approx(298.0)
+    assert model.trap.overall_height_mm == pytest.approx(111.0)
+    assert model.trap.cleanout
+
+    upper = model.drawer("left", "upper").runner
+    assert upper.selected_sku == "763.4570S"
+    assert upper.minimum_drawer_length_mm == pytest.approx(457.0)
+    assert upper.minimum_inside_depth_mm == pytest.approx(477.0)
+
+    assert catalog["comparative_mount"] == "rakks_eh_1818_lv@2022.1.0"
+    assert model.mount_reference.static_capacity_lb == pytest.approx(450.0)
+    assert model.mount_reference.capacity_basis == "evenly_distributed_static_load"
+    assert project.report.by_rule("double_vanity.release.wall_mount").verdict == "UNKNOWN"
+
+
 def test_catalog_asset_reference_is_metadata_only_and_authority_limited():
     from detailgen.packs.cabinetry.double_vanity import CatalogAssetRef
 
@@ -130,7 +161,8 @@ def test_dv72_expands_to_two_independent_service_bays_and_four_drawers():
         upper = model.drawer(bay, "upper")
         lower = model.drawer(bay, "lower")
         assert upper.runner.family_id.startswith("blum_movento")
-        assert upper.runner.minimum_drawer_length_mm == pytest.approx(305.0)
+        assert upper.runner.minimum_drawer_length_mm == pytest.approx(457.0)
+        assert upper.runner.minimum_inside_depth_mm == pytest.approx(477.0)
         assert upper.box_depth_mm >= upper.runner.minimum_drawer_length_mm
         assert lower.runner.family_id == "unselected_short_depth_runner@study"
         assert lower.runner.minimum_drawer_length_mm is None

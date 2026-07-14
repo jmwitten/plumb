@@ -281,9 +281,11 @@ def _inventory(project) -> str:
     for drawer in project.model.drawers:
         if drawer.level == "upper":
             motion = (
-                "MOVENTO study family; 305.0 mm minimum drawer length and "
-                "328.0 mm conservative inside-depth check pass provisionally; "
-                "exact SKU still withheld"
+                f"MOVENTO {drawer.runner.selected_sku}; "
+                f"{drawer.runner.minimum_drawer_length_mm:.1f} mm minimum "
+                "drawer length and 477.0 mm minimum inside-depth check pass "
+                "for the analytic closed position; fixing, joinery, load, "
+                "travel, removal, and actual-service checks remain gated"
             )
         else:
             motion = (
@@ -299,7 +301,7 @@ def _inventory(project) -> str:
     drawers = "".join(drawer_rows)
     return (
         '<section><h2>Model inventory and unresolved procurement</h2>'
-        '<p>MOVENTO study family applies only to the upper U drawers. Lower '
+        '<p>MOVENTO 763.4570S applies only to the upper U drawers. Lower '
         'hardware remains a performance requirement, not a selected catalog '
         'claim.</p><ul>' + drawers
         + '</ul><p>Four half-moon brass pulls, four runner/locking-device sets, drawer joinery, sheet product/SKU, veneer sequence, edge band, finish, top, sinks, clamps, faucet/valves, traps, supplies, shutoffs, sealants, backing, and structural fasteners remain procurement or coordination items. No quantity here authorizes purchase.</p>'
