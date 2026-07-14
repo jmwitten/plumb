@@ -3611,3 +3611,7 @@ this loudly. Concrete fix queued (RAILFASTEN) ahead of the full ontology.
 
 - Task 1: complete (commits a8f589a..bf50723, review clean). RED contracts now pin role ownership, reader budgets, exact UNKNOWN states, four-file link closure, and one-pass compile/view rendering.
 - Task 2: complete (commits b55e330..4a97857, review clean). Typed related-document links, DB40 ownership copy, default manual byte parity, and scheme-bearing href rejection are pinned.
+
+## DV72 assumed-condition release — 2026-07-14
+
+- Task 1: complete (commits c0de122..2168946, review clean). Owner-assumed wall and rough-ins are typed, never field-verified, and contradictions with geometry-driving site declarations fail loudly; 30 model tests passed.
