@@ -181,3 +181,82 @@ byte_identical=True
 
 None for Task 2. The single full-file document-set failure is intentional,
 pre-existing RED for later tasks and remains outside this task's scope.
+
+## Review Fix — Reject URI Schemes
+
+The fresh Task 2 review identified one valid Important issue: the shared
+`_relative_html_basename()` rule accepted scheme-bearing strings such as
+`javascript:alert(1).html` and `mailto:review.html` because both are slashless,
+are their own `Path.name`, and end in `.html`. Construction validation and
+render-time revalidation therefore both accepted them.
+
+### Review-fix RED
+
+The construction invalid-input table was extended with both schemes, and the
+render-time defense test was parameterized over its existing invalid path plus
+both schemes. Before the production fix:
+
+```bash
+PYTHONPATH="$PWD/.shim" /Users/joelwitten/Code/construction-detail-generator/.venv/bin/python -m pytest -q tests/test_cabinetry_instruction_manual.py -k 'related_document_links_require_relative_html_basenames or related_document_links_are_revalidated_during_rendering'
+```
+
+```text
+3 failed, 1 passed, 7 deselected in 5.97s
+```
+
+The three failures were exact `DID NOT RAISE ValueError` failures: one at
+manual construction when the invalid-input loop reached
+`javascript:alert(1).html`, and one render-time failure for each scheme. The
+existing invalid path case continued to pass.
+
+### Minimal fix and GREEN
+
+Because the validator already rejects both path separator forms, any colon in
+the remaining basename is a URI-scheme/drive ambiguity rather than an allowed
+delivery filename. Adding `":" in value` to the shared rule closes technical,
+manual, related-link construction, and related-link render validation through
+the existing call sites.
+
+The same focused command after the one-line validator change produced:
+
+```text
+4 passed, 7 deselected in 6.24s
+```
+
+All Task 2 link/default cases:
+
+```bash
+... -m pytest -q tests/test_cabinetry_instruction_manual.py -k 'related_document'
+```
+
+```text
+6 passed, 5 deselected in 7.79s
+```
+
+Covering cabinetry/manual/shared regression gate:
+
+```bash
+... -m pytest -q tests/test_cabinetry_instruction_manual.py tests/test_instruction_panels.py tests/test_caddy_instruction_manual.py -k 'not real_document_set'
+```
+
+```text
+44 passed, 1 deselected in 40.04s
+```
+
+The deselection remains only the later document-set/composer contract.
+
+An explicit validator probe rejected both requested schemes and retained the
+valid simple basename `review_trace.html`. The frozen-timestamp empty-default
+caddy comparison remained byte-identical to Task 1:
+
+```text
+scheme_probe=javascript/mailto rejected; simple basename accepted
+baseline_sha256=c56623800c4b74e82a29d49230c79395c89ff2d6c40cf19aef2fb13a34461af4
+current_sha256=c56623800c4b74e82a29d49230c79395c89ff2d6c40cf19aef2fb13a34461af4
+byte_identical=True
+```
+
+`git diff --check` completed with exit code 0. The review-fix scope contains
+only the shared validator, its focused cabinetry tests, this appended report,
+and `.superpowers/sdd/task-2-review.md`. No composer, drawing, adapter,
+document-set, release, geometry, or CPG code changed.

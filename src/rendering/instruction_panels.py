@@ -185,6 +185,7 @@ def _relative_html_basename(value: str, field: str) -> str:
     if (not isinstance(value, str) or not value
             or Path(value).name != value
             or "/" in value or "\\" in value
+            or ":" in value
             or not value.endswith(".html")):
         raise ValueError(
             f"{field} must be a relative HTML basename; got {value!r}")

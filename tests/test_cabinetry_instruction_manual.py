@@ -59,6 +59,8 @@ def test_related_document_links_require_relative_html_basenames():
         "/tmp/review_trace.html",
         "folder/review_trace.html",
         "review_trace.pdf",
+        "javascript:alert(1).html",
+        "mailto:review.html",
     ):
         with pytest.raises(ValueError, match="relative HTML basename"):
             build_cabinetry_instruction_manual(
@@ -69,14 +71,19 @@ def test_related_document_links_require_relative_html_basenames():
             )
 
 
-def test_related_document_links_are_revalidated_during_rendering(tmp_path):
+@pytest.mark.parametrize("bad", (
+    "folder/review_trace.html",
+    "javascript:alert(1).html",
+    "mailto:review.html",
+))
+def test_related_document_links_are_revalidated_during_rendering(tmp_path, bad):
     from detailgen.rendering.instruction_panels import RelatedDocumentLink
 
     project, manual = _manual()
     manual = replace(
         manual,
         related_documents=(
-            RelatedDocumentLink("Review trace", "folder/review_trace.html"),
+            RelatedDocumentLink("Review trace", bad),
         ),
     )
 
