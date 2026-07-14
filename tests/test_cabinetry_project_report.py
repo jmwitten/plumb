@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from html import unescape
 from pathlib import Path
+import re
 import sys
 
 import pytest
@@ -23,6 +25,17 @@ B30 = ROOT / "tests/fixtures/cabinetry/frameless_base_cabinet.project.yaml"
 PIXEL = "data:image/png;base64,iVBORw0KGgo="
 
 
+def _visible_text(document: str) -> str:
+    without_embedded_data = re.sub(
+        r"<(script|style)\b[^>]*>.*?</\1\s*>",
+        " ",
+        document,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    without_tags = re.sub(r"<[^>]+>", " ", without_embedded_data)
+    return " ".join(unescape(without_tags).split())
+
+
 def _html(project):
     project.require_fabrication_release()
     images = {view: PIXEL for view in CPR.REQUIRED_VIEWS}
@@ -32,6 +45,114 @@ def _html(project):
         viewer_payload=build_viewer_payload(project.detail),
         glb_b64="H4sIAAAAAAACAwMAAAAAAAAAAAA=",
     )
+
+
+def test_db40_primary_sheet_owns_review_and_installation_within_reader_budget():
+    project = compile_project_file(DB40)
+    html = _html(project)
+    visible = _visible_text(html)
+    budgets = {
+        "visible_words": (len(re.findall(r"\b[\w'’-]+\b", visible)), 2_500),
+        "table_rows": (len(re.findall(r"<tr\b", html, re.IGNORECASE)), 80),
+        "tables": (len(re.findall(r"<table\b", html, re.IGNORECASE)), 8),
+    }
+    over_budget = {
+        name: {"actual": actual, "limit": limit}
+        for name, (actual, limit) in budgets.items()
+        if actual > limit
+    }
+    required_content = (
+        "Model/shop-data gate: PASS",
+        "Purchasing/cutting preflight: OPEN",
+        "Whole-cabinet structural capacity",
+        "Installation/use release: HOLD",
+        "1016.00 mm",
+        "876.30 mm",
+        "590.55 mm",
+        "158.75 mm",
+        "254.00 mm",
+        "354.95 mm",
+        "1.50 mm",
+        "2.00 mm",
+        "Field-verify stud centers",
+        "wall flatness",
+        "highest floor point",
+        "signed, project-specific acceptance",
+        *(finding.rule for finding in project.report.findings
+          if finding.verdict == "UNKNOWN"),
+        *(step.step_id for step in project.artifacts.installation_steps),
+    )
+    missing_content = tuple(item for item in required_content if item not in visible)
+    forbidden_headings = (
+        "Cut list",
+        "Machining schedule",
+        "Fabrication",
+        "Validation findings",
+        "Evidence register",
+        "Source map",
+    )
+    owned_elsewhere = tuple(
+        heading for heading in forbidden_headings
+        if f"<h2>{heading}</h2>" in html
+    )
+
+    assert not (over_budget or missing_content or owned_elsewhere), {
+        "over_budget": over_budget,
+        "missing_content": missing_content,
+        "headings_owned_by_companions": owned_elsewhere,
+    }
+
+
+def test_build_cabinetry_html_wraps_the_focused_review_composer():
+    project = compile_project_file(DB40)
+    project.require_fabrication_release()
+    images = {view: PIXEL for view in CPR.REQUIRED_VIEWS}
+    kwargs = {
+        "images": images,
+        "viewer_payload": build_viewer_payload(project.detail),
+        "glb_b64": "H4sIAAAAAAACAwMAAAAAAAAAAAA=",
+    }
+
+    focused = CPR.build_cabinetry_review_html(project, **kwargs)
+
+    assert focused == CPR.build_cabinetry_html(project, **kwargs)
+
+
+def test_fabrication_composer_owns_complete_shop_and_assembly_ledgers():
+    project = compile_project_file(DB40)
+    project.require_fabrication_release()
+
+    html = CPR.build_cabinetry_fabrication_html(
+        project,
+        images={view: PIXEL for view in CPR.REQUIRED_VIEWS},
+    )
+
+    for complete_renderer_output in (
+        CPR._render_cut_list(project),
+        CPR._render_edge_banding(project),
+        CPR._render_hardware(project),
+        CPR._render_machining(project),
+        CPR._render_steps("Fabrication", project.artifacts.fabrication_steps),
+        CPR._render_steps("Assembly & shipping", project.artifacts.assembly_steps),
+    ):
+        assert complete_renderer_output in html
+    assert CPR._render_steps(
+        "Installation & commissioning", project.artifacts.installation_steps,
+    ) not in html
+    assert CPR._render_findings(project) not in html
+    assert CPR._render_source_map(project) not in html
+
+
+def test_audit_composer_owns_complete_findings_evidence_and_source_map():
+    project = compile_project_file(DB40)
+    project.require_fabrication_release()
+
+    html = CPR.build_cabinetry_audit_html(project)
+
+    assert CPR._render_findings(project) in html
+    assert CPR._render_source_map(project) in html
+    assert CPR._render_cut_list(project) not in html
+    assert CPR._render_machining(project) not in html
 
 
 def test_report_requires_base_validation_and_projects_typed_release_state():

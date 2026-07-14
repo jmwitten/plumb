@@ -1,5 +1,6 @@
 """Cabinetry adapter over the shared CPG instruction-panel engine."""
 
+from hashlib import sha256
 from pathlib import Path
 import json
 import re
@@ -266,7 +267,7 @@ def test_manual_instructions_and_inventory_are_pack_model_backed():
     assert "30 screw — blum_606n" in panel_hardware[3]
 
 
-def test_real_document_pair_has_reciprocal_links_and_six_shared_panel_assets(
+def test_real_document_set_has_relative_links_and_six_shared_panel_assets(
         tmp_path):
     scripts = ROOT / "scripts"
     sys.path.insert(0, str(scripts))
@@ -278,17 +279,62 @@ def test_real_document_pair_has_reciprocal_links_and_six_shared_panel_assets(
     result = documents.build_cabinetry_document_pair(
         tmp_path, project_path=DB40, image_size=(480, 360)
     )
-    technical_path = Path(result["technical_path"])
-    manual_path = Path(result["manual_path"])
-    technical = technical_path.read_text()
-    manual = manual_path.read_text()
+    path_keys = (
+        "technical_path", "manual_path", "fabrication_path", "audit_path",
+    )
+    hash_keys = (
+        "technical_sha256", "manual_sha256", "fabrication_sha256",
+        "audit_sha256",
+    )
+    missing_keys = (set(path_keys) | set(hash_keys)) - result.keys()
+    assert not missing_keys, (
+        f"document set is missing output keys: {sorted(missing_keys)}"
+    )
+
+    paths = {key: Path(result[key]) for key in path_keys}
+    expected_basenames = {
+        "technical_path": "frameless_three_drawer_40_build_document.html",
+        "manual_path": "frameless_three_drawer_40_assembly_manual.html",
+        "fabrication_path": "frameless_three_drawer_40_fabrication_packet.html",
+        "audit_path": "frameless_three_drawer_40_review_trace.html",
+    }
+    assert {key: path.name for key, path in paths.items()} == expected_basenames
+    assert all(path.is_file() for path in paths.values())
+    for path_key, hash_key in zip(path_keys, hash_keys):
+        assert result[hash_key] == sha256(paths[path_key].read_bytes()).hexdigest()
+
+    documents_by_key = {
+        key: path.read_text(encoding="utf-8") for key, path in paths.items()
+    }
+    technical = documents_by_key["technical_path"]
+    manual = documents_by_key["manual_path"]
+    fabrication = documents_by_key["fabrication_path"]
+    audit = documents_by_key["audit_path"]
 
     assert result["panel_count"] == 6
     assert len(result["panel_images"]) == 6
     assert len(set(result["asset_keys"])) == 6
     assert all(Path(path).is_file() for path in result["panel_images"])
-    assert f'href="{documents.MANUAL_BASENAME}"' in technical
-    assert f'href="{documents.TECHNICAL_BASENAME}"' in manual
+    required_links = {
+        "technical_path": (
+            expected_basenames["manual_path"],
+            expected_basenames["fabrication_path"],
+            expected_basenames["audit_path"],
+        ),
+        "manual_path": (
+            expected_basenames["technical_path"],
+            expected_basenames["fabrication_path"],
+            expected_basenames["audit_path"],
+        ),
+        "fabrication_path": (
+            expected_basenames["technical_path"],
+            expected_basenames["manual_path"],
+        ),
+        "audit_path": (expected_basenames["technical_path"],),
+    }
+    for source_key, targets in required_links.items():
+        for target in targets:
+            assert f'href="{target}"' in documents_by_key[source_key]
     assert '"instruction_panels":[' in technical
     payload = json.loads(re.search(
         r'<script type="application/json" id="detail-data-[^"]+">(.*?)</script>',
@@ -316,6 +362,6 @@ def test_real_document_pair_has_reciprocal_links_and_six_shared_panel_assets(
     assert 'aria-label="Runner fixing station' in manual
     assert "data:image/png;base64," in manual
     assert '<link rel="icon" href="data:,">' in manual
-    assert "file://" not in technical + manual
+    assert "file://" not in technical + manual + fabrication + audit
     for stale in ("armchair caddy", "sofa arm", "hot-drink"):
         assert stale not in manual.lower()
