@@ -346,6 +346,17 @@ K8998 = TrapProduct(
     "https://la.kohler.com/en/product-detail/8998?skuid=K-8998-CP",
 )
 
+_REQUIRED_PRODUCT_IDS = {
+    "sink": "kohler_caxton_k20000@2024-06-10",
+    "drain": "kohler_k7124_a@2018-09-28",
+    "trap": "kohler_k8998@2026-07-14",
+}
+
+_REQUIRED_RUNNERS = {
+    "upper": ("blum_movento_763_4570s@2026.1", "763.4570S"),
+    "lower": ("blum_movento_763_3050s@2026.1", "763.3050S"),
+}
+
 RAKKS_EH_1818_LV = MountReference(
     "rakks_eh_1818_lv@2022.1.0", "Rakks", "EH-1818-LV",
     18 * IN, 21.5 * IN, 450.0, "evenly_distributed_static_load",
@@ -615,6 +626,29 @@ class DoubleVanityModel:
                 for drawer in self.drawers
             },
         }
+
+
+def _rough_ins_by_bay(
+    basis: AssumedSiteBasis,
+) -> dict[str, dict[str, RoughInPoint]] | None:
+    points = basis.wastes + basis.supplies
+    if len({point.point_id for point in points}) != len(points):
+        return None
+    owned: dict[str, dict[str, RoughInPoint]] = {}
+    used_ids: set[str] = set()
+    for bay_id in ("left", "right"):
+        owned[bay_id] = {}
+        for kind in ("waste", "hot_supply", "cold_supply"):
+            matches = [
+                point for point in points
+                if point.point_id.startswith(f"{bay_id}_")
+                and point.kind == kind
+            ]
+            if len(matches) != 1:
+                return None
+            owned[bay_id][kind] = matches[0]
+            used_ids.add(matches[0].point_id)
+    return owned if len(used_ids) == len(points) else None
 
 
 def parse_double_vanity_project(doc) -> DoubleVanitySection:
@@ -892,6 +926,11 @@ def build_double_vanity_model(
         minimum_drawer_length_mm=305.0,
         minimum_inside_depth_mm=325.0,
     )
+    rough_ins_by_bay = _rough_ins_by_bay(section.assumed_site)
+    if rough_ins_by_bay is None:
+        raise ProjectSchemaError(
+            "assumed waste and hot/cold rough-ins require one owner per bay"
+        )
 
     bays: list[SinkBay] = []
     paths: list[PlumbingPath] = []
@@ -934,22 +973,12 @@ def build_double_vanity_model(
             countertop_underside_z,
             authority="manufacturer_dimensions_provisional_placement",
         )
-        wastes = sorted(
-            section.assumed_site.wastes,
-            key=lambda point: abs(point.x_mm - center),
-        )
-        supplies = sorted(
-            section.assumed_site.supplies,
-            key=lambda point: abs(point.x_mm - center),
-        )[:2]
-        if not wastes or {point.kind for point in supplies} != {
-            "hot_supply", "cold_supply",
-        }:
-            raise ProjectSchemaError(
-                f"{bay_id} requires one assumed waste and hot/cold supplies"
-            )
-        waste = wastes[0]
-        supplies_by_kind = {point.kind: point for point in supplies}
+        bay_rough_ins = rough_ins_by_bay[bay_id]
+        waste = bay_rough_ins["waste"]
+        supplies_by_kind = {
+            kind: bay_rough_ins[kind]
+            for kind in ("hot_supply", "cold_supply")
+        }
         tailpiece_radius = K7124_A.connection_od_mm / 2
         tailpiece = envelope(
             "tailpiece", center - tailpiece_radius,
@@ -1683,35 +1712,38 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
         model.trap.adapter_id,
         model.trap.specification_url,
     ))
+    required_product_ids_match = (
+        model.sink.adapter_id in {"", _REQUIRED_PRODUCT_IDS["sink"]}
+        and model.drain.adapter_id in {"", _REQUIRED_PRODUCT_IDS["drain"]}
+        and model.trap.adapter_id in {"", _REQUIRED_PRODUCT_IDS["trap"]}
+    )
     connections_agree = (
         abs(model.sink.tailpiece_od_mm - model.drain.connection_od_mm)
         <= tolerance
         and abs(model.drain.connection_od_mm - model.trap.inlet_od_mm)
         <= tolerance
     )
-    product_geometry_ok = topology_ok and connections_agree
+    rough_ins_by_bay = _rough_ins_by_bay(model.assumed_site)
+    product_geometry_ok = (
+        topology_ok
+        and connections_agree
+        and required_product_ids_match
+        and rough_ins_by_bay is not None
+    )
     for path in model.plumbing_paths:
         if path.bay_id not in bays_by_id:
             product_geometry_ok = False
             continue
         bay = bays_by_id[path.bay_id]
-        waste_candidates = sorted(
-            model.assumed_site.wastes,
-            key=lambda point: abs(point.x_mm - bay.sink_center_x_mm),
-        )
-        supply_candidates = sorted(
-            model.assumed_site.supplies,
-            key=lambda point: abs(point.x_mm - bay.sink_center_x_mm),
-        )[:2]
-        if (
-            not waste_candidates
-            or {point.kind for point in supply_candidates}
-            != {"hot_supply", "cold_supply"}
-        ):
+        if rough_ins_by_bay is None:
             product_geometry_ok = False
             continue
-        waste = waste_candidates[0]
-        supplies_by_kind = {point.kind: point for point in supply_candidates}
+        bay_rough_ins = rough_ins_by_bay[path.bay_id]
+        waste = bay_rough_ins["waste"]
+        supplies_by_kind = {
+            kind: bay_rough_ins[kind]
+            for kind in ("hot_supply", "cold_supply")
+        }
         try:
             fixture = path.element("fixture_body")
             tailpiece = path.element("tailpiece")
@@ -1745,6 +1777,26 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
                 and item.z0_mm - tolerance <= point.z_mm <= item.z1_mm + tolerance
             )
 
+        drain_outlet = (
+            (tailpiece.x0_mm + tailpiece.x1_mm) / 2,
+            (tailpiece.y0_mm + tailpiece.y1_mm) / 2,
+            tailpiece.z0_mm,
+        )
+        fixture_drain_center = (
+            (fixture.x0_mm + fixture.x1_mm) / 2,
+            (fixture.y0_mm + fixture.y1_mm) / 2,
+        )
+        outlet_reaches_trap = (
+            abs(drain_outlet[0] - fixture_drain_center[0]) <= tolerance
+            and abs(drain_outlet[1] - fixture_drain_center[1]) <= tolerance
+            and p_trap.x0_mm - tolerance <= drain_outlet[0]
+            <= p_trap.x1_mm + tolerance
+            and p_trap.y0_mm - tolerance <= drain_outlet[1]
+            <= p_trap.y1_mm + tolerance
+            and p_trap.z0_mm - tolerance <= drain_outlet[2]
+            <= p_trap.z1_mm + tolerance
+        )
+
         path_products_match = (
             fixture == path.fixture_envelope
             and abs(fixture.width_mm - model.sink.overall_width_mm) <= tolerance
@@ -1771,6 +1823,7 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
                 "with_cleanout_service_allowance"
             )
             and abs(p_trap.y1_mm - waste.y_mm) <= tolerance
+            and outlet_reaches_trap
             and contains_point(trap_arm, waste)
             and p_trap.contains(trap_arm)
             and all(
@@ -1845,8 +1898,22 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
             runners_authoritative = False
             continue
         if (
+            (runner.family_id, runner.selected_sku)
+            != _REQUIRED_RUNNERS[drawer.level]
+        ):
+            runners_fit = False
+            continue
+        try:
+            drawer_front_y = model.part(
+                f"drawer_{drawer.bay_id}_{drawer.level}_side_left"
+            ).at_mm[1]
+        except KeyError:
+            runners_fit = False
+            continue
+        usable_inside_depth = wall_y - drawer_front_y
+        if (
             drawer.box_depth_mm + tolerance < runner.minimum_drawer_length_mm
-            or vanity.body_depth_mm + tolerance
+            or usable_inside_depth + tolerance
             < runner.minimum_inside_depth_mm
         ):
             runners_fit = False
@@ -1888,8 +1955,22 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
             unknown_runners.append(drawer.drawer_id)
             continue
         if (
+            (runner.family_id, runner.selected_sku)
+            != _REQUIRED_RUNNERS[drawer.level]
+        ):
+            incompatible_runners.append(drawer.drawer_id)
+            continue
+        try:
+            drawer_front_y = model.part(
+                f"drawer_{drawer.bay_id}_{drawer.level}_side_left"
+            ).at_mm[1]
+        except KeyError:
+            incompatible_runners.append(drawer.drawer_id)
+            continue
+        usable_inside_depth = wall_y - drawer_front_y
+        if (
             drawer.box_depth_mm < runner.minimum_drawer_length_mm
-            or vanity.body_depth_mm < runner.minimum_inside_depth_mm
+            or usable_inside_depth < runner.minimum_inside_depth_mm
         ):
             incompatible_runners.append(drawer.drawer_id)
     runner_verdict = (

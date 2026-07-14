@@ -450,6 +450,138 @@ def test_missing_product_authority_keeps_static_coordination_unknown():
     assert finding.verdict == "UNKNOWN"
 
 
+def test_drain_outlet_must_reach_oriented_trap_not_merely_overlap():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    left = model.plumbing_paths[0]
+    tailpiece = left.element("tailpiece")
+    shifted_tailpiece = replace(
+        tailpiece,
+        x0_mm=tailpiece.x0_mm + 40.0,
+        x1_mm=tailpiece.x1_mm + 40.0,
+    )
+    shifted = replace(
+        left,
+        elements=tuple(
+            shifted_tailpiece if item.kind == "tailpiece" else item
+            for item in left.elements
+        ),
+    )
+    finding = validate_double_vanity_model(replace(
+        model, plumbing_paths=(shifted, model.plumbing_paths[1]),
+    )).by_rule("double_vanity.geometry.fixture_plumbing_drawer")
+
+    assert shifted_tailpiece.touches_or_intersects(left.element("p_trap"))
+    assert finding.verdict == "FAIL"
+
+    short_height = 50.0
+    short_tailpiece = replace(
+        tailpiece,
+        z0_mm=left.fixture_envelope.z0_mm - short_height,
+    )
+    short_path = replace(
+        left,
+        elements=tuple(
+            short_tailpiece if item.kind == "tailpiece" else item
+            for item in left.elements
+        ),
+    )
+    short_model = replace(
+        model,
+        drain=replace(model.drain, body_height_mm=short_height),
+        plumbing_paths=(short_path, model.plumbing_paths[1]),
+    )
+    assert not short_tailpiece.touches_or_intersects(left.element("p_trap"))
+    assert validate_double_vanity_model(short_model).by_rule(
+        "double_vanity.geometry.fixture_plumbing_drawer"
+    ).verdict == "FAIL"
+
+
+def test_wrong_nonempty_product_and_runner_identities_do_not_pass():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    product_mutations = (
+        replace(model, sink=replace(model.sink, adapter_id="other_sink@1")),
+        replace(model, drain=replace(model.drain, adapter_id="other_drain@1")),
+        replace(model, trap=replace(model.trap, adapter_id="other_trap@1")),
+    )
+    for mutation in product_mutations:
+        finding = validate_double_vanity_model(mutation).by_rule(
+            "double_vanity.geometry.fixture_plumbing_drawer"
+        )
+        assert finding.verdict != "PASS"
+
+    for level in ("upper", "lower"):
+        wrong_runner = replace(
+            model,
+            drawers=tuple(
+                replace(drawer, runner=replace(
+                    drawer.runner, selected_sku="999.9999X",
+                ))
+                if drawer.level == level else drawer
+                for drawer in model.drawers
+            ),
+        )
+        report = validate_double_vanity_model(wrong_runner)
+        assert report.by_rule(
+            "double_vanity.geometry.fixture_plumbing_drawer"
+        ).verdict != "PASS"
+        assert report.by_rule(
+            "double_vanity.drawer.runner_applicability"
+        ).verdict != "PASS"
+
+
+def test_runner_inside_depth_uses_modeled_installation_span_not_gross_depth():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    gross_depth = model.section.vanity.body_depth_mm
+    usable_depth = gross_depth - 22.0
+    required_depth = (gross_depth + usable_depth) / 2
+    too_deep = replace(
+        model,
+        drawers=tuple(
+            replace(drawer, runner=replace(
+                drawer.runner, minimum_inside_depth_mm=required_depth,
+            ))
+            for drawer in model.drawers
+        ),
+    )
+    report = validate_double_vanity_model(too_deep)
+
+    assert usable_depth < required_depth < gross_depth
+    assert report.by_rule(
+        "double_vanity.geometry.fixture_plumbing_drawer"
+    ).verdict == "FAIL"
+    assert report.by_rule(
+        "double_vanity.drawer.runner_applicability"
+    ).verdict == "FAIL"
+
+
+def test_each_rough_in_point_has_exactly_one_bay_owner():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    duplicate_waste = replace(
+        model.assumed_site.wastes[0],
+        point_id="left_waste_duplicate",
+    )
+    duplicated = replace(
+        model,
+        assumed_site=replace(
+            model.assumed_site,
+            wastes=model.assumed_site.wastes + (duplicate_waste,),
+        ),
+    )
+    finding = validate_double_vanity_model(duplicated).by_rule(
+        "double_vanity.geometry.fixture_plumbing_drawer"
+    )
+
+    assert finding.verdict == "FAIL"
+
+
 def test_impossible_fixture_fails_loudly_instead_of_emitting_fake_clearance(
     monkeypatch,
 ):
