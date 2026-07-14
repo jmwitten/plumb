@@ -168,9 +168,18 @@ def test_pair_regeneration_is_deterministic_after_generated_stamp_normalization(
 
     stamp = re.compile(
         r"Generated \d{4}-\d{2}-\d{2} \d{2}:\d{2} [A-Z]+")
+
+    def normalize_generated_stamp(value):
+        value = stamp.sub("Generated <normalized>", value)
+        return re.sub(
+            r"(<dt>Generated</dt><dd>)\d{4}-\d{2}-\d{2} \d{2}:\d{2} [A-Z]+",
+            r"\1<normalized>",
+            value,
+        )
+
     for key in ("technical_path", "manual_path"):
-        left = stamp.sub("Generated <normalized>", Path(first[key]).read_text())
-        right = stamp.sub("Generated <normalized>", Path(second[key]).read_text())
+        left = normalize_generated_stamp(Path(first[key]).read_text())
+        right = normalize_generated_stamp(Path(second[key]).read_text())
         assert left == right
 
     assert first["asset_keys"] == second["asset_keys"]
