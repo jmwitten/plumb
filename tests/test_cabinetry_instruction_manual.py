@@ -330,11 +330,13 @@ def test_visible_diagram_dimensions_follow_a_released_width_variant(tmp_path):
     hardware_caption = by_id["drawer-hardware-plan"].caption
     front_caption = by_id["applied-front-pattern"].caption
     assert "(979.700, 24.000) mm" in hardware_caption
-    assert "1063.800 mm-wide" in front_caption
+    # 1063.8 mm sits within 1/64 in of 41-7/8", so the homeowner register
+    # renders the tape fraction; coordinate lists stay exact mm.
+    assert '41-7/8"-wide' in front_caption
     assert "246.675/740.025 mm" in front_caption
     assert "419.900/643.900 mm" in front_caption
-    for stale in ("(928.9, 24)", "1013.0 mm-wide", "233.975/701.925",
-                  "394.500/618.500"):
+    for stale in ("(928.9, 24)", "1013.0 mm-wide", '39-7/8"-wide',
+                  "233.975/701.925", "394.500/618.500"):
         assert stale not in hardware_caption + front_caption
 
 

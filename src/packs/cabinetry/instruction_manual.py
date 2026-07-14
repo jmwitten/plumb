@@ -364,8 +364,41 @@ def _plot_point(
     )
 
 
+def _reader_values(values) -> str:
+    """List register: tape fractions only when every value is clean."""
+    from ...details.base import fmt_frac_in
+
+    def clean(mm):
+        inches = mm / 25.4
+        return abs(inches - round(inches * 16) / 16) <= 1 / 64 + 1e-9
+
+    values = tuple(float(v) for v in values)
+    if values and all(clean(v) for v in values):
+        return "/".join(fmt_frac_in(round(v / 25.4 * 16) / 16) for v in values)
+    return _fmt_mm_values(values) + " mm"
+
+
 def _machining(project, kind: str):
     return tuple(row for row in project.model.machining if row.kind == kind)
+
+
+def _reader_len(mm: float) -> str:
+    """Homeowner tape register for one length.
+
+    The intended builder works from a tape measure, not a metric shop: a
+    value on (or within 1/64 in of) a sixteenth reads as a plain tape
+    fraction; anything else reads as ``≈`` the nearest sixteenth with the
+    exact millimeter value alongside, so nothing is silently rounded away.
+    The fabrication packet remains the mm-exact authority.
+    """
+    from ...details.base import fmt_frac_in
+
+    inches = mm / 25.4
+    sixteenths = round(inches * 16)
+    nearest = sixteenths / 16
+    if abs(inches - nearest) <= 1 / 64 + 1e-9:
+        return fmt_frac_in(nearest)
+    return f"≈{fmt_frac_in(nearest)} ({mm:g} mm)"
 
 
 def _fmt_mm_values(values) -> str:
@@ -438,42 +471,48 @@ def _toe_platform_diagram(project) -> OperationDiagram:
     sleeper = project.model.part("toe_left")
     width = front.length_mm
     depth = sleeper.length_mm + 2.0 * front.thickness_mm
-    # The plan box keeps the platform's true proportions: canvas height is
-    # derived from the typed depth/width ratio, not a hand-laid square.
-    box_w = 54.0
+    # The plan box keeps the platform's true proportions (canvas height
+    # from the typed depth/width ratio) and spans the full canvas width so
+    # a homeowner can actually read it; the four rail-end insets sit in a
+    # row beneath it.
+    box_x = 8.0
+    box_w = 84.0
     box_h = box_w * depth / width
-    rail_h = min(5.0, box_h / 4.0)
+    rail_h = min(6.0, box_h / 4.0)
     sleeper_w = max(3.5, box_w * front.thickness_mm / width)
     setback = project.model.profile.toe_kick_setback_mm
     primitives = [
-        _mark("rect", 8, 8, box_w, rail_h, role="work", label="Rear toe rail",
+        _mark("rect", box_x, 8, box_w, rail_h, role="work",
+              label="Rear toe rail",
               fact_ref=project.model.part("toe_rear").part_id),
-        _mark("rect", 8, 8 + box_h - rail_h, box_w, rail_h, role="work",
+        _mark("rect", box_x, 8 + box_h - rail_h, box_w, rail_h, role="work",
               label="Front toe rail", fact_ref=front.part_id),
-        _mark("rect", 8, 8 + rail_h, sleeper_w, box_h - 2.0 * rail_h,
+        _mark("rect", box_x, 8 + rail_h, sleeper_w, box_h - 2.0 * rail_h,
               role="work", label="Left toe sleeper"),
-        _mark("rect", 8 + box_w - sleeper_w, 8 + rail_h, sleeper_w,
+        _mark("rect", box_x + box_w - sleeper_w, 8 + rail_h, sleeper_w,
               box_h - 2.0 * rail_h,
               role="work", label="Right toe sleeper"),
         _mark(
-            "text", 35, 8 + box_h + 9, role="datum",
-            label=f"FRONT / {setback:.1f} mm setback",
+            "text", 50, 8 + box_h + 5, role="datum",
+            label=f"FRONT / {_reader_len(setback)} setback",
             fact_ref="profile.toe_kick_setback_mm",
         ),
-        _mark("text", 35, 4, role="datum", label="PLATFORM PLAN / REAR"),
-        _mark("text", 80, 4, role="datum", label="FOUR RAIL-END FACES"),
+        _mark("text", 50, 4, role="datum", label="PLATFORM PLAN / REAR"),
+        _mark("text", 50, 8 + box_h + 12, role="datum",
+              label="FOUR RAIL-END FACES / 2 CONFIRMAT CENTERS PER END"),
     ]
     toe_rows = tuple(
         row for row in _machining(project, "confirmat_step_drill")
         if row.part_id in {front.part_id, project.model.part("toe_rear").part_id}
     )
+    inset_top = 8 + box_h + 16
+    inset_h = max(18.0, 96.0 - 6.0 - inset_top)
+    inset_w = 12.0
     for row_index, row in enumerate(toe_rows):
-        col = row_index % 2
-        line = row_index // 2
-        x0 = 68.0 + col * 14.0
-        y0 = 8.0 + line * 39.0
+        x0 = 14.0 + row_index * 20.0
+        y0 = inset_top
         primitives.append(_mark(
-            "rect", x0, y0, 11.0, 32.0, role="prior",
+            "rect", x0, y0, inset_w, inset_h, role="prior",
             label=f"{row.part_id.rsplit('.', 1)[-1]} outside face",
             fact_ref=row.part_id,
         ))
@@ -482,8 +521,8 @@ def _toe_platform_diagram(project) -> OperationDiagram:
                 row.location_mm[0],
                 row.location_mm[1] + index * row.pitch_mm,
             )
-            px = x0 + 5.5
-            py = y0 + 32.0 - 32.0 * model_point[1] / front.width_mm
+            px = x0 + inset_w / 2.0
+            py = y0 + inset_h - inset_h * model_point[1] / front.width_mm
             primitives.append(_mark(
                 "circle", px, py, 1.25, role="station",
                 label=(
@@ -494,28 +533,25 @@ def _toe_platform_diagram(project) -> OperationDiagram:
                 fact_ref=row.feature_id,
             ))
         primitives.append(_mark(
-            "text", x0 + 5.5, y0 + 36, role="datum",
+            "text", x0 + inset_w / 2.0, y0 + inset_h + 4, role="datum",
             label=("FRONT" if row.part_id == front.part_id else "REAR")
-                  + (" L" if col == 0 else " R"),
+                  + (" L" if row_index % 2 == 0 else " R"),
             fact_ref=row.feature_id,
         ))
-    primitives.append(_mark(
-        "text", 80, 92, role="datum",
-        label="8 GENERATED CENTERS / 2 PER END",
-        fact_ref="fab.joinery_step_drill",
-    ))
     return OperationDiagram(
         diagram_id="toe-platform-plan",
         title="Toe platform — plan view",
         caption=(
-            f"Assemble the {width:.1f} × {depth:.1f} mm platform square; "
-            "the four rail-end insets plot all eight generated Confirmat "
-            "centers—two on each vertical rail end. Local rail-face Y centers "
-            f"are {toe_rows[0].location_mm[1]:.3f} and "
-            f"{toe_rows[0].location_mm[1] + toe_rows[0].pitch_mm:.3f} mm; "
-            f"left-end X is {min(row.location_mm[0] for row in toe_rows):.3f} "
-            f"mm and right-end X is {max(row.location_mm[0] for row in toe_rows):.3f} "
-            "mm. Verify equal diagonals before proceeding."
+            f"Assemble the {_reader_len(width)} × {_reader_len(depth)} "
+            "platform square; the four rail-end insets plot all eight "
+            "generated Confirmat centers—two on each vertical rail end. "
+            "Local rail-face height centers are "
+            f"{_reader_len(toe_rows[0].location_mm[1])} and "
+            f"{_reader_len(toe_rows[0].location_mm[1] + toe_rows[0].pitch_mm)}"
+            " up from the rail bottom; end centers sit "
+            f"{_reader_len(min(row.location_mm[0] for row in toe_rows))} in "
+            "from the left end and the same in from the right end. Verify "
+            "equal diagonals before proceeding."
         ),
         primitives=tuple(primitives),
         source_refs=tuple(row.feature_id for row in toe_rows),
@@ -657,9 +693,10 @@ def _close_back_diagram(project) -> OperationDiagram:
               label=f"Captured back {back.thickness_mm:.3f} mm thick",
               fact_ref=back.part_id),
         _mark("text", 85.5, 72, role="datum",
-              label=f"{back.thickness_mm:.2f} BACK", fact_ref=back.part_id),
+              label=f"{_reader_len(back.thickness_mm)} BACK", fact_ref=back.part_id),
         _mark("text", 85.5, 77, role="datum",
-              label=f"{groove.width_mm:.2f} W × {groove.depth_mm:.2f} D GROOVE",
+              label=(f"{_reader_len(groove.width_mm)} W × "
+                     f"{_reader_len(groove.depth_mm)} D GROOVE"),
               fact_ref=groove.feature_id),
         _mark("text", 40, 82, role="datum",
               label=f"{len(close_points)} CLOSE-OUT CONFIRMATS — COUNT EVERY MARK",
@@ -856,12 +893,12 @@ def _drawer_box_diagram(project) -> OperationDiagram:
         title="One drawer box — captured bottom and eight corner screws",
         caption=(
             "The six lower views plot both side panels for all three drawer "
-            f"identities. Each has front/rear X centers at {_fmt_mm_values(x_centers)} mm; "
-            f"the two Y centers are top {_fmt_mm_values(y_centers['top'])} mm, middle "
-            f"{_fmt_mm_values(y_centers['middle'])} mm, and bottom "
-            f"{_fmt_mm_values(y_centers['bottom'])} mm. Fully seat each "
-            f"{_fmt_mm_values(bottom_thicknesses)} mm bottom in all four "
-            f"{_fmt_mm_values(groove_widths)} × {_fmt_mm_values(groove_depths)} mm grooves, drive the eight "
+            f"identities. Each has front/rear X centers at {_reader_values(x_centers)}; "
+            f"the two Y centers are top {_reader_values(y_centers['top'])}, middle "
+            f"{_reader_values(y_centers['middle'])}, and bottom "
+            f"{_reader_values(y_centers['bottom'])}. Fully seat each "
+            f"{_reader_values(bottom_thicknesses)} bottom in all four "
+            f"{_reader_values(groove_widths)} × {_reader_values(groove_depths)} grooves, drive the eight "
             "generated corner Confirmats, and verify equal diagonals."
         ),
         primitives=tuple(primitives),
@@ -918,10 +955,10 @@ def _runner_pattern_diagram(project) -> OperationDiagram:
         title="Runner fixing stations — one cabinet side, inside face",
         caption=(
             f"Plot {len(stations)} source-backed stations on each runner row at "
-            f"{_fmt_mm_values(stations)} mm from the cabinet front. The compiled "
-            f"row elevations are top {identity_elevations['top']:.3f}, middle "
-            f"{identity_elevations['middle']:.3f}, and bottom "
-            f"{identity_elevations['bottom']:.3f} mm. Repeat the identical "
+            f"{_reader_values(stations)} from the cabinet front. The compiled "
+            f"row elevations are top {_reader_len(identity_elevations['top'])}, middle "
+            f"{_reader_len(identity_elevations['middle'])}, and bottom "
+            f"{_reader_len(identity_elevations['bottom'])}. Repeat the identical "
             "local-coordinate pattern on the right inside face—do not reverse "
             "the front datum—and keep top/middle/bottom identities. The model "
             "does not claim a pilot depth."
@@ -1136,8 +1173,8 @@ def _applied_front_diagram(project) -> OperationDiagram:
     primitives = [
         _mark("text", 50, 3, role="datum",
               label=(
-                  f"DECORATIVE FACES — {bank.front_edge_reveal_mm:.1f} mm "
-                  f"PERIMETER REVEAL / {bank.front_gap_mm:.1f} mm GAPS"
+                  f"DECORATIVE FACES — {_reader_len(bank.front_edge_reveal_mm)} "
+                  f"PERIMETER REVEAL / {_reader_len(bank.front_gap_mm)} GAPS"
               ), fact_ref="drawer_bank.front_reveals"),
         _mark("text", 50, 51, role="datum",
               label="BOX-FRONT INSIDE FACES — FOUR CLEARANCE HOLES EACH",
@@ -1243,10 +1280,10 @@ def _applied_front_diagram(project) -> OperationDiagram:
         caption=(
             f"The upper row shows only the two Ø{pull_diameter:g} mm, "
             f"{bank.pull_product.hole_spacing_mm:g} mm-center pull bores on the "
-            f"{_fmt_mm_values(front_widths)} mm-wide finished decorative faces "
-            f"(top {front_heights['top']:.3f} mm, middle "
-            f"{front_heights['middle']:.3f} mm, bottom "
-            f"{front_heights['bottom']:.3f} mm high). The lower row is a separate "
+            f"{_reader_values(front_widths)}-wide finished decorative faces "
+            f"(top {_reader_len(front_heights['top'])}, middle "
+            f"{_reader_len(front_heights['middle'])}, bottom "
+            f"{_reader_len(front_heights['bottom'])} high). The lower row is a separate "
             f"inside-box-front view for the four Ø{attachment_diameter:g} mm "
             f"through-clearance holes. Their X centers are "
             f"{_fmt_mm_values(attachment_x)} mm; Y pairs are top "

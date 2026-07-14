@@ -98,12 +98,16 @@ def _frame_html(detail, frame, number: int | None, image_path: Path,
     if frame.illustration is not None and frame.illustration.inset:
         inset = (f'<figcaption class="inset-note">Detail: '
                  f'{_e(frame.illustration.inset)}</figcaption>')
+    # Mirrors panel_callout_ids: first part per reader family, in focus
+    # order — so key number N is the same part as circle N in the scene.
     key_names = []
     for part_id in frame.focus_part_ids:
         name = labels[part_id].reader_name
         if name not in key_names:
             key_names.append(name)
-    picture_key = "".join(f"<li>{_e(name)}</li>" for name in key_names[:6])
+    picture_key = "".join(
+        f'<li><span class="key-num">{number}</span>{_e(name)}</li>'
+        for number, name in enumerate(key_names, start=1))
     number_html = (f'<span class="step-number">{number}</span>'
                    if number is not None
                    else '<span class="step-number stop">STOP</span>')
@@ -197,7 +201,9 @@ _STYLE = """
 /* --acc themes the embedded 3D viewer's hover highlight and dimension
    lines (viewer.js reads it; its orange fallback read as yellow on the
    gray parts). */
-:root { --ink: #14161a; --line: #444; --paper: #fff; --acc: #2563eb; }
+:root { --ink: #14161a; --line: #444; --paper: #fff; --acc: #2563eb;
+  --sheet: #fff; --muted: #555; --faint: #f2f2f2; --chipbg: #ececec;
+  --acc-soft: #dbeafe; }
 * { box-sizing: border-box; }
 body { margin: 0; background: #d8dbe0; color: var(--ink);
   font: 15px/1.45 -apple-system, "Segoe UI", "Helvetica Neue", sans-serif; }
@@ -301,7 +307,12 @@ text.diagram-mark.role-hold { fill: var(--ink); stroke: none; }
 .picture-key { list-style: none; display: flex; flex-wrap: wrap;
   gap: 0.15rem 0.8rem; margin: 0.25rem 0 0; padding: 0; font-size: 0.72rem;
   color: #333; }
-.picture-key li::before { content: "\\25A0"; margin-right: 0.3rem; }
+.picture-key li { display: inline-flex; align-items: center;
+  gap: 0.28rem; }
+.key-num { display: inline-grid; place-items: center; width: 1.05rem;
+  height: 1.05rem; border: 1.6px solid var(--ink); border-radius: 50%;
+  background: var(--paper); font-weight: 800; font-size: 0.62rem;
+  color: var(--ink); }
 .record table { width: 100%; table-layout: fixed; border-collapse: collapse;
   font-size: 0.85rem; }
 .record th, .record td { border: 1.5px solid var(--ink); padding: 0.45rem;
@@ -331,10 +342,7 @@ text.diagram-mark.role-hold { fill: var(--ink); stroke: none; }
 .viewer-slot { position: relative; aspect-ratio: 4/3; background: #f6f6f4;
   overflow: hidden; }
 .viewer-slot img { display: block; width: 100%; height: auto; }
-.viewer-btn { position: absolute; left: 50%; top: 50%;
-  transform: translate(-50%, -50%); padding: 0.6rem 1.1rem;
-  font-size: 1rem; font-weight: 800; border: 2px solid var(--ink);
-  border-radius: 8px; background: var(--paper); cursor: pointer; }
+
 """
 
 
