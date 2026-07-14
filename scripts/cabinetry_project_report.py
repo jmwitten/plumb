@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+from dataclasses import dataclass, replace
 import gzip
 import html
 import json
@@ -17,6 +18,9 @@ if str(_REPO / "src") not in sys.path:
 
 from detailgen.packs import compile_project_file  # noqa: E402
 from detailgen.packs.cabinetry.catalogs import get_assembly_fastener  # noqa: E402
+from detailgen.packs.cabinetry.validation import (  # noqa: E402
+    anchor_embedment_facts,
+)
 from detailgen.assemblies.assembly import DetailAssembly  # noqa: E402
 from detailgen.rendering.export import export_glb, export_png  # noqa: E402
 from detailgen.rendering.part_labels import part_labels  # noqa: E402
@@ -29,18 +33,77 @@ from detailgen.rendering.web_viewer import (  # noqa: E402
 
 
 REQUIRED_VIEWS = (
-    "front", "side", "plan", "isometric", "exploded", "drawer-detail"
+    "front", "installation-plan", "anchor-section", "isometric",
+    "exploded", "drawer-detail",
 )
 VIEW_CAPTIONS = {
-    "front": "Dimensioned front elevation with progressive fronts and centered pulls.",
-    "side": "Right elevation of the compiled product assembly.",
-    "plan": "Plan view showing cabinet depth and installation anchors.",
+    "front": (
+        "Installed front/setout elevation with model-bound fronts, stud and "
+        "anchor centerlines, high-floor datum, and countertop boundary."
+    ),
+    "installation-plan": (
+        "Installation plan with cabinet and toe footprints, wall datum, "
+        "surveyed studs, and cabinet-local anchor offsets."
+    ),
+    "anchor-section": (
+        "Anchor/toe section showing the selected screw, modeled stack and "
+        "stud embedment without claiming capacity or torque."
+    ),
     "isometric": "Compiled product assembly; use Explore in 3D to isolate and explode parts.",
     "exploded": "Drawer-bank exploded diagram, grouped by stable top/middle/bottom identity.",
     "drawer-detail": (
         "Typical MOVENTO wood-drawer geometry with runner and lateral-stabilizer preparation."
     ),
 }
+
+REVIEW_BASENAME = "frameless_three_drawer_40_build_document.html"
+MANUAL_BASENAME = "frameless_three_drawer_40_assembly_manual.html"
+FABRICATION_BASENAME = "frameless_three_drawer_40_fabrication_packet.html"
+AUDIT_BASENAME = "frameless_three_drawer_40_review_trace.html"
+
+
+def _relative_html_basename(value: str, *, field: str) -> str:
+    value = str(value)
+    if (
+        not value
+        or Path(value).name != value
+        or not value.endswith(".html")
+        or ":" in value
+        or "/" in value
+        or "\\" in value
+    ):
+        raise ValueError(f"{field} must be a relative HTML basename")
+    return value
+
+
+@dataclass(frozen=True)
+class CabinetryDocumentLinks:
+    """Validated filenames for the four reciprocal cabinetry surfaces."""
+
+    review_href: str = REVIEW_BASENAME
+    manual_href: str = MANUAL_BASENAME
+    fabrication_href: str = FABRICATION_BASENAME
+    audit_href: str = AUDIT_BASENAME
+
+    def __post_init__(self) -> None:
+        for field in (
+            "review_href", "manual_href", "fabrication_href", "audit_href",
+        ):
+            object.__setattr__(
+                self,
+                field,
+                _relative_html_basename(getattr(self, field), field=field),
+            )
+
+
+@dataclass(frozen=True)
+class CabinetrySharedAssets:
+    """One render pass shared by every document composer."""
+
+    assembly: DetailAssembly
+    images: dict[str, str]
+    viewer_payload: dict
+    glb_bytes: bytes
 
 
 def _esc(value) -> str:
@@ -160,6 +223,289 @@ def drawer_detail_geometry(model) -> dict[str, object]:
                 bank.runner.hook_bore_height_from_bottom_mm,
             ),
         ),
+    }
+
+
+def installation_drawing_facts(project) -> dict[str, object]:
+    """Project installation geometry from one coherent packed model.
+
+    The drawing functions deliberately consume only this projection.  Missing
+    or contradictory cabinet, toe, stud, strip, or screw geometry raises here
+    rather than allowing a plausible-looking coordination drawing to drift
+    from the model.
+    """
+
+    model = project.model
+    cabinets = tuple(model.section.cabinets)
+    if len(cabinets) != 1:
+        raise ValueError(
+            "installation drawings require exactly one cabinet declaration; "
+            f"found {len(cabinets)}"
+        )
+    cabinet = cabinets[0]
+    wall = model.section.site.wall
+    floor = model.section.site.floor
+    tolerance = 1e-6
+    cabinet_x0 = wall.plane_origin_mm[0] + cabinet.from_left_datum_mm
+    cabinet_front_y = wall.plane_origin_mm[1] - cabinet.depth_mm
+    cabinet_base_z = floor.high_point_elevation_mm
+
+    if wall.plane_normal != (0.0, -1.0, 0.0):
+        raise ValueError(
+            "installation drawings require the cabinetry v1 wall frame with "
+            "normal (0, -1, 0)"
+        )
+    if abs(wall.plane_origin_mm[1] - (cabinet_front_y + cabinet.depth_mm)) \
+            > tolerance:
+        raise ValueError(
+            "cabinet back and surveyed wall plane are incoherent; the drawing "
+            "cannot invent a wall gap"
+        )
+
+    parts_by_role: dict[str, list] = {}
+    for part in model.parts:
+        parts_by_role.setdefault(part.role, []).append(part)
+
+    def one_part(role: str, *, component_type: str | None = None):
+        matches = parts_by_role.get(role, ())
+        if len(matches) != 1:
+            raise ValueError(
+                f"installation drawings require exactly one {role!r} part; "
+                f"found {len(matches)}"
+            )
+        part = matches[0]
+        if component_type is not None and part.component_type != component_type:
+            raise ValueError(
+                f"installation drawing role {role!r} must be a "
+                f"{component_type}, got {part.component_type!r}"
+            )
+        return part
+
+    anchor_strip = one_part("anchor_strip", component_type="plywood_panel")
+    if anchor_strip.rotate != (("X", 90.0),):
+        raise ValueError(
+            "anchor strip must use the compiled vertical strip orientation"
+        )
+    anchor_strip_bounds = {
+        "x": (
+            anchor_strip.at_mm[0] - cabinet_x0,
+            anchor_strip.at_mm[0] - cabinet_x0 + anchor_strip.length_mm,
+        ),
+        "z": (
+            anchor_strip.at_mm[2] - cabinet_base_z,
+            anchor_strip.at_mm[2] - cabinet_base_z + anchor_strip.width_mm,
+        ),
+    }
+
+    toe_roles = ("toe_front", "toe_rear", "toe_left", "toe_right")
+    toe_parts = {
+        role: one_part(role, component_type="plywood_panel")
+        for role in toe_roles
+    }
+    toe_plan_bounds = {}
+    for role, part in toe_parts.items():
+        if role in {"toe_front", "toe_rear"}:
+            if part.rotate != (("X", 90.0),):
+                raise ValueError(
+                    f"{role} must use the compiled transverse toe-rail orientation"
+                )
+            x_bounds = (part.at_mm[0], part.at_mm[0] + part.length_mm)
+            y_bounds = (part.at_mm[1] - part.thickness_mm, part.at_mm[1])
+        else:
+            if part.rotate != (("X", 90.0), ("Z", 90.0)):
+                raise ValueError(
+                    f"{role} must use the compiled toe-sleeper orientation"
+                )
+            x_bounds = (part.at_mm[0], part.at_mm[0] + part.thickness_mm)
+            y_bounds = (part.at_mm[1], part.at_mm[1] + part.length_mm)
+        if abs(part.width_mm - cabinet.toe_kick_height_mm) > tolerance:
+            raise ValueError(
+                f"{role} height does not match the declared toe-kick height"
+            )
+        toe_plan_bounds[role] = (x_bounds, y_bounds)
+
+    toe_x = (
+        min(bounds[0][0] for bounds in toe_plan_bounds.values()),
+        max(bounds[0][1] for bounds in toe_plan_bounds.values()),
+    )
+    toe_y = (
+        min(bounds[1][0] for bounds in toe_plan_bounds.values()),
+        max(bounds[1][1] for bounds in toe_plan_bounds.values()),
+    )
+    if (
+        abs(toe_x[0] - cabinet_x0) > tolerance
+        or abs(toe_x[1] - (cabinet_x0 + cabinet.width_mm)) > tolerance
+        or abs(toe_plan_bounds["toe_left"][1][0]
+               - toe_plan_bounds["toe_front"][1][1]) > tolerance
+        or abs(toe_plan_bounds["toe_left"][1][1]
+               - toe_plan_bounds["toe_rear"][1][0]) > tolerance
+        or toe_plan_bounds["toe_left"][1] != toe_plan_bounds["toe_right"][1]
+    ):
+        raise ValueError(
+            "compiled toe parts do not form one closed rectangular support "
+            "footprint under the cabinet"
+        )
+
+    survey_by_id = {stud.stud_id: stud for stud in wall.studs}
+    if len(survey_by_id) != len(wall.studs):
+        raise ValueError("surveyed wall stud ids must be unique")
+    target_ids = tuple(model.anchor_stud_ids)
+    anchor_roles = {
+        part.role.removeprefix("wall_anchor_"): part
+        for part in model.parts
+        if part.role.startswith("wall_anchor_")
+        and part.component_type == "structural_screw"
+    }
+    if (
+        not target_ids
+        or len(anchor_roles) != len(target_ids)
+        or set(anchor_roles) != set(target_ids)
+    ):
+        raise ValueError(
+            "installation drawings require one structural-screw anchor per "
+            "surveyed stud target"
+        )
+    wall_anchor_systems = tuple(
+        item for item in model.hardware if item.kind == "wall_anchor_system"
+    )
+    expected_anchor_part_ids = {
+        f"cabinetry.{cabinet.cabinet_id}.wall_anchor_{stud_id}"
+        for stud_id in target_ids
+    }
+    if (
+        len(wall_anchor_systems) != 1
+        or wall_anchor_systems[0].product_id != model.wall_anchor.product_id
+        or wall_anchor_systems[0].quantity != len(target_ids)
+        or set(wall_anchor_systems[0].related_parts) != expected_anchor_part_ids
+    ):
+        raise ValueError(
+            "wall-anchor hardware schedule must name the selected product and "
+            "exactly the modeled structural-screw paths"
+        )
+
+    stud_centers = []
+    anchors = []
+    anchor_z_values = []
+    stack_values = []
+    embedment_values = []
+    head_plane_y = anchor_strip.at_mm[1] - anchor_strip.thickness_mm
+    stud_front_y = wall.plane_origin_mm[1] + wall.finish_thickness_mm
+    strip_center_z = anchor_strip.at_mm[2] + anchor_strip.width_mm / 2
+    for stud_id in target_ids:
+        if stud_id not in survey_by_id:
+            raise ValueError(
+                f"anchor target {stud_id!r} is absent from the surveyed studs"
+            )
+        survey = survey_by_id[stud_id]
+        stud = one_part(f"wall_stud_{stud_id}", component_type="lumber")
+        anchor = anchor_roles[stud_id]
+        expected_stud_id = f"site.{wall.wall_id}.{stud_id}"
+        expected_anchor_id = f"cabinetry.{cabinet.cabinet_id}.wall_anchor_{stud_id}"
+        center_x = wall.plane_origin_mm[0] + survey.position_mm
+        placed_stud_center = stud.at_mm[0] + stud.width_mm / 2
+        if (
+            stud.part_id != expected_stud_id
+            or anchor.part_id != expected_anchor_id
+            or abs(placed_stud_center - center_x) > tolerance
+            or anchor.rotate != (("X", 90.0),)
+            or abs(anchor.at_mm[0] - center_x) > tolerance
+            or abs(anchor.at_mm[1] - head_plane_y) > tolerance
+            or abs(anchor.at_mm[2] - strip_center_z) > tolerance
+            or abs(anchor.length_mm - model.wall_anchor.length_mm) > tolerance
+            or abs(anchor.width_mm - model.wall_anchor.diameter_mm) > tolerance
+            or abs(anchor.thickness_mm - model.wall_anchor.diameter_mm) > tolerance
+        ):
+            raise ValueError(
+                f"modeled stud/anchor path for {stud_id!r} is incoherent with "
+                "the survey, anchor strip, or selected screw geometry"
+            )
+        local_x = anchor.at_mm[0] - cabinet_x0
+        local_z = anchor.at_mm[2] - cabinet_base_z
+        stack = stud_front_y - anchor.at_mm[1]
+        embedment = anchor.length_mm - stack
+        if stack <= 0 or embedment <= 0:
+            raise ValueError(
+                f"modeled anchor path for {stud_id!r} does not reach the stud"
+            )
+        stud_centers.append((stud_id, center_x))
+        anchor_z_values.append(local_z)
+        stack_values.append(stack)
+        embedment_values.append(embedment)
+        anchors.append({
+            "stud_id": stud_id,
+            "stud_part_id": stud.part_id,
+            "anchor_part_id": anchor.part_id,
+            "stud_verified": survey.verified,
+            "global_x_mm": center_x,
+            "local_x_mm": local_x,
+            "local_z_mm": local_z,
+        })
+
+    def require_common(values: list[float], label: str) -> float:
+        if not values or max(values) - min(values) > tolerance:
+            raise ValueError(
+                f"installation drawings require one common {label} for all anchors"
+            )
+        return values[0]
+
+    anchor_z = require_common(anchor_z_values, "anchor elevation")
+    stack = require_common(stack_values, "modeled anchor stack")
+    embedment = require_common(embedment_values, "modeled stud embedment")
+    validation_stack, validation_embedment, minimum_embedment, _embedment_ok = \
+        anchor_embedment_facts(model)
+    if (
+        abs(validation_stack - stack) > tolerance
+        or abs(validation_embedment - embedment) > tolerance
+    ):
+        raise ValueError(
+            "installation drawing anchor facts disagree with the canonical "
+            "anchor-path validation"
+        )
+
+    released = bool(project.installation_use_ready)
+    stamp = (
+        "INSTALLATION/USE RELEASE: PASS — FOLLOW THE REVIEWED PROJECT-SPECIFIC "
+        "PROCEDURE"
+        if released else
+        "COORDINATION ONLY — DO NOT ANCHOR OR ATTACH COUNTERTOP UNTIL HOLD CLEARED"
+    )
+    return {
+        "cabinet_id": cabinet.cabinet_id,
+        "cabinet_bounds_local_mm": {
+            "x": (0.0, cabinet.width_mm),
+            "y": (0.0, cabinet.depth_mm),
+            "z": (0.0, cabinet.height_mm),
+        },
+        "cabinet_left_global_mm": cabinet_x0,
+        "wall_left_datum_global_mm": wall.plane_origin_mm[0],
+        "wall_plane_y_global_mm": wall.plane_origin_mm[1],
+        "wall_finish_thickness_mm": wall.finish_thickness_mm,
+        "stud_width_mm": wall.stud_width_mm,
+        "stud_depth_mm": wall.stud_depth_mm,
+        "toe_footprint_local_mm": {
+            "x": (toe_x[0] - cabinet_x0, toe_x[1] - cabinet_x0),
+            "y": (toe_y[0] - cabinet_front_y, toe_y[1] - cabinet_front_y),
+        },
+        "toe_height_mm": cabinet.toe_kick_height_mm,
+        "toe_setback_mm": cabinet.toe_kick_setback_mm,
+        "anchor_strip_bounds_local_mm": anchor_strip_bounds,
+        "anchor_strip_thickness_mm": anchor_strip.thickness_mm,
+        "stud_centers_global_mm": tuple(stud_centers),
+        "anchor_x_local_mm": tuple(item["local_x_mm"] for item in anchors),
+        "anchor_z_local_mm": anchor_z,
+        "anchors": tuple(anchors),
+        "selected_screw_product_id": model.wall_anchor.product_id,
+        "selected_screw_name": model.wall_anchor.product,
+        "selected_screw_source_url": model.wall_anchor.source_url,
+        "selected_screw_length_mm": model.wall_anchor.length_mm,
+        "selected_screw_diameter_mm": model.wall_anchor.diameter_mm,
+        "modeled_stack_mm": stack,
+        "stud_embedment_mm": embedment,
+        "minimum_stud_embedment_mm": minimum_embedment,
+        "high_floor_local_z_mm": floor.high_point_elevation_mm - cabinet_base_z,
+        "high_floor_verified": floor.verified,
+        "installation_use_status": "PASS" if released else "HOLD",
+        "drawing_stamp": stamp,
     }
 
 
@@ -433,7 +779,7 @@ def _viewer_block(images, payload, glb_b64) -> str:
      stabilizers, pulls, screws, and glue remain schedule items or explicitly
      labeled schematic proxies, not false detailed geometry.</p>
   <div class="viewer-slot" data-detail="{_esc(slug)}">
-    <img src="{images['isometric']}" alt="Interactive DB40 assembly">
+    <img src="{images['isometric']}" alt="Interactive cabinetry assembly">
     <button type="button" class="viewer-btn">Explore in 3D</button>
   </div>
 </section>
@@ -561,71 +907,21 @@ def _render_before_start(project) -> str:
     )
 
 
-def _gallery(images) -> str:
-    figures = []
-    for view in REQUIRED_VIEWS:
-        figures.append(
-            f'<figure data-view="{_esc(view)}"><img src="{images[view]}" '
-            f'alt="{_esc(view)} cabinetry view" loading="lazy">'
-            f'<figcaption><strong>{_esc(view.replace("-", " ").title())}.</strong> '
-            f'{_esc(VIEW_CAPTIONS[view])}</figcaption></figure>'
-        )
-    return (
-        '<section><h2>Drawings</h2><p>Full-height surveyed wall studs are omitted '
-        'from these product views for legibility; the canonical model, anchor '
-        'validation, evidence register, and installation instructions retain them.</p>'
-        '<div class="gallery">' + "".join(figures) + "</div></section>"
-    )
-
-
-def build_cabinetry_html(project, *, images: dict[str, str],
-                          viewer_payload: dict, glb_b64: str,
-                          companion_href: str | None = None) -> str:
-    """Pure HTML composition from one fabrication-released PackedProject."""
-
+def _require_fabrication_release(project) -> None:
     if project.base_report is None or not project.fabrication_ready:
-        raise ValueError(
-            "cabinetry report requires a fabrication-released project"
-        )
+        raise ValueError("cabinetry report requires a fabrication-released project")
+
+
+def _require_views(images: dict[str, str]) -> None:
     missing = set(REQUIRED_VIEWS) - images.keys()
     if missing:
         raise ValueError(f"missing cabinetry report views: {sorted(missing)}")
-    cabinet = project.model.section.cabinets[0]
-    whole = project.report.by_rule("cabinetry.performance.whole_cabinet_capacity") \
-        if hasattr(project.model, "drawer_bank") else None
-    whole_text = ("UNKNOWN — not qualified" if whole is not None
-                  else "UNKNOWN — physical qualification not performed")
-    base_text = ("PASS" if project.base_report is not None and project.base_report.ok
-                 else "NOT RUN")
-    title = project.project_doc.name
-    if companion_href is not None and (
-        Path(companion_href).name != companion_href
-        or not companion_href.endswith(".html")
-    ):
-        raise ValueError("companion_href must be a relative HTML basename")
-    companion_link = (
-        f'<a class="companion-link" href="{_esc(companion_href)}">'
-        "Open the illustrated assembly manual →</a>"
-        if companion_href else ""
-    )
-    if project.installation_use_ready:
-        installation_status = (
-            '<div class="status pass"><b>Installation/use release: PASS</b>'
-            "The typed pack and base-language installation/use gates pass for "
-            "this project.</div>"
-        )
-    else:
-        policy = project.report.installation_use_policy
-        hold_text = (
-            policy.reader_notice(released=False) if policy is not None
-            else "Installation/use remains blocked by the active typed findings."
-        )
-        installation_status = (
-            '<div class="status fail"><b>Installation/use release: HOLD</b>'
-            + _esc(hold_text)
-            + '</div>'
-        )
-    css = f"""
+
+
+def _reader_css() -> str:
+    """Responsive and print-safe base shared by all three reader surfaces."""
+
+    return f"""
 :root {{ --ink:#18212b; --muted:#5e6b78; --line:#bec8d0; --faint:#dde3e8;
   --sheet:#fff; --acc:#9b3a24; --acc-soft:#f7e9e5; --chipbg:#f3f5f6; }}
 * {{ box-sizing:border-box; }} body {{ margin:0; background:#e9ecef; color:var(--ink);
@@ -640,7 +936,7 @@ h2 {{ margin:36px 0 12px; font-size:22px; border-bottom:1px solid var(--line); p
 .status {{ border:1px solid var(--line); padding:10px; }} .status b {{ display:block; }}
 .unknown {{ color:#8a5200; }} .pass {{ color:#17633b; }} .fail {{ color:#a12622; }}
 .gallery {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }}
-figure {{ margin:0; border:1px solid var(--line); background:#fafafa; }}
+figure {{ margin:0; border:1px solid var(--line); background:#fafafa; break-inside:avoid; }}
 figure img,.viewer-slot img {{ display:block; width:100%; height:auto; }}
 figcaption {{ padding:9px 11px; color:var(--muted); font-size:13px; }}
 .viewer-section .viewer-slot {{ max-width:980px; aspect-ratio:4/3; background:#f8f8f6; overflow:hidden; }}
@@ -650,47 +946,305 @@ th {{ background:#eef1f3; font-size:11px; text-transform:uppercase; letter-spaci
 td code {{ font-size:10.5px; overflow-wrap:anywhere; }} a {{ color:var(--acc); }}
 .verdict {{ font-weight:800; }} footer {{ margin-top:42px; padding-top:16px; border-top:2px solid var(--ink); color:var(--muted); }}
 .notice,.before-start .lede {{ background:var(--acc-soft); border-left:4px solid var(--acc); padding:10px 14px; }}
-.companion-link {{ display:inline-block;margin-top:9px;padding:8px 11px;
-  border:1px solid var(--acc);border-radius:6px;font-weight:800;text-decoration:none; }}
-{viewer_css()}
+.document-nav {{ display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }}
+.document-nav a {{ display:inline-block; padding:7px 10px; border:1px solid var(--acc); border-radius:5px; font-weight:750; text-decoration:none; }}
+.checklist li {{ margin:.45em 0; }}
 @media (max-width:900px) {{ .sheet {{ padding:20px 16px 40px; }} header {{ grid-template-columns:1fr; }}
   .gallery {{ grid-template-columns:1fr 1fr; }} }}
 @media (max-width:560px) {{ .gallery,.status-grid {{ grid-template-columns:1fr; }} }}
-@media print {{ body {{ background:white; }} .sheet {{ width:100%; padding:0; }} .viewer-btn {{ display:none; }} }}
+@media print {{ body {{ background:white; }} .sheet {{ width:100%; padding:0; }} .viewer-btn {{ display:none; }}
+  .table-wrap {{ overflow:visible; }} section,table {{ break-inside:auto; }} tr,figure,.notice {{ break-inside:avoid; }} }}
 """
+
+
+def _release_banner(project) -> str:
+    try:
+        whole = project.report.by_rule(
+            "cabinetry.performance.whole_cabinet_capacity"
+        )
+        whole_verdict = whole.verdict
+    except KeyError:
+        whole_verdict = "UNKNOWN"
+    policy = project.report.installation_use_policy
+    install_verdict = "PASS" if project.installation_use_ready else "HOLD"
+    install_copy = (
+        "The typed installation/use gates pass for this project."
+        if project.installation_use_ready else
+        (policy.reader_notice(released=False) if policy is not None else
+         "Installation/use remains blocked by active typed findings.")
+    )
+    policy_copy = ""
+    if policy is not None:
+        policy_copy = (
+            f'<p><a href="{_esc(policy.source_url)}">CPSC Anchor It! general guidance</a>. '
+            f'{_esc(policy.scope_note)} Scope source: '
+            f'<a href="{_esc(policy.scope_source_url)}">CPSC clothing-storage-unit guidance</a>.</p>'
+        )
+    return (
+        '<div class="status-grid">'
+        f'<div class="status pass"><b>Model/shop-data gate: PASS</b>{_esc(project.report.summary)}</div>'
+        '<div class="status unknown"><b>Purchasing/cutting preflight: OPEN</b>'
+        'Sheet nesting and the final edge-band order remain open.</div>'
+        f'<div class="status unknown"><b>Whole-cabinet structural capacity: {_esc(whole_verdict)}</b>'
+        'Geometry does not qualify the complete cabinet/toe/anchor load path.</div>'
+        f'<div class="status {"pass" if project.installation_use_ready else "fail"}">'
+        f'<b>Installation/use release: {install_verdict}</b>{_esc(install_copy)}</div>'
+        '</div>' + policy_copy
+    )
+
+
+def _procurement_preflight(project) -> str:
+    net_edge_band_mm = sum(
+        item.length_mm for item in project.artifacts.edge_banding
+    )
+    thicknesses = ", ".join(
+        f"{value:g}" for value in sorted({
+            item.thickness_mm for item in project.artifacts.cut_list
+        })
+    )
+    product_ids = sorted({
+        item.product_id for item in project.artifacts.edge_banding
+    })
+    products = ", ".join(product_ids) if product_ids else "no selected product"
+    return (
+        '<section class="notice"><h2>Purchasing/cutting preflight: OPEN</h2>'
+        '<p><strong>Procurement HOLD — edge band:</strong> compiled net application '
+        f'is {_fmt(net_edge_band_mm)} at {project.model.profile.edge_band_thickness_mm:g} mm '
+        f'finished thickness ({_esc(products)}); select matching SKU, roll size, waste, '
+        'and order allowance before purchase.</p>'
+        '<p><strong>Procurement HOLD — sheet nesting:</strong> approve product/SKU, '
+        f'finish, grain direction, kerf, nesting, yield, and sheet count for {_esc(thicknesses)} '
+        'mm panels before purchase or cutting.</p>'
+        '<p><strong>Field/by-others HOLD:</strong> countertop and attachment, wall repair, '
+        'shims, fillers, packaging, and finish touch-up are excluded.</p></section>'
+    )
+
+
+def _document_nav(links: CabinetryDocumentLinks, documents: tuple[str, ...]) -> str:
+    definitions = {
+        "review": ("Review & installation sheet", links.review_href),
+        "manual": ("Illustrated assembly manual", links.manual_href),
+        "fabrication": ("Fabrication packet", links.fabrication_href),
+        "audit": ("Review trace", links.audit_href),
+    }
+    return '<nav class="document-nav" aria-label="Related documents">' + "".join(
+        f'<a href="{_esc(definitions[key][1])}">{_esc(definitions[key][0])}</a>'
+        for key in documents
+    ) + '</nav>'
+
+
+def _drawing_figure(images: dict[str, str], view: str) -> str:
+    return (
+        f'<figure data-view="{_esc(view)}"><img src="{images[view]}" '
+        f'alt="{_esc(view)} cabinetry view" loading="lazy">'
+        f'<figcaption><strong>{_esc(view.replace("-", " ").title())}.</strong> '
+        f'{_esc(VIEW_CAPTIONS[view])}</figcaption></figure>'
+    )
+
+
+def _review_drawings(images: dict[str, str]) -> str:
+    views = ("front", "installation-plan", "anchor-section")
+    return (
+        '<section><h2>Drawings</h2><p>Printed dimensions and the compiled model '
+        'control. Anchor coordinates are coordination geometry, not a capacity '
+        'or installation-torque claim.</p><div class="gallery">'
+        + "".join(_drawing_figure(images, view) for view in views)
+        + '</div></section>'
+    )
+
+
+def _shop_drawings(images: dict[str, str]) -> str:
+    views = ("front", "exploded", "drawer-detail")
+    return (
+        '<section><h2>Shop drawings</h2><p>Full-height surveyed wall studs are omitted '
+        'from these shop views; installation geometry is owned by the review sheet.</p>'
+        '<div class="gallery">'
+        + "".join(_drawing_figure(images, view) for view in views)
+        + '</div></section>'
+    )
+
+
+def _render_active_nonpass(project) -> str:
+    rows = tuple(
+        (
+            f'<code>{_esc(item.rule)}</code>',
+            f'<span class="verdict {item.verdict.lower()}">{_esc(item.verdict)}</span>',
+            _esc(item.message),
+        )
+        for item in project.report.findings if item.verdict != "PASS"
+    )
+    return '<h2>Active gates</h2>' + _table(
+        ("Rule", "Verdict", "Release meaning"), rows
+    )
+
+
+def _render_field_clearance_checklist(project) -> str:
+    policy = project.report.installation_use_policy
+    authority = (
+        policy.clearance_authority if policy is not None
+        else "the responsible project professional"
+    )
+    return (
+        '<section><h2>Field verification and signed clearance</h2>'
+        '<ul class="checklist">'
+        '<li>Field-verify stud centers against the drawing before drilling.</li>'
+        '<li>Record wall flatness, services, obstructions, and the highest floor point.</li>'
+        '<li>Confirm stable bearing and record every required shim location in the field.</li>'
+        '<li>Obtain signed, project-specific acceptance of the cabinet, toe-platform, '
+        f'anchor, countertop, and service-load path from {_esc(authority)} before anchoring, '
+        'loading, commissioning, or attaching the countertop.</li></ul></section>'
+    )
+
+
+def _render_installation_hardware(project) -> str:
+    rows = tuple(
+        (
+            f'<code>{_esc(item.product_id)}</code>', str(item.quantity),
+            _esc(item.procurement_note),
+            f'<a href="{_esc(item.source_url)}">manufacturer source</a>',
+        )
+        for item in project.artifacts.hardware_schedule
+        if item.kind == "wall_anchor_system"
+    )
+    return '<h2>Installation-only hardware</h2>' + _table(
+        ("Selected product", "Qty", "Procurement meaning", "Source"), rows
+    )
+
+
+def build_cabinetry_review_html(
+    project,
+    *,
+    images: dict[str, str],
+    viewer_payload: dict,
+    glb_b64: str,
+    links: CabinetryDocumentLinks | None = None,
+) -> str:
+    """Compose the concise A0/I1 review and installation landing sheet."""
+
+    _require_fabrication_release(project)
+    _require_views(images)
+    links = links or CabinetryDocumentLinks()
+    cabinet = project.model.section.cabinets[0]
+    title = project.project_doc.name
+    nav = _document_nav(links, ("manual", "fabrication", "audit"))
     body = "".join((
-        f"""<header><div><div class="eyebrow">cabinetry.frameless@1 · model-backed build document</div>
-<h1>{_esc(title)}</h1><p>Fabrication, assembly, conventional shipping, and installation-planning
-data generated from the expanded pack model and the unchanged
-DetailSpec assembly.</p>{companion_link}</div><div class="status-grid">
-<div class="status"><b>Fabrication/model gate: PASS</b>{_esc(project.report.summary)}</div>
-<div class="status"><b>Base geometry: {base_text}</b>Collision, contact, connectivity, and intrinsic checks.</div>
-<div class="status unknown"><b>Whole-cabinet structural capacity</b>{whole_text}</div>
-{installation_status}
-<div class="status"><b>Product</b>{_fmt(cabinet.width_mm)} W × {_fmt(cabinet.height_mm)} H × {_fmt(cabinet.depth_mm)} D</div>
-</div></header>""",
-        _render_before_start(project),
-        _gallery(images),
+        f'<header><div><div class="eyebrow">A0/I1 · project sheet & installation plan</div>'
+        f'<h1>{_esc(title)}</h1><p>One model-backed review surface for fit, release, '
+        f'field setout, and unloaded installation planning.</p>{nav}</div>'
+        f'<div>{_release_banner(project)}<div class="status"><b>Product</b>'
+        f'{_fmt(cabinet.width_mm)} W × {_fmt(cabinet.height_mm)} H × '
+        f'{_fmt(cabinet.depth_mm)} D</div></div></header>',
+        _procurement_preflight(project),
+        f'<section>{_render_active_nonpass(project)}</section>',
+        f'<section>{render_dimension_tables(project.model)}</section>',
+        _review_drawings(images),
+        _render_field_clearance_checklist(project),
+        f'<section>{_render_installation_hardware(project)}</section>',
+        f'<section>{_render_steps("Installation & commissioning", project.artifacts.installation_steps)}</section>',
         _viewer_block(images, viewer_payload, glb_b64),
-        f"<section>{_render_part_key(project)}</section>",
-        f"<section>{render_dimension_tables(project.model)}</section>",
-        f"<section>{_render_cut_list(project)}{_render_edge_banding(project)}</section>",
-        f"<section>{_render_hardware(project)}{_render_machining(project)}</section>",
-        f"<section>{_render_steps('Fabrication', project.artifacts.fabrication_steps)}</section>",
-        f"<section>{_render_steps('Assembly & shipping', project.artifacts.assembly_steps)}</section>",
-        f"<section>{_render_steps('Installation & commissioning', project.artifacts.installation_steps)}</section>",
-        f"<section>{_render_findings(project)}</section>",
-        f"<section>{_render_source_map(project)}</section>",
-        f"<footer>Generated from <code>{_esc(project.project_doc.name)}</code>. "
-        "Manufacturer ratings apply only under their documented product conditions; "
-        "this document is not a code approval or structural certification.</footer>",
+        f'<footer>{nav}Generated from <code>{_esc(project.project_doc.name)}</code>. '
+        'This coordination document is not a code approval or structural certification.</footer>',
     ))
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="data:,">
-<title>{_esc(title)} — Build Document</title><style>{css}</style></head>
+<title>{_esc(title)} — Review & Installation Sheet</title><style>{_reader_css()}{viewer_css()}</style></head>
 <body><main class="sheet">{body}</main>
 <script>{vendor_js()}\n{viewer_js()}</script></body></html>"""
+
+
+def build_cabinetry_fabrication_html(
+    project,
+    *,
+    images: dict[str, str],
+    links: CabinetryDocumentLinks | None = None,
+) -> str:
+    """Compose the detailed S1+ fabrication and assembly packet."""
+
+    _require_fabrication_release(project)
+    _require_views(images)
+    links = links or CabinetryDocumentLinks()
+    title = project.project_doc.name
+    nav = _document_nav(links, ("review", "manual"))
+    body = "".join((
+        f'<header><div><div class="eyebrow">S1+ · fabrication packet</div>'
+        f'<h1>{_esc(title)}</h1><p>Shop-owned cut, edge, hardware, machining, '
+        f'fabrication, assembly, and shipping records.</p>{nav}</div>'
+        f'<div>{_release_banner(project)}</div></header>',
+        _procurement_preflight(project),
+        _render_before_start(project),
+        _shop_drawings(images),
+        f'<section>{_render_part_key(project)}</section>',
+        f'<section>{render_dimension_tables(project.model)}</section>',
+        f'<section>{_render_cut_list(project)}{_render_edge_banding(project)}</section>',
+        f'<section>{_render_hardware(project)}{_render_machining(project)}</section>',
+        f'<section>{_render_steps("Fabrication", project.artifacts.fabrication_steps)}</section>',
+        f'<section>{_render_steps("Assembly & shipping", project.artifacts.assembly_steps)}</section>',
+        f'<footer>{nav}Generated from <code>{_esc(project.project_doc.name)}</code>. '
+        'Use the review sheet for installation release and field setout.</footer>',
+    ))
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>{_esc(title)} — Fabrication Packet</title><style>{_reader_css()}</style></head>
+<body><main class="sheet">{body}</main></body></html>"""
+
+
+def build_cabinetry_audit_html(
+    project,
+    *,
+    links: CabinetryDocumentLinks | None = None,
+) -> str:
+    """Compose the complete R1 validation/evidence/source review trace."""
+
+    _require_fabrication_release(project)
+    links = links or CabinetryDocumentLinks()
+    title = project.project_doc.name
+    nav = _document_nav(links, ("review",))
+    counts = {}
+    for finding in project.report.findings:
+        counts[finding.verdict] = counts.get(finding.verdict, 0) + 1
+    count_text = " · ".join(
+        f"{verdict} {counts.get(verdict, 0)}"
+        for verdict in ("PASS", "FAIL", "UNKNOWN")
+    )
+    body = "".join((
+        f'<header><div><div class="eyebrow">R1 · review trace</div>'
+        f'<h1>{_esc(title)}</h1><p>Complete validation, evidence, and source-map '
+        f'trace. Verdict counts: {_esc(count_text)}.</p>{nav}</div>'
+        f'<div>{_release_banner(project)}</div></header>',
+        f'<section>{_render_findings(project)}</section>',
+        f'<section>{_render_source_map(project)}</section>',
+        f'<footer>{nav}Generated from <code>{_esc(project.project_doc.name)}</code>. '
+        'Model and generator provenance are retained in the source map and direct links.</footer>',
+    ))
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>{_esc(title)} — Review Trace</title><style>{_reader_css()}</style></head>
+<body><main class="sheet">{body}</main></body></html>"""
+
+
+def build_cabinetry_html(project, *, images: dict[str, str],
+                          viewer_payload: dict, glb_b64: str,
+                          companion_href: str | None = None) -> str:
+    """Compatibility wrapper for the focused review/install composer."""
+
+    links = CabinetryDocumentLinks()
+    if companion_href is not None:
+        links = replace(
+            links,
+            manual_href=_relative_html_basename(
+                companion_href, field="companion_href"
+            ),
+        )
+    return build_cabinetry_review_html(
+        project,
+        images=images,
+        viewer_payload=viewer_payload,
+        glb_b64=glb_b64,
+        links=links,
+    )
 
 
 def _png_data_uri(path: Path) -> str:
@@ -776,12 +1330,20 @@ def _render_front_drawing(project, path: Path) -> None:
     model = project.model
     cabinet = model.section.cabinets[0]
     labels = front_annotation_labels(project)
+    facts = installation_drawing_facts(project)
     fig, ax = plt.subplots(figsize=(8, 7), dpi=150)
     ax.add_patch(Rectangle((0, 0), cabinet.width_mm, cabinet.height_mm,
                            fill=False, linewidth=2.2, edgecolor="#18212b"))
     ax.plot((0, cabinet.width_mm), (cabinet.toe_kick_height_mm,
                                    cabinet.toe_kick_height_mm),
             color="#78838d", linewidth=1)
+    strip = facts["anchor_strip_bounds_local_mm"]
+    ax.add_patch(Rectangle(
+        (strip["x"][0], strip["z"][0]),
+        strip["x"][1] - strip["x"][0],
+        strip["z"][1] - strip["z"][0],
+        fill=False, linestyle="--", linewidth=1.2, edgecolor="#355e7c",
+    ))
     if hasattr(model, "drawer_bank"):
         for cell in model.drawer_bank.cells:
             front = model.part(f"drawer_front_{cell.cell_id}")
@@ -809,6 +1371,17 @@ def _render_front_drawing(project, path: Path) -> None:
                                    facecolor="#d4b18a", edgecolor="#493a2e"))
     ax.annotate(_fmt(cabinet.width_mm), (cabinet.width_mm / 2, -28),
                 ha="center", va="top")
+    for anchor in facts["anchors"]:
+        x = anchor["local_x_mm"]
+        z = anchor["local_z_mm"]
+        ax.axvline(x, color="#355e7c", linestyle=(0, (3, 4)), linewidth=.8)
+        ax.scatter((x,), (z,), color="#9b3a24", s=22, zorder=5)
+        ax.annotate(
+            f"{anchor['stud_id']} / anchor\nX {_fmt(x)} · Z {_fmt(z)}",
+            xy=(x, z), xytext=(x, cabinet.height_mm + 18),
+            ha="center", va="bottom", fontsize=7,
+            arrowprops={"arrowstyle": "-", "color": "#9b3a24"},
+        )
     ax.annotate(
         labels["left_side"], xy=(0, cabinet.height_mm * .72),
         xytext=(-48, cabinet.height_mm * .82), ha="right", va="center",
@@ -832,11 +1405,248 @@ def _render_front_drawing(project, path: Path) -> None:
         labels["toe_front"], ha="center", va="center", fontsize=8,
         color="#48392e",
     )
+    high_floor = facts["high_floor_local_z_mm"]
+    ax.plot((-34, cabinet.width_mm + 34), (high_floor, high_floor),
+            color="#17633b", linewidth=1.3)
+    ax.text(
+        cabinet.width_mm * .5, high_floor - 8,
+        "VERIFIED HIGH-FLOOR DATUM", ha="center", va="top",
+        fontsize=7, color="#17633b", weight="bold",
+    )
+    ax.add_patch(Rectangle(
+        (0, cabinet.height_mm), cabinet.width_mm, 26,
+        fill=False, linestyle=(0, (5, 4)), linewidth=1.2,
+        edgecolor="#9b3a24",
+    ))
+    ax.text(
+        cabinet.width_mm / 2, cabinet.height_mm + 13,
+        "FIELD INSTALLED / BY OTHERS / HOLD — COUNTERTOP BOUNDARY",
+        ha="center", va="center", fontsize=7, color="#9b3a24", weight="bold",
+    )
     ax.set_xlim(-55, cabinet.width_mm + 55)
-    ax.set_ylim(-50, cabinet.height_mm + 40)
+    ax.set_ylim(-50, cabinet.height_mm + 62)
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.set_title("Front elevation — canonical reader labels and pull centers")
+    ax.set_title(
+        "Installed front/setout elevation\n" + facts["drawing_stamp"],
+        color="#9b3a24" if facts["installation_use_status"] == "HOLD" else "#18212b",
+        fontsize=10,
+    )
+    fig.tight_layout()
+    fig.savefig(path, facecolor="white")
+    plt.close(fig)
+
+
+def _render_installation_plan_drawing(project, path: Path) -> None:
+    """Render a model-bound cabinet/wall/toe/stud coordination plan."""
+
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+
+    facts = installation_drawing_facts(project)
+    bounds = facts["cabinet_bounds_local_mm"]
+    toe = facts["toe_footprint_local_mm"]
+    width = bounds["x"][1]
+    depth = bounds["y"][1]
+    finish = facts["wall_finish_thickness_mm"]
+    stud_width = facts["stud_width_mm"]
+    stud_depth = facts["stud_depth_mm"]
+    fig, ax = plt.subplots(figsize=(11, 6.5), dpi=150)
+
+    ax.add_patch(Rectangle(
+        (0, 0), width, depth, facecolor="#f7f4ef",
+        edgecolor="#18212b", linewidth=2.1,
+    ))
+    ax.add_patch(Rectangle(
+        (toe["x"][0], toe["y"][0]),
+        toe["x"][1] - toe["x"][0],
+        toe["y"][1] - toe["y"][0],
+        facecolor="none", edgecolor="#9b3a24", hatch="///", linewidth=1.2,
+    ))
+    ax.add_patch(Rectangle(
+        (-45, depth), width + 90, finish,
+        facecolor="#dadde0", edgecolor="#707b84", linewidth=1,
+    ))
+    ax.plot((-45, width + 45), (depth, depth), color="#18212b", linewidth=2)
+
+    for anchor in facts["anchors"]:
+        x = anchor["local_x_mm"]
+        ax.add_patch(Rectangle(
+            (x - stud_width / 2, depth + finish), stud_width, stud_depth,
+            facecolor="#d8b58d", edgecolor="#493a2e", linewidth=1,
+        ))
+        head_y = depth + finish - facts["modeled_stack_mm"]
+        ax.plot(
+            (x, x), (head_y, head_y + facts["selected_screw_length_mm"]),
+            color="#9b3a24", linewidth=2.2,
+        )
+        ax.scatter((x,), (head_y,), color="#9b3a24", s=25, zorder=5)
+        ax.text(
+            x, depth + finish + stud_depth + 12,
+            f"{anchor['stud_id']}\nglobal X {_fmt(anchor['global_x_mm'])}\n"
+            f"cabinet X {_fmt(anchor['local_x_mm'])}",
+            ha="center", va="bottom", fontsize=7,
+        )
+
+    ax.annotate(
+        "FRONT", xy=(width * .5, -70), xytext=(width * .5, -18),
+        ha="center", va="top", color="#355e7c", weight="bold",
+        arrowprops={"arrowstyle": "-|>", "color": "#355e7c"},
+    )
+    ax.text(
+        width / 2, depth / 2,
+        f"CABINET {facts['cabinet_id']}\n"
+        f"{_fmt(width)} W × {_fmt(depth)} D\n"
+        f"global left datum {_fmt(facts['cabinet_left_global_mm'])}",
+        ha="center", va="center", fontsize=9,
+        bbox={"facecolor": "white", "edgecolor": "#bec8d0", "alpha": .86},
+    )
+    ax.text(
+        width / 2, (toe["y"][0] + toe["y"][1]) / 2,
+        f"COMPILED TOE FOOTPRINT · front setback {_fmt(toe['y'][0])}",
+        ha="center", va="center", fontsize=7, color="#9b3a24",
+        bbox={"facecolor": "white", "edgecolor": "none", "alpha": .74},
+    )
+    ax.text(
+        -40, depth + finish / 2,
+        f"WALL PLANE · wall-left datum {_fmt(facts['wall_left_datum_global_mm'])}",
+        ha="left", va="center", fontsize=7, color="#18212b",
+    )
+    survey = (
+        "FIELD SURVEY STRIP — verify wall flatness, services, obstructions, "
+        "and every stud center before drilling"
+    )
+    ax.text(
+        width / 2, depth + finish + stud_depth + 72, survey,
+        ha="center", va="center", fontsize=8, color="#9b3a24", weight="bold",
+        bbox={"facecolor": "#f7e9e5", "edgecolor": "#9b3a24", "pad": 5},
+    )
+    ax.text(
+        width / 2, -112, facts["drawing_stamp"],
+        ha="center", va="center", fontsize=8, color="#9b3a24", weight="bold",
+    )
+    ax.set_xlim(-60, width + 60)
+    ax.set_ylim(-135, depth + finish + stud_depth + 105)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    ax.set_title("Installation plan — wall, cabinet, toe, studs, and anchors")
+    fig.tight_layout()
+    fig.savefig(path, facecolor="white")
+    plt.close(fig)
+
+
+def _render_anchor_section_drawing(project, path: Path) -> None:
+    """Render the selected anchor path and toe bearing as a side section."""
+
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Polygon, Rectangle
+
+    facts = installation_drawing_facts(project)
+    bounds = facts["cabinet_bounds_local_mm"]
+    toe = facts["toe_footprint_local_mm"]
+    depth = bounds["y"][1]
+    height = bounds["z"][1]
+    wall_finish = facts["wall_finish_thickness_mm"]
+    stud_depth = facts["stud_depth_mm"]
+    strip_t = facts["anchor_strip_thickness_mm"]
+    anchor_z = facts["anchor_z_local_mm"]
+    stud_front = depth + wall_finish
+    head_y = stud_front - facts["modeled_stack_mm"]
+    screw_end = head_y + facts["selected_screw_length_mm"]
+
+    fig, ax = plt.subplots(figsize=(9, 7), dpi=150)
+    ax.add_patch(Rectangle(
+        (0, facts["toe_height_mm"]), depth,
+        height - facts["toe_height_mm"],
+        facecolor="#f7f4ef", edgecolor="#18212b", linewidth=2,
+    ))
+    ax.add_patch(Rectangle(
+        (toe["y"][0], 0), toe["y"][1] - toe["y"][0],
+        facts["toe_height_mm"],
+        facecolor="none", edgecolor="#9b3a24", hatch="///", linewidth=1.2,
+    ))
+    ax.add_patch(Rectangle(
+        (head_y, facts["anchor_strip_bounds_local_mm"]["z"][0]),
+        strip_t,
+        facts["anchor_strip_bounds_local_mm"]["z"][1]
+        - facts["anchor_strip_bounds_local_mm"]["z"][0],
+        facecolor="#d8b58d", edgecolor="#493a2e", linewidth=1.2,
+    ))
+    ax.add_patch(Rectangle(
+        (depth, 0), wall_finish, height + 60,
+        facecolor="#dadde0", edgecolor="#707b84", linewidth=1,
+    ))
+    ax.add_patch(Rectangle(
+        (stud_front, 0), stud_depth, height + 60,
+        facecolor="#d8b58d", edgecolor="#493a2e", linewidth=1,
+    ))
+    ax.plot((head_y, screw_end), (anchor_z, anchor_z),
+            color="#9b3a24", linewidth=4, solid_capstyle="round")
+    ax.scatter((head_y,), (anchor_z,), color="#9b3a24", s=40, zorder=5)
+    ax.plot((-24, depth + wall_finish + stud_depth + 24), (0, 0),
+            color="#17633b", linewidth=1.4)
+    ax.add_patch(Polygon(
+        ((toe["y"][0] + 30, 0), (toe["y"][0] + 55, 0),
+         (toe["y"][0] + 42.5, 15)),
+        closed=True, facecolor="#f2d28b", edgecolor="#8a5200",
+    ))
+    ax.text(
+        toe["y"][0] + 42.5, 24,
+        "FIELD-LOCATE SHIM ONLY AT STABLE BEARING",
+        ha="center", va="bottom", fontsize=6.5, color="#8a5200",
+    )
+    ax.add_patch(Rectangle(
+        (0, height), depth, 30, fill=False, linestyle=(0, (5, 4)),
+        edgecolor="#9b3a24", linewidth=1.2,
+    ))
+    ax.text(
+        depth / 2, height + 15,
+        "COUNTERTOP · FIELD INSTALLED / BY OTHERS / HOLD",
+        ha="center", va="center", fontsize=7, color="#9b3a24", weight="bold",
+    )
+    ax.annotate(
+        f"SELECTED SCREW {_fmt(facts['selected_screw_length_mm'])}\n"
+        f"{facts['selected_screw_name']}",
+        xy=((head_y + screw_end) / 2, anchor_z),
+        xytext=(depth * .38, anchor_z - 105), ha="center", va="top",
+        fontsize=8, arrowprops={"arrowstyle": "-", "color": "#9b3a24"},
+    )
+    ax.text(
+        depth + wall_finish / 2, height * .55,
+        f"WALL FINISH {_fmt(wall_finish)}\nNO ANCHORAGE CREDIT",
+        ha="center", va="center", rotation=90, fontsize=7,
+        color="#9b3a24", weight="bold",
+    )
+    ax.text(
+        stud_front + stud_depth / 2, height * .52,
+        f"SURVEYED STUD\nMODELED EMBEDMENT {_fmt(facts['stud_embedment_mm'])}",
+        ha="center", va="center", rotation=90, fontsize=7, color="#493a2e",
+    )
+    ax.text(
+        head_y + facts["modeled_stack_mm"] / 2, anchor_z + 30,
+        f"MODELED STACK {_fmt(facts['modeled_stack_mm'])}",
+        ha="center", va="bottom", fontsize=8, color="#355e7c", weight="bold",
+    )
+    ax.text(
+        depth * .42, facts["toe_height_mm"] / 2,
+        f"TOE H {_fmt(facts['toe_height_mm'])} · SETBACK {_fmt(facts['toe_setback_mm'])}",
+        ha="center", va="center", fontsize=7,
+    )
+    ax.text(
+        depth * .5, -48, facts["drawing_stamp"],
+        ha="center", va="center", fontsize=8, color="#9b3a24", weight="bold",
+    )
+    ax.set_xlim(-35, depth + wall_finish + stud_depth + 40)
+    ax.set_ylim(-70, height + 90)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    ax.set_title(
+        "Anchor/toe section — coordination geometry only; no capacity or torque claim"
+    )
     fig.tight_layout()
     fig.savefig(path, facecolor="white")
     plt.close(fig)
@@ -1057,30 +1867,58 @@ def _render_views(project, assembly: DetailAssembly, out_dir: Path) -> dict[str,
     views_dir.mkdir(parents=True, exist_ok=True)
     paths = {
         "front": views_dir / "front.png",
-        "side": views_dir / "side.png",
-        "plan": views_dir / "plan.png",
+        "installation-plan": views_dir / "installation_plan.png",
+        "anchor-section": views_dir / "anchor_section.png",
         "isometric": views_dir / "isometric.png",
         "exploded": views_dir / "exploded.png",
         "drawer-detail": views_dir / "drawer_detail.png",
     }
     _render_front_drawing(project, paths["front"])
-    export_png(assembly, paths["side"], view="right", size=(1200, 900))
-    export_png(assembly, paths["plan"], view="top", size=(1200, 900))
+    _render_installation_plan_drawing(project, paths["installation-plan"])
+    _render_anchor_section_drawing(project, paths["anchor-section"])
     export_png(assembly, paths["isometric"], view="iso", size=(1200, 900))
     _render_exploded_drawing(project, paths["exploded"])
     _render_drawer_detail(project, paths["drawer-detail"])
     return {name: _png_data_uri(path) for name, path in paths.items()}
 
 
-def _web_glb_b64(assembly: DetailAssembly, work_dir: Path) -> str:
+def _web_glb_bytes(assembly: DetailAssembly, work_dir: Path) -> bytes:
     work_dir.mkdir(parents=True, exist_ok=True)
     path = export_glb(
         assembly, work_dir / "cabinetry.web.glb",
         tolerance=0.4, angular_tolerance=0.6,
     )
+    return path.read_bytes()
+
+
+def _glb_b64(glb_bytes: bytes) -> str:
     return base64.b64encode(
-        gzip.compress(path.read_bytes(), compresslevel=9, mtime=0)
+        gzip.compress(glb_bytes, compresslevel=9, mtime=0)
     ).decode("ascii")
+
+
+def _web_glb_b64(assembly: DetailAssembly, work_dir: Path) -> str:
+    """Compatibility helper returning the viewer's deterministic payload."""
+
+    return _glb_b64(_web_glb_bytes(assembly, work_dir))
+
+
+def render_shared_product_assets(
+    project,
+    out_dir: str | Path,
+    *,
+    instruction_manual=None,
+) -> CabinetrySharedAssets:
+    """Render the product scene, six views, payload, and GLB exactly once."""
+
+    _require_fabrication_release(project)
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    assembly = product_view_assembly(project)
+    images = _render_views(project, assembly, out_dir)
+    payload = product_viewer_payload(project, assembly, instruction_manual)
+    glb_bytes = _web_glb_bytes(assembly, out_dir / "_glb")
+    return CabinetrySharedAssets(assembly, images, payload, glb_bytes)
 
 
 def generate_build_document(project_path: str | Path, out_path: str | Path) -> Path:
@@ -1106,12 +1944,14 @@ def generate_released_build_document(
         )
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    assembly = product_view_assembly(project)
-    images = _render_views(project, assembly, out_path.parent)
-    payload = product_viewer_payload(project, assembly, instruction_manual)
-    glb_b64 = _web_glb_b64(assembly, out_path.parent / "_glb")
+    assets = render_shared_product_assets(
+        project, out_path.parent, instruction_manual=instruction_manual,
+    )
     document = build_cabinetry_html(
-        project, images=images, viewer_payload=payload, glb_b64=glb_b64,
+        project,
+        images=assets.images,
+        viewer_payload=assets.viewer_payload,
+        glb_b64=_glb_b64(assets.glb_bytes),
         companion_href=companion_href,
     )
     out_path.write_text(document, encoding="utf-8")

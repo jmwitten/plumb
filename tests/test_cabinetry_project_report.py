@@ -9,6 +9,7 @@ import re
 import sys
 
 import pytest
+import yaml
 
 from detailgen.packs import compile_project_file
 from detailgen.packs.cabinetry.validation import validate_model
@@ -538,6 +539,84 @@ def test_report_scene_excludes_full_height_site_context_but_keeps_install_anchor
     assert set(payload["parts"]) == names
 
 
+def test_db40_installation_drawing_facts_are_exact_model_projections():
+    project = compile_project_file(DB40)
+    facts = CPR.installation_drawing_facts(project)
+
+    assert facts["cabinet_bounds_local_mm"] == {
+        "x": pytest.approx((0.0, 1016.0)),
+        "y": pytest.approx((0.0, 590.55)),
+        "z": pytest.approx((0.0, 876.3)),
+    }
+    assert facts["cabinet_left_global_mm"] == pytest.approx(609.6)
+    assert facts["toe_footprint_local_mm"] == {
+        "x": pytest.approx((0.0, 1016.0)),
+        "y": pytest.approx((76.2, 574.175)),
+    }
+    assert facts["stud_centers_global_mm"] == (
+        ("stud_32", pytest.approx(812.8)),
+        ("stud_48", pytest.approx(1219.2)),
+    )
+    assert facts["anchor_x_local_mm"] == pytest.approx((203.2, 609.6))
+    assert facts["anchor_z_local_mm"] == pytest.approx(806.45)
+    assert facts["selected_screw_length_mm"] == pytest.approx(79.375)
+    assert facts["modeled_stack_mm"] == pytest.approx(47.625)
+    assert facts["stud_embedment_mm"] == pytest.approx(31.75)
+
+
+def test_installation_drawing_facts_follow_released_width_and_site_variant(
+        tmp_path):
+    raw = yaml.safe_load(DB40.read_text())
+    raw["name"] = "DB42 released width-site variant"
+    raw["site"]["wall"]["plane"]["origin"][0] = 10
+    raw["site"]["wall"]["studs"] = [
+        {"id": "stud_34", "position": 34, "verified": True},
+        {"id": "stud_50", "position": 50, "verified": True},
+    ]
+    cabinet = raw["cabinetry"]["cabinets"][0]
+    cabinet["width"] = 42
+    cabinet["placement"]["from_left_datum"] = 25
+    path = tmp_path / "db42-width-site-variant.project.yaml"
+    path.write_text(yaml.safe_dump(raw, sort_keys=False))
+
+    project = compile_project_file(path)
+    project.require_fabrication_release()
+    facts = CPR.installation_drawing_facts(project)
+
+    assert facts["cabinet_bounds_local_mm"]["x"] == \
+        pytest.approx((0.0, 1066.8))
+    assert facts["cabinet_left_global_mm"] == pytest.approx(889.0)
+    assert facts["toe_footprint_local_mm"]["x"] == \
+        pytest.approx((0.0, 1066.8))
+    assert facts["stud_centers_global_mm"] == (
+        ("stud_34", pytest.approx(1117.6)),
+        ("stud_50", pytest.approx(1524.0)),
+    )
+    assert facts["anchor_x_local_mm"] == pytest.approx((228.6, 635.0))
+    assert facts["anchor_z_local_mm"] == pytest.approx(806.45)
+    projected = repr(facts)
+    for stale_moved_value in ("1016.0", "609.599", "203.2", "1219.2"):
+        assert stale_moved_value not in projected
+
+
+def test_installation_drawing_facts_reject_missing_anchor_geometry():
+    project = compile_project_file(DB40)
+    missing_anchor = project.model.anchor_stud_ids[-1]
+    project.model = replace(
+        project.model,
+        parts=tuple(
+            part for part in project.model.parts
+            if part.role != f"wall_anchor_{missing_anchor}"
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="one structural-screw anchor per surveyed stud",
+    ):
+        CPR.installation_drawing_facts(project)
+
+
 def test_drawer_detail_geometry_uses_bottom_blank_and_selected_hardware_facts():
     project = compile_project_file(DB40)
     model = project.model
@@ -589,8 +668,13 @@ def test_focused_review_and_fabrication_surfaces_accept_existing_door_base():
     project = compile_project_file(B30)
     review = _review_html(project)
     fabrication = _fabrication_html(project)
+    installation = CPR.installation_drawing_facts(project)
 
     assert "B30 frameless base cabinet" in review
     assert "Explore in 3D" in review
     assert "door_left" in fabrication
     assert "Cut list" in _headings(fabrication)
+    assert installation["cabinet_bounds_local_mm"]["x"] == \
+        pytest.approx((0.0, 762.0))
+    assert installation["cabinet_left_global_mm"] == pytest.approx(609.6)
+    assert installation["anchor_x_local_mm"] == pytest.approx((203.2, 609.6))
