@@ -40,6 +40,10 @@ class PlacementStation:
     datum: str
     p0: tuple[float, float, float]
     p1: tuple[float, float, float]
+    secondary_mm: float | None = None
+    secondary_datum: str = ""
+    q0: tuple[float, float, float] | None = None
+    q1: tuple[float, float, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -48,6 +52,7 @@ class InstructionPanel:
     action: str
     title: str
     reader_step_indexes: tuple[int, ...]
+    source_events: tuple[tuple[str, str, str], ...] = ()
     connections: tuple[str, ...] = ()
     joins: tuple[str, ...] = ()
     process_kind: str | None = None
@@ -349,6 +354,28 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
     }
 
 
+def _source_events(graph, steps, cohort) -> tuple[tuple[str, str, str], ...]:
+    """Return the event identities owned by a reader-step cohort."""
+    events = []
+    for index in cohort:
+        step = steps[index]
+        for part_id in step.parts_placed:
+            event = graph.event_of.get(part_id)
+            if event is not None and event not in events:
+                events.append(event)
+        for connection in step.connections:
+            for event in graph.drives_of.get(connection, ()):
+                if event not in events:
+                    events.append(event)
+        if step.process_event is not None and step.process_event not in events:
+            events.append(step.process_event)
+        for unit in step.joins:
+            event = graph.join_of[unit]
+            if event not in events:
+                events.append(event)
+    return tuple((event.kind, event.subject, event.group) for event in events)
+
+
 def build_instruction_manual(
     detail,
     technical_href: str = "armchair_caddy_build_document.html",
@@ -423,6 +450,7 @@ def build_instruction_manual(
         panels.append(InstructionPanel(
             index=panel_index, action=action,
             reader_step_indexes=cohort,
+            source_events=_source_events(graph, steps, cohort),
             visible_part_ids=visible,
             arrival_part_ids=arrivals,
             focus_part_ids=focus,

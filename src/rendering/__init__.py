@@ -6,12 +6,18 @@ from .instruction_panels import (
     InstructionManual, InstructionPanel, PlacementStation,
     build_instruction_manual, panel_part_schedule,
 )
+from .caddy_stations import attach_caddy_stations
+from .instruction_render import (
+    panel_content_key, render_instruction_images, render_instruction_panel,
+)
 
 __all__ = [
     "export_step", "export_stl", "export_png", "export_all",
     "export_glb", "export_manifest", "draw_dimensions",
     "InstructionManual", "InstructionPanel", "PlacementStation",
     "build_instruction_manual", "panel_part_schedule",
+    "attach_caddy_stations", "panel_content_key",
+    "render_instruction_images", "render_instruction_panel",
 ]
 
 # blender rendering is optional (needs a Blender install); import lazily.
