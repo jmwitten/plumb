@@ -9,8 +9,12 @@ from pathlib import Path
 
 import pytest
 
-from detailgen.assemblies.event_graph import derive_reader_steps
+from detailgen.assemblies.event_graph import (
+    ReaderStepProjectionError,
+    derive_reader_steps,
+)
 from detailgen.spec.compiler import compile_spec_file
+import detailgen.rendering.instruction_panels as instruction_panels_module
 from detailgen.rendering.instruction_panels import (
     build_instruction_manual,
     panel_part_schedule,
@@ -97,6 +101,15 @@ def test_panel_order_is_a_valid_projection_of_the_event_graph(caddy):
     assert all(a < b for a, b in manual.step_edges)
     assert all(panel_of_step[a] < panel_of_step[b]
                for a, b in manual.step_edges)
+
+
+def test_panel_event_ownership_delegates_duplicate_detection_to_core(caddy):
+    graph = caddy._connection_checks.event_graph
+    steps = derive_reader_steps(graph)
+
+    with pytest.raises(ReaderStepProjectionError, match="multiple steps"):
+        instruction_panels_module._step_event_map(
+            graph, (steps[0], *steps))
 
 
 def test_caddy_panel_text_uses_reader_vocabulary_and_typed_facts(caddy):

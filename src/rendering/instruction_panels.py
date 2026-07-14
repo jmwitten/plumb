@@ -13,7 +13,7 @@ from collections import Counter
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from ..assemblies.event_graph import derive_reader_steps
+from ..assemblies.event_graph import derive_reader_steps, reader_step_event_map
 from ..details.base import fmt_frac_in
 from .part_labels import part_labels
 
@@ -139,20 +139,7 @@ def _step_action(step, installs_by_connection: dict[str, tuple]) -> str:
 
 
 def _step_event_map(graph, steps) -> dict:
-    event_to_step = {}
-    for index, step in enumerate(steps):
-        for part_id in step.parts_placed:
-            event = graph.event_of.get(part_id)
-            if event is not None:
-                event_to_step[event] = index
-        for label in step.connections:
-            for event in graph.drives_of.get(label, ()):
-                event_to_step[event] = index
-        if step.process_event is not None:
-            event_to_step[step.process_event] = index
-        for unit in step.joins:
-            event_to_step[graph.join_of[unit]] = index
-    return event_to_step
+    return reader_step_event_map(graph, tuple(steps))
 
 
 def _reader_step_edges(graph, steps) -> tuple[tuple[int, int], ...]:
@@ -173,12 +160,7 @@ def _cohort_key(step, action: str) -> tuple:
     return action, unit, stage
 
 
-def _panel_cohorts(steps, step_edges, actions) -> tuple[tuple[int, ...], ...]:
-    backwards = tuple((a, b) for a, b in step_edges if a >= b)
-    if backwards:
-        raise InstructionPresentationError(
-            "canonical reader-step order contradicts graph edges: "
-            f"{backwards!r}")
+def _panel_cohorts(steps, actions) -> tuple[tuple[int, ...], ...]:
     if not steps:
         return ()
     cohorts = []
@@ -489,7 +471,7 @@ def build_instruction_manual(
         label: tuple(values) for label, values in installs_by_connection.items()}
     actions = tuple(_step_action(step, installs_by_connection) for step in steps)
     step_edges = _reader_step_edges(graph, steps)
-    cohorts = _panel_cohorts(steps, step_edges, actions)
+    cohorts = _panel_cohorts(steps, actions)
     labels = part_labels(detail.assembly.parts)
 
     event_to_step = _step_event_map(graph, steps)
