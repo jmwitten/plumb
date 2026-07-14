@@ -13,17 +13,17 @@ site:
     height: 96
     finish_thickness: 0.5
     studs:
-      - {id: stud_16, position: 16, verified: true}
-      - {id: stud_32, position: 32, verified: true}
-      - {id: stud_48, position: 48, verified: true}
-      - {id: stud_64, position: 64, verified: true}
-      - {id: stud_80, position: 80, verified: true}
-      - {id: stud_96, position: 96, verified: true}
-      - {id: stud_112, position: 112, verified: true}
-      - {id: stud_128, position: 128, verified: true}
+      - {id: stud_16, position: 16, verified: false}
+      - {id: stud_32, position: 32, verified: false}
+      - {id: stud_48, position: 48, verified: false}
+      - {id: stud_64, position: 64, verified: false}
+      - {id: stud_80, position: 80, verified: false}
+      - {id: stud_96, position: 96, verified: false}
+      - {id: stud_112, position: 112, verified: false}
+      - {id: stud_128, position: 128, verified: false}
   floor:
     high_point_elevation: 0
-    verified: true
+    verified: false
   environment:
     building_enclosed: true
     wet_work_complete: true
@@ -38,7 +38,23 @@ double_vanity:
   placement:
     against: north_wall
     from_left_datum: 24
+  assumed_conditions:
+    provenance: owner_assumed
+    field_verified: false
+    wall_length: 144
+    wall_height: 96
+    vanity_left: 24
+    floor_elevation: 0
+    finish_thickness: 0.5
+    backing: continuous_solid_2x6_with_support_blocking
+    wastes:
+      - {id: left_waste, kind: waste, x: 42, y: 22, z: 19, provenance: owner_assumed}
+      - {id: right_waste, kind: waste, x: 78, y: 22, z: 19, provenance: owner_assumed}
+    supplies:
+      - {id: left_hot, kind: hot_supply, x: 38, y: 22, z: 21, provenance: owner_assumed}
+      - {id: left_cold, kind: cold_supply, x: 46, y: 22, z: 21, provenance: owner_assumed}
+      - {id: right_hot, kind: hot_supply, x: 74, y: 22, z: 21, provenance: owner_assumed}
+      - {id: right_cold, kind: cold_supply, x: 82, y: 22, z: 21, provenance: owner_assumed}
   jurisdiction: nyc_2022
   sink: kohler_caxton_k20000@2024-06-10
   faucet: kohler_purist_t14414_4_k410_k@2026.1
-

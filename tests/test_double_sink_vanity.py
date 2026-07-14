@@ -25,6 +25,23 @@ def _project():
     return compile_project_file(FIXTURE)
 
 
+def test_owner_assumptions_are_explicit_and_never_field_verified():
+    model = _project().model
+    assert model.assumed_site.provenance == "owner_assumed"
+    assert not model.assumed_site.field_verified
+    assert model.assumed_site.wall_length_mm == pytest.approx(144 * 25.4)
+    assert all(not stud.verified for stud in model.section.site.wall.studs)
+
+
+def test_assumed_rough_ins_match_the_approved_schedule():
+    basis = _project().model.assumed_site
+    assert [p.x_mm for p in basis.wastes] == pytest.approx([42 * 25.4, 78 * 25.4])
+    assert [p.z_mm for p in basis.wastes] == pytest.approx([19 * 25.4] * 2)
+    assert [p.x_mm for p in basis.supplies] == pytest.approx(
+        [38 * 25.4, 46 * 25.4, 74 * 25.4, 82 * 25.4]
+    )
+
+
 def test_registry_exposes_double_sink_pack_without_mutating_base_registries():
     from detailgen.packs.registry import default_pack_registry
 

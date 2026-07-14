@@ -29,7 +29,7 @@ from .artifacts import CabinetArtifacts, CutListItem, WorkStep
 from .catalogs import get_wall_anchor_product
 from .evidence import EvidenceRecord
 from .profiles import get_profile
-from .schema import SiteSurvey, _length, _parse_site, _take
+from .schema import SiteSurvey, _length, _list, _parse_site, _take
 from .shell import PartModel, Provenance, params
 from .validation import CabinetFinding, CabinetReport
 
@@ -385,10 +385,35 @@ class DoubleVanityDecl:
 
 
 @dataclass(frozen=True)
+class RoughInPoint:
+    point_id: str
+    kind: str
+    x_mm: float
+    y_mm: float
+    z_mm: float
+    provenance: str
+
+
+@dataclass(frozen=True)
+class AssumedSiteBasis:
+    provenance: str
+    field_verified: bool
+    wall_length_mm: float
+    wall_height_mm: float
+    vanity_left_mm: float
+    floor_elevation_mm: float
+    finish_thickness_mm: float
+    backing: str
+    wastes: tuple[RoughInPoint, ...]
+    supplies: tuple[RoughInPoint, ...]
+
+
+@dataclass(frozen=True)
 class DoubleVanitySection:
     mode: str
     profile_id: str
     site: SiteSurvey
+    assumed_site: AssumedSiteBasis
     vanity: DoubleVanityDecl
     jurisdiction_id: str
     sink_adapter_id: str
@@ -457,6 +482,7 @@ class DoubleVanityModel:
     mode: str
     profile: object
     section: DoubleVanitySection
+    assumed_site: AssumedSiteBasis
     sink: SinkFixtureAdapter
     drain: DrainProduct
     trap: TrapProduct
@@ -596,7 +622,7 @@ def parse_double_vanity_project(doc) -> DoubleVanitySection:
         doc.sections["double_vanity"],
         {
             "mode", "archetype", "id", "profile", "placement",
-            "jurisdiction", "sink", "faucet",
+            "jurisdiction", "sink", "faucet", "assumed_conditions",
         },
         set(),
         "double_vanity",
@@ -629,6 +655,87 @@ def parse_double_vanity_project(doc) -> DoubleVanitySection:
         placement["from_left_datum"], doc.units,
         "double_vanity.placement.from_left_datum",
     )
+    assumed_raw = _take(
+        raw["assumed_conditions"],
+        {
+            "provenance", "field_verified", "wall_length", "wall_height",
+            "vanity_left", "floor_elevation", "finish_thickness", "backing",
+            "wastes", "supplies",
+        },
+        set(),
+        "double_vanity.assumed_conditions",
+    )
+    if assumed_raw["provenance"] != "owner_assumed":
+        raise ProjectSchemaError(
+            "double_vanity.assumed_conditions.provenance must be "
+            "'owner_assumed'"
+        )
+    if not isinstance(assumed_raw["field_verified"], bool):
+        raise ProjectSchemaError(
+            "double_vanity.assumed_conditions.field_verified must be a boolean"
+        )
+    if assumed_raw["field_verified"]:
+        raise ProjectSchemaError(
+            "double_vanity.assumed_conditions.field_verified must be false"
+        )
+
+    def rough_ins(key: str) -> tuple[RoughInPoint, ...]:
+        points = []
+        for index, item in enumerate(_list(
+            assumed_raw[key], f"double_vanity.assumed_conditions.{key}",
+        )):
+            ctx = f"double_vanity.assumed_conditions.{key}[{index}]"
+            point = _take(
+                item, {"id", "kind", "x", "y", "z", "provenance"}, set(), ctx,
+            )
+            if point["provenance"] != "owner_assumed":
+                raise ProjectSchemaError(f"{ctx}.provenance must be 'owner_assumed'")
+            point_id = str(point["id"]).strip()
+            kind = str(point["kind"]).strip()
+            if not point_id or not kind:
+                raise ProjectSchemaError(f"{ctx}.id and kind must be non-empty")
+            points.append(RoughInPoint(
+                point_id=point_id,
+                kind=kind,
+                x_mm=_length(point["x"], doc.units, f"{ctx}.x"),
+                y_mm=_length(point["y"], doc.units, f"{ctx}.y"),
+                z_mm=_length(point["z"], doc.units, f"{ctx}.z"),
+                provenance="owner_assumed",
+            ))
+        return tuple(points)
+
+    backing = str(assumed_raw["backing"]).strip()
+    if not backing:
+        raise ProjectSchemaError(
+            "double_vanity.assumed_conditions.backing must be non-empty"
+        )
+    assumed_site = AssumedSiteBasis(
+        provenance="owner_assumed",
+        field_verified=False,
+        wall_length_mm=_length(
+            assumed_raw["wall_length"], doc.units,
+            "double_vanity.assumed_conditions.wall_length", positive=True,
+        ),
+        wall_height_mm=_length(
+            assumed_raw["wall_height"], doc.units,
+            "double_vanity.assumed_conditions.wall_height", positive=True,
+        ),
+        vanity_left_mm=_length(
+            assumed_raw["vanity_left"], doc.units,
+            "double_vanity.assumed_conditions.vanity_left",
+        ),
+        floor_elevation_mm=_length(
+            assumed_raw["floor_elevation"], doc.units,
+            "double_vanity.assumed_conditions.floor_elevation",
+        ),
+        finish_thickness_mm=_length(
+            assumed_raw["finish_thickness"], doc.units,
+            "double_vanity.assumed_conditions.finish_thickness", positive=True,
+        ),
+        backing=backing,
+        wastes=rough_ins("wastes"),
+        supplies=rough_ins("supplies"),
+    )
     width = 72 * IN
     x0 = site.wall.plane_origin_mm[0] + from_left
     if from_left < 0 or from_left + width > site.wall.length_mm:
@@ -653,6 +760,7 @@ def parse_double_vanity_project(doc) -> DoubleVanitySection:
         mode="study",
         profile_id=profile.profile_id,
         site=site,
+        assumed_site=assumed_site,
         vanity=vanity,
         jurisdiction_id=str(raw["jurisdiction"]),
         sink_adapter_id=K20000.adapter_id,
@@ -1110,7 +1218,7 @@ def build_double_vanity_model(
             wall.stud_width_mm, wall.stud_depth_mm, "existing_concealed",
         ))
         source_map[part_id] = Provenance(
-            f"site.wall.studs.{stud.stud_id}", "site.surveyed_stud",
+            f"site.wall.studs.{stud.stud_id}", "site.owner_assumed_stud",
             pack_version="vanity.double_sink@1.0.0",
             profile_id=profile.profile_id,
         )
@@ -1135,7 +1243,8 @@ def build_double_vanity_model(
         )
 
     return DoubleVanityModel(
-        project_name, section.mode, profile, section, K20000, K7124_A, K8998,
+        project_name, section.mode, profile, section, section.assumed_site,
+        K20000, K7124_A, K8998,
         PURIST_WALL, RAKKS_EH_1818_LV, code,
         tuple(bays), tuple(paths), tuple(drawers), service_chase_depth,
         tuple(parts), (), (), (), source_map,
@@ -1627,8 +1736,7 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
         expected_targets = {
             stud.stud_id
             for stud in wall.studs
-            if stud.verified
-            and rail_x0 <= wall.plane_origin_mm[0] + stud.position_mm <= rail_x1
+            if rail_x0 <= wall.plane_origin_mm[0] + stud.position_mm <= rail_x1
         }
         target_axes = sorted(
             wall.plane_origin_mm[0] + surveyed[stud_id].position_mm
@@ -1663,7 +1771,7 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
         "axes share X coordinates and represent a proposed load path; this does "
         "not establish a field survey or capacity."
         if mount_ok else
-        "The rail, verified studs, and candidate fastener axes do not form a "
+        "The rail, study-declared studs, and candidate fastener axes do not form a "
         "complete represented load path.",
         "derived",
     )
