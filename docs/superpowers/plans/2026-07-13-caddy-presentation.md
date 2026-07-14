@@ -205,7 +205,7 @@ git commit -m "feat: render content-keyed instruction panels"
 - Create: `scripts/caddy_documents.py`
 - Create: `tests/test_caddy_instruction_manual.py`
 - Modify: `scripts/single_detail_report.py`
-- Modify: `tests/test_single_detail_report.py`
+- Modify: `tests/test_armchair_caddy_e2e.py`
 
 **Interfaces:**
 - Consumes: Tasks 1–2 manual/panels/PNGs, existing `build_document()` technical generator and coverage report.
@@ -243,11 +243,10 @@ Run the pair generator twice in separate directories; assert identical HTML byte
 
 ```bash
 PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest -q \
-  tests/test_caddy_instruction_manual.py tests/test_single_detail_report.py \
-  tests/test_armchair_caddy_e2e.py
+  tests/test_caddy_instruction_manual.py tests/test_armchair_caddy_e2e.py
 git add src/rendering/instruction_manual.py scripts/caddy_documents.py \
   scripts/single_detail_report.py tests/test_caddy_instruction_manual.py \
-  tests/test_single_detail_report.py
+  tests/test_armchair_caddy_e2e.py
 git commit -m "feat: generate linked caddy assembly manual"
 ```
 
