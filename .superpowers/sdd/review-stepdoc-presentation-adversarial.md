@@ -1,8 +1,8 @@
 # STEPDOC +presentation adversarial review
 
-**Reviewed:** 2026-07-13  
-**Base:** `aa8cd90`  
-**Initial head:** `b48da2b`  
+**Reviewed:** 2026-07-13
+**Base:** `aa8cd90`
+**Initial head:** `b48da2b`
 **Verdict:** REVISE; confirmation required after the correction round.
 
 ## Verified strengths

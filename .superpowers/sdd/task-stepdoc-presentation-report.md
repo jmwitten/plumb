@@ -103,4 +103,3 @@ than prose-filled assumptions.
 
 The one full `pytest -n auto -q` merge gate is recorded in the session ledger
 after it runs on the frozen final implementation tree.
-

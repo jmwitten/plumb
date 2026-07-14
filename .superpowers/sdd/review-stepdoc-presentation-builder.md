@@ -1,9 +1,9 @@
 # Armchair caddy naive-builder review
 
-**Reviewed:** 2026-07-13  
-**Document:** regenerated five-panel assembly manual  
+**Reviewed:** 2026-07-13
+**Document:** regenerated five-panel assembly manual
 **Reviewer context:** competent handyman without contracting or engineering
-training; compared against public Article and IKEA side-table manuals.  
+training; compared against public Article and IKEA side-table manuals.
 **Initial verdict:** buildable with minor guessing, not yet guess-free.
 
 ## Parts and order

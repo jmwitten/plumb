@@ -80,4 +80,3 @@ The remaining notes are non-blocking: the live WebGL behavior is supported by
 source-level regression tests plus the recorded runtime probe rather than an
 always-on browser test, and the initial review file deliberately retains its
 historical `REVISE` verdict.
-
