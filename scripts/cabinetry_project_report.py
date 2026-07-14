@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import binascii
 from dataclasses import dataclass, replace
 import gzip
 import html
@@ -108,6 +109,24 @@ class CabinetrySharedAssets:
 
 def _esc(value) -> str:
     return html.escape(str(value), quote=True)
+
+
+def _image_data_uri(value: str) -> str:
+    """Validate an internally rendered raster before placing it in markup."""
+
+    value = str(value)
+    try:
+        header, payload = value.split(",", 1)
+        if header not in {
+            "data:image/png;base64",
+            "data:image/jpeg;base64",
+            "data:image/webp;base64",
+        }:
+            raise ValueError
+        base64.b64decode(payload, validate=True)
+    except (ValueError, binascii.Error):
+        raise ValueError("cabinetry image data URI is invalid") from None
+    return _esc(value)
 
 
 def _fmt(value: float) -> str:
@@ -281,10 +300,63 @@ def installation_drawing_facts(project) -> dict[str, object]:
             )
         return part
 
+    carcass_t = model.profile.carcass_thickness_mm
+    body_height = cabinet.height_mm - cabinet.toe_kick_height_mm
+    inside_width = cabinet.width_mm - 2 * carcass_t
+    carcass_depth = cabinet.depth_mm - model.profile.back_inset_mm
+    expected_frame = {
+        "left_end": (
+            (cabinet_x0, cabinet_front_y + cabinet.depth_mm,
+             cabinet_base_z + cabinet.toe_kick_height_mm),
+            (("Y", -90.0), ("Z", 180.0)),
+            (body_height, cabinet.depth_mm, carcass_t),
+        ),
+        "right_end": (
+            (cabinet_x0 + cabinet.width_mm, cabinet_front_y,
+             cabinet_base_z + cabinet.toe_kick_height_mm),
+            (("Y", -90.0),),
+            (body_height, cabinet.depth_mm, carcass_t),
+        ),
+        "bottom": (
+            (cabinet_x0 + carcass_t, cabinet_front_y,
+             cabinet_base_z + cabinet.toe_kick_height_mm),
+            (),
+            (inside_width, carcass_depth, carcass_t),
+        ),
+    }
+
+    def geometry_matches(part, expected) -> bool:
+        at_mm, rotate, dimensions = expected
+        actual_dimensions = (
+            part.length_mm, part.width_mm, part.thickness_mm,
+        )
+        return (
+            part.rotate == rotate
+            and all(abs(a - b) <= tolerance for a, b in zip(part.at_mm, at_mm))
+            and all(
+                abs(a - b) <= tolerance
+                for a, b in zip(actual_dimensions, dimensions)
+            )
+        )
+
+    for role, expected in expected_frame.items():
+        live = one_part(role, component_type="plywood_panel")
+        if not geometry_matches(live, expected):
+            raise ValueError(
+                f"cabinet frame part {role!r} is incoherent with the compiled "
+                "wall/floor-local frame"
+            )
+
     anchor_strip = one_part("anchor_strip", component_type="plywood_panel")
-    if anchor_strip.rotate != (("X", 90.0),):
+    if not (
+        anchor_strip.rotate == (("X", 90.0),)
+        and abs(anchor_strip.at_mm[0] - (cabinet_x0 + carcass_t)) <= tolerance
+        and abs(anchor_strip.length_mm - inside_width) <= tolerance
+        and abs(anchor_strip.width_mm - model.profile.stretcher_depth_mm) <= tolerance
+        and abs(anchor_strip.thickness_mm - carcass_t) <= tolerance
+    ):
         raise ValueError(
-            "anchor strip must use the compiled vertical strip orientation"
+            "anchor strip is incoherent with the compiled cabinet-local frame"
         )
     anchor_strip_bounds = {
         "x": (
@@ -332,14 +404,34 @@ def installation_drawing_facts(project) -> dict[str, object]:
         min(bounds[1][0] for bounds in toe_plan_bounds.values()),
         max(bounds[1][1] for bounds in toe_plan_bounds.values()),
     )
+
+    def bounds_match(actual, expected) -> bool:
+        return all(
+            abs(actual_value - expected_value) <= tolerance
+            for actual_value, expected_value in zip(actual, expected)
+        )
+
+    front_x, front_y = toe_plan_bounds["toe_front"]
+    rear_x, rear_y = toe_plan_bounds["toe_rear"]
+    left_x, left_y = toe_plan_bounds["toe_left"]
+    right_x, right_y = toe_plan_bounds["toe_right"]
+    member_t = model.profile.toe_base_member_thickness_mm
     if (
-        abs(toe_x[0] - cabinet_x0) > tolerance
-        or abs(toe_x[1] - (cabinet_x0 + cabinet.width_mm)) > tolerance
-        or abs(toe_plan_bounds["toe_left"][1][0]
-               - toe_plan_bounds["toe_front"][1][1]) > tolerance
-        or abs(toe_plan_bounds["toe_left"][1][1]
-               - toe_plan_bounds["toe_rear"][1][0]) > tolerance
-        or toe_plan_bounds["toe_left"][1] != toe_plan_bounds["toe_right"][1]
+        not bounds_match(front_x, (cabinet_x0, cabinet_x0 + cabinet.width_mm))
+        or not bounds_match(rear_x, (cabinet_x0, cabinet_x0 + cabinet.width_mm))
+        or not bounds_match(left_x, (cabinet_x0, cabinet_x0 + member_t))
+        or not bounds_match(
+            right_x,
+            (cabinet_x0 + cabinet.width_mm - member_t,
+             cabinet_x0 + cabinet.width_mm),
+        )
+        or abs(front_y[0] - (cabinet_front_y + cabinet.toe_kick_setback_mm))
+        > tolerance
+        or abs(front_y[1] - left_y[0]) > tolerance
+        or abs(left_y[1] - rear_y[0]) > tolerance
+        or not bounds_match(left_y, right_y)
+        or abs(front_y[1] - front_y[0] - member_t) > tolerance
+        or abs(rear_y[1] - rear_y[0] - member_t) > tolerance
     ):
         raise ValueError(
             "compiled toe parts do not form one closed rectangular support "
@@ -350,14 +442,18 @@ def installation_drawing_facts(project) -> dict[str, object]:
     if len(survey_by_id) != len(wall.studs):
         raise ValueError("surveyed wall stud ids must be unique")
     target_ids = tuple(model.anchor_stud_ids)
-    anchor_roles = {
-        part.role.removeprefix("wall_anchor_"): part
-        for part in model.parts
+    anchor_parts = tuple(
+        part for part in model.parts
         if part.role.startswith("wall_anchor_")
         and part.component_type == "structural_screw"
+    )
+    anchor_roles = {
+        part.role.removeprefix("wall_anchor_"): part
+        for part in anchor_parts
     }
     if (
         not target_ids
+        or len(anchor_parts) != len(target_ids)
         or len(anchor_roles) != len(target_ids)
         or set(anchor_roles) != set(target_ids)
     ):
@@ -403,6 +499,9 @@ def installation_drawing_facts(project) -> dict[str, object]:
         expected_anchor_id = f"cabinetry.{cabinet.cabinet_id}.wall_anchor_{stud_id}"
         center_x = wall.plane_origin_mm[0] + survey.position_mm
         placed_stud_center = stud.at_mm[0] + stud.width_mm / 2
+        local_x = anchor.at_mm[0] - cabinet_x0
+        local_z = anchor.at_mm[2] - cabinet_base_z
+        anchor_params = dict(anchor.params)
         if (
             stud.part_id != expected_stud_id
             or anchor.part_id != expected_anchor_id
@@ -414,13 +513,24 @@ def installation_drawing_facts(project) -> dict[str, object]:
             or abs(anchor.length_mm - model.wall_anchor.length_mm) > tolerance
             or abs(anchor.width_mm - model.wall_anchor.diameter_mm) > tolerance
             or abs(anchor.thickness_mm - model.wall_anchor.diameter_mm) > tolerance
+            or set(anchor_params) != {"diameter", "length"}
+            or abs(anchor_params["length"] - model.wall_anchor.length_mm) > tolerance
+            or abs(anchor_params["diameter"] - model.wall_anchor.diameter_mm) > tolerance
+            or not (
+                anchor_strip_bounds["x"][0] - tolerance
+                <= local_x
+                <= anchor_strip_bounds["x"][1] + tolerance
+            )
+            or not (
+                anchor_strip_bounds["z"][0] - tolerance
+                <= local_z
+                <= anchor_strip_bounds["z"][1] + tolerance
+            )
         ):
             raise ValueError(
                 f"modeled stud/anchor path for {stud_id!r} is incoherent with "
                 "the survey, anchor strip, or selected screw geometry"
             )
-        local_x = anchor.at_mm[0] - cabinet_x0
-        local_z = anchor.at_mm[2] - cabinet_base_z
         stack = stud_front_y - anchor.at_mm[1]
         embedment = anchor.length_mm - stack
         if stack <= 0 or embedment <= 0:
@@ -462,6 +572,35 @@ def installation_drawing_facts(project) -> dict[str, object]:
             "anchor-path validation"
         )
 
+    toe_member_rectangles = tuple(
+        (
+            role,
+            tuple(value - cabinet_x0 for value in toe_plan_bounds[role][0]),
+            tuple(value - cabinet_front_y for value in toe_plan_bounds[role][1]),
+        )
+        for role in toe_roles
+    )
+    toe_section_x = anchors[0]["local_x_mm"]
+    toe_section_intervals = tuple(
+        y_bounds for _role, x_bounds, y_bounds in toe_member_rectangles
+        if x_bounds[0] - tolerance <= toe_section_x <= x_bounds[1] + tolerance
+    )
+    if not toe_section_intervals:
+        raise ValueError(
+            "toe section line does not intersect any compiled support member"
+        )
+
+    countertop_lane = cabinet.height_mm + 13.0
+    anchor_callout_lanes = tuple(
+        cabinet.height_mm + 44.0 + index * 34.0
+        for index, _anchor in enumerate(anchors)
+    )
+    front_annotation_lanes = {
+        "countertop": countertop_lane,
+        "anchor_callouts": anchor_callout_lanes,
+        "plot_top": max(anchor_callout_lanes) + 38.0,
+    }
+
     released = bool(project.installation_use_ready)
     stamp = (
         "INSTALLATION/USE RELEASE: PASS — FOLLOW THE REVIEWED PROJECT-SPECIFIC "
@@ -486,6 +625,13 @@ def installation_drawing_facts(project) -> dict[str, object]:
             "x": (toe_x[0] - cabinet_x0, toe_x[1] - cabinet_x0),
             "y": (toe_y[0] - cabinet_front_y, toe_y[1] - cabinet_front_y),
         },
+        "toe_member_rectangles_local_mm": toe_member_rectangles,
+        "toe_section_local_x_mm": toe_section_x,
+        "toe_section_material_y_intervals_mm": toe_section_intervals,
+        "plan_toe_label_y_local_mm": (
+            toe_plan_bounds["toe_front"][1][0]
+            + toe_plan_bounds["toe_front"][1][1]
+        ) / 2 - cabinet_front_y,
         "toe_height_mm": cabinet.toe_kick_height_mm,
         "toe_setback_mm": cabinet.toe_kick_setback_mm,
         "anchor_strip_bounds_local_mm": anchor_strip_bounds,
@@ -506,6 +652,7 @@ def installation_drawing_facts(project) -> dict[str, object]:
         "high_floor_verified": floor.verified,
         "installation_use_status": "PASS" if released else "HOLD",
         "drawing_stamp": stamp,
+        "front_annotation_lanes_local_z_mm": front_annotation_lanes,
     }
 
 
@@ -769,6 +916,7 @@ def _render_steps(title: str, steps) -> str:
 
 def _viewer_block(images, payload, glb_b64) -> str:
     slug = payload["slug"]
+    isometric_uri = _image_data_uri(images["isometric"])
     payload_json = json.dumps(payload, separators=(",", ":")).replace("</", "<\\/")
     return f"""
 <section class="viewer-section">
@@ -779,7 +927,7 @@ def _viewer_block(images, payload, glb_b64) -> str:
      stabilizers, pulls, screws, and glue remain schedule items or explicitly
      labeled schematic proxies, not false detailed geometry.</p>
   <div class="viewer-slot" data-detail="{_esc(slug)}">
-    <img src="{images['isometric']}" alt="Interactive cabinetry assembly">
+    <img src="{isometric_uri}" alt="Interactive cabinetry assembly">
     <button type="button" class="viewer-btn">Explore in 3D</button>
   </div>
 </section>
@@ -936,9 +1084,12 @@ h2 {{ margin:36px 0 12px; font-size:22px; border-bottom:1px solid var(--line); p
 .status {{ border:1px solid var(--line); padding:10px; }} .status b {{ display:block; }}
 .unknown {{ color:#8a5200; }} .pass {{ color:#17633b; }} .fail {{ color:#a12622; }}
 .gallery {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }}
+.installation-scroll {{ overflow-x:auto; }}
+.installation-gallery {{ grid-template-columns:1fr; min-width:900px; }}
 figure {{ margin:0; border:1px solid var(--line); background:#fafafa; break-inside:avoid; }}
 figure img,.viewer-slot img {{ display:block; width:100%; height:auto; }}
 figcaption {{ padding:9px 11px; color:var(--muted); font-size:13px; }}
+.drawing-open {{ display:inline-block; margin:0 11px 11px; font-size:13px; font-weight:700; }}
 .viewer-section .viewer-slot {{ max-width:980px; aspect-ratio:4/3; background:#f8f8f6; overflow:hidden; }}
 .table-wrap {{ overflow-x:auto; margin-bottom:14px; }} table {{ width:100%; border-collapse:collapse; font-size:12px; }}
 th,td {{ padding:7px 8px; border:1px solid var(--faint); text-align:left; vertical-align:top; }}
@@ -950,10 +1101,12 @@ td code {{ font-size:10.5px; overflow-wrap:anywhere; }} a {{ color:var(--acc); }
 .document-nav a {{ display:inline-block; padding:7px 10px; border:1px solid var(--acc); border-radius:5px; font-weight:750; text-decoration:none; }}
 .checklist li {{ margin:.45em 0; }}
 @media (max-width:900px) {{ .sheet {{ padding:20px 16px 40px; }} header {{ grid-template-columns:1fr; }}
-  .gallery {{ grid-template-columns:1fr 1fr; }} }}
+  .gallery {{ grid-template-columns:1fr 1fr; }} .installation-gallery {{ grid-template-columns:1fr; }} }}
 @media (max-width:560px) {{ .gallery,.status-grid {{ grid-template-columns:1fr; }} }}
 @media print {{ body {{ background:white; }} .sheet {{ width:100%; padding:0; }} .viewer-btn {{ display:none; }}
-  .table-wrap {{ overflow:visible; }} section,table {{ break-inside:auto; }} tr,figure,.notice {{ break-inside:avoid; }} }}
+  .table-wrap,.installation-scroll {{ overflow:visible; }} .installation-gallery {{ grid-template-columns:1fr; min-width:0; }}
+  .installation-gallery figure + figure {{ break-before:page; }} .drawing-open {{ display:none; }}
+  section,table {{ break-inside:auto; }} tr,figure,.notice {{ break-inside:avoid; }} }}
 """
 
 
@@ -965,21 +1118,14 @@ def _release_banner(project) -> str:
         whole_verdict = whole.verdict
     except KeyError:
         whole_verdict = "UNKNOWN"
-    policy = project.report.installation_use_policy
     install_verdict = "PASS" if project.installation_use_ready else "HOLD"
     install_copy = (
-        "The typed installation/use gates pass for this project."
+        "Typed installation/use blockers are cleared; preserve the signed "
+        "project-specific acceptance."
         if project.installation_use_ready else
-        (policy.reader_notice(released=False) if policy is not None else
-         "Installation/use remains blocked by active typed findings.")
+        "Blocked by the active required findings below. Do not install, anchor, "
+        "load, commission, or use until signed project-specific clearance."
     )
-    policy_copy = ""
-    if policy is not None:
-        policy_copy = (
-            f'<p><a href="{_esc(policy.source_url)}">CPSC Anchor It! general guidance</a>. '
-            f'{_esc(policy.scope_note)} Scope source: '
-            f'<a href="{_esc(policy.scope_source_url)}">CPSC clothing-storage-unit guidance</a>.</p>'
-        )
     return (
         '<div class="status-grid">'
         f'<div class="status pass"><b>Model/shop-data gate: PASS</b>{_esc(project.report.summary)}</div>'
@@ -989,7 +1135,22 @@ def _release_banner(project) -> str:
         'Geometry does not qualify the complete cabinet/toe/anchor load path.</div>'
         f'<div class="status {"pass" if project.installation_use_ready else "fail"}">'
         f'<b>Installation/use release: {install_verdict}</b>{_esc(install_copy)}</div>'
-        '</div>' + policy_copy
+        '</div>'
+    )
+
+
+def _installation_policy_sources(project) -> str:
+    """Link the typed policy sources without duplicating its long gate text."""
+
+    policy = project.report.installation_use_policy
+    if policy is None:
+        return ""
+    return (
+        '<p class="policy-sources"><strong>Safety-policy sources:</strong> '
+        f'<a href="{_esc(policy.source_url)}">CPSC Anchor It! general guidance</a>; '
+        f'<a href="{_esc(policy.scope_source_url)}">'
+        'CPSC clothing-storage-unit guidance</a>. The complete typed hazard and '
+        'clearance wording is retained in the installation release-gate step below.</p>'
     )
 
 
@@ -1021,6 +1182,8 @@ def _procurement_preflight(project) -> str:
 
 
 def _document_nav(links: CabinetryDocumentLinks, documents: tuple[str, ...]) -> str:
+    if not documents:
+        return ""
     definitions = {
         "review": ("Review & installation sheet", links.review_href),
         "manual": ("Illustrated assembly manual", links.manual_href),
@@ -1034,11 +1197,14 @@ def _document_nav(links: CabinetryDocumentLinks, documents: tuple[str, ...]) -> 
 
 
 def _drawing_figure(images: dict[str, str], view: str) -> str:
+    image_uri = _image_data_uri(images[view])
     return (
-        f'<figure data-view="{_esc(view)}"><img src="{images[view]}" '
+        f'<figure data-view="{_esc(view)}"><img src="{image_uri}" '
         f'alt="{_esc(view)} cabinetry view" loading="lazy">'
         f'<figcaption><strong>{_esc(view.replace("-", " ").title())}.</strong> '
-        f'{_esc(VIEW_CAPTIONS[view])}</figcaption></figure>'
+        f'{_esc(VIEW_CAPTIONS[view])}</figcaption>'
+        f'<a class="drawing-open" href="{image_uri}" target="_blank" '
+        f'rel="noopener">Open full-resolution drawing</a></figure>'
     )
 
 
@@ -1047,9 +1213,10 @@ def _review_drawings(images: dict[str, str]) -> str:
     return (
         '<section><h2>Drawings</h2><p>Printed dimensions and the compiled model '
         'control. Anchor coordinates are coordination geometry, not a capacity '
-        'or installation-torque claim.</p><div class="gallery">'
+        'or installation-torque claim.</p><div class="installation-scroll">'
+        '<div class="gallery installation-gallery">'
         + "".join(_drawing_figure(images, view) for view in views)
-        + '</div></section>'
+        + '</div></div></section>'
     )
 
 
@@ -1057,7 +1224,7 @@ def _shop_drawings(images: dict[str, str]) -> str:
     views = ("front", "exploded", "drawer-detail")
     return (
         '<section><h2>Shop drawings</h2><p>Full-height surveyed wall studs are omitted '
-        'from these shop views; installation geometry is owned by the review sheet.</p>'
+        'from these shop views. Installation plan and anchor section geometry is owned by the review sheet.</p>'
         '<div class="gallery">'
         + "".join(_drawing_figure(images, view) for view in views)
         + '</div></section>'
@@ -1118,6 +1285,7 @@ def build_cabinetry_review_html(
     viewer_payload: dict,
     glb_b64: str,
     links: CabinetryDocumentLinks | None = None,
+    related_documents: tuple[str, ...] = ("manual", "fabrication", "audit"),
 ) -> str:
     """Compose the concise A0/I1 review and installation landing sheet."""
 
@@ -1126,7 +1294,7 @@ def build_cabinetry_review_html(
     links = links or CabinetryDocumentLinks()
     cabinet = project.model.section.cabinets[0]
     title = project.project_doc.name
-    nav = _document_nav(links, ("manual", "fabrication", "audit"))
+    nav = _document_nav(links, related_documents)
     body = "".join((
         f'<header><div><div class="eyebrow">A0/I1 · project sheet & installation plan</div>'
         f'<h1>{_esc(title)}</h1><p>One model-backed review surface for fit, release, '
@@ -1135,7 +1303,8 @@ def build_cabinetry_review_html(
         f'{_fmt(cabinet.width_mm)} W × {_fmt(cabinet.height_mm)} H × '
         f'{_fmt(cabinet.depth_mm)} D</div></div></header>',
         _procurement_preflight(project),
-        f'<section>{_render_active_nonpass(project)}</section>',
+        f'<section>{_render_active_nonpass(project)}'
+        f'{_installation_policy_sources(project)}</section>',
         f'<section>{render_dimension_tables(project.model)}</section>',
         _review_drawings(images),
         _render_field_clearance_checklist(project),
@@ -1244,6 +1413,7 @@ def build_cabinetry_html(project, *, images: dict[str, str],
         viewer_payload=viewer_payload,
         glb_b64=glb_b64,
         links=links,
+        related_documents=("manual",) if companion_href is not None else (),
     )
 
 
@@ -1371,14 +1541,15 @@ def _render_front_drawing(project, path: Path) -> None:
                                    facecolor="#d4b18a", edgecolor="#493a2e"))
     ax.annotate(_fmt(cabinet.width_mm), (cabinet.width_mm / 2, -28),
                 ha="center", va="top")
-    for anchor in facts["anchors"]:
+    annotation_lanes = facts["front_annotation_lanes_local_z_mm"]
+    for index, anchor in enumerate(facts["anchors"]):
         x = anchor["local_x_mm"]
         z = anchor["local_z_mm"]
         ax.axvline(x, color="#355e7c", linestyle=(0, (3, 4)), linewidth=.8)
         ax.scatter((x,), (z,), color="#9b3a24", s=22, zorder=5)
         ax.annotate(
             f"{anchor['stud_id']} / anchor\nX {_fmt(x)} · Z {_fmt(z)}",
-            xy=(x, z), xytext=(x, cabinet.height_mm + 18),
+            xy=(x, z), xytext=(x, annotation_lanes["anchor_callouts"][index]),
             ha="center", va="bottom", fontsize=7,
             arrowprops={"arrowstyle": "-", "color": "#9b3a24"},
         )
@@ -1419,12 +1590,12 @@ def _render_front_drawing(project, path: Path) -> None:
         edgecolor="#9b3a24",
     ))
     ax.text(
-        cabinet.width_mm / 2, cabinet.height_mm + 13,
+        cabinet.width_mm / 2, annotation_lanes["countertop"],
         "FIELD INSTALLED / BY OTHERS / HOLD — COUNTERTOP BOUNDARY",
         ha="center", va="center", fontsize=7, color="#9b3a24", weight="bold",
     )
-    ax.set_xlim(-55, cabinet.width_mm + 55)
-    ax.set_ylim(-50, cabinet.height_mm + 62)
+    ax.set_xlim(-180, cabinet.width_mm + 180)
+    ax.set_ylim(-50, annotation_lanes["plot_top"])
     ax.set_aspect("equal")
     ax.axis("off")
     ax.set_title(
@@ -1459,12 +1630,13 @@ def _render_installation_plan_drawing(project, path: Path) -> None:
         (0, 0), width, depth, facecolor="#f7f4ef",
         edgecolor="#18212b", linewidth=2.1,
     ))
-    ax.add_patch(Rectangle(
-        (toe["x"][0], toe["y"][0]),
-        toe["x"][1] - toe["x"][0],
-        toe["y"][1] - toe["y"][0],
-        facecolor="none", edgecolor="#9b3a24", hatch="///", linewidth=1.2,
-    ))
+    for _role, x_bounds, y_bounds in facts["toe_member_rectangles_local_mm"]:
+        ax.add_patch(Rectangle(
+            (x_bounds[0], y_bounds[0]),
+            x_bounds[1] - x_bounds[0],
+            y_bounds[1] - y_bounds[0],
+            facecolor="none", edgecolor="#9b3a24", hatch="///", linewidth=1.2,
+        ))
     ax.add_patch(Rectangle(
         (-45, depth), width + 90, finish,
         facecolor="#dadde0", edgecolor="#707b84", linewidth=1,
@@ -1504,8 +1676,8 @@ def _render_installation_plan_drawing(project, path: Path) -> None:
         bbox={"facecolor": "white", "edgecolor": "#bec8d0", "alpha": .86},
     )
     ax.text(
-        width / 2, (toe["y"][0] + toe["y"][1]) / 2,
-        f"COMPILED TOE FOOTPRINT · front setback {_fmt(toe['y'][0])}",
+        width / 2, facts["plan_toe_label_y_local_mm"],
+        f"COMPILED TOE FRAME · front setback {_fmt(toe['y'][0])}",
         ha="center", va="center", fontsize=7, color="#9b3a24",
         bbox={"facecolor": "white", "edgecolor": "none", "alpha": .74},
     )
@@ -1543,11 +1715,10 @@ def _render_anchor_section_drawing(project, path: Path) -> None:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from matplotlib.patches import Polygon, Rectangle
+    from matplotlib.patches import Rectangle
 
     facts = installation_drawing_facts(project)
     bounds = facts["cabinet_bounds_local_mm"]
-    toe = facts["toe_footprint_local_mm"]
     depth = bounds["y"][1]
     height = bounds["z"][1]
     wall_finish = facts["wall_finish_thickness_mm"]
@@ -1564,11 +1735,12 @@ def _render_anchor_section_drawing(project, path: Path) -> None:
         height - facts["toe_height_mm"],
         facecolor="#f7f4ef", edgecolor="#18212b", linewidth=2,
     ))
-    ax.add_patch(Rectangle(
-        (toe["y"][0], 0), toe["y"][1] - toe["y"][0],
-        facts["toe_height_mm"],
-        facecolor="none", edgecolor="#9b3a24", hatch="///", linewidth=1.2,
-    ))
+    for y_bounds in facts["toe_section_material_y_intervals_mm"]:
+        ax.add_patch(Rectangle(
+            (y_bounds[0], 0), y_bounds[1] - y_bounds[0],
+            facts["toe_height_mm"],
+            facecolor="none", edgecolor="#9b3a24", hatch="///", linewidth=1.2,
+        ))
     ax.add_patch(Rectangle(
         (head_y, facts["anchor_strip_bounds_local_mm"]["z"][0]),
         strip_t,
@@ -1589,14 +1761,9 @@ def _render_anchor_section_drawing(project, path: Path) -> None:
     ax.scatter((head_y,), (anchor_z,), color="#9b3a24", s=40, zorder=5)
     ax.plot((-24, depth + wall_finish + stud_depth + 24), (0, 0),
             color="#17633b", linewidth=1.4)
-    ax.add_patch(Polygon(
-        ((toe["y"][0] + 30, 0), (toe["y"][0] + 55, 0),
-         (toe["y"][0] + 42.5, 15)),
-        closed=True, facecolor="#f2d28b", edgecolor="#8a5200",
-    ))
     ax.text(
-        toe["y"][0] + 42.5, 24,
-        "FIELD-LOCATE SHIM ONLY AT STABLE BEARING",
+        depth * .50, 18,
+        "FIELD-VERIFY LEVEL BEARING; RECORD SHIMS ONLY AT ACTUAL TOE MEMBERS",
         ha="center", va="bottom", fontsize=6.5, color="#8a5200",
     )
     ax.add_patch(Rectangle(

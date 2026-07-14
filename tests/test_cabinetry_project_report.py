@@ -191,7 +191,9 @@ def test_build_cabinetry_html_wraps_the_focused_review_composer():
         "glb_b64": "H4sIAAAAAAACAwMAAAAAAAAAAAA=",
     }
 
-    focused = CPR.build_cabinetry_review_html(project, **kwargs)
+    focused = CPR.build_cabinetry_review_html(
+        project, related_documents=(), **kwargs,
+    )
 
     assert focused == CPR.build_cabinetry_html(project, **kwargs)
 
@@ -355,6 +357,24 @@ def test_db40_review_contains_release_boundary_views_and_exact_dimensions():
         assert value in html
 
 
+def test_db40_release_cards_stay_compact_without_dropping_the_safety_notice():
+    project = compile_project_file(DB40)
+    policy = project.report.installation_use_policy
+    assert policy is not None
+    full_notice = policy.reader_notice(released=False)
+
+    banner = CPR._release_banner(project)
+    banner_words = re.findall(r"\b[\w'’-]+\b", _visible_text(banner))
+
+    assert full_notice not in banner
+    assert len(banner_words) <= 120
+    assert full_notice in _review_html(project)
+    assert full_notice not in _fabrication_html(project)
+    assert full_notice not in _audit_html(project)
+    assert policy.source_url in _review_html(project)
+    assert policy.scope_source_url in _review_html(project)
+
+
 def test_fabrication_projects_shop_sources_and_owned_process_phases():
     project = compile_project_file(DB40)
     html = _fabrication_html(project)
@@ -383,6 +403,9 @@ def test_fabrication_projects_shop_sources_and_owned_process_phases():
         "ship.remove_drawers", "ship.empty_carcass",
     ):
         assert step_id in html
+    assert "Installation plan and anchor section geometry is owned by the review sheet" \
+        in html
+    assert "installation geometry is owned by the review sheet" not in html
 
 
 def test_review_reuses_interactive_viewer_payload_and_is_self_contained():
@@ -562,6 +585,35 @@ def test_db40_installation_drawing_facts_are_exact_model_projections():
     assert facts["selected_screw_length_mm"] == pytest.approx(79.375)
     assert facts["modeled_stack_mm"] == pytest.approx(47.625)
     assert facts["stud_embedment_mm"] == pytest.approx(31.75)
+    toe_rectangles = {
+        role: (x_bounds, y_bounds)
+        for role, x_bounds, y_bounds
+        in facts["toe_member_rectangles_local_mm"]
+    }
+    assert toe_rectangles == {
+        "toe_front": (
+            pytest.approx((0.0, 1016.0)), pytest.approx((76.2, 95.25)),
+        ),
+        "toe_rear": (
+            pytest.approx((0.0, 1016.0)), pytest.approx((555.125, 574.175)),
+        ),
+        "toe_left": (
+            pytest.approx((0.0, 19.05)), pytest.approx((95.25, 555.125)),
+        ),
+        "toe_right": (
+            pytest.approx((996.95, 1016.0)), pytest.approx((95.25, 555.125)),
+        ),
+    }
+    assert facts["toe_section_local_x_mm"] == pytest.approx(203.2)
+    assert facts["toe_section_material_y_intervals_mm"] == (
+        pytest.approx((76.2, 95.25)),
+        pytest.approx((555.125, 574.175)),
+    )
+    assert facts["plan_toe_label_y_local_mm"] == pytest.approx(85.725)
+    lanes = facts["front_annotation_lanes_local_z_mm"]
+    assert lanes["countertop"] < min(lanes["anchor_callouts"])
+    assert len(set(lanes["anchor_callouts"])) == len(facts["anchors"])
+    assert max(lanes["anchor_callouts"]) < lanes["plot_top"]
 
 
 def test_installation_drawing_facts_follow_released_width_and_site_variant(
@@ -615,6 +667,196 @@ def test_installation_drawing_facts_reject_missing_anchor_geometry():
         match="one structural-screw anchor per surveyed stud",
     ):
         CPR.installation_drawing_facts(project)
+
+
+@pytest.mark.parametrize("mutation", ("missing_left", "collapsed_right"))
+def test_installation_drawing_facts_reject_missing_or_collapsed_toe_sleepers(
+        mutation):
+    project = compile_project_file(DB40)
+    left = project.model.part("toe_left")
+    if mutation == "missing_left":
+        parts = tuple(
+            part for part in project.model.parts if part.role != "toe_left"
+        )
+    else:
+        right = project.model.part("toe_right")
+        collapsed = replace(right, at_mm=left.at_mm)
+        parts = tuple(
+            collapsed if part.role == "toe_right" else part
+            for part in project.model.parts
+        )
+    project.model = replace(project.model, parts=parts)
+
+    with pytest.raises(ValueError, match="toe"):
+        CPR.installation_drawing_facts(project)
+
+
+def test_installation_drawing_facts_reject_moved_cabinet_side():
+    project = compile_project_file(DB40)
+    side = project.model.part("left_end")
+    moved = replace(
+        side,
+        at_mm=(side.at_mm[0] + 500.0, side.at_mm[1], side.at_mm[2]),
+    )
+    project.model = replace(
+        project.model,
+        parts=tuple(
+            moved if part.role == "left_end" else part
+            for part in project.model.parts
+        ),
+    )
+
+    with pytest.raises(ValueError, match="cabinet frame"):
+        CPR.installation_drawing_facts(project)
+
+
+@pytest.mark.parametrize("mutation", ("moved", "shortened"))
+def test_installation_drawing_facts_reject_incoherent_anchor_strip(mutation):
+    project = compile_project_file(DB40)
+    strip = project.model.part("anchor_strip")
+    if mutation == "moved":
+        changed = replace(
+            strip,
+            at_mm=(strip.at_mm[0] + 2000.0, strip.at_mm[1], strip.at_mm[2]),
+        )
+    else:
+        changed = replace(strip, length_mm=strip.length_mm - 250.0)
+    project.model = replace(
+        project.model,
+        parts=tuple(
+            changed if part.role == "anchor_strip" else part
+            for part in project.model.parts
+        ),
+    )
+
+    with pytest.raises(ValueError, match="anchor strip"):
+        CPR.installation_drawing_facts(project)
+
+
+def test_installation_drawing_facts_reject_duplicate_anchor_role():
+    project = compile_project_file(DB40)
+    anchor = project.model.part("wall_anchor_stud_32")
+    project.model = replace(
+        project.model, parts=(*project.model.parts, anchor),
+    )
+
+    with pytest.raises(
+        ValueError, match="one structural-screw anchor per surveyed stud",
+    ):
+        CPR.installation_drawing_facts(project)
+
+
+def test_installation_drawing_facts_reject_screw_param_catalog_disagreement():
+    project = compile_project_file(DB40)
+    anchor = project.model.part("wall_anchor_stud_32")
+    changed = replace(
+        anchor,
+        params=tuple(
+            (key, value + 1.0) if key == "length" else (key, value)
+            for key, value in anchor.params
+        ),
+    )
+    project.model = replace(
+        project.model,
+        parts=tuple(
+            changed if part.part_id == anchor.part_id else part
+            for part in project.model.parts
+        ),
+    )
+
+    with pytest.raises(ValueError, match="selected screw geometry"):
+        CPR.installation_drawing_facts(project)
+
+
+@pytest.mark.parametrize("view", ("front", "isometric"))
+def test_cabinetry_composers_reject_hostile_image_data_uris(view):
+    project = compile_project_file(DB40)
+    project.require_fabrication_release()
+    images = _images()
+    images[view] = 'data:image/png;base64,AAAA" onerror="alert(1)'
+
+    with pytest.raises(ValueError, match="image data URI"):
+        CPR.build_cabinetry_review_html(
+            project,
+            images=images,
+            viewer_payload=build_viewer_payload(project.detail),
+            glb_b64="H4sIAAAAAAACAwMAAAAAAAAAAAA=",
+        )
+
+
+def test_installation_drawings_render_with_separate_lanes_and_readable_layout(
+        tmp_path):
+    from PIL import Image, ImageChops
+
+    project = compile_project_file(DB40)
+    project.require_fabrication_release()
+    front = tmp_path / "front.png"
+    anchor = tmp_path / "anchor.png"
+    CPR._render_front_drawing(project, front)
+    CPR._render_anchor_section_drawing(project, anchor)
+
+    for path in (front, anchor):
+        with Image.open(path) as rendered:
+            assert rendered.width >= 1200
+            assert rendered.height >= 1000
+            assert rendered.getbbox() is not None
+
+    with Image.open(front).convert("RGB") as rendered:
+        white = Image.new("RGB", rendered.size, "white")
+        ink_bounds = ImageChops.difference(rendered, white).getbbox()
+        assert ink_bounds is not None
+        assert ink_bounds[0] > 5
+        assert ink_bounds[2] < rendered.width - 5
+
+    html = _review_html(project)
+    assert 'class="installation-scroll"' in html
+    assert 'class="gallery installation-gallery"' in html
+    assert html.count('class="drawing-open"') == 3
+    assert ".installation-gallery { grid-template-columns:1fr; }" in html
+    assert ".installation-gallery figure + figure { break-before:page; }" in html
+
+
+@pytest.mark.parametrize(
+    ("fixture", "companion"),
+    ((DB40, True), (B30, False)),
+)
+def test_standalone_generation_renders_only_explicit_closed_companion_links(
+        tmp_path, monkeypatch, fixture, companion):
+    project = compile_project_file(fixture)
+    project.require_fabrication_release()
+    assembly = CPR.product_view_assembly(project)
+
+    def fake_assets(*_args, **_kwargs):
+        return CPR.CabinetrySharedAssets(
+            assembly=assembly,
+            images=_images(),
+            viewer_payload=CPR.product_viewer_payload(project, assembly),
+            glb_bytes=b"test-glb",
+        )
+
+    monkeypatch.setattr(CPR, "render_shared_product_assets", fake_assets)
+    companion_href = None
+    if companion:
+        companion_path = tmp_path / "explicit-companion.html"
+        companion_path.write_text("companion")
+        companion_href = companion_path.name
+    output = tmp_path / f"{project.model.section.cabinets[0].cabinet_id}.html"
+    CPR.generate_released_build_document(
+        project, output, companion_href=companion_href,
+    )
+    document = output.read_text()
+    local_html_hrefs = tuple(
+        href for href in re.findall(r'href="([^"]+)"', document)
+        if href.endswith(".html") and "://" not in href
+    )
+
+    assert all((output.parent / href).is_file() for href in local_html_hrefs)
+    assert local_html_hrefs == (
+        ("explicit-companion.html", "explicit-companion.html")
+        if companion else ()
+    )
+    if fixture == B30:
+        assert "frameless_three_drawer_40_" not in document
 
 
 def test_drawer_detail_geometry_uses_bottom_blank_and_selected_hardware_facts():
