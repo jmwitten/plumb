@@ -392,7 +392,7 @@ h1{{font-size:clamp(2rem,5vw,3.25rem);line-height:1.05;margin:.35rem 0 .75rem}} 
 .stop-notice{{margin:0;padding:1rem 1.2rem;background:var(--red-soft);border-bottom:4px solid #b91c1c;color:var(--red)}}
 .stop-notice h3{{margin:0 0 .25rem;font-size:1.2rem;letter-spacing:.04em}} .stop-notice p{{margin:0;font-weight:800}}
 .overview{{padding:1.4rem 2.25rem;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1.1fr 1fr;gap:1.25rem}}
-.overview h2{{margin:.1rem 0 .55rem;font-size:1.05rem}} .inventory{{margin:.2rem 0;list-style:none;padding:0}} .inventory li{{display:flex;align-items:center;gap:.5rem;margin:.4rem 0}}
+.overview>div{{min-width:0}} .overview h2{{margin:.1rem 0 .55rem;font-size:1.05rem}} .inventory{{margin:.2rem 0;list-style:none;padding:0}} .inventory li{{display:flex;align-items:center;gap:.5rem;margin:.4rem 0;min-width:0}} .inventory li span{{min-width:0;overflow-wrap:anywhere}}
 .panel-index{{display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem}}
 .panel-index a{{padding:.55rem .25rem;border:1px solid var(--line);border-radius:6px;text-align:center;text-decoration:none;color:var(--ink)}}
 .panel-index b,.panel-index span{{display:block}} .panel-index span{{font-size:.72rem;text-transform:uppercase;color:var(--muted)}}
@@ -442,8 +442,8 @@ text.diagram-mark.role-hold{{fill:#dc2626;stroke:none;font-size:3px}}
 .honesty{{background:var(--red-soft);border-left:5px solid #dc2626}} .panel-nav{{display:flex;justify-content:space-between;padding:.8rem 1.2rem;border-top:1px solid var(--line)}}
 .record-form{{margin:1rem 1.2rem;padding:.8rem 1rem;border:2px solid var(--ink);border-radius:7px;overflow-x:auto}}
 .record-form h3{{margin:.1rem 0 .25rem}} .record-form p{{margin:.2rem 0 .7rem;color:var(--muted)}}
-.record-form table{{width:100%;border-collapse:collapse;font-size:.86rem}} .record-form th,.record-form td{{border:1px solid var(--line);padding:.5rem;text-align:left;vertical-align:top}}
-.record-entry{{min-width:14rem;height:2.2rem;background:#fff}}
+.record-form table{{width:100%;table-layout:fixed;border-collapse:collapse;font-size:.86rem}} .record-form th,.record-form td{{border:1px solid var(--line);padding:.5rem;text-align:left;vertical-align:top;overflow-wrap:anywhere}}
+.record-entry{{width:30%;height:2.2rem;background:#fff}}
 .panel-nav a{{color:var(--blue);font-weight:750;text-decoration:none}} .panel-nav .disabled{{visibility:hidden}}
 .manual-foot{{padding:1.5rem 2.25rem 2rem;border-top:1px solid var(--line);background:#f8fafc}} .manual-foot a{{color:var(--blue);font-weight:800}}
 @media(max-width:700px){{.overview{{grid-template-columns:1fr}}.instruction-panel{{margin:1rem .5rem}}.manual-head,.overview{{padding-left:1rem;padding-right:1rem}}.panel-index{{grid-template-columns:repeat(3,1fr)}}.render-legend{{width:100%;margin-left:0}}.panel-controls{{grid-template-columns:auto 1fr auto}}#panel-progress{{grid-column:1/-1;text-align:center}}.diagram-coordinate-key ol{{columns:1}}}}
