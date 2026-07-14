@@ -320,3 +320,44 @@ def test_image_size_is_part_of_the_content_key(caddy, stationed):
     panel = stationed.panels[0]
     assert panel_content_key(caddy, panel, size=(1200, 900)) != \
         panel_content_key(caddy, panel, size=(1500, 1100))
+
+
+def test_high_contrast_style_rekeys_but_default_key_is_unchanged(
+        caddy, stationed):
+    panel = stationed.panels[0]
+    base = panel_content_key(caddy, panel)
+    assert panel_content_key(caddy, panel, style="technical") == base
+    assert panel_content_key(caddy, panel, style="high_contrast") != base
+
+
+def test_unknown_style_is_rejected():
+    from detailgen.rendering.instruction_render import instruction_style
+    with pytest.raises(ValueError, match="style"):
+        instruction_style("sepia")
+
+
+def test_high_contrast_style_is_dark_work_on_light_prior():
+    from detailgen.rendering.instruction_render import instruction_style
+
+    def luminance(rgb):
+        r, g, b = rgb
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+    style = instruction_style("high_contrast")
+    assert style.use_material_color is False
+    assert luminance(style.work_color) < 0.25
+    assert luminance(style.prior_color) > 0.7
+    # grayscale printing: fills must be far apart in luminance
+    assert luminance(style.prior_color) - luminance(style.work_color) >= 0.5
+    assert style.prior_opacity == 1.0
+    assert style.edge_color == (0.0, 0.0, 0.0)
+    assert style.edge_visibility is True
+
+
+def test_technical_style_matches_established_rendering():
+    from detailgen.rendering.instruction_render import instruction_style
+    style = instruction_style("technical")
+    assert style.use_material_color is True
+    assert style.prior_color == (0.72, 0.72, 0.72)
+    assert style.prior_opacity == 0.16
+    assert style.edge_visibility is False

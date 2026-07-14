@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 from pathlib import Path
 import tempfile
 
@@ -18,6 +19,58 @@ DEFAULT_SIZE = (1500, 1100)
 
 CALLOUT_INK = (17, 24, 39)
 DIMENSION_BLUE = (37, 99, 235)
+
+
+@dataclass(frozen=True)
+class InstructionStyle:
+    """Typed scene palette for one instruction rendering register."""
+
+    name: str
+    use_material_color: bool     # current work keeps material color
+    work_color: tuple[float, float, float]   # used when not material color
+    prior_color: tuple[float, float, float]
+    prior_opacity: float
+    edge_visibility: bool
+    edge_color: tuple[float, float, float]
+    edge_width: float
+
+
+_STYLES = {
+    # The established technical register: material-colored work over a
+    # translucent ghost. Byte-stable with the pre-style renderer.
+    "technical": InstructionStyle(
+        name="technical",
+        use_material_color=True,
+        work_color=(0.0, 0.0, 0.0),
+        prior_color=(0.72, 0.72, 0.72),
+        prior_opacity=0.16,
+        edge_visibility=False,
+        edge_color=(0.0, 0.0, 0.0),
+        edge_width=1.0,
+    ),
+    # Consumer manual register: current work dark, prior assembly light
+    # gray, black outlines, grayscale-print legible.
+    "high_contrast": InstructionStyle(
+        name="high_contrast",
+        use_material_color=False,
+        work_color=(0.16, 0.17, 0.19),
+        prior_color=(0.88, 0.88, 0.88),
+        prior_opacity=1.0,
+        edge_visibility=True,
+        edge_color=(0.0, 0.0, 0.0),
+        edge_width=1.6,
+    ),
+}
+
+
+def instruction_style(name: str) -> InstructionStyle:
+    """Resolve a named instruction rendering style."""
+    style = _STYLES.get(name)
+    if style is None:
+        raise ValueError(
+            f"unknown instruction style {name!r}; known: "
+            f"{sorted(_STYLES)}")
+    return style
 
 
 def panel_callout_ids(detail, panel) -> tuple[str, ...]:
@@ -68,8 +121,11 @@ def panel_content_key(
     panel,
     renderer_version: str = RENDERER_VERSION,
     size: tuple[int, int] = DEFAULT_SIZE,
+    *,
+    style: str = "technical",
 ) -> str:
     """Hash only image-relevant geometry, order, camera, and station inputs."""
+    instruction_style(style)
     manifest = build_manifest(detail.assembly)
     geometry_by_id = {
         part.id: row["geometry_hash"]
@@ -94,6 +150,10 @@ def panel_content_key(
         "callouts": panel_callout_ids(detail, panel),
         "stations": tuple(_station_payload(value) for value in panel.stations),
     }
+    # The established technical register predates styles; leaving it out of
+    # the payload keeps every existing content key (and cached PNG) stable.
+    if style != "technical":
+        payload["style"] = style
     canonical = json.dumps(
         payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -299,11 +359,13 @@ def render_instruction_panel(
     out_dir: str | Path,
     *,
     size: tuple[int, int] = DEFAULT_SIZE,
+    style: str = "technical",
 ) -> Path:
     """Render one ghost/arrival panel and reuse an exact content-key hit."""
     import vtk
 
-    key = panel_content_key(detail, panel, size=size)
+    palette = instruction_style(style)
+    key = panel_content_key(detail, panel, size=size, style=style)
     output = Path(out_dir) / f"{key}.png"
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists() and _is_valid_cached_panel(output, key=key, size=size):
@@ -342,11 +404,18 @@ def render_instruction_panel(
             actor = vtk.vtkActor()
             actor.SetMapper(mapper)
             if placed.id in emphasized:
-                actor.GetProperty().SetColor(*material[:3])
+                if palette.use_material_color:
+                    actor.GetProperty().SetColor(*material[:3])
+                else:
+                    actor.GetProperty().SetColor(*palette.work_color)
                 actor.GetProperty().SetOpacity(1.0)
             else:
-                actor.GetProperty().SetColor(0.72, 0.72, 0.72)
-                actor.GetProperty().SetOpacity(0.16)
+                actor.GetProperty().SetColor(*palette.prior_color)
+                actor.GetProperty().SetOpacity(palette.prior_opacity)
+            if palette.edge_visibility:
+                actor.GetProperty().EdgeVisibilityOn()
+                actor.GetProperty().SetEdgeColor(*palette.edge_color)
+                actor.GetProperty().SetLineWidth(palette.edge_width)
             renderer.AddActor(actor)
     missing = visible - shown
     if missing:
@@ -400,10 +469,11 @@ def render_instruction_images(
     out_dir: str | Path,
     *,
     size: tuple[int, int] = DEFAULT_SIZE,
+    style: str = "technical",
 ) -> dict[int, Path]:
     """Render every panel in manual order, keyed by 1-based panel index."""
     return {
         panel.index: render_instruction_panel(
-            detail, panel, out_dir, size=size)
+            detail, panel, out_dir, size=size, style=style)
         for panel in manual.panels
     }
