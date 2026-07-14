@@ -25,30 +25,6 @@ ALL commit citations in this ledger and the sdd/ documents written before
 commit-map-authorship-2026-07-13.txt (old -> new, 633 entries) in this
 directory. Post-rewrite master tip at the time of the rewrite: 3bbdaa7.
 
-## ★ SESSION UPDATE 13 (2026-07-13 — reader-facing names COMPLETE + MERGED; caddy document DELIVERED)
-
-The reader-facing-name increment is COMPLETE and merged to GitHub `main`
-@`0c7d291`. Optional `reader_name` now flows from the spec to `Placed` and one
-shared frozen `part_labels()` projection. Builder surfaces use canonical names
-with stable duplicate ordinals; machine names/ids remain the sole graph,
-selection, GLB, cache, provenance, and export identities. Cut planning carries
-an independent `(detail origin, Placed.id)` source key so two identically named
-parts cannot overwrite each other's fabrication notes.
-
-The final adversarial review found four cross-surface leaks/collisions; all are
-closed and confirmation is CLEAN (`review-reader-names.md`, implementation
-detail in `task-reader-names-fix-report.md`). Final gate on the exact feature
-tree: **1366 passed / 3 skipped / 1 xfailed** in 857.91s. The merged tree was
-byte-identical to the gated tree.
-
-The caddy document was regenerated with fresh model-backed views, verified
-statically and in the in-app browser (including the 3D hover), and delivered as
-byte-identical copies to the repo output, dated vault attachment, and
-`~/Downloads/Build Documents/`. HTML SHA-256:
-`c89e91ad085c257599147cc6ad4ca4acd21ef846b2f85c2309d3fd4e6fc90ce3`.
-Next increments remain separately gated: **+process** (cure event + CAT-K),
-then **+presentation** (a separate linked illustrated assembly manual).
-
 ## ★ SESSION UPDATE 12 (2026-07-13 — STEPDOC/CPG +staging COMPLETE + MERGED; documents DELIVERED)
 
 Reader-facing names arc (in progress on `codex/reader-names`): Task 1 complete

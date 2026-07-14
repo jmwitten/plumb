@@ -57,4 +57,3 @@ research record, not a substitute for the selected product label.
   generic duration or cure-condition calculation is represented.
 - Glue and clamps remain consumable/tool roles, not geometry/BOM parts in this
   increment.
-

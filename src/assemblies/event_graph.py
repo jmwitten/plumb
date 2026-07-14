@@ -999,6 +999,19 @@ def build_event_graph(assembly, connections, edges, installs,
     norm_after = tuple(after or ())
     seen_after_targets: dict[str, ResolvedAfter] = {}
     for claim in norm_after:
+        if (not isinstance(claim.connection, str)
+                or not claim.connection.strip()):
+            raise ValueError(
+                "event graph: sequence.after target connection must be a "
+                f"non-blank string; got {claim.connection!r}.")
+        if not isinstance(claim.why, str) or not claim.why.strip():
+            raise ValueError(
+                f"event graph: sequence.after target {claim.connection!r} "
+                f"why must be a non-blank string; got {claim.why!r}.")
+        if not isinstance(claim.after, tuple) or not claim.after:
+            raise ValueError(
+                f"event graph: sequence.after target {claim.connection!r} "
+                "after must contain at least one typed process reference.")
         prior = seen_after_targets.get(claim.connection)
         if prior is not None:
             raise ValueError(
@@ -1009,6 +1022,18 @@ def build_event_graph(assembly, connections, edges, installs,
         seen_after_targets[claim.connection] = claim
         seen_refs: set[tuple[str, str]] = set()
         for ref in claim.after:
+            if not isinstance(ref.kind, str) or not ref.kind.strip():
+                raise ValueError(
+                    f"event graph: sequence.after target "
+                    f"{claim.connection!r} process reference kind must be a "
+                    f"non-blank string; got {ref.kind!r}.")
+            if (not isinstance(ref.connection, str)
+                    or not ref.connection.strip()):
+                raise ValueError(
+                    f"event graph: sequence.after target "
+                    f"{claim.connection!r} process reference source "
+                    "connection must be a non-blank string; got "
+                    f"{ref.connection!r}.")
             key = (ref.kind, ref.connection)
             if key in seen_refs:
                 raise ValueError(

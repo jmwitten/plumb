@@ -146,6 +146,38 @@ The golden guard also passed independently:
 
 `git diff --check` exited cleanly with the 261-test gate.
 
+## Final adversarial fix round
+
+The final review found that direct Python callers could bypass the schema and
+construct malformed `ResolvedAfter` values, and that `Glued`'s reusable class
+docstring repeated the caddy's cure-then-side-screw recipe. Direct graph-boundary
+probes plus the modeling-docstring closer were written first and failed on the
+unfixed tree:
+
+```text
+8 failed, 47 deselected in 2.18s
+```
+
+The event-graph boundary now rejects a blank or non-string `why`, an empty
+`after` tuple, a blank target label, and blank process-reference kind/source
+with field-specific `sequence.after` diagnostics. The reusable `Glued` docstring
+now owns only its bond and cure semantics; consumer cross-connection order is
+owned by typed `sequence.after` authoring.
+
+CAT-K's reversion probe now follows the deleted -X claim through
+`graph.constraints`, authoritative derivation facts, the epistemic table,
+`build_sequence_model`, Markdown, and the HTML build-sequence renderer. The +X
+claim remains on every projection, and both independently derived bond->cure
+edges remain. Focused process/caddy/schema/CPG verification after the fixes:
+
+```text
+188 passed in 19.46s
+```
+
+Branch-scope cleanup removed the reader-names-only review and ledger update;
+the prior tracked reader-names fix report remains untouched. Trailing whitespace
+and extra EOF blanks in the retained process review/research files were removed.
+
 ## Geometry/view non-change gate
 
 The caddy assembly geometry hash is byte-identical between `HEAD`'s spec and

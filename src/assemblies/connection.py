@@ -1752,10 +1752,10 @@ class Glued(ConnectionType):
     order's plain face-to-face case — design task #22's glued-miter is the
     waterfall sibling, not this type).
 
-    Exemplar: the armchair caddy's rail->top joints (owner directive,
-    2026-07-11) — each interior registration rail's top edge is glued to the
-    top board's underside: glue both mating faces, clamp, cure per the
-    adhesive label, then drive the side screws.
+    This reusable type owns only one connection's bond and its typed cure.
+    When that cure must gate a different connection, the consumer declares
+    the cross-connection order with ``sequence.after``; a project-specific
+    assembly recipe does not belong in this modeling type.
 
     What this type claims — and, deliberately, what it does NOT:
 

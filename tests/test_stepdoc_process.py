@@ -425,6 +425,76 @@ def test_runtime_rejects_duplicate_process_refs_in_one_after_claim():
         compile_connections(assembly, [glue, target], after=(duplicate,))
 
 
+@pytest.mark.parametrize("bad_why", ["", " \t", 42])
+def test_runtime_rejects_blank_or_non_string_after_why(bad_why):
+    assembly, glue, target = _glue_and_target()
+    claim = eg.ResolvedAfter(
+        connection="target", after=(_cure_ref("glue"),), why=bad_why)
+
+    with pytest.raises(ValueError) as err:
+        compile_connections(assembly, [glue, target], after=(claim,))
+
+    message = str(err.value)
+    assert "sequence.after" in message
+    assert "target" in message
+    assert "why" in message
+    assert "non-blank string" in message
+
+
+def test_runtime_rejects_after_claim_without_a_process_prerequisite():
+    assembly, glue, target = _glue_and_target()
+    claim = eg.ResolvedAfter(
+        connection="target", after=(), why="A rationale cannot add an edge.")
+
+    with pytest.raises(ValueError) as err:
+        compile_connections(assembly, [glue, target], after=(claim,))
+
+    message = str(err.value)
+    assert "sequence.after" in message
+    assert "target" in message
+    assert "after" in message
+    assert "at least one" in message
+
+
+def test_runtime_rejects_blank_after_target_connection():
+    assembly, glue, target = _glue_and_target()
+    claim = eg.ResolvedAfter(
+        connection=" \t", after=(_cure_ref("glue"),),
+        why="A blank target cannot receive the process edge.")
+
+    with pytest.raises(ValueError) as err:
+        compile_connections(assembly, [glue, target], after=(claim,))
+
+    message = str(err.value)
+    assert "sequence.after" in message
+    assert "target connection" in message
+    assert "non-blank string" in message
+
+
+@pytest.mark.parametrize(
+    ("ref", "field"),
+    [
+        (eg.ResolvedProcessRef(kind=" ", connection="glue"), "kind"),
+        (eg.ResolvedProcessRef(kind="cure", connection=" \t"),
+         "source connection"),
+    ],
+)
+def test_runtime_rejects_blank_process_reference_fields(ref, field):
+    assembly, glue, target = _glue_and_target()
+    claim = eg.ResolvedAfter(
+        connection="target", after=(ref,),
+        why="Only a named typed source can gate the target.")
+
+    with pytest.raises(ValueError) as err:
+        compile_connections(assembly, [glue, target], after=(claim,))
+
+    message = str(err.value)
+    assert "sequence.after" in message
+    assert "target" in message
+    assert field in message
+    assert "non-blank string" in message
+
+
 def test_process_constraints_cannot_cross_their_composed_fragment_chain():
     assembly, glue, target = _glue_and_target()
     fragments = {"glue": "left", "target": "right"}

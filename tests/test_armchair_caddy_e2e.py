@@ -492,24 +492,45 @@ def test_build_sequence_derives_cat_k_cures_before_side_screws_and_join(caddy):
 
 
 def test_cat_k_reversion_removes_only_one_authored_cure_dependency(caddy):
+    import html
+    from types import SimpleNamespace
+
     from detailgen.assemblies import compile_connections
     from detailgen.assemblies.event_graph import FAMILY_AUTHORED, FAMILY_NECESSITY
+    from detailgen.validation.build_sequence import (
+        build_sequence_model, render_build_sequence_md)
+    from detailgen.validation.install import epistemic_contract_rows
+
+    if str(_REPO / "scripts") not in sys.path:
+        sys.path.insert(0, str(_REPO / "scripts"))
+    import single_detail_report as SDR
 
     detail, _report = caddy
     claims = detail.resolved_after()
     assert len(claims) == 2
-    full = detail._connection_checks.event_graph
-    reverted = compile_connections(
+    surviving_claim, removed_claim = claims
+    full_checks = detail._connection_checks
+    full = full_checks.event_graph
+    reverted_checks = compile_connections(
         detail.assembly, detail.connections(), after=claims[:1],
-        staging=detail.resolved_staging()).event_graph
+        staging=detail.resolved_staging())
+    reverted = reverted_checks.event_graph
+    reverted_detail = SimpleNamespace(
+        assembly=detail.assembly, _connection_checks=reverted_checks)
 
     def process_pairs(graph, family):
         return {(edge.a, edge.b) for edge in graph.edges
                 if edge.family == family
                 and (edge.a.kind == "process" or edge.b.kind == "process")}
 
+    # Reverting one authored point constraint removes exactly that claim at
+    # the graph boundary. Both independently derived bond->cure facts survive.
+    assert full.constraints == claims
+    assert reverted.constraints == (surviving_claim,)
+    assert removed_claim not in reverted.constraints
     assert process_pairs(full, FAMILY_NECESSITY) == \
         process_pairs(reverted, FAMILY_NECESSITY)
+    assert len(process_pairs(reverted, FAMILY_NECESSITY)) == 2
     removed = process_pairs(full, FAMILY_AUTHORED) - \
         process_pairs(reverted, FAMILY_AUTHORED)
     assert len(removed) == 1
@@ -518,6 +539,47 @@ def test_cat_k_reversion_removes_only_one_authored_cure_dependency(caddy):
     assert target.subject.startswith("rail -X -> side -X inner face")
     assert process_pairs(reverted, FAMILY_AUTHORED) <= \
         process_pairs(full, FAMILY_AUTHORED)
+
+    # The same removal must propagate through every authoritative and reader
+    # projection; no stale second owner may preserve the deleted -X claim.
+    def authoritative_after_whys(checks):
+        facts = [fact for fact in checks.derived
+                 if fact.rule == "sequence.after"]
+        assert all(fact.source_type == "authoritative"
+                   and fact.confidence == "official" for fact in facts)
+        return {fact.assumptions[0] for fact in facts}
+
+    assert authoritative_after_whys(full_checks) == {
+        surviving_claim.why, removed_claim.why}
+    assert authoritative_after_whys(reverted_checks) == {
+        surviving_claim.why}
+
+    full_rows = "\n".join(" | ".join(row)
+                          for row in epistemic_contract_rows(full_checks))
+    reverted_rows = "\n".join(
+        " | ".join(row) for row in epistemic_contract_rows(reverted_checks))
+    assert surviving_claim.why in full_rows
+    assert removed_claim.why in full_rows
+    assert surviving_claim.why in reverted_rows
+    assert removed_claim.why not in reverted_rows
+
+    reverted_model = build_sequence_model(reverted_detail)
+    assert reverted_model is not None
+    model_whys = {
+        order_claim["why"]
+        for step in reverted_model[0]
+        for order_claim in step["order_claims"]
+    }
+    assert model_whys == {surviving_claim.why}
+
+    markdown = render_build_sequence_md(reverted_detail)
+    assert markdown.count(surviving_claim.why) == 2
+    assert removed_claim.why not in markdown
+
+    html_section = html.unescape(
+        SDR._render_build_sequence_section(reverted_detail))
+    assert html_section.count(surviving_claim.why) == 2
+    assert removed_claim.why not in html_section
 
 
 def test_cat_k_sequence_prose_exists_only_in_typed_authoring_surfaces():
@@ -537,6 +599,17 @@ def test_cat_k_sequence_prose_exists_only_in_typed_authoring_surfaces():
         flags=re.I | re.S)
     assert not [value for value in constants if sequence_pattern.search(value)]
     assert "Hidden rail joints — glue, then screws" not in script
+
+    # Reusable modeling types cannot become a second owner of a consumer's
+    # cross-connection sequence.  Scan the actual class docstring so this
+    # closer fails if the caddy recipe drifts back into Glued's source docs.
+    model_source = (_REPO / "src" / "assemblies" / "connection.py").read_text()
+    model_tree = ast.parse(model_source)
+    glued_class = next(
+        node for node in model_tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "Glued")
+    glued_doc = ast.get_docstring(glued_class) or ""
+    assert not sequence_pattern.search(glued_doc)
 
     spec = load_spec_file(SPEC)
     free_text = [assumption for conn in spec.connections

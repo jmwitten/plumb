@@ -46,4 +46,3 @@ The implementation plan now requires:
 remaining compatibility ambiguity—whether an unannotated `Glued` connection
 still gets a cure fact—and recommended the safe default path. The plan now
 defines and tests that behavior explicitly.
-
