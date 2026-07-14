@@ -67,9 +67,20 @@ def panel_content_key(
     size: tuple[int, int] = DEFAULT_SIZE,
 ) -> str:
     """Hash only image-relevant geometry, order, camera, and station inputs."""
+    manifest = build_manifest(detail.assembly)
+    geometry_by_id = {
+        part.id: row["geometry_hash"]
+        for part, row in zip(detail.assembly.parts, manifest["parts"])
+    }
+    image_part_ids = tuple(dict.fromkeys((
+        *panel.visible_part_ids,
+        *panel.arrival_part_ids,
+        *panel.focus_part_ids,
+    )))
     payload = {
         "renderer_version": renderer_version,
-        "assembly_hash": build_manifest(detail.assembly)["assembly_hash"],
+        "part_geometry": tuple(
+            (part_id, geometry_by_id[part_id]) for part_id in image_part_ids),
         "source_events": panel.source_events,
         "reader_steps": panel.reader_step_indexes,
         "visible_part_ids": panel.visible_part_ids,

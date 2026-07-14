@@ -39,6 +39,7 @@ def test_instruction_rendering_api_is_public():
     from detailgen.rendering import (
         attach_caddy_stations,
         panel_content_key,
+        render_instruction_manual_html,
         render_instruction_images,
         render_instruction_panel,
     )
@@ -46,6 +47,7 @@ def test_instruction_rendering_api_is_public():
     assert all(callable(value) for value in (
         attach_caddy_stations,
         panel_content_key,
+        render_instruction_manual_html,
         render_instruction_images,
         render_instruction_panel,
     ))
@@ -123,6 +125,12 @@ def test_moving_authored_screw_offset_moves_raw_stations_and_rekeys(
     assert tuple(station.near_mm for station in original.stations) != tuple(
         station.near_mm for station in moved.stations)
     assert panel_content_key(caddy, original) != panel_content_key(changed, moved)
+    for action in ("prepare", "bond", "cure"):
+        assert panel_content_key(caddy, _panel(stationed, action)) == \
+            panel_content_key(changed, _panel(changed_manual, action))
+    assert panel_content_key(
+        caddy, _panel(stationed, "join")) != panel_content_key(
+            changed, _panel(changed_manual, "join"))
 
 
 def test_content_key_ignores_prose_but_covers_station_inputs(caddy, stationed):

@@ -315,17 +315,25 @@ sequence:
     - connection: "rail +X -> side +X inner face (screwed, face grain, upper + lower pairs)"
       after:
         - cure: "rail +X -> top underside (glued)"
-      why: >-
-        The cured +X rail preserves this project's registration datum while
-        its side board is positioned and screwed. This is an authored caddy
-        assembly strategy, not a universal glue-before-screws rule.
-    - connection: "rail -X -> side -X inner face (screwed, face grain, upper + lower pairs)"
-      after:
         - cure: "rail -X -> top underside (glued)"
       why: >-
-        The cured -X rail preserves this project's registration datum while
-        its side board is positioned and screwed. This is an authored caddy
-        assembly strategy, not a universal glue-before-screws rule.
+        Complete both rail-to-top glue-ups and hold each to the selected
+        adhesive's full-cure condition before changing the bench operation to
+        side-board fastening. Each cured rail then preserves its own
+        registration datum while its matching side board is positioned and screwed.
+        This is this caddy's declared batch workflow, not a universal
+        glue-before-screws rule.
+    - connection: "rail -X -> side -X inner face (screwed, face grain, upper + lower pairs)"
+      after:
+        - cure: "rail +X -> top underside (glued)"
+        - cure: "rail -X -> top underside (glued)"
+      why: >-
+        Complete both rail-to-top glue-ups and hold each to the selected
+        adhesive's full-cure condition before changing the bench operation to
+        side-board fastening. Each cured rail then preserves its own
+        registration datum while its matching side board is positioned and screwed.
+        This is this caddy's declared batch workflow, not a universal
+        glue-before-screws rule.
   assembly:
     mode: bench_then_set
     why: >-

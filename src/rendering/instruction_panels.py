@@ -9,6 +9,7 @@ verdict.
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -25,6 +26,8 @@ class InstructionPresentationError(ValueError):
 class DisplayRow:
     icon: str
     label: str
+    count: int | None = None
+    source_part_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -80,13 +83,32 @@ class InstructionManual:
     inventory: tuple[DisplayRow, ...]
 
 
-_ACTION_PRIORITY = {
-    "prepare": 0,
-    "bond": 1,
-    "cure": 2,
-    "fasten": 3,
-    "join": 4,
-    "unordered": 5,
+# Small reader-register vocabulary keyed only by typed model facts. Sentence
+# structure and quantities are composed below from live parts/connections.
+_FAB_TOOL_ROWS = {
+    "crosscut": DisplayRow("saw", "Saw suitable for the modeled crosscuts"),
+    "ease": DisplayRow("ease", "Sanding or edge-easing tool"),
+    "bore": DisplayRow("drill", "Clamped drilling setup for the modeled bore"),
+}
+_COMPLETION_TEXT = {
+    "selected_label_full_cure": (
+        "the selected adhesive label's full-cure/full-strength condition is "
+        "met under the actual shop conditions"),
+}
+_COMPLETION_GAP = {
+    "selected_label_full_cure": "No generic duration is represented.",
+}
+_INSTALL_TOOL_ROWS = {
+    "driven_straight": DisplayRow(
+        "driver", "Drill/driver aligned with the modeled shank axis"),
+}
+_HEAD_TOOL_ROWS = {
+    "flush_countersunk": DisplayRow(
+        "countersink",
+        "Pilot/countersink selected from the fastener maker's instructions"),
+}
+_HEAD_TEXT = {
+    "flush_countersunk": "head seated flush in its countersink",
 }
 
 
@@ -152,31 +174,24 @@ def _cohort_key(step, action: str) -> tuple:
 
 
 def _panel_cohorts(steps, step_edges, actions) -> tuple[tuple[int, ...], ...]:
-    successors = {i: set() for i in range(len(steps))}
-    indegree = {i: 0 for i in range(len(steps))}
-    for a, b in step_edges:
-        if b not in successors[a]:
-            successors[a].add(b)
-            indegree[b] += 1
-
-    remaining = set(range(len(steps)))
+    backwards = tuple((a, b) for a, b in step_edges if a >= b)
+    if backwards:
+        raise InstructionPresentationError(
+            "canonical reader-step order contradicts graph edges: "
+            f"{backwards!r}")
+    if not steps:
+        return ()
     cohorts = []
-    while remaining:
-        ready = sorted(i for i in remaining if indegree[i] == 0)
-        if not ready:
-            raise InstructionPresentationError(
-                "reader-step projection contains a cycle")
-        first = min(
-            ready,
-            key=lambda i: (_ACTION_PRIORITY.get(actions[i], 99), i))
-        key = _cohort_key(steps[first], actions[first])
-        cohort = tuple(i for i in ready
-                       if _cohort_key(steps[i], actions[i]) == key)
-        cohorts.append(cohort)
-        for i in cohort:
-            remaining.remove(i)
-            for nxt in successors[i]:
-                indegree[nxt] -= 1
+    current = [0]
+    for index in range(1, len(steps)):
+        prior = current[-1]
+        if (_cohort_key(steps[index], actions[index])
+                == _cohort_key(steps[prior], actions[prior])):
+            current.append(index)
+        else:
+            cohorts.append(tuple(current))
+            current = [index]
+    cohorts.append(tuple(current))
     return tuple(cohorts)
 
 
@@ -212,14 +227,44 @@ def _process_fact_for_connection(graph, connection: str, kind: str):
         f"connection {connection!r} has no typed process fact {kind!r}")
 
 
-def _title(action: str, count: int) -> str:
-    return {
-        "prepare": "Prepare and dry-fit the five wood parts",
-        "bond": "Glue both registration rails to the top underside",
-        "cure": "Keep both rail bonds clamped until full cure",
-        "fasten": "Fasten both side boards to the registration rails",
-        "join": "Set the completed caddy over the actual sofa arm",
-    }.get(action, f"{action.title()} ({count} steps)")
+def _counted_names(labels, part_ids) -> str:
+    part_ids = tuple(dict.fromkeys(part_ids))
+    counts = Counter(labels[part_id].reader_name for part_id in part_ids)
+    names = list(counts)
+    chunks = [
+        (f"{counts[name]} × {name}" if counts[name] > 1 else name)
+        for name in names
+    ]
+    if not chunks:
+        return ""
+    if len(chunks) == 1:
+        return chunks[0]
+    if len(chunks) == 2:
+        return " and ".join(chunks)
+    return ", ".join(chunks[:-1]) + ", and " + chunks[-1]
+
+
+def _panel_title(detail, action, graph, steps, cohort, labels) -> str:
+    if action == "prepare":
+        ids = tuple(pid for index in cohort
+                    for pid in steps[index].parts_placed)
+        return f"Prepare {_counted_names(labels, ids)}"
+    if action in {"bond", "fasten"}:
+        connections = tuple(label for index in cohort
+                            for label in steps[index].connections)
+        ids = _members_for(graph, connections)
+        verb = "Bond" if action == "bond" else "Fasten"
+        return f"{verb} {_counted_names(labels, ids)}"
+    if action == "cure":
+        count = len(cohort)
+        noun = "bond" if count == 1 else "bonds"
+        return f"Hold {count} adhesive {noun} to full cure"
+    if action == "join":
+        context = tuple(graph.context_parts)
+        suffix = (f" over {_counted_names(labels, context)}"
+                  if context else " in the root assembly")
+        return f"Set completed {detail.name}{suffix}"
+    return action.title()
 
 
 def _hardware_rows(detail, installs) -> tuple[DisplayRow, ...]:
@@ -229,12 +274,43 @@ def _hardware_rows(detail, installs) -> tuple[DisplayRow, ...]:
         return ()
     first = by_id[ids[0]].component
     length = getattr(first, "length", None)
-    length_text = f", {fmt_frac_in(length / 25.4)}" if length is not None else ""
-    head = installs[0].contract.head.replace("_", "-")
+    diameter = getattr(first, "diameter", None)
+    size = []
+    if diameter is not None:
+        size.append(f"{fmt_frac_in(diameter / 25.4)} dia")
+    if length is not None:
+        size.append(fmt_frac_in(length / 25.4))
+    head_key = installs[0].contract.head
+    head = _HEAD_TEXT.get(head_key, head_key.replace("_", " "))
+    labels = part_labels(detail.assembly.parts)
+    reader_name = labels[ids[0]].reader_name
     return (DisplayRow(
         "screw",
-        f"{len(ids)} × Rail-to-side screw — #10-class{length_text} "
-        f"flat-head, {head}"),)
+        f"{len(ids)} × {reader_name} — {' × '.join(size)}, {head}",
+        count=len(ids), source_part_ids=tuple(ids)),)
+
+
+def _fabrication_tools(parts) -> tuple[DisplayRow, ...]:
+    kinds = []
+    for part in parts:
+        record_fn = getattr(part.component, "fabrication_record", None)
+        record = record_fn() if record_fn is not None else None
+        for step in (record.steps if record is not None else ()):
+            if step.kind in _FAB_TOOL_ROWS and step.kind not in kinds:
+                kinds.append(step.kind)
+    return tuple(_FAB_TOOL_ROWS[kind] for kind in kinds)
+
+
+def _constraint_whys(graph, *, connections=(), process_events=()) -> tuple[str, ...]:
+    connections = set(connections)
+    process_keys = {(event.group, event.subject) for event in process_events}
+    result = []
+    for claim in graph.constraints:
+        applies = claim.connection in connections or any(
+            (ref.kind, ref.connection) in process_keys for ref in claim.after)
+        if applies and claim.why not in result:
+            result.append(claim.why)
+    return tuple(result)
 
 
 def _inventory(detail, labels) -> tuple[DisplayRow, ...]:
@@ -245,7 +321,8 @@ def _inventory(detail, labels) -> tuple[DisplayRow, ...]:
         grouped.setdefault(labels[part.id].reader_name, []).append(part)
     return tuple(
         DisplayRow("part", f"{len(parts)} × {reader_name} — "
-                   f"{labels[parts[0].id].item}")
+                   f"{labels[parts[0].id].item}", count=len(parts),
+                   source_part_ids=tuple(part.id for part in parts))
         for reader_name, parts in grouped.items())
 
 
@@ -264,73 +341,89 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
     hardware = ()
 
     if action == "prepare":
-        for part_id in (pid for i in cohort for pid in steps[i].parts_placed):
+        prepared_ids = tuple(pid for i in cohort for pid in steps[i].parts_placed)
+        for part_id in prepared_ids:
             part = by_id[part_id]
             fab = _fab_note(part.component)
             line = f"Prepare {_display(labels, part_id)} — {labels[part_id].item}"
             if fab:
                 line += f": {fab}."
             instructions.append(line)
-        instructions.append(
-            "Dry-fit the cut wood parts on the actual sofa arm before any glue is applied.")
-        tools = [DisplayRow("measure", "Tape measure, square, and pencil"),
-                 DisplayRow("saw", "Saw and sanding/edge-easing tools"),
-                 DisplayRow("drill", "Clamped drill setup for the modeled cup bore")]
+        tools = list(_fabrication_tools(by_id[part_id] for part_id in prepared_ids))
 
     elif action == "bond":
         for connection in connections:
             members = _human_members(graph, labels, connection)
             fact = _process_fact_for_connection(graph, connection, "cure")
-            rail = next((name for name in members
-                         if name.startswith("Registration rail")), members[0])
-            instructions.extend(f"{rail}: {line}" for line in fact.instructions)
+            instructions.extend(f"{line}" for line in fact.instructions)
             if fact.why not in rationales:
                 rationales.append(fact.why)
-        tools = [DisplayRow("adhesive", "Selected stock-compatible wood adhesive"),
-                 DisplayRow("clamp", "Clamps and square; clamp count is product/setup specific")]
+        hardware = (DisplayRow(
+            "adhesive", "Selected wood adhesive — product selection required"),)
+        tools = [DisplayRow(
+            "clamp", "Clamps; count follows the product and setup")]
 
     elif action == "cure":
+        process_events = tuple(steps[i].process_event for i in cohort)
         for i in cohort:
             event, fact = steps[i].process_event, steps[i].process_fact
-            members = _human_members(graph, labels, event.subject)
-            rail = next((name for name in members
-                         if name.startswith("Registration rail")), members[0])
+            rail_ids = tuple(
+                pid for pid in graph.members_of[event.subject]
+                if any(pid == install.contract.entry_face.part
+                       for values in installs_by_connection.values()
+                       for install in values))
+            subject = (_counted_names(labels, rail_ids)
+                       if rail_ids else _counted_names(
+                           labels, graph.members_of[event.subject]))
+            completion = _COMPLETION_TEXT.get(
+                fact.completion, fact.completion.replace("_", " "))
             instructions.append(
-                f"Keep {rail} clamped until the selected adhesive label's "
-                "full-cure/full-strength condition is met under the actual shop conditions.")
+                f"Keep {subject} clamped until {completion}.")
             if fact.why not in rationales:
                 rationales.append(fact.why)
-        instructions.append("No generic duration is represented.")
-        rationales.append(
-            "Waiting preserves each cured registration rail as the datum while "
-            "its matching side board is positioned and screwed. This is an "
-            "authored caddy assembly strategy, not a universal glue-before-screws rule.")
-        tools = [DisplayRow("hold", "Hard stop: keep the selected label's fixture state")]
+            gap = _COMPLETION_GAP.get(fact.completion)
+            if gap and gap not in instructions:
+                instructions.append(gap)
+        rationales.extend(why for why in _constraint_whys(
+            graph, process_events=process_events) if why not in rationales)
+        tools = [DisplayRow(
+            "clamp", "Keep the bond clamps in the selected label's fixture state")]
 
     elif action == "fasten":
         installs = tuple(inst for connection in connections
                          for inst in installs_by_connection.get(connection, ()))
         hardware = _hardware_rows(detail, installs)
         for connection in connections:
-            members = _human_members(graph, labels, connection)
-            rail = next(name for name in members
-                        if name.startswith("Registration rail"))
-            side = next(name for name in members if name.startswith("Side board"))
-            count = sum(len(inst.fasteners)
-                        for inst in installs_by_connection.get(connection, ()))
+            resolved = installs_by_connection.get(connection, ())
+            rail_ids = tuple(install.contract.entry_face.part
+                             for install in resolved)
+            member_ids = graph.members_of[connection]
+            side_ids = tuple(pid for pid in member_ids if pid not in rail_ids)
+            count = sum(len(install.fasteners) for install in resolved)
+            head = _HEAD_TEXT.get(
+                resolved[0].contract.head,
+                resolved[0].contract.head.replace("_", " "))
             instructions.append(
-                f"Fasten {side} to {rail}; drive all {count} modeled screws "
-                "through the rail and into the side-board face grain, seating each head flush.")
-        rationales.append(
-            "Each side waits for its matching cured rail so the rail remains the "
-            "registration datum; this is not a universal glue-before-screws rule.")
-        tools = [DisplayRow("driver", "Drill/driver"),
-                 DisplayRow("bit", "Pilot/countersink bit selected from the screw manufacturer's chart")]
+                f"Fasten {_counted_names(labels, side_ids)} to "
+                f"{_counted_names(labels, rail_ids)}; drive all {count} modeled "
+                f"fasteners through the rail into the other member, with each {head}.")
+        rationales.extend(_constraint_whys(graph, connections=connections))
+        method_keys = tuple(dict.fromkeys(
+            install.contract.method for install in installs))
+        head_keys = tuple(dict.fromkeys(
+            install.contract.head for install in installs))
+        tools = [*(_INSTALL_TOOL_ROWS[key] for key in method_keys
+                   if key in _INSTALL_TOOL_ROWS),
+                 *(_HEAD_TOOL_ROWS[key] for key in head_keys
+                   if key in _HEAD_TOOL_ROWS)]
 
     elif action == "join":
+        context = tuple(graph.context_parts)
+        context_names = _counted_names(labels, context)
         instructions.extend((
-            "Lift the completed five-piece caddy and set it over the actual sofa arm.",
-            "With the caddy empty, confirm square bearing, cushion clearance, cup fit, and movement in both directions before use.",
+            f"Set the completed {detail.name} over {context_names}.",
+            "Choose its along-arm position during fitting; the model does not "
+            "represent that direction as a critical placement station.",
         ))
         if graph.staging is not None and graph.staging.why:
             rationales.append(graph.staging.why)
@@ -338,10 +431,10 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
             "DECLARED TRUST — the sofa arm is connection-free context. "
             "insertion travel is not analyzed; stability, sliding resistance, "
             "structural capacity, and hot-drink use are not proved.")
-        tools = [DisplayRow("fit", "Actual sofa arm and intended cup for the final fit gate")]
+        tools = [DisplayRow("fit", f"Actual {context_names} for the declared fit placement")]
 
     return {
-        "title": _title(action, len(cohort)),
+        "title": _panel_title(detail, action, graph, steps, cohort, labels),
         "connections": connections,
         "joins": joins,
         "process_kind": process_kind,
@@ -456,13 +549,6 @@ def build_instruction_manual(
             focus_part_ids=focus,
             **content,
         ))
-
-    if detail.name == "armchair caddy":
-        expected = ("prepare", "bond", "cure", "fasten", "join")
-        got = tuple(panel.action for panel in panels)
-        if got != expected:
-            raise InstructionPresentationError(
-                f"armchair caddy panel contract changed: {got!r}, expected {expected!r}")
 
     return InstructionManual(
         title="Armchair Coffee Caddy — Illustrated Assembly Manual",

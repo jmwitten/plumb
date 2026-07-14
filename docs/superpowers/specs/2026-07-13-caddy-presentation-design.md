@@ -59,33 +59,34 @@ world solids. It does not parse rendered prose or recompile connections.
 
 ### 2. Panel grouping and ordering
 
-Panels are a deterministic topological projection of reader steps, not a new
-order graph. The builder lifts event edges to a reader-step DAG and repeatedly
-chooses all currently ready steps in the same unit/action cohort. Its stable
-action priority is:
+Panels group **consecutive runs of the one canonical reader-step order**; they
+never perform a second Kahn pass or choose another valid linearization. The
+builder scans `derive_reader_steps()` in order and joins only adjacent steps
+with the same unit, authored stage, and action family. Process and join runs
+always have a boundary before and after them. A panel never crosses an
+authored-stage, bench-unit, process-kind, or join boundary.
 
-1. prepare/place;
-2. bond or set a connector;
-3. typed process hold;
-4. fasten;
-5. join/set in context;
-6. explicitly unordered work, marked order-not-derived.
+The caddy's phase grouping is not invented by presentation. Each side-fastening
+constraint names both cure events in `sequence.after`, adding the two honest
+cross-rail facts needed to represent this declared batch workflow. Deleting
+those cross terms deterministically restores the interleaved seven-panel
+fallback; a reversion test pins that behavior. A two-stage glue/fasten amendment
+was probed and rejected because stages order connection drive events, not the
+intervening cure processes, so it does not make the cure steps consecutive.
 
-This priority selects one valid linearization but adds no graph edge. It makes
-the caddy's two bonds a single panel, then its two ready cure facts a single
-hard-stop panel, then both side-screw connections a single fastening panel.
-Process and join cohorts always have a boundary before and after them. A panel
-never crosses an authored stage, bench-unit boundary, process kind, or join.
+The expected caddy structure is five panels, described by source content rather
+than finished caption copy:
 
-The expected caddy manual is five panels:
-
-1. Prepare and dry-fit the five wood parts.
-2. Glue both registration rails to the top underside.
-3. Keep both bonds clamped until the selected adhesive's full-cure/full-
-   strength condition is met under actual shop conditions.
-4. Fasten both side boards to their registration rails with all eight screws.
-5. Set the completed caddy over the actual arm and perform the final fit,
-   stability, and use gate.
+1. prepare — the bench unit's five fabricated structural members and their
+   `ProcessRecord` fabrication facts;
+2. bond — the two consecutive adhesive-connection reader steps and their typed
+   preparation/fixture facts;
+3. cure — the two consecutive cure events, each carrying its completion fact
+   and every authored cross-cure rationale;
+4. fasten — the two consecutive resolved side installations and all eight
+   modeled fasteners;
+5. join — the completed unit entering context, with no invented along-arm
+   station or safety proof.
 
 The cure panel says no generic duration is represented. The join panel carries
 the caddy's connection-free-context **DECLARED TRUST** marker and says insertion
@@ -151,10 +152,11 @@ presentation adapter, not a second geometry model.
   pretending a new part arrived;
 - a join panel reveals the context body only at the join.
 
-Each PNG filename is the SHA-256 of renderer version, assembly geometry hash,
-ordered source event identities, visible/arrival/focus part ids, camera,
-callouts, and stations. Existing files are reused only on an exact key match.
-Changing relevant geometry or order must re-key; unrelated wording or review
+Each PNG filename is the SHA-256 of renderer version, the per-part world-
+geometry hashes for only that panel's visible/arrival/focus ids, ordered source
+event identities, camera, callouts, and stations. Existing files are reused
+only on an exact key match. Changing relevant geometry or order must re-key;
+geometry belonging only to a later panel, unrelated wording, and review
 metadata must not. The HTML embeds PNG bytes as data URIs, so the manual itself
 is portable even though keyed PNGs remain available as reproducible assets.
 
@@ -180,10 +182,12 @@ placement-critical station is absent/inconsistent, when hardware ids do not
 resolve, when a process fact lacks its typed content, or when either companion
 basename is not relative.
 
-The front matter says once that ordered actions are machine-derived and that a
-blocking modeled failure blocks release. It separately lists analysis gaps;
-silence never implies capacity/code/hot-drink safety. Per-panel trust wording
-appears only for declared-trust or named not-analyzed exceptions.
+The front matter says once that this is one machine-checked build order, names
+the caddy's declared batch-workflow provenance, and says a blocking modeled
+failure blocks release. It never calls independent-event tie-breaks uniquely
+derived. It separately lists analysis gaps; silence never implies
+capacity/code/hot-drink safety. Per-panel trust wording appears only for
+declared-trust or named not-analyzed exceptions.
 
 ## Testing and acceptance
 
@@ -192,7 +196,9 @@ appears only for declared-trust or named not-analyzed exceptions.
   counts, and no `+X/-X`, raw part ids, or raw contract register in human text.
 - CAT-J pins both content-key directions: order/geometry changes re-key affected
   images; unrelated prose/review changes do not.
-- CAT-L pins verdict and event-graph byte identity across panel regrouping.
+- CAT-L uses the binding step-stool lever: add authored stages, build, remove
+  them, and rebuild; reader grouping and affected render keys move while every
+  axis verdict remains byte-identical.
 - CAT-M pins station completeness and a moved-station mutation through model,
   text, and image overlays.
 - Viewer tests pin panel snapping, arrival highlighting, explode composition,

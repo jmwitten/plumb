@@ -83,9 +83,9 @@ def test_caddy_has_five_semantic_cohorts(caddy):
 
 Run the two tests above with `-vv`; expected failures show zero/missing panels, not fixture errors.
 
-- [ ] **Step 6: Implement the reader-step DAG and deterministic cohort Kahn pass**
+- [ ] **Step 6: Implement consecutive-run grouping over the canonical reader order**
 
-Map every event to its owning reader-step index, lift graph edges only when endpoints map to different steps, and group the currently ready steps by `(unit, authored stage, action family)`. Classify `process` as its kind, `joins` as join, contract-bearing connections as fasten, contract-less connections as bond/set, and pure placements as prepare. Choose the first ready cohort by action priority then declaration/index order. Never add an edge; assert every source edge points from an earlier emitted cohort to a later one.
+Map every event to its owning reader-step index, lift graph edges only to verify the existing order, then scan `derive_reader_steps()` without re-linearizing it. Group only adjacent steps with the same `(unit, authored stage, action family)`. Classify process as its kind, joins as join, contract-bearing connections as fasten, contract-less connections as bond/set, and pure placements as prepare. Assert every panel's indexes are a contiguous range, panel order is by first index, and every lifted edge points forward. Author the caddy's two cross-cure `after:` terms (each screw connection waits on both cures) with the declared batch-workflow why; pin deletion reverting to seven canonical panels. Do not use stages as the remedy: the executed proof shows they do not order process events.
 
 - [ ] **Step 7: Write RED tests for typed human register and banned machine vocabulary**
 
@@ -175,7 +175,11 @@ The first changes a part placement or source event identities; the second change
 
 - [ ] **Step 8: Implement canonical key serialization**
 
-Hash a sorted, compact JSON object containing renderer version, assembly geometry hash, ordered source event tuples, visible/arrival/focus ids, camera spec, callouts, and raw stations. Do not hash rendered prose, review stores, generated timestamps, or HTML styles.
+Hash a sorted, compact JSON object containing renderer version, per-part world-geometry hashes restricted to visible/arrival/focus ids, ordered source event tuples, camera spec, callouts, and raw stations. Do not hash the whole assembly, rendered prose, review stores, generated timestamps, or HTML styles. The moved-screw CAT-M variant must re-key fasten/join while leaving prepare/bond/cure keys unchanged.
+
+- [ ] **Step 8a: Implement binding CAT-L on the verdict-independent step stool**
+
+Build a temporary step-stool variant with authored stages, then remove the stages and rebuild. Assert the reader grouping changes (per-stage versus per-connection), affected step/panel keys move, and every validation finding tuple—verdict, check, subject, detail, declared-order, declared-trust—remains byte-identical. First resolve any existing reader-bucket collapse honestly; do not weaken CAT-L into downstream panel regrouping, which would be vacuous because verdicts do not consume panels.
 
 - [ ] **Step 9: Write renderer RED tests**
 
@@ -326,7 +330,7 @@ PYTHONPATH="$PWD/.shim" ../../.venv/bin/python -m pytest -q \
 
 - [ ] **Step 2: Verify geometry/verdict/event-graph non-change**
 
-Compare assembly geometry hash, validation finding signatures, event identities/edges, and all existing ten caddy view PNG hashes against `origin/main`. Panel regrouping may change only presentation artifacts and optional payload metadata.
+Compare assembly geometry hash, validation finding signatures, event identities/edges, the canonical linearization, and all existing ten caddy view PNG hashes against `origin/main`. The two new cross-cure authored edges and canonical order are deliberate; geometry and validation findings must remain unchanged. Panel grouping may change only presentation artifacts and optional payload metadata.
 
 - [ ] **Step 3: Request fresh adversarial review**
 
