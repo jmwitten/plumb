@@ -302,7 +302,8 @@ def project_action_frames(
                 allowed_numbers=spec.allowed_numbers,
                 forbidden_tokens=forbidden_tokens,
             )
-            for text in (spec.hold, spec.warning, spec.tool):
+            for text in (spec.hold, spec.warning, spec.tool,
+                         spec.repeat_subject):
                 if text:
                     validate_caption(
                         text,
@@ -346,21 +347,28 @@ def project_action_frames(
 
 
 def validate_frame_ownership(panels, frames) -> None:
-    """Prove complete, unique event ownership across the frame set."""
-    panel_events = [event for panel in panels for event in panel.source_events]
-    known = set(panel_events)
+    """Prove complete, unique event ownership across the frame set.
+
+    Multiset semantics: an event identity that occurs in N panels must be
+    claimed exactly N times, so a shared identity cannot let one claim
+    satisfy two panels while a copy silently vanishes.
+    """
+    expected = Counter(
+        event for panel in panels for event in panel.source_events)
     claimed = Counter()
     for frame in frames:
         for event in frame.owned_events:
-            if event not in known:
+            if event not in expected:
                 raise FrameContractError(
                     f"frame {frame.frame_id!r} owns unknown event {event!r}")
             claimed[event] += 1
-    duplicated = sorted(event for event, count in claimed.items() if count > 1)
+    duplicated = sorted(event for event, count in claimed.items()
+                        if count > expected[event])
     if duplicated:
         raise FrameContractError(
             f"events owned more than once: {duplicated!r}")
-    unowned = sorted(set(panel_events) - set(claimed))
+    unowned = sorted(event for event, count in expected.items()
+                     if claimed[event] < count)
     if unowned:
         raise FrameContractError(
             f"panel events left unowned by every frame: {unowned!r}")

@@ -464,3 +464,16 @@ class TestProjection:
             project_action_frames(caddy_manual, tuple(specs),
                                   letters=_caddy_letters(),
                                   forbidden_tokens=("deck_board-0",))
+
+
+class TestOwnershipMultiset:
+    def test_shared_event_identity_across_panels_needs_both_claims(self):
+        panels = (_Panel((EV_A,)), _Panel((EV_A,)))
+        one_claim = (_frame("f1", (EV_A,)),)
+        with pytest.raises(FrameContractError, match="unowned"):
+            validate_frame_ownership(panels, one_claim)
+        both = (_frame("f1", (EV_A,)), _frame("f2", (EV_A,)))
+        validate_frame_ownership(panels, both)
+        three = both + (_frame("f3", (EV_A,)),)
+        with pytest.raises(FrameContractError, match="owned more than once"):
+            validate_frame_ownership(panels, three)
