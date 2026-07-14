@@ -1,6 +1,11 @@
 """Precedent-first product-design selection and lifecycle governance."""
 
 from .loader import load_design_review_file, load_design_review_text
+from .fingerprint import (
+    model_fingerprint,
+    selection_fingerprint,
+    selection_payload,
+)
 from .schema import (
     APPLICATION_STATES,
     ASSESSMENTS,
@@ -24,6 +29,12 @@ from .schema import (
     PartPurpose,
     Precedent,
     Requirement,
+)
+from .validation import (
+    DesignReviewFinding,
+    DesignReviewResult,
+    DesignReviewValidationError,
+    validate_design_review,
 )
 
 __all__ = [
@@ -49,6 +60,13 @@ __all__ = [
     "PartPurpose",
     "Precedent",
     "Requirement",
+    "DesignReviewFinding",
+    "DesignReviewResult",
+    "DesignReviewValidationError",
     "load_design_review_file",
     "load_design_review_text",
+    "model_fingerprint",
+    "selection_fingerprint",
+    "selection_payload",
+    "validate_design_review",
 ]
