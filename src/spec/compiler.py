@@ -161,6 +161,34 @@ class SpecDetail(Detail):
         analyze_retires(doc)
         analyze_sequence(doc)
         self.doc = doc
+        self.design_governance = None
+        if doc.design_review is not None:
+            if doc.source_path is None:
+                raise SpecCompileError(
+                    "a governed DetailSpec requires its file path to resolve "
+                    "design_review.record; load it with load_spec_file() or "
+                    "compile_spec_file()"
+                )
+            from ..design_review import (
+                DesignReviewSchemaError,
+                governance_for_review,
+                load_design_review_file,
+            )
+            from .serialize import spec_to_dict
+
+            review_path = doc.source_path.parent / doc.design_review.record
+            try:
+                review = load_design_review_file(review_path)
+            except (OSError, DesignReviewSchemaError) as error:
+                raise SpecCompileError(
+                    f"design_review.record {doc.design_review.record!r} could "
+                    f"not be loaded: {error}"
+                ) from None
+            self.design_governance = governance_for_review(
+                review,
+                selected_concept=doc.design_review.selected_concept,
+                spec_payload=spec_to_dict(doc),
+            )
         self.unit = doc.units
         self.unit_factor = UNIT_FACTORS[doc.units]
         # A param-override compile re-binds named ``params:`` values, then lets
@@ -232,6 +260,19 @@ class SpecDetail(Detail):
                 assumptions=("dotted-path escape hatch, not a declarative check",),
                 confidence="placeholder",
             ))
+
+    def require_modeling_approval(self):
+        """Require current concept approval before production promotion."""
+        if self.design_governance is not None:
+            self.design_governance.require_modeling_approval()
+        return self
+
+    def require_delivery_ready(self):
+        """Require physical validation plus current model confirmation."""
+        report = super().require_delivery_ready()
+        if self.design_governance is not None:
+            self.design_governance.require_delivery_confirmation()
+        return report
 
     # -- stage 1-2: params -> components + assembly ---------------------------
 

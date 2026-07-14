@@ -33,6 +33,23 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv=None) -> int:
     args = _parser().parse_args(argv)
     try:
+        is_spec = args.command == "gate" and any(
+            args.review.name.endswith(suffix)
+            for suffix in (".spec.yaml", ".spec.yml", ".spec.json")
+        )
+        if is_spec:
+            from detailgen.spec import compile_spec_file
+
+            detail = compile_spec_file(args.review)
+            if detail.design_governance is None:
+                raise DesignReviewGateError(
+                    f"DetailSpec {args.review} does not opt into design review"
+                )
+            if args.stage == "modeling":
+                detail.require_modeling_approval()
+            else:
+                detail.design_governance.require_delivery_confirmation()
+            return 0
         doc = load_design_review_file(args.review)
         result = validate_design_review(doc)
         if args.command == "validate":

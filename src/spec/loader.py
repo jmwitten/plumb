@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import difflib
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import yaml
@@ -40,6 +41,7 @@ from .schema import (
     CrossCheckSpec,
     DeclaredCantilever,
     DerivationLogSection,
+    DesignReviewSpec,
     DetailSpecDoc,
     DimensionSpec,
     DocSpec,
@@ -106,7 +108,8 @@ def load_spec_file(path: str | Path) -> DetailSpecDoc:
     (``.yaml``/``.yml``) the YAML parser."""
     path = Path(path)
     fmt = "json" if path.suffix.lower() == ".json" else "yaml"
-    return load_spec_text(path.read_text(), fmt=fmt)
+    return replace(load_spec_text(path.read_text(), fmt=fmt),
+                   source_path=path.resolve())
 
 
 def _build_doc(raw: dict) -> DetailSpecDoc:
@@ -119,6 +122,7 @@ def _build_doc(raw: dict) -> DetailSpecDoc:
         "foundations": False,  # FAB-3 (retire R29): foundation systems
         "retire": False,  # CL-3 (retro R10): intentional removals with provenance
         "sequence": False,  # SEQSCHEMA: the authored sequence: block
+        "design_review": False,
         # -- presentation surfaces (task 4B-2) ---------------------------------
         "callouts": False, "explode": False, "doc": False,
         "cross_check": False, "export": False,
@@ -143,6 +147,8 @@ def _build_doc(raw: dict) -> DetailSpecDoc:
                          in enumerate(_as_list(f["retire"], "retire"))))
     sequence = (SequenceSpec() if f["sequence"] is _MISSING
                 else _build_sequence(f["sequence"]))
+    design_review = (None if f["design_review"] is _MISSING
+                     else _build_design_review(f["design_review"]))
     callouts = (() if f["callouts"] is _MISSING
                 else tuple(_build_callout(c, i)
                            for i, c in enumerate(_as_list(f["callouts"], "callouts"))))
@@ -169,6 +175,7 @@ def _build_doc(raw: dict) -> DetailSpecDoc:
         foundations=foundations,
         retire=retire,
         sequence=sequence,
+        design_review=design_review,
         context_grounds=context_grounds,
         callouts=callouts,
         explode=explode,
@@ -176,6 +183,26 @@ def _build_doc(raw: dict) -> DetailSpecDoc:
         cross_check=cross_check,
         export=export,
     )
+
+
+def _build_design_review(raw: dict) -> DesignReviewSpec:
+    f = _take(raw, {"record": True, "selected_concept": True},
+              "design_review")
+    record = f["record"]
+    selected = f["selected_concept"]
+    if not isinstance(record, str) or not record.strip():
+        raise SpecSchemaError(
+            "design_review.record must be a non-empty relative sidecar path"
+        )
+    if Path(record).is_absolute():
+        raise SpecSchemaError(
+            "design_review.record must be relative to the DetailSpec file"
+        )
+    if not isinstance(selected, str) or not selected.strip():
+        raise SpecSchemaError(
+            "design_review.selected_concept must be a non-empty concept id"
+        )
+    return DesignReviewSpec(record=record, selected_concept=selected)
 
 
 # -- presentation surfaces (task 4B-2) ---------------------------------------

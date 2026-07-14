@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import difflib
 from dataclasses import dataclass, field
+from pathlib import Path
 
 # The install-contract closed vocabularies (task INSTALL v1) are owned by the
 # leaf contract module — the spec surface names the SAME sets, imported (never
@@ -1100,6 +1101,14 @@ class SequenceSpec:
 
 
 @dataclass(frozen=True)
+class DesignReviewSpec:
+    """Opt-in binding from a production DetailSpec to its design review."""
+
+    record: str
+    selected_concept: str
+
+
+@dataclass(frozen=True)
 class DetailSpecDoc:
     """A whole DetailSpec: metadata, the param/derived dimension blocks, the
     placed components, the declared connections, and the escape-hatch
@@ -1166,6 +1175,12 @@ class DetailSpecDoc:
     # unchanged. Plumbing only here — no event graph, no axis-3 semantics;
     # this is the parsed+validated authoring surface the next task consumes.
     sequence: SequenceSpec = field(default_factory=SequenceSpec)
+    # Optional pre-model design-selection governance. The review remains a
+    # sidecar so research can exist before production geometry.
+    design_review: DesignReviewSpec | None = None
+    # Loader context for resolving the sidecar. It is not authored, serialized,
+    # compared, or fingerprinted.
+    source_path: Path | None = field(default=None, compare=False, repr=False)
     # Whether ``units`` was omitted (defaulted to ``in``) — a provenance flag the
     # compiler records as an inferred fact (P1: a silent default that scales
     # every length 25.4x is exactly the kind of assumption the log must surface).
