@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Armchair caddy precedent-first design selection — design selection</title>
+<style>
+body{font:15px/1.45 system-ui,sans-serif;max-width:1180px;margin:0 auto;padding:28px;color:#202124}
+h1,h2,h3{line-height:1.15} table{border-collapse:collapse;width:100%;margin:12px 0 28px}
+th,td{border:1px solid #ccd0d5;padding:8px;vertical-align:top;text-align:left}
+.ready{color:#176b36;font-weight:700}.blocked{color:#a1261d;font-weight:700}
+.unknown{background:#fff4ce}.mono{font-family:ui-monospace,monospace;word-break:break-all}
+</style></head><body>
+<h1>Armchair caddy precedent-first design selection</h1>
+<p>Project <code>armchair_caddy</code> · record status <strong>draft</strong></p>
+<h2>Lifecycle gates</h2>
+<p class="blocked">Production promotion: BLOCKED</p>
+<p class="blocked">Delivery: BLOCKED</p>
+<p class="mono">Selection fingerprint: 24a277ee5e2a67e1022428ca20cb0c09cca8be946a147619528cee160e891b25</p>
+<h2>Blocking findings</h2>
+<ul>
+<li>None — the structured draft is complete; approval is a separate gate.</li>
+</ul>
+<h2>Design brief</h2>
+<dl>
+<dt>Use</dt><dd>Provide a removable hard surface for a cup and small personal items on a padded armchair arm.</dd>
+<dt>Loads</dt><dd>Carry its own weight plus an ordinary filled mug and small accessories without relying on permanent sofa attachment.</dd>
+<dt>Fit range</dt><dd>Preserve the existing parameterized fit around a six-inch arm with clearance for upholstery and removal by hand.</dd>
+<dt>Appearance</dt><dd>Read as compact indoor furniture with clean exterior faces, eased edges, and no exposed utilitarian fasteners.</dd>
+<dt>Builder skill</dt><dd>Suit an intermediate home woodworker while making any accuracy-sensitive joint setup explicit in the instructions.</dd>
+<dt>Tools</dt><dd>tape measure and square, table saw or accurate miter saw, drill or drill press, clamps, sanding tools</dd>
+</dl>
+<h3>Required features</h3><ul>
+<li><code>req_service_surface</code> — Provide a stable top surface that transfers ordinary service loads into both hanging side panels.</li>
+<li><code>req_fit</code> — Fit over the modeled arm and preserve clearance from adjacent upholstery throughout installation and use.</li>
+<li><code>req_registration</code> — Limit cross-arm rocking without gripping, fastening to, or otherwise modifying the upholstered chair arm.</li>
+<li><code>req_cup_opening</code> — Retain the modeled centered cup opening and its stated loose-fit verification before any production redesign.</li>
+<li><code>req_removable</code> — Lift off by hand and remain compact enough to store when the chair arm should be unobstructed.</li>
+</ul><h3>Prioritized constraints</h3><ol>
+<li value="1"><code>constraint_simplicity</code> — Minimize permanent part count and repeated assembly operations before optimizing secondary construction preferences.</li>
+<li value="2"><code>constraint_fit_preservation</code> — Avoid consuming the interior fit envelope with reinforcement unless a required function justifies that material.</li>
+<li value="3"><code>constraint_appearance</code> — Keep metal fasteners and coarse structural seams away from the visible top and outside faces.</li>
+<li value="4"><code>constraint_tools</code> — Prefer methods achievable with the listed home-shop tools and clearly disclose specialized jigs or setups.</li>
+<li value="5"><code>constraint_instruction_clarity</code> — Prefer repeated joints and short verification sequences that can be explained without hidden positioning assumptions.</li>
+</ol><h2>Precedent provenance</h2><table><thead><tr><th>Id</th><th>Kind / source</th><th>Observed construction</th><th>Lessons</th></tr></thead><tbody>
+<tr><td><code>rui_lusitano</code></td><td>commercial_product<br><a href="https://www.ruisilvastudio.com/lusitano/sofa-armrest">Lusitano Sofa Armrest Tray in Solid Oak</a><br>Rui Silva Studio · accessed 2026-07-14</td><td>A handcrafted solid-oak armrest tray presents a simple continuous sleeve with two sides and a broad top surface.</td><td><ul><li>A restrained three-panel silhouette can read as finished furniture without visible internal reinforcement walls.</li><li>Published inner dimensions make fit a first-class product property rather than an incidental assembly outcome.</li></ul></td></tr>
+<tr><td><code>love_miter</code></td><td>build_instruction<br><a href="https://www.loveandrenovations.com/sofa-arm-table/">DIY Sofa Arm Table</a><br>Love and Renovations · accessed 2026-07-14</td><td>Three walnut boards receive forty-five-degree edges and fold together with painter&#x27;s tape and wood glue.</td><td><ul><li>The conventional sleeve can use only its three visible panels when loads and handling permit glued miters.</li><li>Measuring the actual arm and adding modest sliding clearance precedes every cut in the demonstrated workflow.</li></ul></td></tr>
+<tr><td><code>woodworkers_keyed_miter</code></td><td>build_instruction<br><a href="https://www.woodworkersjournal.com/project-sofa-armrest-table/">Sofa Armrest Table</a><br>Woodworker&#x27;s Journal · accessed 2026-07-14</td><td>Three mitered panels are glued into a sleeve and diagonal dowels mechanically reinforce both corner joints.</td><td><ul><li>Crossing each miter with two dowels strengthens the conventional shell without adding full-size interior members.</li><li>A doweling jig and careful dry fitting trade additional setup accuracy for low part count and clean exterior faces.</li></ul></td></tr>
+<tr><td><code>kreg_pocket_screws</code></td><td>build_instruction<br><a href="https://learn.kregtool.com/plans/sofa-arm-table/">Sofa Arm Table</a><br>Kreg Tool · accessed 2026-07-14</td><td>One board becomes a three-panel square-jointed sleeve assembled with four concealed pocket-hole screws.</td><td><ul><li>Pocket screws provide a documented beginner-accessible alternative when accurate miter joinery is undesirable.</li><li>The demonstrated fit subtracts roughly one-half inch from the measured arm width to establish a controlled opening.</li></ul></td></tr>
+<tr><td><code>mitre10_nailed_sleeve</code></td><td>build_instruction<br><a href="https://www.mitre10.com.au/diy/how-to-make-a-couch-sleeve">How to make a couch sleeve</a><br>Mitre 10 · accessed 2026-07-14</td><td>Plywood top and sides are joined with glue and finish nails before a backed cup-holder opening is cut.</td><td><ul><li>A real beginner build keeps the load-bearing sleeve direct while integrating a cup opening into the top panel.</li><li>The instructions derive dimensions from the actual sofa and treat snug fit as a verification target.</li></ul></td></tr>
+<tr><td><code>fullhearted_brackets</code></td><td>build_instruction<br><a href="https://thefullheartedhome.com/how-to-build-a-diy-couch-arm-table-tray-for-your-sofa/">How to Build a DIY Couch Arm Table Tray for Your Sofa</a><br>Full Hearted Home · accessed 2026-07-14</td><td>Three square-cut pine boards form a sleeve with glue and concealed metal corner brackets screwed inside.</td><td><ul><li>Small inside brackets can replace wooden reinforcement members while preserving simple square cuts.</li><li>Bracket clearance must be included when sizing the opening, so concealed hardware still has a measurable fit cost.</li></ul></td></tr>
+</tbody></table><h2>Concepts</h2>
+<h3><code>current_double_wall</code> — Current double-wall rail construction</h3>
+<p>Three exterior panels surround two full-depth internal registration rails that are glued overhead and screwed into the sides.</p>
+<table><tbody>
+<tr><th>load_path</th><td>top_end_bearing_plus_rail_bonds_to_sides</td></tr>
+<tr><th>joint_family</th><td>butt_joint_with_full_depth_internal_rails</td></tr>
+<tr><th>part_topology</th><td>five_wood_part_double_wall_saddle</td></tr>
+<tr><th>fastening_strategy</th><td>glue_and_eight_concealed_screws</td></tr>
+<tr><th>visible_seam_strategy</th><td>square_butt_exterior_seams</td></tr>
+<tr><th>fit_strategy</th><td>rail_faces_register_with_quarter_inch_reveal</td></tr>
+</tbody></table><h4>Feature inventory</h4><ul>
+<li><code>current_double_wall.full_depth_registration_rails</code> — Two nearly side-sized interior rails both reinforce the corners and register against the upholstered arm.; precedents: none</li>
+<li><code>current_double_wall.concealed_face_grain_screws</code> — Eight screws enter side-panel face grain from hidden rail faces without piercing any exterior show surface.; precedents: kreg_pocket_screws, fullhearted_brackets</li>
+</ul><h4>Simplification review</h4><ul>
+<li><strong>exterior structural panels</strong>: Form the usable top and two outside faces while carrying service loads around the chair arm. Joinery review: These three visible panels are irreducible, although their corner connections can be integrated directly into their edges.</li>
+<li><strong>full-depth registration rails</strong>: Reinforce both butt joints and present deep interior faces that limit cross-arm rocking at the specified reveal. Joinery review: Reinforced miters, shouldered rabbets, or compact concealed hardware could absorb the corner function while side geometry handles fit.</li>
+<li><strong>concealed structural screws</strong>: Clamp each rail to a side panel and resist joint separation through face-grain screw engagement. Joinery review: Dowels or purpose-made corner joinery could replace these eight metal fasteners and their drilling operations.</li>
+</ul>
+<h3><code>reinforced_miter</code> — Three-panel reinforced-miter shell</h3>
+<p>Three mitered exterior panels form a continuous sleeve while diagonal dowels cross and reinforce each glued corner.</p>
+<table><tbody>
+<tr><th>load_path</th><td>top_through_reinforced_miters_to_sides</td></tr>
+<tr><th>joint_family</th><td>dowel_reinforced_miter</td></tr>
+<tr><th>part_topology</th><td>three_panel_shell_with_small_dowels</td></tr>
+<tr><th>fastening_strategy</th><td>glue_and_diagonal_wood_dowels</td></tr>
+<tr><th>visible_seam_strategy</th><td>continuous_wrapped_grain_miter</td></tr>
+<tr><th>fit_strategy</th><td>side_faces_and_clearance_register</td></tr>
+</tbody></table><h4>Feature inventory</h4><ul>
+<li><code>reinforced_miter.keyed_miter_corners</code> — Diagonal dowels mechanically key both glued miter joints while remaining compatible with clean exterior finishing.; precedents: woodworkers_keyed_miter</li>
+<li><code>reinforced_miter.panel_defined_fit</code> — The side panels directly define the interior opening without a second wooden wall consuming clearance.; precedents: rui_lusitano, love_miter, woodworkers_keyed_miter</li>
+</ul><h4>Simplification review</h4><ul>
+<li><strong>mitered structural panels</strong>: Create the top, sides, fit opening, and direct service-load path using only the three visible furniture surfaces. Joinery review: No panel can be removed because each supplies a required exterior surface and structural side of the sleeve.</li>
+<li><strong>diagonal reinforcing dowels</strong>: Cross the two glued miters to resist corner opening without introducing another full-size structural member. Joinery review: Splines or biscuits could serve the same reinforcement role, but plain glue would reduce mechanical reserve.</li>
+</ul>
+<h3><code>rabbet_and_dowel</code> — Rabbet-and-dowel shell</h3>
+<p>Each side seats into a shouldered top rabbet and receives concealed cross dowels through the assembled corner.</p>
+<table><tbody>
+<tr><th>load_path</th><td>top_rabbet_shoulders_bear_on_sides</td></tr>
+<tr><th>joint_family</th><td>shouldered_rabbet_with_cross_dowels</td></tr>
+<tr><th>part_topology</th><td>three_panel_shouldered_shell</td></tr>
+<tr><th>fastening_strategy</th><td>glue_and_concealed_cross_dowels</td></tr>
+<tr><th>visible_seam_strategy</th><td>expressed_square_shoulder_line</td></tr>
+<tr><th>fit_strategy</th><td>rabbet_shoulders_locate_side_faces</td></tr>
+</tbody></table><h4>Feature inventory</h4><ul>
+<li><code>rabbet_and_dowel.locating_rabbet_shoulders</code> — Two machined shoulders positively locate the side panels and provide bearing during glue-up and service.; precedents: none</li>
+<li><code>rabbet_and_dowel.concealed_cross_dowels</code> — Wooden dowels reinforce each assembled corner without leaving metal hardware or exposed screw heads.; precedents: woodworkers_keyed_miter</li>
+</ul><h4>Simplification review</h4><ul>
+<li><strong>rabbeted structural panels</strong>: Supply every visible surface while the integrated shoulders locate the sides and transfer vertical service loads. Joinery review: The rabbets already integrate the locating member into the top, so no separate cleat or rail remains to remove.</li>
+<li><strong>concealed cross dowels</strong>: Resist withdrawal across the rabbet joints while preserving clean top and outside faces after finishing. Joinery review: Screws could replace the dowels but would add metal hardware and potentially visible plugging operations.</li>
+</ul>
+<h3><code>concealed_pocket_screw_or_bracket</code> — Concealed pocket-screw or bracket shell</h3>
+<p>Three square-cut panels use compact concealed hardware at both inside corners, selected for the builder&#x27;s available jig.</p>
+<table><tbody>
+<tr><th>load_path</th><td>top_butt_bearing_with_hardware_ties_to_sides</td></tr>
+<tr><th>joint_family</th><td>square_butt_with_compact_concealed_hardware</td></tr>
+<tr><th>part_topology</th><td>three_panels_plus_discrete_hardware</td></tr>
+<tr><th>fastening_strategy</th><td>pocket_screws_or_inside_brackets_and_glue</td></tr>
+<tr><th>visible_seam_strategy</th><td>square_butt_seams_with_hidden_hardware</td></tr>
+<tr><th>fit_strategy</th><td>hardware_allowance_plus_side_clearance</td></tr>
+</tbody></table><h4>Feature inventory</h4><ul>
+<li><code>concealed_pocket_screw_or_bracket.compact_concealed_hardware</code> — Pocket screws or small metal brackets tie square-cut corners without full-depth wooden reinforcement walls.; precedents: kreg_pocket_screws, fullhearted_brackets</li>
+<li><code>concealed_pocket_screw_or_bracket.square_cut_workflow</code> — All three structural panels use square crosscuts and direct inside-corner assembly for accessible fabrication.; precedents: kreg_pocket_screws, fullhearted_brackets, mitre10_nailed_sleeve</li>
+</ul><h4>Simplification review</h4><ul>
+<li><strong>square-cut structural panels</strong>: Form the top, sides, and fit opening with straightforward cuts and direct corner bearing surfaces. Joinery review: The visible panels remain necessary, while their square joints deliberately avoid machining integrated shoulders or miters.</li>
+<li><strong>compact concealed hardware</strong>: Tie the two square butt joints against separation while remaining inside and away from exterior show faces. Joinery review: Accurate reinforced joinery could eliminate the purchased hardware at the cost of more demanding cutting and layout.</li>
+</ul>
+<h2>Comparison matrix</h2><table><thead><tr><th>Criterion</th>
+<th>current_double_wall</th>
+<th>reinforced_miter</th>
+<th>rabbet_and_dowel</th>
+<th>concealed_pocket_screw_or_bracket</th>
+</tr></thead><tbody>
+<tr><th>strength</th>
+<td class=""><strong>advantage</strong><br>Deep glued rails and eight face-grain screws provide redundant corner attachment beyond ordinary sleeve precedents.<br><small>Evidence: req_service_surface</small></td>
+<td class=""><strong>advantage</strong><br>Long glued miter faces plus crossing dowels create a documented mechanically reinforced corner load path.<br><small>Evidence: woodworkers_keyed_miter, req_service_surface</small></td>
+<td class=""><strong>advantage</strong><br>Shoulders provide positive bearing while glued cross dowels resist withdrawal across both assembled corners.<br><small>Evidence: req_service_surface</small></td>
+<td class=""><strong>neutral</strong><br>Published pocket-screw and bracket builds support ordinary use, but hardware capacity and embedment need selection.<br><small>Evidence: kreg_pocket_screws, fullhearted_brackets, req_service_surface</small></td>
+</tr>
+<tr><th>part_count</th>
+<td class=""><strong>disadvantage</strong><br>Two substantial rails increase the wooden assembly from the conventional three panels to five members.<br><small>Evidence: constraint_simplicity, rui_lusitano</small></td>
+<td class=""><strong>advantage</strong><br>Only three full-size panels define the shell, with small dowels serving as integrated joint reinforcement.<br><small>Evidence: rui_lusitano, woodworkers_keyed_miter, constraint_simplicity</small></td>
+<td class=""><strong>advantage</strong><br>Three visible panels and small pins supply every structural function without separate wooden reinforcement walls.<br><small>Evidence: constraint_simplicity</small></td>
+<td class=""><strong>advantage</strong><br>The shell retains three wooden panels, though several purchased metal hardware pieces remain in the assembly.<br><small>Evidence: constraint_simplicity, kreg_pocket_screws</small></td>
+</tr>
+<tr><th>fasteners</th>
+<td class=""><strong>disadvantage</strong><br>Eight concealed screws exceed the four pocket screws documented for a comparable square-jointed sleeve.<br><small>Evidence: kreg_pocket_screws</small></td>
+<td class=""><strong>advantage</strong><br>Wooden dowels replace repeated metal screws and disappear into the finished corner after trimming.<br><small>Evidence: woodworkers_keyed_miter, constraint_appearance</small></td>
+<td class=""><strong>neutral</strong><br>Multiple wooden pins remain concealed after finishing, although each requires its own accurately registered bore.<br><small>Evidence: constraint_appearance, woodworkers_keyed_miter</small></td>
+<td class=""><strong>disadvantage</strong><br>Each corner depends on metal screws and possibly brackets whose quantity and specifications must be documented.<br><small>Evidence: kreg_pocket_screws, fullhearted_brackets</small></td>
+</tr>
+<tr><th>operations</th>
+<td class=""><strong>disadvantage</strong><br>Rail cutting, bilateral layout, two glue bonds, clamping, pilot drilling, countersinking, and fastening expand assembly work.<br><small>Evidence: constraint_simplicity</small></td>
+<td class=""><strong>neutral</strong><br>Accurate angled cuts and dowel boring replace separate rail fabrication, placement, bonding, and screw installation.<br><small>Evidence: woodworkers_keyed_miter, constraint_simplicity</small></td>
+<td class=""><strong>disadvantage</strong><br>Two consistent rabbets, shoulder cleanup, dry fitting, glue-up, and cross drilling create several precision stages.<br><small>Evidence: constraint_simplicity, constraint_instruction_clarity</small></td>
+<td class=""><strong>advantage</strong><br>Square cutting followed by repeatable jig drilling or bracket fastening creates a short assembly sequence.<br><small>Evidence: kreg_pocket_screws, fullhearted_brackets</small></td>
+</tr>
+<tr><th>tooling</th>
+<td class=""><strong>advantage</strong><br>Square cuts and ordinary drilling avoid specialized joinery cutters or precision angled dowel fixtures.<br><small>Evidence: constraint_tools</small></td>
+<td class=""><strong>disadvantage</strong><br>Reliable results require precise forty-five-degree cutting, controlled clamping, and an accurate diagonal doweling setup.<br><small>Evidence: woodworkers_keyed_miter, constraint_tools</small></td>
+<td class=""><strong>disadvantage</strong><br>Controlled rabbet cutting needs a table-saw dado setup or router beyond ordinary square-cut assembly.<br><small>Evidence: constraint_tools</small></td>
+<td class=""><strong>advantage</strong><br>A drill and basic saw suffice with brackets, while pocket screws add one common commercial jig.<br><small>Evidence: kreg_pocket_screws, fullhearted_brackets, constraint_tools</small></td>
+</tr>
+<tr><th>tolerances</th>
+<td class=""><strong>disadvantage</strong><br>Rail thickness and placement consume both sides of the opening and compound fit error across the arm.<br><small>Evidence: req_fit, constraint_fit_preservation</small></td>
+<td class=""><strong>neutral</strong><br>Miter closure is accuracy-sensitive, but the finished side faces preserve the entire intended fit envelope.<br><small>Evidence: req_fit, love_miter</small></td>
+<td class=""><strong>advantage</strong><br>Machined shoulders positively locate both side faces and make the finished interior span directly inspectable.<br><small>Evidence: req_fit, req_registration</small></td>
+<td class=""><strong>advantage</strong><br>Square butt assembly tolerates modest cutting error when hardware is clamped against aligned reference faces.<br><small>Evidence: fullhearted_brackets, req_fit</small></td>
+</tr>
+<tr><th>material</th>
+<td class=""><strong>disadvantage</strong><br>Two full-depth one-by-six rails add nearly side-panel-sized stock that produces no usable exterior surface.<br><small>Evidence: constraint_simplicity</small></td>
+<td class=""><strong>advantage</strong><br>Small dowels reinforce both corners using far less stock than two full-depth registration members.<br><small>Evidence: constraint_simplicity, woodworkers_keyed_miter</small></td>
+<td class=""><strong>advantage</strong><br>Integrated shoulders and short dowels eliminate almost all reinforcement stock outside the visible three panels.<br><small>Evidence: constraint_simplicity</small></td>
+<td class=""><strong>neutral</strong><br>Wood consumption is minimal, but proprietary screws or brackets add purchased material and sourcing choices.<br><small>Evidence: kreg_pocket_screws, fullhearted_brackets</small></td>
+</tr>
+<tr><th>appearance</th>
+<td class=""><strong>disadvantage</strong><br>Hardware stays hidden, yet square seams and visible interior double walls weaken the simple furniture silhouette.<br><small>Evidence: constraint_appearance, rui_lusitano</small></td>
+<td class=""><strong>advantage</strong><br>Wrapped miters and concealed wooden keys best match the clean continuous solid-oak commercial precedent.<br><small>Evidence: rui_lusitano, constraint_appearance</small></td>
+<td class=""><strong>neutral</strong><br>Clean faces conceal hardware, but square shoulder lines interrupt the continuous grain wrap at both corners.<br><small>Evidence: constraint_appearance</small></td>
+<td class=""><strong>neutral</strong><br>Exterior faces stay clean while interior hardware and square corner seams remain visible from some angles.<br><small>Evidence: constraint_appearance, fullhearted_brackets</small></td>
+</tr>
+<tr><th>builder_skill</th>
+<td class=""><strong>advantage</strong><br>An intermediate builder can execute familiar square layout, glue-up, pilot holes, and controlled screw driving.<br><small>Evidence: constraint_tools</small></td>
+<td class=""><strong>disadvantage</strong><br>The builder needs careful saw calibration, tape or clamp technique, and repeatable diagonal drilling practice.<br><small>Evidence: love_miter, woodworkers_keyed_miter</small></td>
+<td class=""><strong>disadvantage</strong><br>Uniform rabbet depth and accurately aligned cross bores demand measured intermediate joinery competence.<br><small>Evidence: constraint_tools</small></td>
+<td class=""><strong>advantage</strong><br>Documented beginner workflows use straightforward measuring, square cuts, clamping, drilling, and screw driving.<br><small>Evidence: kreg_pocket_screws, fullhearted_brackets</small></td>
+</tr>
+<tr><th>instruction_complexity</th>
+<td class=""><strong>disadvantage</strong><br>The manual must explain rail orientation, reveal geometry, two adhesive joints, eight stations, and cure sequencing.<br><small>Evidence: constraint_instruction_clarity</small></td>
+<td class=""><strong>advantage</strong><br>Instructions repeat one corner method twice and avoid an independent rail-positioning and fastening sequence.<br><small>Evidence: constraint_instruction_clarity, woodworkers_keyed_miter</small></td>
+<td class=""><strong>neutral</strong><br>Dimensioned machining and pin layout add explanation, while positive shoulders simplify the final glue-up checks.<br><small>Evidence: constraint_instruction_clarity</small></td>
+<td class=""><strong>advantage</strong><br>A concise guide can specify one hardware system, its clearances, and the same connection at both corners.<br><small>Evidence: constraint_instruction_clarity, kreg_pocket_screws</small></td>
+</tr>
+</tbody></table><h2>Novelty and deviations</h2><ul>
+<li><code>current_double_wall.full_depth_registration_rails</code> — forced by req_registration</li>
+<li><code>rabbet_and_dowel.locating_rabbet_shoulders</code> — forced by req_registration</li>
+</ul><h2>Decision</h2>
+<p>Selected concept: <strong>reinforced_miter</strong> — Three-panel reinforced-miter shell</p>
+<p>Application: <strong>recommendation_only</strong></p>
+<p>The reinforced-miter shell best combines documented corner strength, conventional three-panel topology, preserved fit volume, low material use, and finished-furniture appearance.</p>
+<p>Decisive cells: reinforced_miter.strength, reinforced_miter.part_count, reinforced_miter.material, reinforced_miter.appearance, reinforced_miter.instruction_complexity</p>
+<h3>Accepted tradeoffs</h3><ul>
+<li>Accurate miter cutting and diagonal dowel layout demand more setup care than square-cut hardware assembly.</li>
+<li>A future production redesign must prove cross-arm registration without assuming the current rails remain necessary.</li>
+</ul></body></html>

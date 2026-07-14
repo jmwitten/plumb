@@ -8,6 +8,7 @@ import html as html_module
 from pathlib import Path
 
 import pytest
+import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,9 +21,20 @@ import single_detail_report as SDR
 
 
 @pytest.fixture(scope="module")
-def pair(tmp_path_factory):
+def legacy_caddy_spec(tmp_path_factory):
+    spec_dir = tmp_path_factory.mktemp("legacy-caddy-spec")
+    raw = yaml.safe_load(SDR.CADDY_SPEC.read_text())
+    raw.pop("design_review")
+    path = spec_dir / SDR.CADDY_SPEC.name
+    path.write_text(yaml.safe_dump(raw, sort_keys=False))
+    return path
+
+
+@pytest.fixture(scope="module")
+def pair(tmp_path_factory, legacy_caddy_spec):
     out_dir = tmp_path_factory.mktemp("caddy-document-pair")
-    return CD.build_caddy_document_pair(out_dir, image_size=(1200, 900))
+    return CD.build_caddy_document_pair(
+        out_dir, image_size=(1200, 900), spec_path=legacy_caddy_spec)
 
 
 def _visible_text(html: str) -> str:
@@ -63,7 +75,9 @@ def test_technical_companion_uses_the_same_five_panel_schedule(pair):
     assert payload["parts"]["sofa arm"]["first_panel"] == 5
 
 
-def test_pair_compiles_the_detail_only_once(monkeypatch, tmp_path):
+def test_pair_compiles_the_detail_only_once(
+    monkeypatch, tmp_path, legacy_caddy_spec,
+):
     calls = []
     real_compile = CD.compile_spec_file
 
@@ -74,13 +88,14 @@ def test_pair_compiles_the_detail_only_once(monkeypatch, tmp_path):
     monkeypatch.setattr(CD, "compile_spec_file", counted_compile)
     monkeypatch.setattr(SDR, "compile_spec_file", counted_compile)
 
-    CD.build_caddy_document_pair(tmp_path, image_size=(320, 240))
+    CD.build_caddy_document_pair(
+        tmp_path, image_size=(320, 240), spec_path=legacy_caddy_spec)
 
-    assert calls == [SDR.CADDY_SPEC]
+    assert calls == [legacy_caddy_spec]
 
 
 def test_pair_compiles_once_when_ignored_legacy_views_are_missing(
-    monkeypatch, tmp_path,
+    monkeypatch, tmp_path, legacy_caddy_spec,
 ):
     calls = []
     rendered_details = []
@@ -108,9 +123,13 @@ def test_pair_compiles_once_when_ignored_legacy_views_are_missing(
         lambda: pytest.fail("clean pair must not launch a compiling subprocess"),
     )
 
-    CD.build_caddy_document_pair(tmp_path / "pair", image_size=(320, 240))
+    CD.build_caddy_document_pair(
+        tmp_path / "pair",
+        image_size=(320, 240),
+        spec_path=legacy_caddy_spec,
+    )
 
-    assert calls == [SDR.CADDY_SPEC]
+    assert calls == [legacy_caddy_spec]
     assert len(rendered_details) == 1
     assert rendered_details[0].report is not None
 
@@ -210,11 +229,17 @@ def test_pair_reports_content_hashes_and_five_keyed_panel_images(pair):
 
 
 def test_pair_regeneration_is_deterministic_after_generated_stamp_normalization(
-        tmp_path):
+        tmp_path, legacy_caddy_spec):
     first = CD.build_caddy_document_pair(
-        tmp_path / "first", image_size=(320, 240))
+        tmp_path / "first",
+        image_size=(320, 240),
+        spec_path=legacy_caddy_spec,
+    )
     second = CD.build_caddy_document_pair(
-        tmp_path / "second", image_size=(320, 240))
+        tmp_path / "second",
+        image_size=(320, 240),
+        spec_path=legacy_caddy_spec,
+    )
 
     stamp = re.compile(
         r"Generated \d{4}-\d{2}-\d{2} \d{2}:\d{2} [A-Z]+")

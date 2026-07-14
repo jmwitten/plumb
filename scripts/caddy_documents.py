@@ -34,15 +34,19 @@ def build_caddy_document_pair(
     out_dir: str | Path = DEFAULT_OUT_DIR,
     *,
     image_size: tuple[int, int] = DEFAULT_SIZE,
+    spec_path: str | Path = SDR.CADDY_SPEC,
 ) -> dict:
     """Build both reciprocal documents and their content-keyed panel images."""
+    spec_path = Path(spec_path)
+    detail = compile_spec_file(spec_path)
+    detail.validate()
+    detail.require_delivery_ready()
+
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     technical_path = out_dir / TECHNICAL_BASENAME
     manual_path = out_dir / MANUAL_BASENAME
 
-    detail = compile_spec_file(SDR.CADDY_SPEC)
-    detail.validate()
     manual = attach_caddy_stations(
         detail, build_instruction_manual(detail, TECHNICAL_BASENAME))
     image_paths = render_instruction_images(
@@ -51,7 +55,7 @@ def build_caddy_document_pair(
         render_instruction_manual_html(detail, manual, image_paths),
         encoding="utf-8")
     SDR.build_document(
-        technical_path, spec_path=SDR.CADDY_SPEC, preview=False,
+        technical_path, spec_path=spec_path, preview=False,
         companion_href=MANUAL_BASENAME, compiled_detail=detail,
         instruction_manual=manual)
 

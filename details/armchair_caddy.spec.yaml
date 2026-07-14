@@ -33,6 +33,10 @@ name: armchair caddy
 type: armchair_caddy
 units: in
 
+design_review:
+  record: armchair_caddy.design-review.yaml
+  selected_concept: reinforced_miter
+
 # --- author intent: the saddle's dimensions (inches) -------------------------
 params:
   # The sofa arm the caddy sits on: an EXISTING body (context, not purchased),

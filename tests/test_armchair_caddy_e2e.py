@@ -25,6 +25,7 @@ import time
 from pathlib import Path
 
 import pytest
+import yaml
 
 from detailgen.spec.compiler import compile_spec_file
 from detailgen.core.process_graph import (
@@ -383,10 +384,15 @@ def test_progression_harness_matches_the_tree_it_runs_on(caddy):
 # ---------------------------------------------------------------------------- #
 # task 8: doc render through the real entry path, visual review, view coverage.
 # ---------------------------------------------------------------------------- #
-def test_certifying_render_accepts_declared_staging(caddy, tmp_path):
-    """With no blocking verdict left, both the certifying and documentation
-    entry paths render. The trust ceiling remains visible in their reports."""
-    detail, _report = caddy
+def test_certifying_render_accepts_declared_staging(tmp_path):
+    """Legacy ungoverned details retain both historical render entry paths."""
+    raw = yaml.safe_load(SPEC.read_text())
+    raw.pop("design_review")
+    legacy_spec = tmp_path / SPEC.name
+    legacy_spec.write_text(yaml.safe_dump(raw, sort_keys=False))
+    detail = compile_spec_file(legacy_spec)
+    detail.validate()
+
     certified = detail.render(tmp_path / "certified")
     assert certified.exists()
     assert "DECLARED TRUST" in (certified / "validation_report.md").read_text()
