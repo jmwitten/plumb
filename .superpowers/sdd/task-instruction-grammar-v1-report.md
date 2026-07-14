@@ -89,6 +89,13 @@ locking-device roles (42) — labeled from typed catalog products
 | Prepared-kit gate | kit card + gate text; no `fab.*` step renders as an assembly frame (tested) |
 | Separate surface, accepted manual unreplaced | script writes only the consumer manual (tested) |
 
+Full gate at final HEAD: **1826 passed / 4 skipped / 1 xfailed in
+1063s**, plus 2 subprocess-determinism tests that fail in any fresh
+worktree because they expect the untracked repo-root `.shim/` symlink
+(`detailgen -> src`); after recreating `.shim` in the worktree — the same
+state the main checkout carries — both pass (1828 total green). Not
+related to this branch's changes.
+
 Verification: 151 tests green across the affected instruction suites
 (`test_instruction_panels`, `test_instruction_render`,
 `test_caddy_instruction_manual`, `test_viewer_instruction_panels`,
