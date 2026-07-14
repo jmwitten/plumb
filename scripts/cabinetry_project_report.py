@@ -18,6 +18,7 @@ if str(_REPO / "src") not in sys.path:
 from detailgen.packs import compile_project_file  # noqa: E402
 from detailgen.assemblies.assembly import DetailAssembly  # noqa: E402
 from detailgen.rendering.export import export_glb, export_png  # noqa: E402
+from detailgen.rendering.part_labels import part_labels  # noqa: E402
 from detailgen.rendering.web_viewer import (  # noqa: E402
     build_viewer_payload,
     vendor_js,
@@ -151,6 +152,48 @@ def _render_cut_list(project) -> str:
     return "<h2>Cut list</h2>" + _table(
         ("Part id", "Role", "Length", "Width", "Thickness", "Material", "Rule"),
         rows,
+    )
+
+
+def reader_labels_by_part_id(project) -> dict[str, str]:
+    """Return the compiled hover label for every modeled cabinetry part id."""
+
+    placed_by_name = {part.name: part for part in project.detail.assembly.parts}
+    labels = part_labels(project.detail.assembly.parts)
+    result = {}
+    for part in project.model.parts:
+        placed = placed_by_name.get(part.name)
+        if placed is None:
+            raise ValueError(
+                f"modeled cabinetry part {part.part_id!r} is absent from the "
+                "compiled assembly used by the reader surfaces"
+            )
+        result[part.part_id] = labels[placed.id].display_name
+    return result
+
+
+def _render_part_key(project) -> str:
+    labels = reader_labels_by_part_id(project)
+    rows = []
+    for part in project.model.parts:
+        if part.part_id.startswith("site."):
+            scope = "Existing site context"
+        elif part.component_type == "structural_screw":
+            scope = "Installation hardware"
+        else:
+            scope = "Fabricated cabinet part"
+        rows.append((
+            _esc(labels[part.part_id]),
+            _esc(scope),
+            f"<code>{_esc(part.part_id)}</code>",
+            _esc(part.role),
+        ))
+    return (
+        "<h2>Part key</h2>"
+        "<p>These are the same reader names shown when a part is hovered in "
+        "the 3D viewer. Stable ids remain visible for cut, machining, and "
+        "evidence cross-reference.</p>"
+        + _table(("Reader name", "Scope", "Stable id", "Role"), tuple(rows))
     )
 
 
@@ -349,6 +392,7 @@ DetailSpec assembly.</p></div><div class="status-grid">
 </div></header>""",
         _gallery(images),
         _viewer_block(images, viewer_payload, glb_b64),
+        f"<section>{_render_part_key(project)}</section>",
         f"<section>{render_dimension_tables(project.model)}</section>",
         f"<section>{_render_cut_list(project)}{_render_edge_banding(project)}</section>",
         f"<section>{_render_hardware(project)}{_render_machining(project)}</section>",
@@ -407,6 +451,26 @@ def product_viewer_payload(project, assembly: DetailAssembly) -> dict:
     }
 
 
+def front_annotation_labels(project) -> dict[str, str]:
+    """Canonical labels that the front drawing places on visible members."""
+
+    labels = reader_labels_by_part_id(project)
+    prefix = f"cabinetry.{project.model.section.cabinets[0].cabinet_id}."
+    result = {
+        "left_side": labels[prefix + "left_end"],
+        "right_side": labels[prefix + "right_end"],
+        "cabinet_bottom": labels[prefix + "bottom"],
+        "toe_front": labels[prefix + "toe_front"],
+    }
+    drawer_bank = getattr(project.model, "drawer_bank", None)
+    if drawer_bank is not None:
+        for cell in drawer_bank.cells:
+            result[f"drawer_{cell.cell_id}"] = labels[
+                prefix + f"drawer_front_{cell.cell_id}"
+            ]
+    return result
+
+
 def _render_front_drawing(project, path: Path) -> None:
     import matplotlib
     matplotlib.use("Agg")
@@ -415,6 +479,7 @@ def _render_front_drawing(project, path: Path) -> None:
 
     model = project.model
     cabinet = model.section.cabinets[0]
+    labels = front_annotation_labels(project)
     fig, ax = plt.subplots(figsize=(8, 7), dpi=150)
     ax.add_patch(Rectangle((0, 0), cabinet.width_mm, cabinet.height_mm,
                            fill=False, linewidth=2.2, edgecolor="#18212b"))
@@ -436,7 +501,7 @@ def _render_front_drawing(project, path: Path) -> None:
                 ax.plot(xs, (pull_z, pull_z), color="#1a1a1a", linewidth=5,
                         solid_capstyle="round")
             ax.text(x + 14, z + front.width_mm - 10,
-                    f"{cell.cell_id} · H {_fmt(front.width_mm)}",
+                    f"{labels['drawer_' + cell.cell_id]} · H {_fmt(front.width_mm)}",
                     ha="left", va="top", fontsize=8, color="#48392e",
                     bbox={"facecolor": "white", "edgecolor": "none", "alpha": .72,
                           "pad": 1.5})
@@ -448,11 +513,34 @@ def _render_front_drawing(project, path: Path) -> None:
                                    facecolor="#d4b18a", edgecolor="#493a2e"))
     ax.annotate(_fmt(cabinet.width_mm), (cabinet.width_mm / 2, -28),
                 ha="center", va="top")
+    ax.annotate(
+        labels["left_side"], xy=(0, cabinet.height_mm * .72),
+        xytext=(-48, cabinet.height_mm * .82), ha="right", va="center",
+        arrowprops={"arrowstyle": "-", "color": "#9b3a24"}, fontsize=8,
+    )
+    ax.annotate(
+        labels["right_side"], xy=(cabinet.width_mm, cabinet.height_mm * .72),
+        xytext=(cabinet.width_mm + 48, cabinet.height_mm * .82),
+        ha="left", va="center",
+        arrowprops={"arrowstyle": "-", "color": "#9b3a24"}, fontsize=8,
+    )
+    ax.annotate(
+        labels["cabinet_bottom"],
+        xy=(cabinet.width_mm * .5, cabinet.toe_kick_height_mm),
+        xytext=(cabinet.width_mm * .5, cabinet.toe_kick_height_mm - 32),
+        ha="center", va="top",
+        arrowprops={"arrowstyle": "-", "color": "#9b3a24"}, fontsize=8,
+    )
+    ax.text(
+        cabinet.width_mm * .5, cabinet.toe_kick_height_mm * .45,
+        labels["toe_front"], ha="center", va="center", fontsize=8,
+        color="#48392e",
+    )
     ax.set_xlim(-55, cabinet.width_mm + 55)
     ax.set_ylim(-50, cabinet.height_mm + 40)
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.set_title("Front elevation — model dimensions and pull centers")
+    ax.set_title("Front elevation — canonical reader labels and pull centers")
     fig.tight_layout()
     fig.savefig(path, facecolor="white")
     plt.close(fig)

@@ -14,6 +14,7 @@ from ...spec.schema import (
     ValidationSpec,
 )
 from .model import CabinetModel
+from .labels import reader_name_for_part
 
 
 def _component(part) -> ComponentSpec:
@@ -21,6 +22,7 @@ def _component(part) -> ComponentSpec:
         id=part.part_id,
         type=part.component_type,
         name=part.name,
+        reader_name=reader_name_for_part(part),
         params=part.params_dict(),
         place=RawSpec(at=part.at_mm, rotate=part.rotate),
     )

@@ -119,6 +119,29 @@ def test_db40_lowers_one_for_one_without_new_component_vocabulary():
                           prefix + f"drawer_front_{cell_id}")) in bonds
 
 
+def test_db40_authors_canonical_reader_names_without_rekeying_parts():
+    project = _project()
+    model_by_id = {part.part_id: part for part in project.model.parts}
+    lowered_by_id = {
+        component.id: component for component in project.lowered_doc.components
+    }
+
+    assert set(lowered_by_id) == set(model_by_id)
+    assert lowered_by_id["cabinetry.DB40.left_end"].reader_name == \
+        "Left cabinet side"
+    assert lowered_by_id["cabinetry.DB40.drawer_top_side_left"].reader_name == \
+        "Top drawer box — left side"
+    assert lowered_by_id["cabinetry.DB40.drawer_front_middle"].reader_name == \
+        "Middle drawer front"
+    assert lowered_by_id["cabinetry.DB40.wall_anchor_stud_32"].reader_name == \
+        "Wall anchor (stud 32)"
+    assert all(component.reader_name for component in lowered_by_id.values())
+    assert all(
+        lowered_by_id[part_id].name == part.name
+        for part_id, part in model_by_id.items()
+    )
+
+
 def test_db40_lowers_sound_placement_order_into_base_cpg():
     project = _project()
     stages = project.lowered_doc.sequence.stages

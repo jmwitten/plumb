@@ -98,6 +98,45 @@ def test_report_reuses_interactive_viewer_payload_and_is_self_contained():
     assert 'src="http' not in html
 
 
+def test_report_uses_one_reader_vocabulary_for_hover_and_visible_part_key():
+    project = compile_project_file(DB40)
+    html = _html(project)
+    assembly = CPR.product_view_assembly(project)
+    payload = CPR.product_viewer_payload(project, assembly)
+    expected = {
+        "DB40 left end": ("cabinetry.DB40.left_end", "Left cabinet side"),
+        "DB40 right end": ("cabinetry.DB40.right_end", "Right cabinet side"),
+        "DB40 drawer top side left": (
+            "cabinetry.DB40.drawer_top_side_left",
+            "Top drawer box — left side",
+        ),
+        "DB40 drawer front middle": (
+            "cabinetry.DB40.drawer_front_middle", "Middle drawer front",
+        ),
+        "DB40 toe front": ("cabinetry.DB40.toe_front", "Toe-kick front"),
+    }
+    assert {
+        machine_name: payload["parts"][machine_name]["reader_name"]
+        for machine_name in expected
+    } == {
+        machine_name: reader_name
+        for machine_name, (_part_id, reader_name) in expected.items()
+    }
+    assert "<h2>Part key</h2>" in html
+    for part_id, reader_name in expected.values():
+        assert part_id in html
+        assert reader_name in html
+    assert CPR.front_annotation_labels(project) == {
+        "left_side": "Left cabinet side",
+        "right_side": "Right cabinet side",
+        "cabinet_bottom": "Cabinet bottom",
+        "toe_front": "Toe-kick front",
+        "drawer_top": "Top drawer front",
+        "drawer_middle": "Middle drawer front",
+        "drawer_bottom": "Bottom drawer front",
+    }
+
+
 def test_report_scene_excludes_full_height_site_context_but_keeps_install_anchors():
     project = compile_project_file(DB40)
 
