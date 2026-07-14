@@ -6,6 +6,12 @@ from .fingerprint import (
     selection_fingerprint,
     selection_payload,
 )
+from .gate import (
+    DesignGovernance,
+    DesignReviewGateError,
+    governance_for_review,
+)
+from .report import render_design_review_html
 from .schema import (
     APPLICATION_STATES,
     ASSESSMENTS,
@@ -61,6 +67,8 @@ __all__ = [
     "Precedent",
     "Requirement",
     "DesignReviewFinding",
+    "DesignGovernance",
+    "DesignReviewGateError",
     "DesignReviewResult",
     "DesignReviewValidationError",
     "load_design_review_file",
@@ -68,5 +76,7 @@ __all__ = [
     "model_fingerprint",
     "selection_fingerprint",
     "selection_payload",
+    "governance_for_review",
+    "render_design_review_html",
     "validate_design_review",
 ]
