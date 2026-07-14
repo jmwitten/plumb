@@ -404,7 +404,7 @@ h1{{font-size:clamp(2rem,5vw,3.25rem);line-height:1.05;margin:.35rem 0 .75rem}} 
 .panel-head h2{{margin:.15rem 0;font-size:1.45rem}} .panel-kicker{{font-size:.76rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}}
 .panel-number{{font-size:2.6rem;font-weight:900;line-height:1}}
 .resources{{display:flex;align-items:center;flex-wrap:wrap;gap:.65rem;padding:.55rem 1.2rem;background:#f8fafc;border-bottom:1px solid var(--line)}}
-.resources ul{{display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;list-style:none;margin:0;padding:0}} .resources li{{display:flex;align-items:center;gap:.4rem;font-weight:700;font-size:.9rem}}
+.resources ul{{display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;list-style:none;margin:0;padding:0;min-width:0;max-width:100%}} .resources li{{display:flex;align-items:center;gap:.4rem;font-weight:700;font-size:.9rem;min-width:0;max-width:100%}} .resources li span{{overflow-wrap:anywhere}}
 .resource-icon{{width:1.45rem;height:1.45rem;flex:0 0 auto;fill:none;stroke:var(--blue);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}} .badge{{font-size:.74rem;font-weight:850;text-transform:uppercase;padding:.25rem .5rem;border-radius:999px;background:#e2e8f0}}
 .hard-stop{{background:#fee2e2;color:#991b1b}} figure{{margin:0}} img.scene{{display:block;width:100%;height:auto;background:white}}
 figcaption{{display:flex;align-items:center;flex-wrap:wrap;gap:.6rem 1rem;padding:.55rem 1rem;background:#f8fafc;border-top:1px solid var(--line);font-size:.86rem}}
