@@ -80,6 +80,7 @@ from .schema import (
     _MISSING,
     _take,
 )
+from .semantics import require_connection_process_capability
 from .values import UNIT_FACTORS, Resolver, SpecValueError
 
 def _is_context_body(component) -> bool:
@@ -328,6 +329,15 @@ class SiteDetail(Detail):
             raise SpecCompileError(
                 f"unknown authoring unit {doc.units!r}; known: "
                 f"{sorted(UNIT_FACTORS)}")
+        # Site-owned connections bypass SpecDetail's semantic pass, so apply
+        # the same declaration-time capability gate before fragment compile or
+        # geometry. Unknown types keep the registry's teaching diagnostic.
+        for index, conn in enumerate(doc.connections):
+            if conn.process.cure is not None:
+                label = conn.label or f"site connection {index}"
+                require_connection_process_capability(
+                    conn, "cure",
+                    owner=f"site connection {label!r}: process.cure")
         self.doc = doc
         self.base_dir = Path(base_dir)
         self.unit = doc.units
@@ -594,6 +604,25 @@ class SiteDetail(Detail):
                 out.append(ResolvedStage(
                     name=f"{sid}/{st.name}", why=st.why, chain=sid,
                     connections=st.connections, parts=st.parts))
+        return tuple(out)
+
+    def resolved_after(self) -> tuple:
+        """Replay fragment-local process point constraints without crossing.
+
+        The constraint's compiled connection labels remain the fragment's real
+        labels, while ``chain`` is replaced with its subsystem id. Consumers
+        can therefore merge them into one site surface without inferring any
+        order between fragments (the same rule as :meth:`resolved_sequence`).
+        """
+        from ..assemblies.event_graph import ResolvedAfter
+
+        self.build()
+        out = []
+        for sid in self._order:
+            for claim in self._frags[sid].resolved_after():
+                out.append(ResolvedAfter(
+                    connection=claim.connection, after=claim.after,
+                    why=claim.why, chain=sid))
         return tuple(out)
 
     def validation_spec(self) -> dict:
@@ -890,7 +919,7 @@ class SiteDetail(Detail):
 
     def _build_site_connection(self, cspec: ConnectionSpec, index: int) -> Connection:
         from ..assemblies.connection import connection_types
-        from .compiler import build_install_overrides
+        from .compiler import build_install_overrides, build_process_facts
 
         label = cspec.label or f"site connection {index}"
         try:
@@ -916,11 +945,12 @@ class SiteDetail(Detail):
         install = build_install_overrides(
             cspec.install, self._site_resolver, self._resolve_qid, {},
             f"site connection {label!r}")
+        process = build_process_facts(cspec.process)
         try:
             return Connection(kind=kind, parts=parts, hardware=hardware,
                               surfaces=surfaces,
                               assumptions=list(cspec.assumptions), label=label,
-                              install=install)
+                              install=install, process=process)
         except (ValueError, KeyError) as e:
             raise SpecCompileError(f"site connection {label!r}: {e}") from None
 

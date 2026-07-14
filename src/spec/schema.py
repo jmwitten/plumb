@@ -342,6 +342,38 @@ class RepeatSpec:
 # -- connections -------------------------------------------------------------
 
 
+#: The one completion condition +process v1 can represent. The token records
+#: an ordering predicate, never a duration: the selected adhesive label and
+#: actual shop conditions determine when it has been reached.
+PROCESS_CURE_COMPLETIONS = ("selected_label_full_cure",)
+
+
+@dataclass(frozen=True)
+class CureProcessSpec:
+    """An authored refinement of a glued connection's cure process fact.
+
+    ``instructions`` and ``why`` are project/product-selection facts. The
+    closed ``completion`` token deliberately represents no generic time.
+    Runtime process events remain the ConnectionType's responsibility; this
+    schema node is the replayable authoring fact that +process will compile.
+    """
+
+    instructions: tuple[str, ...]
+    completion: str
+    why: str
+
+
+@dataclass(frozen=True)
+class ProcessFactSpec:
+    """Connection-local authored process facts.
+
+    V1 has one closed process key, ``cure``. An omitted ``process:`` block is
+    this empty value, preserving every existing connection byte-for-byte.
+    """
+
+    cure: CureProcessSpec | None = None
+
+
 #: The finding kinds an ``expect:`` may pin (CL-3, retro R7/R12/R19/R20). A
 #: closed set — an expectation names a divergence its OWNING declaration could
 #: actually produce, so a typo or an impossible pairing (a ``connection`` pinning
@@ -461,6 +493,9 @@ class ConnectionSpec:
     #: this is COMPILED INTO the built Connection (its ``install`` field), so
     #: the contract is present where ``generate_checks`` resolves it.
     install: object = None
+    #: AUTHORED process-fact refinement (+process). This remains typed spec
+    #: data in Task 1; Task 2 lowers it onto runtime Connection/process events.
+    process: ProcessFactSpec = field(default_factory=ProcessFactSpec)
 
 
 # -- validation (the escape-hatch checks not yet Connection-owned) -----------
@@ -941,10 +976,10 @@ class RetireSpec:
 
 # -- sequence (task SEQSCHEMA, stepdoc-cpg-design.md §3.1 family 3) ----------
 
-#: ``after:`` point constraints remain a later +process key and therefore an
-#: ordinary unknown key in +staging. The staging vocabulary itself is closed:
-#: a whole detail is either built apart and set onto its context, or explicitly
-#: built in place. Undeclared context is neither — it remains UNORDERED.
+#: The staging vocabulary itself is closed: a whole detail is either built
+#: apart and set onto its context, or explicitly built in place. Undeclared
+#: context is neither — it remains UNORDERED. ``after:`` is the orthogonal
+#: +process point-constraint surface, represented by :class:`AuthoredAfter`.
 ASSEMBLY_MODES = ("bench_then_set", "in_situ")
 
 
@@ -1017,19 +1052,48 @@ class AuthoredAssembly:
 
 
 @dataclass(frozen=True)
+class AuthoredProcessRef:
+    """One typed process prerequisite named by a point constraint.
+
+    ``kind`` is closed to ``cure`` by the loader in v1; ``connection`` is the
+    source connection's authored label. A typed node keeps labels verbatim and
+    avoids parsing a string mini-language such as ``cure(label)``.
+    """
+
+    kind: str
+    connection: str
+
+
+@dataclass(frozen=True)
+class AuthoredAfter:
+    """A target connection constrained after one or more process facts.
+
+    The target and sources remain authored labels here. The compiler resolves
+    each to exactly one built connection; repeat ambiguity is loud in v1.
+    """
+
+    connection: str
+    after: tuple[AuthoredProcessRef, ...]
+    why: str
+
+
+@dataclass(frozen=True)
 class SequenceSpec:
     """A detail spec's authored construction-order and staging claims.
 
     ``stages`` are authored order groups. ``subassemblies`` and ``assembly``
     are the unified +staging surface: explicit named units, or whole-detail
     sugar / in-place mirror. A sequence block may carry either kind alone;
-    an entirely absent block is the empty default below. ``after:`` point
-    constraints remain outside this increment and stay an unknown key.
+    an entirely absent block is the empty default below. ``after`` carries
+    typed point constraints from a process fact to a target connection. Each
+    claim carries ``why`` provenance and is resolved only at compile time,
+    beside stages and staging.
     """
 
     stages: tuple = ()
     subassemblies: tuple = ()
     assembly: AuthoredAssembly | None = None
+    after: tuple[AuthoredAfter, ...] = ()
 
 
 # -- the whole document ------------------------------------------------------

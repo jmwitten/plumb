@@ -422,10 +422,21 @@ def test_doc_renders_through_render_documentation(caddy, tmp_path):
     assert "**bench whole detail**" in text
     assert "**set whole detail in place**" in text
     assert "authored staging claim" in text
+    # +process provenance is not hidden behind the per-connection sample cap.
+    assert "Glued.process_events" in text
+    assert "sequence.after" in text
+    assert "[inferred] event order" in text
+    assert "[official] event order" in text
+    assert "Bond/install before process cure" in text
+    assert "Authored process point constraints" in text
+    assert "rail +X -> top underside (glued)" in text
+    assert "rail +X -> side +X inner face" in text
 
 
-def test_build_sequence_derives_bench_then_set_and_does_not_list_arm_loose(caddy):
-    from detailgen.validation.build_sequence import build_sequence_model
+def test_build_sequence_derives_cat_k_cures_before_side_screws_and_join(caddy):
+    from detailgen.assemblies.event_graph import Event
+    from detailgen.validation.build_sequence import (
+        build_sequence_model, render_build_sequence_md)
 
     detail, _report = caddy
     steps, loose = build_sequence_model(detail)
@@ -434,9 +445,8 @@ def test_build_sequence_derives_bench_then_set_and_does_not_list_arm_loose(caddy
     assert "set whole detail in place" in titles
     assert titles.index("bench whole detail") < \
         titles.index("set whole detail in place")
-    # The staging defense names only the frame/context claim. Glue/cure/screw
-    # process order is not representable until +process and must not be smuggled
-    # into a reader step as if the CPG had checked it.
+    # The staging defense names only the frame/context claim. Process order is
+    # owned separately by typed process facts + sequence.after.
     why = steps[0]["why"]
     assert "assembled off the sofa" in why and "DECLARED TRUST" in why
     assert "then drive" not in why and "cure" not in why.lower()
@@ -444,6 +454,169 @@ def test_build_sequence_derives_bench_then_set_and_does_not_list_arm_loose(caddy
     assert steps[titles.index("set whole detail in place")]["joins"] == \
         ("whole detail",)
     assert "sofa arm" not in loose
+
+    graph = detail._connection_checks.event_graph
+    pairs = (
+        ("rail +X -> top underside (glued)",
+         "rail +X -> side +X inner face (screwed, face grain, upper + lower pairs)"),
+        ("rail -X -> top underside (glued)",
+         "rail -X -> side -X inner face (screwed, face grain, upper + lower pairs)"),
+    )
+    process_steps = [step for step in steps if step["process"] is not None]
+    assert len(process_steps) == 2
+    assert all(step["process"]["fact"].provenance ==
+               "authored_process_fact" for step in process_steps)
+    for source, target in pairs:
+        bond = Event("drive", source, "")
+        cure = Event("process", source, "cure")
+        (screws,) = graph.drives_of[target]
+        join = graph.join_of["whole detail"]
+        assert graph.precedes(bond, cure)
+        assert graph.precedes(cure, screws)
+        assert graph.precedes(screws, join)
+        cure_step = next(step for step in process_steps
+                         if step["process"]["event"] == cure)
+        target_step = next(step for step in steps
+                           if target in step["connections"])
+        assert cure_step["order_claims"][0]["role"] == "source"
+        assert target_step["order_claims"][0]["role"] == "target"
+        assert "not a universal" in cure_step["order_claims"][0]["why"]
+
+    # The rendered content is byte-stable and each authored why appears at
+    # both ends of its point constraint.
+    first = render_build_sequence_md(detail)
+    assert first == render_build_sequence_md(detail)
+    for claim in detail.resolved_after():
+        assert first.count(claim.why) == 2
+    assert "No generic duration is represented" in first
+
+
+def test_cat_k_reversion_removes_only_one_authored_cure_dependency(caddy):
+    import html
+    from types import SimpleNamespace
+
+    from detailgen.assemblies import compile_connections
+    from detailgen.assemblies.event_graph import FAMILY_AUTHORED, FAMILY_NECESSITY
+    from detailgen.validation.build_sequence import (
+        build_sequence_model, render_build_sequence_md)
+    from detailgen.validation.install import epistemic_contract_rows
+
+    if str(_REPO / "scripts") not in sys.path:
+        sys.path.insert(0, str(_REPO / "scripts"))
+    import single_detail_report as SDR
+
+    detail, _report = caddy
+    claims = detail.resolved_after()
+    assert len(claims) == 2
+    surviving_claim, removed_claim = claims
+    full_checks = detail._connection_checks
+    full = full_checks.event_graph
+    reverted_checks = compile_connections(
+        detail.assembly, detail.connections(), after=claims[:1],
+        staging=detail.resolved_staging())
+    reverted = reverted_checks.event_graph
+    reverted_detail = SimpleNamespace(
+        assembly=detail.assembly, _connection_checks=reverted_checks)
+
+    def process_pairs(graph, family):
+        return {(edge.a, edge.b) for edge in graph.edges
+                if edge.family == family
+                and (edge.a.kind == "process" or edge.b.kind == "process")}
+
+    # Reverting one authored point constraint removes exactly that claim at
+    # the graph boundary. Both independently derived bond->cure facts survive.
+    assert full.constraints == claims
+    assert reverted.constraints == (surviving_claim,)
+    assert removed_claim not in reverted.constraints
+    assert process_pairs(full, FAMILY_NECESSITY) == \
+        process_pairs(reverted, FAMILY_NECESSITY)
+    assert len(process_pairs(reverted, FAMILY_NECESSITY)) == 2
+    removed = process_pairs(full, FAMILY_AUTHORED) - \
+        process_pairs(reverted, FAMILY_AUTHORED)
+    assert len(removed) == 1
+    (source, target), = removed
+    assert source.subject == "rail -X -> top underside (glued)"
+    assert target.subject.startswith("rail -X -> side -X inner face")
+    assert process_pairs(reverted, FAMILY_AUTHORED) <= \
+        process_pairs(full, FAMILY_AUTHORED)
+
+    # The same removal must propagate through every authoritative and reader
+    # projection; no stale second owner may preserve the deleted -X claim.
+    def authoritative_after_whys(checks):
+        facts = [fact for fact in checks.derived
+                 if fact.rule == "sequence.after"]
+        assert all(fact.source_type == "authoritative"
+                   and fact.confidence == "official" for fact in facts)
+        return {fact.assumptions[0] for fact in facts}
+
+    assert authoritative_after_whys(full_checks) == {
+        surviving_claim.why, removed_claim.why}
+    assert authoritative_after_whys(reverted_checks) == {
+        surviving_claim.why}
+
+    full_rows = "\n".join(" | ".join(row)
+                          for row in epistemic_contract_rows(full_checks))
+    reverted_rows = "\n".join(
+        " | ".join(row) for row in epistemic_contract_rows(reverted_checks))
+    assert surviving_claim.why in full_rows
+    assert removed_claim.why in full_rows
+    assert surviving_claim.why in reverted_rows
+    assert removed_claim.why not in reverted_rows
+
+    reverted_model = build_sequence_model(reverted_detail)
+    assert reverted_model is not None
+    model_whys = {
+        order_claim["why"]
+        for step in reverted_model[0]
+        for order_claim in step["order_claims"]
+    }
+    assert model_whys == {surviving_claim.why}
+
+    markdown = render_build_sequence_md(reverted_detail)
+    assert markdown.count(surviving_claim.why) == 2
+    assert removed_claim.why not in markdown
+
+    html_section = html.unescape(
+        SDR._render_build_sequence_section(reverted_detail))
+    assert html_section.count(surviving_claim.why) == 2
+    assert removed_claim.why not in html_section
+
+
+def test_cat_k_sequence_prose_exists_only_in_typed_authoring_surfaces():
+    """The §6.5 grep/AST closer: report scripts and free spec prose cannot
+    author a glue/cure/screw sequence beside the graph-derived one."""
+    import re
+
+    from detailgen.spec.loader import load_spec_file
+    from detailgen.spec.schema import ProseSection
+
+    script = (_REPO / "scripts" / "single_detail_report.py").read_text()
+    constants = [
+        node.value for node in ast.walk(ast.parse(script))
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)]
+    sequence_pattern = re.compile(
+        r"(?:glue|cure).{0,180}(?:before|then).{0,180}screw",
+        flags=re.I | re.S)
+    assert not [value for value in constants if sequence_pattern.search(value)]
+    assert "Hidden rail joints — glue, then screws" not in script
+
+    # Reusable modeling types cannot become a second owner of a consumer's
+    # cross-connection sequence.  Scan the actual class docstring so this
+    # closer fails if the caddy recipe drifts back into Glued's source docs.
+    model_source = (_REPO / "src" / "assemblies" / "connection.py").read_text()
+    model_tree = ast.parse(model_source)
+    glued_class = next(
+        node for node in model_tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "Glued")
+    glued_doc = ast.get_docstring(glued_class) or ""
+    assert not sequence_pattern.search(glued_doc)
+
+    spec = load_spec_file(SPEC)
+    free_text = [assumption for conn in spec.connections
+                 for assumption in conn.assumptions]
+    free_text.extend(section.text for section in spec.doc.sections
+                     if isinstance(section, ProseSection))
+    assert not [value for value in free_text if sequence_pattern.search(value)]
 
 
 def test_reader_configuration_formats_values_from_the_compiled_namespace():
@@ -607,6 +780,17 @@ def test_single_detail_html_build_document(tmp_path):
     assert "workpiece clamped" in low
     assert "head=flush_countersunk" in low and "head=proud" not in low
     assert "longitudinal sliding is not analyzed" in low
+    assert "authored_process_fact" in low
+    assert "selected adhesive label's full-cure/full-strength condition" in low
+    assert "actual shop conditions" in low
+    assert "no generic duration is represented" in low
+    assert "bond/install before process cure" in low
+    assert "authored process point constraints" in low
+    assert "authored_sequence" in low
+    import html as _html
+    visible_text = _html.unescape(vis)
+    for claim in compile_spec_file(SPEC).resolved_after():
+        assert visible_text.count(claim.why) >= 3  # table + both affected steps
     # Hidden viewer metadata is reader-visible on hover and must use the
     # domain part, not the rectangular primitive used to approximate it.
     raw = html.lower()

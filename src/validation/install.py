@@ -385,7 +385,9 @@ def check_installability(assembly: DetailAssembly, connections: list,
         from ..assemblies.event_graph import build_event_graph
         graph = build_event_graph(assembly, connections, checks.edges,
                                   checks.installs, checks.sequence,
-                                  getattr(checks, "staging", None))
+                                  getattr(checks, "staging", None),
+                                  after=getattr(checks, "after", ()),
+                                  fragments=getattr(checks, "fragments", {}))
 
     findings: list[Finding] = []
     for ri in installs:
@@ -842,9 +844,10 @@ _DECLARED_ORDER_RUNG = (
 
 def _unordered_clauses(parts, scope: _Scope) -> str:
     """The teaching tail of an underdetermined verdict: name the missing
-    order fact and the authoring surfaces that EXIST in v1-core (an
-    authored ``sequence:`` stage; a ConnectionType technique edge) — a
-    staging declaration is an authorable frame/presence mechanism. Adds the
+    order fact and the authoring surfaces that EXIST (an authored
+    ``sequence:`` stage; a typed ``sequence.after`` process point constraint;
+    a ConnectionType technique edge) — a staging declaration is an
+    authorable frame/presence mechanism. Adds the
     composed-site cross-fragment gap and the epoxy-rod insertion gap where
     they are the true missing mechanisms."""
     graph = scope.graph
@@ -864,9 +867,10 @@ def _unordered_clauses(parts, scope: _Scope) -> str:
                 cross_frags |= {f for f in frags if f}
     clauses.append(
         f"no order fact relates {f_desc} to the occupants' own events — an "
-        f"authored sequence: stage ordering them, or a ConnectionType "
-        f"technique edge, would resolve it; an authorable staging declaration "
-        f"can instead establish the honest bench frame/presence context")
+        f"authored sequence: stage ordering them, a typed sequence.after "
+        f"process point constraint, or a ConnectionType technique edge, "
+        f"would resolve it; an authorable staging declaration can instead "
+        f"establish the honest bench frame/presence context")
     if no_conn:
         clauses.append(
             f"{', '.join(no_conn)} participates in no connection, so no "
@@ -1237,12 +1241,35 @@ def epistemic_contract_rows(checks) -> list[tuple[str, str, str]]:
         declared_staging = (
             f"this detail authors assembly mode {staging.mode!r}: "
             f"{units}{trust}")
+    derived_process = [
+        fact for fact in tuple(getattr(checks, "derived", ()) or ())
+        if fact.rule.endswith(".process_events")
+        and "event order" in fact.fact]
+    if derived_process:
+        process_sources = "; ".join(
+            f"{fact.connection}: {fact.fact} (source: {fact.rule})"
+            for fact in derived_process)
+        process_sources = f"this detail derives: {process_sources}"
+    else:
+        process_sources = "no typed process event is emitted by this detail"
+    after = tuple(getattr(checks, "after", ()) or ())
+    if after:
+        declared_after = "; ".join(
+            f"{ref.kind} for {ref.connection!r} -> {claim.connection!r} "
+            f"(why: {claim.why})"
+            for claim in after for ref in claim.after)
+        declared_after = f"this detail authors: {declared_after}"
+    else:
+        declared_after = "none authored by this detail"
     return [
         ("Structural necessity (a member exists before its own "
          "connection's fasteners are driven)",
          "DERIVED",
          "derived from connection membership; points only INTO a drive "
          "event, so no derived fact ever clears a corridor"),
+        ("Bond/install before process cure",
+         "DERIVED",
+         process_sources),
         ("Technique defaults (a ConnectionType's own installed_before "
          "edges, lifted to events)",
          "DECLARED (type-level construction knowledge, defended in the "
@@ -1252,6 +1279,10 @@ def epistemic_contract_rows(checks) -> list[tuple[str, str, str]]:
          "DECLARED (authored claim; a why is required and prints with "
          "every verdict that leans on it)",
          declared_seq),
+        ("Authored process point constraints",
+         "DECLARED (authored claim; a why is required and prints on both "
+         "the process step and the dependent connection step)",
+         declared_after),
         ("Bench events before join (R-1)",
          "DERIVED",
          "all place/drive events inside a declared bench unit precede that "

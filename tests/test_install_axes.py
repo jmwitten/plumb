@@ -19,8 +19,10 @@ from detailgen.assemblies import (
     BoltedClamp, Connection, ConnectionType, DetailAssembly,
     compile_connections, connection_types,
 )
-from detailgen.assemblies.connection import Edge
-from detailgen.assemblies.event_graph import ResolvedStaging, ResolvedUnit
+from detailgen.assemblies.connection import Edge, Glued
+from detailgen.assemblies.event_graph import (
+    ResolvedAfter, ResolvedProcessRef, ResolvedStaging, ResolvedUnit,
+)
 from detailgen.assemblies.installation import (
     EntryFace, Exit, ToolAxis, straight_screw_group,
 )
@@ -261,6 +263,55 @@ def test_cat_e_foreign_blocker_is_named_unknown():
     # the slab participates in no connection — the verdict says exactly
     # that, so the reader knows no derived fact can ever exist for it
     assert "participates in no connection" in acc.detail
+
+
+def test_process_point_constraint_falsifies_foreign_blocker_unknown_to_fail():
+    """A cure prerequisite informs axis 3; it never waives geometry.
+
+    The hovering slab is a member of the glue connection.  Without a point
+    constraint, its own process is unrelated to the target screw and the
+    corridor is honestly UNKNOWN.  Authoring cure-before-target proves the
+    slab already exists (member -> glue bond -> cure -> target drive), so the
+    identical corridor becomes a loud FAIL.  Rebuilding through the direct-
+    test fallback (``event_graph=None``) must consume the same resolved
+    constraint surface.
+    """
+    assembly, target = _blocked_corridor(
+        _ScrewedPlate, blocker_in_connection=False)
+    blocker = next(p for p in assembly.parts if p.name == "hovering slab")
+    mate = assembly.add(
+        Lumber("2x4", 4 * IN, name="glue mate"), at=(0, 300, 0))
+    glue = Connection(
+        kind=Glued(), parts=[blocker, mate], label="blocking glue")
+
+    unordered = compile_connections(assembly, [glue, target])
+    (before,) = [
+        finding for finding in check_installability(
+            assembly, [glue, target], unordered)
+        if finding.check == "install_access"
+        and finding.subject.startswith("cat-ef joint")]
+    assert before.verdict == "UNKNOWN"
+    assert "sequence.after" in before.detail
+
+    claim = ResolvedAfter(
+        connection="cat-ef joint",
+        after=(ResolvedProcessRef("cure", "blocking glue"),),
+        why="The cured glue-up establishes the registration datum first.")
+    ordered = compile_connections(
+        assembly, [glue, target], after=(claim,))
+    # Exercise install.py's hand-built ConnectionChecks fallback, not only
+    # compile_connections' cached graph.
+    ordered.event_graph = None
+    (after,) = [
+        finding for finding in check_installability(
+            assembly, [glue, target], ordered)
+        if finding.check == "install_access"
+        and finding.subject.startswith("cat-ef joint")]
+    assert after.verdict == "FAIL" and after.blocking
+    assert "hovering slab" in after.detail
+    assert "process(blocking glue, cure)" in after.detail
+    assert "authored_sequence" in after.detail
+    assert claim.why in after.detail
 
 
 def test_cat_g_bench_frame_clears_context_with_declared_trust_marker():

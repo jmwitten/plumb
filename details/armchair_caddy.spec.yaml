@@ -8,8 +8,8 @@
 # registration rails (design findings D1 + D6): a full-depth 1x6 rail in each
 # corner, dropping 5.5in down the arm side, GLUED up to the top board's
 # underside (the rail's long-grain top edge to the top's face grain — a
-# declared `glued` connection: glue both mating faces, clamp, cure per the
-# adhesive label, assembled OFF the sofa) and screwed horizontally into the
+# declared `glued` connection whose typed process fact owns preparation,
+# fixturing, and label-governed completion) and screwed horizontally into the
 # side board's inner face (FACE grain) — NO fastener on the top show face and
 # none in end grain. The deep rail REGISTERS the caddy
 # across the arm to limit cross-arm rocking (D6); the top still BEARS on the side
@@ -245,8 +245,8 @@ components:
 # withdrawal is stronger than end grain but is NOT analyzed to a number here;
 # adhesive bond capacity is likewise NOT analyzed.
 #
-# The glue bond's technique is a PROCESS fact the assumptions carry: glue both
-# mating faces, clamp, cure per the adhesive label — assembled OFF the sofa.
+# The glue bond's technique is a typed PROCESS fact; cross-connection order is
+# owned only by sequence.after — assembled OFF the sofa.
 # The side joints' authored embedment minimums replace the half-length
 # rule-of-thumb with joint-geometry numbers; each connection's assumptions
 # carry the why.
@@ -256,7 +256,16 @@ connections:
     parts: [cleat_pos, top]
     assumptions:
       - "Adhesive bond, long grain both sides: the rail's 0.75in x 5.5in top edge (long grain) mates flush to the top board's underside FACE grain — the strong glue case; bond capacity NOT analyzed to a number."
-      - "Technique (process fact): spread glue on BOTH mating faces, clamp the rail to the top, and cure per the adhesive label before driving the side screws — assembled OFF the sofa. Wood glue and clamps are shop consumables/tools, not billed BOM rows."
+    process:
+      cure:
+        instructions:
+          - "Spread the selected wood adhesive on both prepared long-grain mating faces: the rail's top edge and the top board's underside."
+          - "Clamp the rail flush to the top underside and maintain the selected adhesive label's required fixture state."
+        completion: selected_label_full_cure
+        why: >-
+          This detail selects an adhesive bond at this long-grain mating plane;
+          the selected product label and actual shop conditions govern when
+          that bond reaches full cure/full strength.
   - type: cleat_screwed
     label: "rail +X -> side +X inner face (screwed, face grain, upper + lower pairs)"
     params: {n_screws: 4}
@@ -273,7 +282,16 @@ connections:
     parts: [cleat_neg, top]
     assumptions:
       - "Adhesive bond, long grain both sides: the rail's 0.75in x 5.5in top edge (long grain) mates flush to the top board's underside FACE grain — the strong glue case; bond capacity NOT analyzed to a number."
-      - "Technique (process fact): spread glue on BOTH mating faces, clamp the rail to the top, and cure per the adhesive label before driving the side screws — assembled OFF the sofa. Wood glue and clamps are shop consumables/tools, not billed BOM rows."
+    process:
+      cure:
+        instructions:
+          - "Spread the selected wood adhesive on both prepared long-grain mating faces: the rail's top edge and the top board's underside."
+          - "Clamp the rail flush to the top underside and maintain the selected adhesive label's required fixture state."
+        completion: selected_label_full_cure
+        why: >-
+          This detail selects an adhesive bond at this long-grain mating plane;
+          the selected product label and actual shop conditions govern when
+          that bond reaches full cure/full strength.
   - type: cleat_screwed
     label: "rail -X -> side -X inner face (screwed, face grain, upper + lower pairs)"
     params: {n_screws: 4}
@@ -293,6 +311,21 @@ connections:
 # outside it. This context exclusion is DECLARED TRUST until insertion travel
 # over the arm is analyzed (P1), so every dependent verdict says so.
 sequence:
+  after:
+    - connection: "rail +X -> side +X inner face (screwed, face grain, upper + lower pairs)"
+      after:
+        - cure: "rail +X -> top underside (glued)"
+      why: >-
+        The cured +X rail preserves this project's registration datum while
+        its side board is positioned and screwed. This is an authored caddy
+        assembly strategy, not a universal glue-before-screws rule.
+    - connection: "rail -X -> side -X inner face (screwed, face grain, upper + lower pairs)"
+      after:
+        - cure: "rail -X -> top underside (glued)"
+      why: >-
+        The cured -X rail preserves this project's registration datum while
+        its side board is positioned and screwed. This is an authored caddy
+        assembly strategy, not a universal glue-before-screws rule.
   assembly:
     mode: bench_then_set
     why: >-
@@ -366,7 +399,7 @@ doc:
     - prose: |
         # Armchair Coffee Caddy — Validation Report
 
-        A five-piece saddle that straddles a sofa arm and holds a coffee cup, generated by the `detailgen` parametric library. Nothing fastens to the sofa: the caddy is a loose object that BEARS on the arm top by gravity, saddle-style. One 5/4x6 top board (bored with a {cup_dia:g}" cup hole) caps the arm; two 1x6 side boards drop {side_drop:g}" down the arm's two sides and butt under the top board. The top<->side joints use HIDDEN interior registration rails — a full-depth 1x6 rail in each corner, dropping 5.5" down the arm side, GLUED up to the top board's underside (the rail's long-grain top edge to the top's face grain — a declared adhesive bond: glue both mating faces, clamp, cure per the adhesive label) and screwed horizontally into the side board's inner face (FACE grain), with NO fastener on the top show face. The deep rails register the caddy across the arm and limit cross-arm rocking (design finding D6); longitudinal sliding is not analyzed. The top still bears on the side boards' top end grain (a real, declared gravity seat the rails do not replace). Deterministic computed placement is canonical.
+        A five-piece saddle that straddles a sofa arm and holds a coffee cup, generated by the `detailgen` parametric library. Nothing fastens to the sofa: the caddy is a loose object that BEARS on the arm top by gravity, saddle-style. One 5/4x6 top board (bored with a {cup_dia:g}" cup hole) caps the arm; two 1x6 side boards drop {side_drop:g}" down the arm's two sides and butt under the top board. The top<->side joints use HIDDEN interior registration rails — a full-depth 1x6 rail in each corner, dropping 5.5" down the arm side, GLUED up to the top board's underside at a declared long-grain adhesive bond and screwed horizontally into the side board's inner face (FACE grain), with NO fastener on the top show face. The deep rails register the caddy across the arm and limit cross-arm rocking (design finding D6); longitudinal sliding is not analyzed. The top still bears on the side boards' top end grain (a real, declared gravity seat the rails do not replace). Deterministic computed placement is canonical.
 
         ## Collision / interference
         - Pairwise interference checks run: **{interference_checks}**
@@ -376,9 +409,9 @@ doc:
     - hardware_presence: {header: "## Connection hardware presence", cap: 8}
     - derivation_log:
         header: "## Construction Graph — derivation log"
-        preamble: "Every overlap/bond/hardware-presence/load-path fact for the four hidden rail joints is generated from a declared Connection — a `glued` bond at each rail->top corner, a `cleat_screwed` joint at each rail->side face — recorded here with its source rule and confidence:"
+        preamble: "Every overlap/bond/hardware-presence/load-path and process-order fact for the four hidden rail joints is generated from a declared Connection or typed sequence constraint — a `glued` bond at each rail->top corner, a `cleat_screwed` joint at each rail->side face — recorded here with its source rule and confidence:"
         mode: per_connection
-        cap: 4
+        cap: 32
     - findings: {header: "## Dimension checks", check: dimension}
     - prose: "## Result: **{result_verdict}**"
     - bom_table: {header: "## Bill of materials"}
@@ -387,6 +420,6 @@ doc:
         - **Gravity saddle, no fastening to the sofa.** The caddy rests on the arm top and lifts straight off. Each side board is flush with its top-board end, while its inner face sits {clear:g}" outside the sofa-arm side; the registration rail occupies 0.75" of that span and leaves a {arm_gap:g}" clear reveal at the arm. Support/Stability, Load-path, and Structural capacity are honestly NOT ANALYZED (a loose saddle has no walking-surface support obligation and no capacity rung here) — see the coverage matrix appended below.
         - **The arm is EXISTING context**, modeled as a plain box (Boulder primitive), self-grounded like the platform's living tree — not purchased, excluded from the buy list, and carrying no structural claim.
         - **The cup hole is a full-thickness bore** ({cup_dia:g}" diameter) sized so a coffee cup's tapered body/lip catches on it; it is the top board's `bore` FEATURE — a designed recess that carries its own name through fabrication (never borrowed clearance language).
-        - **Hidden registration rails — glued at the top, face-grain screws at the sides.** The top<->side joints are made with two full-depth interior 1x6 rails (dropping 5.5" down the arm side), each GLUED up to the top board's underside and screwed into its side board's inner face (upper + lower screw pairs) — no fastener on the show face and none in end grain. The glue bond mates the rail's long-grain top edge (0.75" x 5.5") to the top's face grain — long grain both sides, the strong glue case; spread glue on BOTH faces, clamp each rail to the top, and let it cure per the adhesive label BEFORE driving the side screws, with the whole assembly OFF the sofa. Wood glue and clamps are shop consumables/tools, not billed BOM rows. Adhesive bond capacity is NOT analyzed to a number; the deep rails register the caddy across the arm and limit cross-arm rocking (design finding D6), but longitudinal sliding is not analyzed. Face-grain screw withdrawal is stronger than end grain but is NOT analyzed to a number here.
+        - **Hidden registration rails — adhesive bonds at the top, face-grain screws at the sides.** The top<->side joints use two full-depth interior 1x6 rails (dropping 5.5" down the arm side), each bonded to the top board's underside and screwed into its side board's inner face (upper + lower screw pairs) — no fastener on the show face and none in end grain. The bond mates the rail's long-grain top edge (0.75" x 5.5") to the top's face grain — long grain both sides, the strong glue case. Wood adhesive and clamps are shop consumables/tools, not billed BOM rows. Adhesive bond capacity is NOT analyzed to a number; the deep rails register the caddy across the arm and limit cross-arm rocking (design finding D6), but longitudinal sliding is not analyzed. Face-grain screw withdrawal is stronger than end grain but is NOT analyzed to a number here. Adhesive preparation, fixturing, completion, and project-specific order are printed only in the graph-derived Build sequence.
         - **Installability follows the declared bench strategy.** All five fabricated members and their four joints are assembled as one unit OFF the sofa. The authored `bench_then_set` construction frame excludes the existing arm, so all eight driver corridors pass in that declared frame. Because the arm touches no connection, that exclusion is explicitly DECLARED TRUST until insertion travel over the upholstered arm is analyzed; it is not a geometric proof of placement. The glued rail->top bonds carry no fastener for the installability checks to judge. The authored embedment minimum (0.5" into the side boards) is a joint-geometry number that keeps the show faces intact; the connection assumptions carry the reasoning.
         - **Stability is NOT ANALYZED.** The rail depth was chosen to restore the caddy's grip on the arm (reviewer rigid-body geometry: rock angle ~2.6° with the 5.5" rail vs ~9.5° with the shallow 1x2 cleat, ~2.05° for the pre-cleat full-depth sides), but detailgen has no rocking/stability rung — Support/Stability stays UNKNOWN, no stability number is claimed as proven.

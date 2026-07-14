@@ -69,7 +69,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .assembly import DetailAssembly, Placed
-from .event_graph import build_event_graph
+from .event_graph import ProcessFact, build_event_graph
 from .installation import (
     EntryFace,
     Exit,
@@ -189,6 +189,11 @@ class ConnectionChecks:
     ``installs`` rather than reaching back into the spec doc. Empty for
     every ``Detail`` that authors no sequence.
 
+    ``after`` (+process) is the resolved typed process-point constraint
+    surface. It stays beside ``sequence`` so the graph, axis-3 checks, direct
+    test fallback, derivation log, and later reader projection consume one
+    compiled truth rather than re-reading the spec.
+
     ``event_graph`` (task CPGCORE) is the built Construction Process Graph
     assembly slice (:class:`~detailgen.assemblies.event_graph.EventGraph`)
     over ALL connections + the authored sequence — the ONE order truth the
@@ -212,6 +217,7 @@ class ConnectionChecks:
     edges: list[Edge] = field(default_factory=list)
     installs: list[ResolvedInstallation] = field(default_factory=list)
     sequence: tuple = ()
+    after: tuple = ()
     staging: object = None
     event_graph: object = None
     fragments: dict = field(default_factory=dict)
@@ -299,6 +305,26 @@ class ConnectionType:
           provenance (guardrail #7) stamped at the source."""
         return None
 
+    @classmethod
+    def supported_process_kinds(cls) -> frozenset[str]:
+        """Process kinds this reusable joint type can produce.
+
+        This capability surface is type-level so declaration semantics can
+        reject an impossible process refinement before geometry.  The runtime
+        graph still confirms that :meth:`process_events` actually produced the
+        referenced fact; capability alone is never enough to invent an event.
+        """
+        return frozenset()
+
+    def process_events(self, conn: "Connection") -> tuple[ProcessFact, ...]:
+        """Typed non-geometric process facts contributed by this joint.
+
+        The generic default is honestly empty.  Concrete types opt in through
+        :meth:`supported_process_kinds` and produce facts from that same
+        capability, optionally refining them from ``conn.process``.
+        """
+        return ()
+
 
 # -- Connection: declared data + the compile step ----------------------------
 
@@ -350,6 +376,10 @@ class Connection:
     #: the type's default contract, stamping ``authored_override`` per field
     #: (guardrail #7). Empty for a connection authoring no override.
     install: dict = field(default_factory=dict)
+    #: Typed authored process refinements lowered by the spec compiler.  The
+    #: owning ConnectionType decides whether and how each supported fact is
+    #: produced; an unsupported or silently dropped fact is a runtime error.
+    process: tuple[ProcessFact, ...] = ()
 
     def __post_init__(self) -> None:
         if len(self.parts) < 2:
@@ -609,7 +639,8 @@ class Connection:
 def compile_connections(assembly: DetailAssembly, connections: list[Connection],
                         sequence: tuple = (),
                         staging=None,
-                        fragments: dict | None = None) -> ConnectionChecks:
+                        fragments: dict | None = None,
+                        after: tuple = ()) -> ConnectionChecks:
     """Aggregate every :class:`Connection`'s generated checks into one
     :class:`ConnectionChecks`, run the whole-detail installation-order
     consistency check across ALL connections combined (a single connection's
@@ -631,8 +662,10 @@ def compile_connections(assembly: DetailAssembly, connections: list[Connection],
     connection labels + built part ids); a stage naming an unknown
     connection/part is a loud load-time teaching error here. ``fragments``
     is the composed-site connection-label -> fragment-id map (design §3.2);
-    ``None``/empty for a standalone detail."""
-    out = ConnectionChecks(sequence=sequence, staging=staging,
+    ``None``/empty for a standalone detail. ``after`` carries resolved typed
+    process point constraints on the same compiled labels; the event graph
+    validates every source/target and fragment chain again at runtime."""
+    out = ConnectionChecks(sequence=sequence, after=after, staging=staging,
                            fragments=dict(fragments or {}))
     for conn in connections:
         c = conn.generate_checks(assembly)
@@ -648,8 +681,59 @@ def compile_connections(assembly: DetailAssembly, connections: list[Connection],
         out.installs.extend(c.installs)
     _check_install_order(out.edges)
     out.event_graph = build_event_graph(
-        assembly, connections, out.edges, out.installs, sequence, staging)
+        assembly, connections, out.edges, out.installs, sequence, staging,
+        after=after, fragments=out.fragments)
+    _record_process_order_facts(out, connections)
     return out
+
+
+def _record_process_order_facts(out: ConnectionChecks,
+                                connections: list[Connection]) -> None:
+    """Project process-order graph truth into the ordinary derivation log.
+
+    Only the two +process rules land here: bond/install-before-cure is a
+    derived ConnectionType rule; cure-before-target is the author's direct
+    point constraint.  Staging's process-before-join lift remains represented
+    by the graph's existing staging provenance rather than duplicating the
+    +process facts this increment promises.
+    """
+    from .event_graph import FAMILY_AUTHORED, FAMILY_NECESSITY
+
+    graph = out.event_graph
+    conn_by_label = {conn.label: conn for conn in connections}
+    for edge in graph.edges:
+        if (edge.family == FAMILY_NECESSITY
+                and edge.a.kind == "drive" and edge.b.kind == "process"):
+            conn = conn_by_label[edge.a.subject]
+            process = graph.process_facts[edge.b]
+            out.derived.append(DerivedFact(
+                fact=(f"event order {graph.describe(edge.a)} -> "
+                      f"{graph.describe(edge.b)} [{edge.family}]: "
+                      f"{edge.source}"),
+                connection=conn.label,
+                rule=f"{type(conn.kind).__name__}.process_events",
+                assumptions=(process.why,), confidence="inferred",
+                source_type="verified_heuristic",
+                subjects=tuple(p.id for p in conn.parts),
+            ))
+        elif (edge.family == FAMILY_AUTHORED
+              and edge.a.kind == "process" and edge.b.kind == "drive"):
+            claim = next(
+                claim for claim in graph.constraints
+                if claim.connection == edge.b.subject
+                and any(ref.connection == edge.a.subject
+                        and ref.kind == edge.a.group
+                        for ref in claim.after))
+            target = conn_by_label[claim.connection]
+            out.derived.append(DerivedFact(
+                fact=(f"event order {graph.describe(edge.a)} -> "
+                      f"{graph.describe(edge.b)} [{edge.family}]: "
+                      f"{edge.source}"),
+                connection=target.label, rule="sequence.after",
+                assumptions=(claim.why,), confidence="official",
+                source_type="authoritative",
+                subjects=tuple(p.id for p in target.parts),
+            ))
 
 
 def _check_install_order(edges: list[Edge]) -> None:
@@ -1668,10 +1752,10 @@ class Glued(ConnectionType):
     order's plain face-to-face case — design task #22's glued-miter is the
     waterfall sibling, not this type).
 
-    Exemplar: the armchair caddy's rail->top joints (owner directive,
-    2026-07-11) — each interior registration rail's top edge is glued to the
-    top board's underside: glue both mating faces, clamp, cure per the
-    adhesive label, then drive the side screws.
+    This reusable type owns only one connection's bond and its typed cure.
+    When that cure must gate a different connection, the consumer declares
+    the cross-connection order with ``sequence.after``; a project-specific
+    assembly recipe does not belong in this modeling type.
 
     What this type claims — and, deliberately, what it does NOT:
 
@@ -1689,9 +1773,9 @@ class Glued(ConnectionType):
       R-SUBSTRATE lesson). The ``transfer_claims`` name only the MECHANISM
       (an adhesive bond across the mating plane); every declared Connection's
       ``assumptions`` must name what its two mated faces actually are, plus
-      the clamp-and-cure requirement (a PROCESS fact this type deliberately
-      does not encode as an ``installed_before`` edge — there is no hardware
-      whose install order the joint owns).
+      the substrate/capacity boundary. Clamp-and-cure is now the typed
+      :meth:`process_events` fact, never parsed from assumptions and never
+      misrepresented as a part-level ``installed_before`` edge.
     - **Nothing to contract.** :meth:`install_contract` returns the explicit
       empty ``()`` (never ``None``): by the type's own semantics there is no
       fastener-class hardware to install, so the Fastener-installability
@@ -1734,6 +1818,29 @@ class Glued(ConnectionType):
                       "plane — representative"),
     )
 
+    @classmethod
+    def supported_process_kinds(cls) -> frozenset[str]:
+        return frozenset({"cure"})
+
+    def process_events(self, conn: Connection) -> tuple[ProcessFact, ...]:
+        authored = tuple(f for f in conn.process if f.kind == "cure")
+        if authored:
+            return authored
+        return (ProcessFact(
+            kind="cure",
+            instructions=(
+                "Follow the selected adhesive label for surface preparation, "
+                "application, and fixturing.",
+                "Maintain the selected adhesive label's required fixture "
+                "state under the actual shop conditions.",
+            ),
+            completion="selected_label_full_cure",
+            why=("Treat cure as complete only at the selected adhesive "
+                 "label's full-cure/full-strength condition under the actual "
+                 "shop conditions; no generic duration is represented."),
+            provenance="connectiontype_default",
+        ),)
+
     def _unpack(self, conn: Connection):
         if len(conn.parts) != 2:
             raise ValueError(
@@ -1754,10 +1861,10 @@ class Glued(ConnectionType):
     def edges(self, conn: Connection):
         member_a, member_b = self._unpack(conn)
         # The bond is the joint's one graph fact. Deliberately NO
-        # installed_before edge: there is no hardware, and clamp-and-cure is
-        # a process fact the connection's assumptions disclose, not an
-        # ordering between the members this joint owns (same reasoning as
-        # CleatScrewed's no cleat<->member order edge). NO bears_on — a glue
+        # installed_before edge: there is no hardware. Clamp-and-cure lives
+        # on the typed process-event surface, not as an ordering between the
+        # members this joint owns (same reasoning as CleatScrewed's no
+        # cleat<->member order edge). NO bears_on — a glue
         # joint holds parts together, it is not a gravity seat.
         return [Edge(member_a.id, member_b.id, "bonded_to", conn.label)]
 

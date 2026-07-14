@@ -168,14 +168,6 @@ PANEL = {
          "underside. Predrill and countersink for #10-class {screw_len_h:g}in "
          "flat-head wood/structural screws per the selected screw manufacturer's "
          "chart; seat every head flush with the rail face."),
-        ("Hidden rail joints — glue, then screws, all off the sofa.", "Two full-depth "
-         "1x6 registration rails, one per corner. Spread wood glue on BOTH mating faces "
-         "(the rail's top edge and the top board's underside — long grain both, the "
-         "strong glue case), clamp each rail to the top, and let it cure per the "
-         "adhesive label. Then drive the side screws into each side board's inner face "
-         "(2 pairs, upper + lower, into FACE grain — stronger in withdrawal than end "
-         "grain). All hidden, nothing on the show face. The deep rail limits cross-arm "
-         "rocking; bond, withdrawal, and longitudinal sliding are not analyzed."),
         ("Tools and consumables.", "Tools: tape measure, square, pencil, saw, "
          "drill/driver, pilot/countersink bits, clamps, sanding tools, and "
          "eye/hearing/dust protection. For the {cup_dia:g}in opening, use a hole saw "
@@ -1259,8 +1251,40 @@ def _render_build_sequence_section(detail) -> str:
         for label in step["units"]:
             subs.append(f"<li>install {_html.escape(label)} &mdash; no "
                         f"fastener contract (a bond or connector install "
-                        f"unit; its process facts live on the connection's "
-                        f"own assumptions)</li>")
+                        f"unit; any typed process fact follows as its own "
+                        f"reader step)</li>")
+        if step["process"] is not None:
+            fact = step["process"]["fact"]
+            subs.append(
+                f"<li>process fact: {_html.escape(fact.provenance)} "
+                f"(why: {_html.escape(fact.why)})</li>")
+            subs.extend(
+                f"<li>{_html.escape(instruction)}</li>"
+                for instruction in fact.instructions)
+            if fact.completion == "selected_label_full_cure":
+                subs.append(
+                    "<li>complete only when the selected adhesive label's "
+                    "full-cure/full-strength condition is met under the "
+                    "actual shop conditions. No generic duration is "
+                    "represented.</li>")
+            else:
+                subs.append(
+                    f"<li>completion condition: "
+                    f"{_html.escape(fact.completion)} (no generic duration "
+                    f"is represented)</li>")
+        for claim in step["order_claims"]:
+            if claim["role"] == "source":
+                text = (
+                    f"do not install {claim['target']} until this "
+                    f"{claim['process_kind']} completes — "
+                    f"{claim['provenance']} (why: {claim['why']})")
+            else:
+                text = (
+                    f"complete {claim['process_kind']} for "
+                    f"{claim['source']} before installing "
+                    f"{claim['target']} — {claim['provenance']} "
+                    f"(why: {claim['why']})")
+            subs.append(f"<li>{_html.escape(text)}</li>")
         for unit in step["joins"]:
             subs.append(
                 f"<li>set {_html.escape(unit)} in place &mdash; join the "

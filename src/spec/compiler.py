@@ -26,6 +26,7 @@ from dataclasses import dataclass
 
 from ..assemblies.assembly import DetailAssembly, Placed
 from ..assemblies.connection import Connection, DerivedFact, connection_types
+from ..assemblies.event_graph import ProcessFact
 from ..assemblies.installation import EntryFace, Exit, ToolAxis, ToolEnvelope
 from ..core import IN
 from ..core.config import DEFAULT
@@ -779,6 +780,54 @@ class SpecDetail(Detail):
                 connections=tuple(labels), parts=tuple(pids)))
         return tuple(out)
 
+    def resolved_after(self) -> tuple:
+        """Resolve typed process point constraints to built connection labels.
+
+        V1 deliberately accepts only a one-to-one authored reference. A repeat
+        template expanding to multiple built connections carries no represented
+        pairing provenance, so choosing all-to-all (or matching indices) would
+        invent order. Retired and zero-instance references are equally loud.
+        """
+        from ..assemblies.event_graph import ResolvedAfter, ResolvedProcessRef
+
+        claims = self.doc.sequence.after
+        if not claims:
+            return ()
+        self.build()
+        if self._conn_instances is None:
+            self.connections()
+
+        def resolve_one(ref: str, owner: str) -> str:
+            expanded = self._conn_instances.get(ref)
+            if not expanded:
+                raise SpecCompileError(
+                    f"{owner}: connection {ref!r} built no instance "
+                    f"(retired, or its repeat ran zero times) — a process "
+                    f"point constraint cannot order a connection that does "
+                    f"not exist in the built detail")
+            if len(expanded) != 1:
+                raise SpecCompileError(
+                    f"{owner}: connection {ref!r} expands to "
+                    f"{len(expanded)} built instances {expanded}; +process v1 "
+                    f"requires exactly one built instance because pairwise "
+                    f"repeat provenance is not represented. Unroll the "
+                    f"constraint explicitly.")
+            return expanded[0]
+
+        out = []
+        for i, claim in enumerate(claims):
+            owner = f"sequence after[{i}] target {claim.connection!r}"
+            target = resolve_one(claim.connection, owner)
+            refs = tuple(ResolvedProcessRef(
+                kind=ref.kind,
+                connection=resolve_one(
+                    ref.connection,
+                    f"{owner} {ref.kind} prerequisite {ref.connection!r}"))
+                for ref in claim.after)
+            out.append(ResolvedAfter(
+                connection=target, after=refs, why=claim.why, chain=""))
+        return tuple(out)
+
     def resolved_staging(self):
         """Resolve typed staging claims to built part ids exactly once.
 
@@ -910,6 +959,7 @@ class SpecDetail(Detail):
                     for sid, datum in conn.surfaces.items()}
         install = build_install_overrides(
             conn.install, resolver, self._resolve_part, bindings, ctx)
+        process = build_process_facts(conn.process)
         # Connection.__post_init__ validates surface datum names (with its own
         # did-you-mean) and part counts — surface those as spec diagnostics
         # rather than a leaked ValueError/KeyError.
@@ -917,7 +967,7 @@ class SpecDetail(Detail):
             return Connection(
                 kind=kind, parts=parts, hardware=hardware, surfaces=surfaces,
                 assumptions=list(conn.assumptions), label=label,
-                install=install,
+                install=install, process=process,
             )
         except (ValueError, KeyError) as e:
             raise SpecCompileError(f"{ctx}: {e}") from None
@@ -1458,6 +1508,24 @@ def build_install_overrides(ispec, resolver, resolve_part, bindings: dict,
     except SpecValueError as e:
         raise SpecCompileError(f"{ctx} install: {e}") from None
     return {ispec.role: fields}
+
+
+def build_process_facts(process_spec) -> tuple[ProcessFact, ...]:
+    """Lower typed connection-local process authoring to runtime facts.
+
+    The loader already validated the closed v1 completion token and non-empty
+    provenance.  This bridge is deliberately mechanical: the ConnectionType
+    remains the authority that decides whether the fact is supported and
+    actually emits an event for it.
+    """
+    cure = process_spec.cure
+    if cure is None:
+        return ()
+    return (ProcessFact(
+        kind="cure", instructions=tuple(cure.instructions),
+        completion=cure.completion, why=cure.why,
+        provenance="authored_process_fact",
+    ),)
 
 
 _INTERP_RE = re.compile(r"\{(\w+)\}")

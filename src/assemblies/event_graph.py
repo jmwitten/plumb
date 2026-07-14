@@ -1,10 +1,9 @@
-"""The Construction Process Graph's ASSEMBLY slice (task CPGCORE,
-``stepdoc-cpg-design.md`` §2–§3, v1-core scope per owner amendment 1).
+"""The Construction Process Graph's assembly + process slice (STEPDOC,
+``stepdoc-cpg-design.md`` §2–§3, v1-core through the +process increment).
 
 The Construction Graph says what exists; this graph says in what order it can
 be built. It is a DAG of install EVENTS — one node kind, open-tagged like
-every other kind in this codebase (``join`` lands in the ``+staging``
-increment; ``cure`` remains later; the tag headroom is the point):
+every other kind in this codebase:
 
 - ``place(part)`` — the part arrives at its final relative pose. Identity:
   the part's id (repeat instances already carry their index).
@@ -17,12 +16,14 @@ increment; ``cure`` remains later; the tag headroom is the point):
   with an empty hardware set).
 - ``join(unit)`` — a completed bench unit enters the root assembly. Every
   internal bench event precedes its own join; separate units are not ordered.
+- ``process(connection, kind)`` — a typed non-geometric process fact. V1's
+  first kind is ``cure``; identity is ``(connection label, process kind)``.
 
 Identity is CONTENT, never an ordinal (the INCR/FAB-Q3 lesson): regrouping
 presentation can never move a verdict, because verdicts bind to events and
 the partial order, not to any linearization (§4.1).
 
-Edge families in v1-core, every edge provenance-stamped with its family AND
+Edge families in v1, every edge provenance-stamped with its family AND
 the source claim it came from:
 
 1. ``technique_default`` — each ConnectionType's ``installed_before`` part
@@ -103,7 +104,9 @@ import heapq
 from collections import deque
 from dataclasses import dataclass
 
-#: The four implemented edge families (open set — process/cure is later).
+#: The four implemented edge families (open set). Process uses the same
+#: derived-necessity and authored-sequence families rather than inventing a
+#: provenance family parallel to them.
 FAMILY_TECHNIQUE = "technique_default"
 FAMILY_NECESSITY = "structural_necessity"
 FAMILY_AUTHORED = "authored_sequence"
@@ -120,14 +123,30 @@ DECLARED_FAMILIES = frozenset({
 @dataclass(frozen=True)
 class Event:
     """One install event, content-keyed (§2): ``place`` keyed by the part's
-    id, ``drive`` keyed by ``(connection label, role-group key)``. ``kind``
-    is an open tag — ``join`` is the +staging event and ``cure`` remains a
-    later process increment."""
+    id, ``drive`` keyed by ``(connection label, role-group key)``, and
+    ``process`` keyed by ``(connection label, process kind)``. ``kind`` is an
+    open tag."""
 
-    kind: str          # "place" | "drive" | "join"
-    subject: str       # place: part id; drive: connection label; join: unit
-    group: str = ""    # drive only: the role-group key ("" = the single
-                       # install unit of a group-less connection)
+    kind: str          # "place" | "drive" | "join" | "process"
+    subject: str       # place: part id; drive/process: conn label; join: unit
+    group: str = ""    # drive: role group; process: process kind
+
+
+@dataclass(frozen=True)
+class ProcessFact:
+    """Typed runtime content for one non-geometric construction process.
+
+    ``kind`` is intentionally open-tagged at runtime (v1 ships ``cure``).
+    ``provenance`` names whether the fact is the ConnectionType's safe
+    compatibility default or an authored connection-local refinement.  A
+    completion condition is a predicate, never a clock duration.
+    """
+
+    kind: str
+    instructions: tuple[str, ...]
+    completion: str
+    why: str
+    provenance: str  # connectiontype_default | authored_process_fact
 
 
 @dataclass(frozen=True)
@@ -186,6 +205,33 @@ class ResolvedStage:
 
 
 @dataclass(frozen=True)
+class ResolvedProcessRef:
+    """One typed process reference resolved to a compiled connection label.
+
+    Keeping it beside :class:`ResolvedStage` follows the existing typed
+    authored-to-event-graph boundary; runtime resolution confirms the named
+    ConnectionType actually emitted the requested process event.
+    """
+
+    kind: str
+    connection: str
+
+
+@dataclass(frozen=True)
+class ResolvedAfter:
+    """One resolved process -> target connection point constraint.
+
+    ``chain`` isolates fragment-local claims in a composed site exactly as it
+    does for :class:`ResolvedStage`; no cross-fragment order is invented.
+    """
+
+    connection: str
+    after: tuple[ResolvedProcessRef, ...]
+    why: str
+    chain: str = ""
+
+
+@dataclass(frozen=True)
 class ResolvedUnit:
     """One authored bench unit resolved to built ``Placed.id`` values."""
 
@@ -224,6 +270,8 @@ class ReaderStep:
     parts_placed: tuple = ()  # part ids whose place events fold into it
     unit: ResolvedUnit | None = None  # authored bench frame, when applicable
     joins: tuple = ()          # unit names joined/set into the root assembly
+    process_event: Event | None = None
+    process_fact: ProcessFact | None = None
 
 
 class EventOrderCycleError(ValueError):
@@ -240,7 +288,8 @@ class EventGraph:
 
     def __init__(self, events, edges, event_of, part_names, conn_labels,
                  drives_of, members_of, stages, staging=None, frame_of=None,
-                 unit_of=None, join_of=None):
+                 unit_of=None, join_of=None, processes_of=None,
+                 process_facts=None, constraints=()):
         self.events: tuple[Event, ...] = tuple(events)
         self.edges: tuple[EventEdge, ...] = tuple(edges)
         #: part id -> its governing event (fastener/stack hardware -> its
@@ -252,6 +301,15 @@ class EventGraph:
         self.drives_of: dict[str, tuple[Event, ...]] = drives_of
         #: connection label -> its member part ids, declaration order.
         self.members_of: dict[str, tuple[str, ...]] = members_of
+        #: connection label -> typed process events, deterministically sorted
+        #: by process kind within connection declaration order.
+        self.processes_of: dict[str, tuple[Event, ...]] = dict(
+            processes_of or {})
+        #: process event -> the typed runtime fact that gives it content.
+        self.process_facts: dict[Event, ProcessFact] = dict(
+            process_facts or {})
+        #: Resolved authored point constraints consumed by this graph.
+        self.constraints: tuple[ResolvedAfter, ...] = tuple(constraints)
         self.stages: tuple[ResolvedStage, ...] = tuple(stages)
         self.staging: ResolvedStaging | None = staging
         #: Event -> frame name. ``root`` is the assembled detail; every other
@@ -282,6 +340,8 @@ class EventGraph:
             return f"place({self.part_names.get(ev.subject, ev.subject)})"
         if ev.kind == "join":
             return f"join({ev.subject})"
+        if ev.kind == "process":
+            return f"process({ev.subject}, {ev.group})"
         grp = ev.group or "install"
         return f"drive({ev.subject}, {grp})"
 
@@ -485,7 +545,7 @@ def _stage_events(stage: ResolvedStage, drives_of, event_of,
 
 
 def build_event_graph(assembly, connections, edges, installs,
-                      stages=(), staging=None) -> EventGraph:
+                      stages=(), staging=None, after=(), fragments=None) -> EventGraph:
     """Build the merged assembly-slice CPG from the compiled surfaces
     (:func:`~detailgen.assemblies.connection.compile_connections` calls
     this after aggregation) and run the merged cycle check.
@@ -583,6 +643,104 @@ def build_event_graph(assembly, connections, edges, installs,
             for h in c.hardware:
                 event_of.setdefault(h.id, ev)
 
+    # -- typed process events ------------------------------------------------
+    # Capability and production are deliberately separate checks.  The type-
+    # level declaration gives schema semantics an early diagnostic; the graph
+    # accepts only facts the runtime hook ACTUALLY produced, so a lying or
+    # incomplete plugin cannot make a point constraint invent an event.
+    processes_of: dict[str, tuple[Event, ...]] = {}
+    process_facts: dict[Event, ProcessFact] = {}
+    for c in connections:
+        supported = frozenset(c.kind.supported_process_kinds())
+        for fact in c.process:
+            if fact.provenance != "authored_process_fact":
+                raise ValueError(
+                    f"event graph: connection {c.label!r} authored process "
+                    f"provenance must be 'authored_process_fact', got "
+                    f"{fact.provenance!r}; runtime callers cannot forge a "
+                    f"ConnectionType default or another authority.")
+        authored_kinds = [fact.kind for fact in c.process]
+        unsupported_authored = sorted(set(authored_kinds) - supported)
+        if unsupported_authored:
+            raise ValueError(
+                f"event graph: connection {c.label!r} has authored process "
+                f"kind(s) {unsupported_authored} not supported by "
+                f"{type(c.kind).__name__}; supported process kinds: "
+                f"{sorted(supported)}")
+        produced = tuple(c.kind.process_events(c))
+        if any(not isinstance(fact, ProcessFact) for fact in produced):
+            raise ValueError(
+                f"event graph: connection {c.label!r} process_events() must "
+                f"return ProcessFact values, got {produced!r}")
+        produced_kinds = [fact.kind for fact in produced]
+        duplicate_kinds = sorted({kind for kind in produced_kinds
+                                  if produced_kinds.count(kind) > 1})
+        if duplicate_kinds:
+            raise ValueError(
+                f"event graph: connection {c.label!r} produced duplicate "
+                f"process kind(s) {duplicate_kinds}; event identity is "
+                f"(connection label, process kind), so each must be unique.")
+        unsupported_produced = sorted(set(produced_kinds) - supported)
+        if unsupported_produced:
+            raise ValueError(
+                f"event graph: connection {c.label!r} produced process "
+                f"kind(s) {unsupported_produced} outside its declared "
+                f"capability {sorted(supported)}")
+        for fact in produced:
+            if fact.provenance not in {
+                    "connectiontype_default", "authored_process_fact"}:
+                raise ValueError(
+                    f"event graph: connection {c.label!r} produced unknown "
+                    f"process provenance {fact.provenance!r}; expected "
+                    f"'connectiontype_default' or 'authored_process_fact'.")
+            if fact.kind == "cure" and (
+                    fact.completion != "selected_label_full_cure"
+                    or not fact.instructions
+                    or any(not isinstance(text, str) or not text.strip()
+                           for text in fact.instructions)
+                    or not isinstance(fact.why, str)
+                    or not fact.why.strip()):
+                raise ValueError(
+                    f"event graph: connection {c.label!r} produced an "
+                    f"invalid cure fact; cure requires non-empty instructions "
+                    f"and why plus completion "
+                    f"'selected_label_full_cure' (never a duration).")
+        authored_by_kind = {fact.kind: fact for fact in c.process}
+        for fact in produced:
+            if (fact.provenance == "authored_process_fact"
+                    and fact.kind not in authored_by_kind):
+                raise ValueError(
+                    f"event graph: connection {c.label!r} produced an "
+                    f"'authored_process_fact' for unauthored process kind "
+                    f"{fact.kind!r}; a fact created by ConnectionType "
+                    f"knowledge must use provenance "
+                    f"'connectiontype_default'.")
+        dropped_authored = sorted(set(authored_kinds) - set(produced_kinds))
+        if dropped_authored:
+            raise ValueError(
+                f"event graph: connection {c.label!r} authors process kind(s) "
+                f"{dropped_authored}, but its ConnectionType produced no such "
+                f"runtime process fact; authored process facts cannot be "
+                f"silently dropped.")
+        produced_by_kind = {fact.kind: fact for fact in produced}
+        for authored in c.process:
+            if produced_by_kind[authored.kind] != authored:
+                raise ValueError(
+                    f"event graph: connection {c.label!r} changed authored "
+                    f"process fact {authored.kind!r} inside process_events(); "
+                    f"an authored refinement must reach the graph exactly, "
+                    f"never be rewritten by reusable type knowledge.")
+        evs = []
+        for fact in sorted(produced, key=lambda item: item.kind):
+            if not fact.kind:
+                raise ValueError(
+                    f"event graph: connection {c.label!r} produced a blank "
+                    f"process kind; process identity must be content-keyed.")
+            ev = Event("process", c.label, fact.kind)
+            evs.append(ev)
+            process_facts[ev] = fact
+        processes_of[c.label] = tuple(evs)
+
     # Multi-stack resolution (review R-2): stack hardware maps to the drive
     # event its OWN type edges place it at-or-before; single-stack hardware
     # maps to its one group's drive. Ambiguity is loud, never a guess.
@@ -642,6 +800,9 @@ def build_event_graph(assembly, connections, edges, installs,
     for label, drives in drives_of.items():
         for dev in drives:
             frame_of[dev] = connection_frame[label]
+    for label, process_events in processes_of.items():
+        for process_event in process_events:
+            frame_of[process_event] = connection_frame[label]
     # Hardware is installed at its mapped drive event and therefore inherits
     # that event's frame. If an author explicitly lists it in a different
     # subassembly, the claims contradict one another; reject the mismatch.
@@ -673,6 +834,10 @@ def build_event_graph(assembly, connections, edges, installs,
             events.append(ev)
     for label in conn_labels:
         for ev in drives_of[label]:
+            if ev not in seen_ev:
+                seen_ev.add(ev)
+                events.append(ev)
+        for ev in processes_of[label]:
             if ev not in seen_ev:
                 seen_ev.add(ev)
                 events.append(ev)
@@ -812,6 +977,128 @@ def build_event_graph(assembly, connections, edges, installs,
                 graph_edges.append(
                     EventEdge(mev, dev, FAMILY_NECESSITY, src))
 
+    # A connection's install/bond event precedes its own cure by the meaning
+    # of cure.  The rule keys on the typed process fact, not a type label or
+    # free-text assumption, and every role-group drive must complete first.
+    for c in connections:
+        for process_event in processes_of[c.label]:
+            if process_event.group != "cure":
+                continue
+            fact = process_facts[process_event]
+            for drive_event in drives_of[c.label]:
+                src = (
+                    f"{c.label}: bond precedes its own cure "
+                    f"[{fact.provenance}] — {fact.why}")
+                graph_edges.append(EventEdge(
+                    drive_event, process_event, FAMILY_NECESSITY, src))
+
+    # Authored point constraints: one typed source process gates EVERY drive
+    # role group of the target connection.  Resolve names and fragment scope
+    # again at the graph boundary; a direct Python caller bypasses the schema.
+    fragments = dict(fragments or {})
+    norm_after = tuple(after or ())
+    seen_after_targets: dict[str, ResolvedAfter] = {}
+    for claim in norm_after:
+        if (not isinstance(claim.connection, str)
+                or not claim.connection.strip()):
+            raise ValueError(
+                "event graph: sequence.after target connection must be a "
+                f"non-blank string; got {claim.connection!r}.")
+        if not isinstance(claim.why, str) or not claim.why.strip():
+            raise ValueError(
+                f"event graph: sequence.after target {claim.connection!r} "
+                f"why must be a non-blank string; got {claim.why!r}.")
+        if not isinstance(claim.after, tuple) or not claim.after:
+            raise ValueError(
+                f"event graph: sequence.after target {claim.connection!r} "
+                "after must contain at least one typed process reference.")
+        prior = seen_after_targets.get(claim.connection)
+        if prior is not None:
+            raise ValueError(
+                f"event graph: duplicate sequence.after target connection "
+                f"{claim.connection!r}; one target must have exactly one "
+                f"point-constraint declaration. First why: {prior.why!r}; "
+                f"duplicate why: {claim.why!r}.")
+        seen_after_targets[claim.connection] = claim
+        seen_refs: set[tuple[str, str]] = set()
+        for ref in claim.after:
+            if not isinstance(ref.kind, str) or not ref.kind.strip():
+                raise ValueError(
+                    f"event graph: sequence.after target "
+                    f"{claim.connection!r} process reference kind must be a "
+                    f"non-blank string; got {ref.kind!r}.")
+            if (not isinstance(ref.connection, str)
+                    or not ref.connection.strip()):
+                raise ValueError(
+                    f"event graph: sequence.after target "
+                    f"{claim.connection!r} process reference source "
+                    "connection must be a non-blank string; got "
+                    f"{ref.connection!r}.")
+            key = (ref.kind, ref.connection)
+            if key in seen_refs:
+                raise ValueError(
+                    f"event graph: duplicate {ref.kind} process reference "
+                    f"to connection {ref.connection!r} for sequence.after "
+                    f"target {claim.connection!r}; list each typed "
+                    f"prerequisite once.")
+            seen_refs.add(key)
+    for claim in norm_after:
+        target_drives = drives_of.get(claim.connection)
+        if target_drives is None:
+            raise ValueError(
+                f"sequence after target {claim.connection!r} names no "
+                f"compiled connection; compiled labels: {sorted(drives_of)}")
+        if fragments:
+            target_fragment = fragments.get(claim.connection)
+            if target_fragment != claim.chain:
+                raise ValueError(
+                    f"sequence after target {claim.connection!r} belongs to "
+                    f"fragment {target_fragment!r}, not claim chain "
+                    f"{claim.chain!r}; a process constraint cannot cross or "
+                    f"misstate its composed fragment boundary.")
+        for ref in claim.after:
+            source_events = processes_of.get(ref.connection)
+            if source_events is None:
+                raise ValueError(
+                    f"sequence after {ref.kind} source {ref.connection!r} "
+                    f"names no compiled connection; compiled labels: "
+                    f"{sorted(processes_of)}")
+            if fragments:
+                source_fragment = fragments.get(ref.connection)
+                if source_fragment != claim.chain:
+                    raise ValueError(
+                        f"sequence after claim chain {claim.chain!r}: source "
+                        f"connection {ref.connection!r} belongs to fragment "
+                        f"{source_fragment!r}; both target and process source "
+                        f"must belong to the claim's own fragment.")
+            source = next(
+                (event for event in source_events if event.group == ref.kind),
+                None)
+            if source is None:
+                source_conn = next(
+                    c for c in connections if c.label == ref.connection)
+                supported = source_conn.kind.supported_process_kinds()
+                if ref.kind in supported:
+                    reason = (
+                        f"its type supports {ref.kind!r} but process_events() "
+                        f"produced no {ref.kind!r} fact")
+                else:
+                    reason = (
+                        f"it does not produce {ref.kind!r}; supported process "
+                        f"kinds: {sorted(supported)}")
+                raise ValueError(
+                    f"sequence after {ref.kind} source "
+                    f"{ref.connection!r}: {reason}. Runtime constraints bind "
+                    f"only to an actually produced typed process event.")
+            src = (
+                f"authored sequence after: process({ref.connection}, "
+                f"{ref.kind}) precedes every drive role group of "
+                f"{claim.connection!r} (why: {claim.why})")
+            for target in target_drives:
+                if source != target:
+                    graph_edges.append(EventEdge(
+                        source, target, FAMILY_AUTHORED, src))
+
     # -- family 4: staging (R-1 bench-events-before-join) ---------------------
     # This edge rule is derived from the staging declaration's own content:
     # "assembled apart" means every internal place/drive happens BEFORE the
@@ -829,7 +1116,10 @@ def build_event_graph(assembly, connections, edges, installs,
     graph = EventGraph(events, graph_edges, event_of, part_names,
                        conn_labels, drives_of, members_of, norm_stages,
                        staging=staging, frame_of=frame_of,
-                       unit_of=unit_of, join_of=join_of)
+                       unit_of=unit_of, join_of=join_of,
+                       processes_of=processes_of,
+                       process_facts=process_facts,
+                       constraints=norm_after)
     _check_event_order(graph)
     return graph
 
@@ -862,11 +1152,12 @@ def _check_event_order(graph: EventGraph) -> None:
         "contradict each other, so no build order satisfies them all. "
         "Conflicting order facts (with provenance family and source "
         "claim):\n" + "\n".join(lines) + "\n"
-        "Fix the claim that is wrong: when an authored sequence: stage "
-        "contradicts a ConnectionType's technique edge or a derived "
-        "structural-necessity fact (a member must exist before its own "
-        "connection's fasteners are driven), one of the two is not how "
-        "this joint is built.")
+        "Fix the claim that is wrong: when an authored sequence: stage or "
+        "process point constraint contradicts a ConnectionType's technique "
+        "edge or a derived structural-necessity fact (a member must exist "
+        "before its own connection's fasteners are driven; a bond/install "
+        "event must precede its cure), one of the two is not how this joint "
+        "is built.")
 
 
 # -- canonical linearization + reader steps (§5.1) ----------------------------
@@ -900,6 +1191,8 @@ def linearize(graph: EventGraph) -> tuple[Event, ...]:
         si = stage_idx.get(ev, big)
         if ev.kind == "drive":
             return (si, conn_idx.get(ev.subject, big), 1, ev.group)
+        if ev.kind == "process":
+            return (si, conn_idx.get(ev.subject, big), 2, ev.group)
         return (si, first_consumer.get(ev.subject, big), 0, ev.subject)
 
     indeg: dict[Event, int] = {ev: 0 for ev in graph.events}
@@ -949,24 +1242,86 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
     conn_idx = {label: i for i, label in enumerate(graph.conn_labels)}
 
     # bucket key: ("unit", name), ("unit-stage", unit, chain, stage),
-    # ("join", name),
-    # ("stage", chain, name), or ("conn", label)
+    # their process-adjacent per-connection variants, ("process", label,
+    # kind), ("join", name), ("stage", chain, name), or ("conn", label).
+    # A real process is a hard presentation break: if its bond and dependent
+    # target were left in one stage/unit bucket, bond -> cure -> target would
+    # collapse into a false bucket-level cycle and the wait would disappear.
     buckets: dict[tuple, dict] = {}
+
+    process_adjacent = {
+        label for label, events in graph.processes_of.items() if events}
+    process_adjacent.update(claim.connection for claim in graph.constraints)
 
     unit_idx = {u.name: i for i, u in enumerate(
         graph.staging.units if graph.staging is not None else ())}
 
     def bucket_for(key: tuple, stage: ResolvedStage | None, title: str,
                    *, unit: ResolvedUnit | None = None, joins=(),
-                   preferred=None):
+                   preferred=None, process_event=None, process_fact=None):
         b = buckets.get(key)
         if b is None:
             b = {"stage": stage, "title": title, "connections": [],
                  "parts": [], "first": len(order) + 1, "events": [],
                  "unit": unit, "joins": tuple(joins),
-                 "preferred": preferred}
+                 "preferred": preferred,
+                 "process_event": process_event,
+                 "process_fact": process_fact}
             buckets[key] = b
         return b
+
+    def connection_bucket(label: str):
+        """Return the presentation bucket for one connection's drive events.
+
+        Only process-adjacent connections split out of their ordinary
+        stage/bench grouping.  This preserves existing grouping everywhere
+        no real process barrier exists while making cure non-foldable.
+        """
+        drives = graph.drives_of[label]
+        frame = graph.frame_of[drives[0]] if drives else "root"
+        split = label in process_adjacent
+        st = stage_of_conn.get(label)
+        first = min((pos.get(ev, len(order)) for ev in drives),
+                    default=len(order))
+        if frame != "root":
+            unit = graph.units[frame]
+            if st is not None and split:
+                key = ("unit-stage-conn", frame, st.chain, st.name, label)
+                return bucket_for(
+                    key, st,
+                    f"bench {frame}: stage {st.name!r} (declared order): "
+                    f"install {label}",
+                    unit=unit,
+                    preferred=(0, unit_idx[frame],
+                               1 + stage_order[(st.chain, st.name)],
+                               first, label))
+            if st is not None:
+                key = ("unit-stage", frame, st.chain, st.name)
+                return bucket_for(
+                    key, st,
+                    f"bench {frame}: stage {st.name!r} (declared order)",
+                    unit=unit,
+                    preferred=(0, unit_idx[frame],
+                               1 + stage_order[(st.chain, st.name)]))
+            if split:
+                key = ("unit-conn", frame, label)
+                return bucket_for(
+                    key, None, f"bench {frame}: install {label}", unit=unit,
+                    preferred=(0, unit_idx[frame], 1, first, label))
+            return bucket_for(
+                ("unit", frame), None, f"bench {frame}", unit=unit,
+                preferred=(0, unit_idx[frame], 0))
+        if st is not None and split:
+            key = ("stage-conn", st.chain, st.name, label)
+            return bucket_for(
+                key, st,
+                f"stage {st.name!r} (declared order): install {label}")
+        if st is not None:
+            key = ("stage", st.chain, st.name)
+            return bucket_for(
+                key, st, f"stage {st.name!r} (declared order)")
+        return bucket_for(
+            ("conn", label), None, f"install {label}")
 
     # Create unit and join buckets in declaration order even when a unit has
     # only place events or a connection-free join. This is presentation state,
@@ -984,35 +1339,28 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
 
     for label in graph.conn_labels:
         drives = graph.drives_of[label]
-        frame = graph.frame_of[drives[0]] if drives else "root"
-        if frame != "root":
-            unit = graph.units[frame]
-            st = stage_of_conn.get(label)
-            if st is not None:
-                key = ("unit-stage", frame, st.chain, st.name)
-                b = bucket_for(
-                    key, st,
-                    f"bench {frame}: stage {st.name!r} (declared order)",
-                    unit=unit,
-                    preferred=(0, unit_idx[frame],
-                               1 + stage_order[(st.chain, st.name)]))
-            else:
-                key = ("unit", frame)
-                b = bucket_for(key, None, f"bench {frame}", unit=unit,
-                               preferred=(0, unit_idx[frame], 0))
-        else:
-            st = stage_of_conn.get(label)
-            if st is not None:
-                key = ("stage", st.chain, st.name)
-                b = bucket_for(key, st,
-                               f"stage {st.name!r} (declared order)")
-            else:
-                key = ("conn", label)
-                b = bucket_for(key, None, f"install {label}")
+        b = connection_bucket(label)
         b["connections"].append(label)
         for ev in drives:
             b["events"].append(ev)
             b["first"] = min(b["first"], pos.get(ev, len(order)))
+
+        # A process event is its own reader step and directly carries the
+        # typed graph fact.  Renderers must never re-call connections() or
+        # search assumptions to reconstruct this content.
+        for ev in graph.processes_of.get(label, ()):
+            frame = graph.frame_of.get(ev, "root")
+            unit = graph.units.get(frame)
+            preferred = None
+            if unit is not None:
+                preferred = (0, unit_idx[frame], 2,
+                             pos.get(ev, len(order)), label, ev.group)
+            pb = bucket_for(
+                ("process", label, ev.group), None,
+                f"{ev.group} {label}", unit=unit, preferred=preferred,
+                process_event=ev, process_fact=graph.process_facts[ev])
+            pb["events"].append(ev)
+            pb["first"] = min(pb["first"], pos.get(ev, len(order)))
 
     # fold place events: stage-claimed parts to their stage's step; every
     # other consumed part to its FIRST consuming connection's step.
@@ -1054,11 +1402,9 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
         if not consumers:
             continue  # no order fact — the renderer says so
         first = min(consumers, key=lambda lbl: conn_idx[lbl])
-        st2 = stage_of_conn.get(first)
-        key = (("stage", st2.chain, st2.name) if st2 is not None
-               else ("conn", first))
-        buckets[key]["parts"].append(p_id)
-        buckets[key]["events"].append(ev)
+        b = connection_bucket(first)
+        b["parts"].append(p_id)
+        b["events"].append(ev)
 
     # Topologically order presentation buckets by the real graph edges. The
     # preferred key makes independent units read bench-all, then set-all, then
@@ -1101,7 +1447,9 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
             title=b["title"], stage=b["stage"],
             connections=tuple(b["connections"]),
             parts_placed=tuple(sorted(b["parts"])),
-            unit=b["unit"], joins=b["joins"]))
+            unit=b["unit"], joins=b["joins"],
+            process_event=b["process_event"],
+            process_fact=b["process_fact"]))
     return tuple(steps)
 
 

@@ -43,6 +43,31 @@ class SemanticError(ValueError):
     style (what is wrong + the constraint to add / remove)."""
 
 
+def require_connection_process_capability(conn: ConnectionSpec, kind: str,
+                                          *, owner: str) -> frozenset[str]:
+    """Resolve one registered process capability or fail with teaching text.
+
+    This is the declaration-time trust boundary shared by standalone and site
+    connections.  Registry resolution happens exactly once: an unknown type
+    keeps the registry's established known-types / did-you-mean diagnostic
+    instead of being mislabeled as a known type with no capability.
+    """
+    from ..assemblies.connection import connection_types
+
+    try:
+        type_cls = connection_types.get(conn.type)
+    except KeyError as e:
+        raise SemanticError(str(e)) from None
+    supported = frozenset(type_cls.supported_process_kinds())
+    if kind not in supported:
+        raise SemanticError(
+            f"{owner}: registered connection type {conn.type!r} does not "
+            f"support process-kind capability {kind!r}; its supported "
+            f"process kinds are "
+            f"{sorted(supported)}.")
+    return supported
+
+
 def analyze_mounts(doc) -> None:
     """Run the mount semantic-analysis pass over a loaded ``DetailSpecDoc``.
     Raises the FIRST :class:`SemanticError` found (declaration order), so the
@@ -178,10 +203,26 @@ def analyze_sequence(doc) -> None:
     target-existence check is likewise deferred here rather than done at
     load. Did-you-mean on the near misses, same style throughout this
     module."""
+    connections = list(_walk_connections(doc.connections))
+    conn_by_label: dict[str, list] = {}
+    for conn in connections:
+        if conn.label:
+            conn_by_label.setdefault(conn.label, []).append(conn)
+
+    # A process refinement is meaningful only where the registered
+    # ConnectionType declares that capability.  The runtime graph asks the
+    # same capability surface and also confirms an event was actually emitted;
+    # no display key (including ``glued``) is a second authority.
+    for conn in connections:
+        if conn.process.cure is not None:
+            require_connection_process_capability(
+                conn, "cure",
+                owner=f"connection {conn.label or conn.type!r}: process.cure")
+
     if (not doc.sequence.stages and not doc.sequence.subassemblies
-            and doc.sequence.assembly is None):
+            and doc.sequence.assembly is None and not doc.sequence.after):
         return
-    conn_labels = {c.label for c in _walk_connections(doc.connections) if c.label}
+    conn_labels = set(conn_by_label)
     member_ids = _declared_ids(doc.components)
     for stage in doc.sequence.stages:
         for label in stage.connections:
@@ -216,6 +257,43 @@ def analyze_sequence(doc) -> None:
                     f"cannot be a constructed bench-unit member. Leave context "
                     f"out of subassemblies and declare its presence through "
                     f"assembly mode when needed.")
+
+    for claim in doc.sequence.after:
+        _require_unique_sequence_connection(
+            claim.connection, conn_by_label,
+            f"sequence after target connection {claim.connection!r}")
+        for ref in claim.after:
+            source = _require_unique_sequence_connection(
+                ref.connection, conn_by_label,
+                f"sequence after {ref.kind} source {ref.connection!r}")
+            require_connection_process_capability(
+                source, ref.kind,
+                owner=(f"sequence after target {claim.connection!r}: "
+                       f"{ref.kind} source {ref.connection!r}"))
+
+
+def _require_unique_sequence_connection(label: str, by_label: dict[str, list],
+                                        owner: str):
+    """Resolve one authored connection label at declaration time.
+
+    Repeat templates appear once here and are deliberately resolved later.
+    Two independently authored declarations reusing one label are ambiguous
+    immediately and therefore loud before geometry.
+    """
+    matches = by_label.get(label, [])
+    if not matches:
+        known = sorted(by_label)
+        hint = difflib.get_close_matches(label, known, n=3)
+        tip = f" — did you mean one of {hint}?" if hint else ""
+        raise SemanticError(
+            f"{owner} names no declared connection{tip}. A point constraint "
+            f"can only reference a connection by its 'label'.")
+    if len(matches) != 1:
+        raise SemanticError(
+            f"{owner} is ambiguous: {len(matches)} declared connections reuse "
+            f"that label. Point constraints require one unique authored "
+            f"connection label.")
+    return matches[0]
 
 
 def _member_dependents(doc, mid: str, retired_conn: set) -> list[str]:

@@ -23,9 +23,11 @@ import yaml
 
 from .schema import (
     ASSEMBLY_MODES,
+    AuthoredAfter,
     RENDERABLE_CHECK_KINDS,
     RESERVED_SPATIAL_NAMES,
     AuthoredAssembly,
+    AuthoredProcessRef,
     AuthoredStage,
     AuthoredSubassembly,
     BearingSpec,
@@ -54,6 +56,9 @@ from .schema import (
     INSTALL_EXIT_CONDITIONS,
     INSTALL_HEAD_CONDITIONS,
     PostBaseSpec,
+    ProcessFactSpec,
+    CureProcessSpec,
+    PROCESS_CURE_COMPLETIONS,
     HardwarePresenceSection,
     MateSpec,
     MountSpec,
@@ -465,13 +470,16 @@ def _build_sequence(raw: dict) -> SequenceSpec:
     if not isinstance(raw, dict):
         raise SpecSchemaError(
             f"{ctx}: expected a mapping containing stages, subassemblies, "
-            f"or assembly; got {type(raw).__name__}")
+            f"assembly, or after; got {type(raw).__name__}")
     f = _take(raw, {
         "stages": False, "subassemblies": False, "assembly": False,
+        "after": False,
     }, ctx)
-    if all(f[k] is _MISSING for k in ("stages", "subassemblies", "assembly")):
+    if all(f[k] is _MISSING
+           for k in ("stages", "subassemblies", "assembly", "after")):
         raise SpecSchemaError(
-            f"{ctx}: declares no stages, subassemblies, or assembly mode — "
+            f"{ctx}: declares no stages, subassemblies, assembly mode, or "
+            f"point constraints — "
             f"omit the empty sequence: block instead.")
 
     raw_stages = ([] if f["stages"] is _MISSING else
@@ -499,6 +507,14 @@ def _build_sequence(raw: dict) -> SequenceSpec:
             f"bench_then_set is sugar for one whole-detail subassembly, while "
             f"in_situ explicitly declares no bench units. Choose exactly one "
             f"staging shape.")
+
+    raw_after = ([] if f["after"] is _MISSING else
+                 _as_list(f["after"], f"{ctx}.after"))
+    if f["after"] is not _MISSING and not raw_after:
+        raise SpecSchemaError(
+            f"{ctx}: 'after' is empty — an explicit point-constraint list "
+            f"with no entries declares no order; omit that key instead.")
+    after = tuple(_build_after(a, i, ctx) for i, a in enumerate(raw_after))
 
     seen_names: dict[str, int] = {}
     for i, stage in enumerate(stages):
@@ -546,8 +562,61 @@ def _build_sequence(raw: dict) -> SequenceSpec:
                     f"to at most one subassembly; nesting is unsupported.")
             member_of[pid] = (i, unit.name)
 
+    seen_after_targets: dict[str, int] = {}
+    for i, claim in enumerate(after):
+        prior = seen_after_targets.get(claim.connection)
+        if prior is not None:
+            raise SpecSchemaError(
+                f"{ctx}: target connection {claim.connection!r} is declared "
+                f"by both after[{prior}] and after[{i}] — give one target "
+                f"exactly one point-constraint declaration and list all of "
+                f"its typed prerequisites there.")
+        seen_after_targets[claim.connection] = i
+
     return SequenceSpec(stages=stages, subassemblies=subassemblies,
-                        assembly=assembly)
+                        assembly=assembly, after=after)
+
+
+def _build_after(raw: dict, index: int, seq_ctx: str) -> AuthoredAfter:
+    """Load one typed process -> target connection point constraint."""
+    ctx = f"{seq_ctx}.after[{index}]"
+    f = _take(raw, {"connection": True, "after": True, "why": True}, ctx)
+    target = f["connection"] if isinstance(f["connection"], str) else ""
+    if not target.strip():
+        raise SpecSchemaError(
+            f"{ctx}: 'connection' must be a non-empty connection-label string")
+    why = f["why"].strip() if isinstance(f["why"], str) else ""
+    if not why:
+        raise SpecSchemaError(
+            f"{ctx}: 'why' is required and must be non-empty — an authored "
+            f"order claim ships with its defense.")
+    raw_refs = _as_list(f["after"], f"{ctx}.after")
+    if not raw_refs:
+        raise SpecSchemaError(
+            f"{ctx}: nested 'after' is empty — name at least one typed "
+            f"process prerequisite.")
+    refs = tuple(_build_process_ref(r, i, ctx)
+                 for i, r in enumerate(raw_refs))
+    seen: set[tuple[str, str]] = set()
+    for ref in refs:
+        key = (ref.kind, ref.connection)
+        if key in seen:
+            raise SpecSchemaError(
+                f"{ctx}: duplicate {ref.kind} process reference to "
+                f"connection {ref.connection!r}; list each prerequisite once.")
+        seen.add(key)
+    return AuthoredAfter(connection=target, after=refs, why=why)
+
+
+def _build_process_ref(raw: dict, index: int,
+                       after_ctx: str) -> AuthoredProcessRef:
+    ctx = f"{after_ctx}.after[{index}]"
+    f = _take(raw, {"cure": True}, ctx)
+    source = f["cure"] if isinstance(f["cure"], str) else ""
+    if not source.strip():
+        raise SpecSchemaError(
+            f"{ctx}: 'cure' must name a non-empty source connection label")
+    return AuthoredProcessRef(kind="cure", connection=source)
 
 
 def _build_subassembly(raw: dict, index: int,
@@ -918,13 +987,15 @@ def _build_connection(raw: dict, index: int) -> ConnectionSpec:
     f = _take(raw, {
         "type": True, "parts": True, "hardware": False, "params": False,
         "surfaces": False, "assumptions": False, "label": False,
-        "expect": False, "install": False,
+        "expect": False, "install": False, "process": False,
     }, ctx)
     expect = tuple(
         _build_expect(e, f"{ctx} expect[{i}]")
         for i, e in enumerate(_as_list(_default(f["expect"], []), f"{ctx} expect")))
     install = (None if f["install"] is _MISSING
                else _build_install(f["install"], f"{ctx} install"))
+    process = (ProcessFactSpec() if f["process"] is _MISSING
+               else _build_process_facts(f["process"], f"{ctx} process"))
     return ConnectionSpec(
         type=f["type"],
         parts=list(_as_list(f["parts"], f"{ctx} parts")),
@@ -935,7 +1006,52 @@ def _build_connection(raw: dict, index: int) -> ConnectionSpec:
         label=_default(f["label"], ""),
         expect=expect,
         install=install,
+        process=process,
     )
+
+
+def _build_process_facts(raw: dict, ctx: str) -> ProcessFactSpec:
+    """Load the closed v1 connection-local ``process:`` vocabulary."""
+    f = _take(raw, {"cure": False}, ctx)
+    if f["cure"] is _MISSING:
+        raise SpecSchemaError(
+            f"{ctx}: declares no process facts — omit the empty process: "
+            f"block instead.")
+    return ProcessFactSpec(cure=_build_cure_process(f["cure"], f"{ctx}.cure"))
+
+
+def _build_cure_process(raw: dict, ctx: str) -> CureProcessSpec:
+    f = _take(raw, {
+        "instructions": True, "completion": True, "why": True,
+    }, ctx)
+    instructions_raw = _as_list(f["instructions"], f"{ctx}.instructions")
+    if not instructions_raw:
+        raise SpecSchemaError(
+            f"{ctx}: 'instructions' must contain at least one instruction")
+    instructions: list[str] = []
+    for i, value in enumerate(instructions_raw):
+        if not isinstance(value, str):
+            raise SpecSchemaError(
+                f"{ctx}.instructions[{i}]: each instruction must be a "
+                f"string, got {type(value).__name__}")
+        value = value.strip()
+        if not value:
+            raise SpecSchemaError(
+                f"{ctx}.instructions[{i}]: instruction must be non-empty")
+        instructions.append(value)
+    completion = f["completion"]
+    if completion not in PROCESS_CURE_COMPLETIONS:
+        raise SpecSchemaError(
+            f"{ctx}: 'completion' must be "
+            f"{PROCESS_CURE_COMPLETIONS[0]!r}; v1 represents the selected "
+            f"label's full-cure/full-strength condition, never a generic "
+            f"duration. Got {completion!r}")
+    why = f["why"].strip() if isinstance(f["why"], str) else ""
+    if not why:
+        raise SpecSchemaError(
+            f"{ctx}: 'why' must be a non-empty provenance statement")
+    return CureProcessSpec(
+        instructions=tuple(instructions), completion=completion, why=why)
 
 
 def _build_expect(raw: dict, ctx: str) -> ExpectSpec:

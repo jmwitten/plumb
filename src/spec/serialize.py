@@ -76,7 +76,7 @@ def spec_to_dict(doc: DetailSpecDoc) -> dict:
     # a sequence-free spec round-trips unchanged. Preserve authoring order:
     # stages, explicit units, whole-detail assembly mode.
     if (doc.sequence.stages or doc.sequence.subassemblies
-            or doc.sequence.assembly is not None):
+            or doc.sequence.assembly is not None or doc.sequence.after):
         sequence = {}
         if doc.sequence.stages:
             sequence["stages"] = [_stage_to_dict(st)
@@ -89,6 +89,8 @@ def spec_to_dict(doc: DetailSpecDoc) -> dict:
                 "mode": doc.sequence.assembly.mode,
                 "why": doc.sequence.assembly.why,
             }
+        if doc.sequence.after:
+            sequence["after"] = [_after_to_dict(a) for a in doc.sequence.after]
         out["sequence"] = sequence
     vd = _validation_to_dict(doc.validation)
     if vd:
@@ -207,6 +209,15 @@ def _subassembly_to_dict(unit) -> dict:
     return {"name": unit.name, "parts": list(unit.parts), "why": unit.why}
 
 
+def _after_to_dict(claim) -> dict:
+    """One typed process point constraint in its exact nested shape."""
+    return {
+        "connection": claim.connection,
+        "after": [{ref.kind: ref.connection} for ref in claim.after],
+        "why": claim.why,
+    }
+
+
 def dump_yaml(doc: DetailSpecDoc) -> str:
     """Serialize to YAML text (block style, keys in authoring order)."""
     return yaml.safe_dump(spec_to_dict(doc), sort_keys=False, default_flow_style=False)
@@ -318,6 +329,13 @@ def _connection_to_dict(c) -> dict:
         d["expect"] = [_expect_to_dict(e) for e in c.expect]
     if c.install is not None:
         d["install"] = _install_to_dict(c.install)
+    if c.process.cure is not None:
+        cure = c.process.cure
+        d["process"] = {"cure": {
+            "instructions": list(cure.instructions),
+            "completion": cure.completion,
+            "why": cure.why,
+        }}
     return d
 
 
