@@ -1217,6 +1217,49 @@ def linearize(graph: EventGraph) -> tuple[Event, ...]:
     return tuple(out)
 
 
+def validate_reader_step_order(
+    graph: EventGraph,
+    steps: tuple[ReaderStep, ...],
+) -> None:
+    """Raise when a printed reader-step order reverses a model edge."""
+    event_to_step: dict[Event, int] = {}
+    for index, step in enumerate(steps):
+        events = []
+        events.extend(
+            graph.event_of[part_id] for part_id in step.parts_placed
+            if part_id in graph.event_of)
+        for label in step.connections:
+            events.extend(graph.drives_of.get(label, ()))
+        if step.process_event is not None:
+            events.append(step.process_event)
+        events.extend(
+            graph.join_of[unit] for unit in step.joins
+            if unit in graph.join_of)
+        for event in events:
+            prior = event_to_step.get(event)
+            if prior is not None and prior != index:
+                raise ReaderStepProjectionError(
+                    "reader-step order assigns one source event to multiple "
+                    f"steps: {event!r} appears in steps {prior + 1} and "
+                    f"{index + 1}.")
+            event_to_step[event] = index
+
+    backwards = []
+    for edge in graph.edges:
+        source = event_to_step.get(edge.a)
+        target = event_to_step.get(edge.b)
+        if source is None or target is None or source <= target:
+            continue
+        backwards.append(
+            f"step {source + 1} -> step {target + 1}: "
+            f"{edge.a!r} -> {edge.b!r} [{edge.family}]")
+    if backwards:
+        raise ReaderStepProjectionError(
+            "reader-step order contains backward graph edge(s), so the "
+            "printed sequence is not a valid graph linearization: "
+            f"{backwards!r}")
+
+
 def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
     """The reader-step grouping (§5.1), a PURE function of the graph — one
     step per authored stage where stages exist, else one step per
@@ -1680,7 +1723,9 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
             unit=b["unit"], joins=b["joins"],
             process_event=b["process_event"],
             process_fact=b["process_fact"]))
-    return tuple(steps)
+    result = tuple(steps)
+    validate_reader_step_order(graph, result)
+    return result
 
 
 def unordered_parts(graph: EventGraph) -> tuple[str, ...]:

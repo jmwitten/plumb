@@ -30,6 +30,7 @@ from detailgen.assemblies.event_graph import (
     build_event_graph,
     derive_reader_steps, linearize, unordered_parts,
 )
+import detailgen.assemblies.event_graph as event_graph_module
 from detailgen.assemblies.installation import straight_screw_group
 from detailgen.components import (
     HexBolt, HexNut, JoistHanger, Lumber, StructuralScrew, Washer,
@@ -952,6 +953,25 @@ def test_reader_steps_restore_platform_sequence_with_five_honest_merges():
     )
     assert len(emitted) == len(set(emitted)) == len(graph.conn_labels)
     assert set(emitted) == set(graph.conn_labels)
+
+
+def test_reader_step_order_validator_rejects_backward_model_edges():
+    """Every reader surface must pin the claim that its printed sequence is
+    one valid graph linearization, not leave that check to the panel renderer."""
+    from detailgen.spec.compiler import compile_spec_file
+
+    root = Path(__file__).resolve().parents[1]
+    detail = compile_spec_file(root / "details" / "platform.spec.yaml")
+    detail.validate()
+    graph = detail._connection_checks.event_graph
+    steps = derive_reader_steps(graph)
+    validator = getattr(event_graph_module, "validate_reader_step_order", None)
+
+    assert validator is not None, (
+        "the shared reader-step derivation has no order-validity gate")
+    validator(graph, steps)
+    with pytest.raises(ReaderStepProjectionError, match="backward graph edge"):
+        validator(graph, tuple(reversed(steps)))
 
 
 def test_reader_steps_fail_when_a_required_event_was_never_mapped():
