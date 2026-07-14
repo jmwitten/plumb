@@ -428,6 +428,19 @@ def _validate_novelty(doc, findings, feature_ids, requirement_ids) -> None:
                 f"deviations[{index}]",
                 "deviation needs a forcing requirement or approved exception",
             )
+        if deviation.exception is not None:
+            approval_valid = bool(deviation.exception.approved_by.strip())
+            try:
+                date.fromisoformat(deviation.exception.approved_on)
+            except ValueError:
+                approval_valid = False
+            if not approval_valid:
+                _finding(
+                    findings,
+                    "novelty.invalid_exception_approval",
+                    f"deviations[{index}].exception",
+                    "an exception requires a named approver and ISO approval date",
+                )
     for feature_ref, values in deviations.items():
         if len(values) > 1:
             _finding(

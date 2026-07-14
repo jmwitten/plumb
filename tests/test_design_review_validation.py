@@ -108,6 +108,49 @@ def test_approved_exception_justifies_novelty(valid_doc):
     assert "novelty.unsupported" not in codes(validate_design_review(doc))
 
 
+@pytest.mark.parametrize(
+    ("approved_by", "approved_on"),
+    [
+        ("", "2026-07-14"),
+        ("Joel Witten", "not-a-date"),
+    ],
+)
+def test_exception_requires_named_dated_approval(
+    valid_doc, approved_by, approved_on,
+):
+    concept = valid_doc.concepts[0]
+    feature = replace(concept.features[0], precedent_refs=())
+    concept = replace(concept, features=(feature,) + concept.features[1:])
+    deviation = Deviation(
+        feature_ref=f"{concept.id}.{feature.id}",
+        forcing_requirement="",
+        exception=NoveltyException(
+            rationale=(
+                "The removable liner requires a locating lip absent from the "
+                "reviewed precedents."
+            ),
+            cost_or_risk=(
+                "The lip adds one routing setup and can trap debris if left "
+                "unfinished."
+            ),
+            alternatives_rejected=(
+                "A loose liner could shift into the cup opening during use."
+            ),
+            approved_by=approved_by,
+            approved_on=approved_on,
+        ),
+    )
+    doc = replace(
+        valid_doc,
+        concepts=(concept,) + valid_doc.concepts[1:],
+        deviations=(deviation,),
+    )
+
+    assert "novelty.invalid_exception_approval" in codes(
+        validate_design_review(doc)
+    )
+
+
 def test_forcing_requirement_justifies_novelty(valid_doc):
     concept = valid_doc.concepts[0]
     feature = replace(concept.features[0], precedent_refs=())
