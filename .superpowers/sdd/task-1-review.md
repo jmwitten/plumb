@@ -1,89 +1,76 @@
-# Task 1 Re-review — DB40 Surface Ownership Contracts
+# Final Task 1 Re-review — DB40 Surface Ownership Contracts
 
 ## Verdicts
 
-- **Spec compliance: FAIL**
-- **Code/test quality: CHANGES REQUIRED**
+- **Spec compliance: PASS**
+- **Code/test quality: APPROVED**
 
-The amendment closes most of the first review: legacy facts now target their
-owning surfaces; the old readiness label is rejected; the three UNKNOWN
-rule/verdict pairs and four matrix states are exact; normalized headings and
-viewer exclusions strengthen ownership; and the four-file test retains the
-existing manual, asset, hash, basename, and link assertions. One new negative
-assertion is nevertheless incompatible with a required canonical audit block,
-so the RED suite is still not internally satisfiable.
+The amended RED suite is precise, non-vacuous, and internally satisfiable. It
+now pins the approved A0/I1, S1+, R1, manual, and four-file document-set
+boundaries without changing geometry, validation truth, release state, or CPG
+order. Existing exact facts remain tested on their new owning surfaces.
 
 ## Critical findings
 
-### 1. The audit ownership test forbids a substring that its required findings block contains
-
-`test_audit_composer_owns_complete_findings_evidence_and_source_map` requires
-the exact complete `_render_findings(project)` output
-(`tests/test_cabinetry_project_report.py:223`) and then rejects every process
-step id with a raw substring assertion (`:239-244`). DB40 has an installation
-step id `install.countertop`; the required findings HTML contains the distinct
-finding rule `cabinetry.install.countertop_support`. Therefore
-`"install.countertop" in CPR._render_findings(project)` is true.
-
-This was confirmed with a targeted compiled-ledger inspection; the collision
-is in `_render_findings`, not speculative future markup. Once the audit composer
-exists, it cannot both contain the required findings ledger and satisfy the
-step-id negative. Changing the finding rule would violate the frozen validation
-truth, so production implementation cannot resolve the contradiction.
-
-Compare identifiers as exact tokens rather than substrings—for example, parse
-the rendered `<code>` values and reject an exact step-id value, or use
-dot/word-aware boundaries that distinguish `install.countertop` from
-`cabinetry.install.countertop_support`. Apply the same exact-token discipline to
-the fabrication finding/evidence negatives to avoid future prefix collisions.
+None.
 
 ## Important findings
 
-### 1. The compile-once spy does not intercept the compiler alias in the report module
-
-The document-set test wraps only `documents.compile_project_file`
-(`tests/test_cabinetry_instruction_manual.py:279-294`).
-`documents.CPR.compile_project_file` remains a separate imported alias. A set
-generator that performs the intended compile through `documents` and then
-accidentally calls a CPR path that recompiles—such as the existing standalone
-path-based generator—would still report one call and pass the global
-compile-once assertion.
-
-Patch both module aliases to the same counted wrapper, or route all compilation
-through one injectable boundary and assert that boundary is called exactly
-once. The `_render_views` interception is module-wide and adequately pins the
-one product-view render pass.
+None.
 
 ## Minor findings
 
-### 1. Link presence is pinned, but filesystem closure is only implied
+None.
 
-The output test verifies exact basenames, existing returned files, and required
-relative `href` strings, but not that every source-relative target resolves to
-the corresponding returned path. Files with the right basename in different
-directories would satisfy the assertions while the links are broken. A small
-`source_path.parent / target_basename` resolution check would make the stated
-link-closure contract literal.
+## Final closure audit
 
-## Prior-finding closure audit
-
-- **Legacy monolithic assertions:** substantially closed. Shop, audit,
-  installation, viewer, release, B30, and exact content pins were redistributed
-  without changing model/process truth.
-- **UNKNOWN self-weakening:** closed. The compiled DB40 boundary now pins the
-  exact three `(rule, "UNKNOWN")` pairs, and A0/I1 must render the same pairs.
-- **Markup-sensitive/incomplete negatives:** partially closed. Heading and
-  viewer checks are stronger, but the audit substring collision above leaves
-  this finding open.
-- **Single compile/render pass:** partially closed. Rendering is pinned once;
-  compilation counting misses the CPR alias.
+- **Primary ownership and budgets:** visible text excludes script/style data;
+  DB40 is capped at 2,500 words, 80 rows, and eight tables. Exact status pairs,
+  the three frozen UNKNOWN rule/verdict pairs, key dimensions, field checks,
+  installation ids, intended installation views, and forbidden companion
+  headings are all pinned.
+- **Truth and release semantics:** the suite requires
+  `Model/shop-data gate: PASS`, separately requires
+  `Purchasing/cutting preflight: OPEN`, rejects the obsolete
+  `Fabrication/model gate` wording, and retains DB40 installation/use HOLD. An
+  UNKNOWN verdict cannot disappear from the expectation by changing to PASS.
+- **Surface completeness:** S1+ must contain the complete canonical cut,
+  edge-band, hardware, machining, fabrication, and assembly outputs. R1 must
+  contain the complete canonical findings/evidence and source-map outputs.
+  Legacy product, source, tool, machining, reader-vocabulary, release, viewer,
+  and evidence-link facts were moved to their correct composers rather than
+  deleted.
+- **Exact-token negatives:** `_code_tokens()` normalizes complete rendered
+  `<code>` values before comparison. This correctly distinguishes the step id
+  `install.countertop` from the required finding rule
+  `cabinetry.install.countertop_support`, while preserving exact installation,
+  finding, and evidence ownership checks. Heading and viewer/GLB exclusions
+  remain independently enforced.
+- **Compatibility and existing behavior:** `build_cabinetry_html()` must equal
+  the focused review composer, the existing B30 cabinetry project remains
+  accepted across focused surfaces, and no shared non-cabinetry manual default
+  was changed in Task 1.
+- **Single-pass generation:** both `documents.compile_project_file` and
+  `documents.CPR.compile_project_file` are patched to one counted wrapper, so a
+  compile through either imported boundary contributes to the exact one-call
+  limit. The module-wide `_render_views` wrapper independently requires one
+  product-view render pass.
+- **Four-file and link closure:** stable basenames include the required landing
+  basename; all four returned files and SHA-256 values are pinned; every
+  required relative href is present; and each href resolves from its source
+  directory to the corresponding returned, existing target file. Viewer/GLB
+  markers are limited to the landing/review document.
+- **Prior manual pins:** the six shared panel assets, six instruction panels,
+  nine operation diagrams, coordinate rows, procedure links, accessibility
+  markers, embedded images, and self-containment assertions remain intact.
 
 ## Review evidence
 
-Reviewed the same Task 1 brief, the updated implementer report, the frozen
-`a8f589a..f41aa34` review package, and both amended test modules. The reported
-focused RED run was not repeated. A targeted read-only compiled-ledger probe was
-run solely to investigate the concrete identifier-overlap risk; it confirmed
-`install.countertop` occurs inside the canonical required findings output as
-part of `cabinetry.install.countertop_support`. The review artifact itself was
-then verified separately.
+Reviewed the Task 1 brief, updated Task 1 report, prior review, frozen
+`a8f589a..bf50723` package, and final amended test code. The reported focused
+result of `16 failed, 8 passed` was accepted as coherent intentional RED:
+fifteen failures are absent focused composers and one is the absent companion
+path/hash output contract. Tests were not rerun because the supplied evidence
+already covers the final patch and no concrete inconsistency required another
+execution. The review artifact was verified separately for required verdicts,
+severity sections, and patch cleanliness.

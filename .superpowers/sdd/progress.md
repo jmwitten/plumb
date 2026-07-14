@@ -3409,3 +3409,7 @@ this loudly. Concrete fix queued (RAILFASTEN) ahead of the full ontology.
 - Task 3: manifest dimension points serialize 0→0.0 (float coercion in _resolve_point) vs old integer literals — functionally inert, labels/values equal. (reviewer Minor)
 - Task 3: BOM group `item` label changed last-wins→first-wins — inert while bom_group (type+describe) ⊇ bom_label inputs; latent if a future component makes bom_label finer. (reviewer Minor)
 - Task 3 re-review: test_no_public_export_verb_bypasses_the_gate is name-scoped (hardcoded {export,document,render} set) — a differently-named future public writer would slip past; optional polish: scan vars(Detail) for public callables and assert only render writes. (reviewer Minor)
+
+## DB40 reader-surface redesign — 2026-07-14
+
+- Task 1: complete (commits a8f589a..bf50723, review clean). RED contracts now pin role ownership, reader budgets, exact UNKNOWN states, four-file link closure, and one-pass compile/view rendering.
