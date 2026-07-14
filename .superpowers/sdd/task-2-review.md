@@ -1,8 +1,8 @@
-# Task 2 Review — Typed Manual Document Links
+# Task 2 Re-review — Typed Manual Document Links
 
-**Spec compliance: FAIL**
+**Spec compliance: PASS**
 
-**Code quality: CHANGES REQUIRED**
+**Code quality: APPROVED**
 
 ## Findings
 
@@ -12,54 +12,49 @@ None.
 
 ### Important
 
-1. **URI schemes pass the promised relative-basename validation.**
-   `src/rendering/instruction_panels.py:184-191` defines
-   `_relative_html_basename()` using basename, slash, and `.html` checks, but it
-   does not reject a URI scheme. Consequently both new validation sites
-   (`src/rendering/instruction_panels.py:604-611` and
-   `src/rendering/instruction_manual.py:74-80`) accept values such as
-   `javascript:alert(1).html` and `mailto:review.html`. The renderer then places
-   the accepted value directly in `href`; HTML escaping does not make a
-   scheme-bearing URL relative. This violates the Task 2/global invariant that
-   related hrefs are relative HTML basenames and, for a `javascript:` value,
-   creates a click-triggered script URL despite the claimed validation.
-
-   A focused probe against the reviewed implementation produced:
-
-   ```text
-   javascript:alert(1).html => javascript:alert(1).html scheme= javascript
-   mailto:review.html => mailto:review.html scheme= mailto
-   review_trace.html => review_trace.html scheme= <none>
-   ```
-
-   Reject scheme-bearing/colon-containing first path segments in the shared
-   basename validator (or otherwise prove the parsed scheme is empty), and add
-   construction and render regression cases alongside the existing path and
-   non-HTML cases in `tests/test_cabinetry_instruction_manual.py`.
+None.
 
 ### Minor
 
 None.
 
-## What is otherwise correct
+## Review-fix verification
 
-- `RelatedDocumentLink` is a minimal frozen value type, and the new manual
-  tuple is appended with a safe empty default.
-- Normal related hrefs are checked during builder construction and rechecked
-  during rendering; labels and hrefs are HTML-escaped.
-- DB40's landing, fabrication-packet, and review-trace labels are represented
-  without hard-coding document-set filenames into reusable rendering code.
-  Fabrication signoff ownership is corrected while landing/release/install
-  prose and HOLD behavior remain untouched.
-- Header and footer links use list/navigation semantics with distinct accessible
-  landmark labels. Conditional markup and CSS preserve the legacy empty-default
-  rendering path, including non-cabinetry manuals.
-- The reviewed source diff does not change geometry, validation/CPG behavior,
-  shop-data or purchasing-readiness state, and does not add premature document
-  composers.
+- `_relative_html_basename()` now rejects `:` after the existing basename and
+  separator checks, closing the scheme/drive ambiguity for every shared call
+  site.
+- Construction tests reject `javascript:alert(1).html` and
+  `mailto:review.html`; render-defense tests independently reject those values
+  when injected into a replaced immutable manual.
+- The valid simple basename `review_trace.html` remains accepted. A focused
+  independent probe reproduced both scheme rejections and the valid acceptance.
+- The fix is one validator condition plus focused regression cases. It adds no
+  parallel validation path or speculative abstraction.
 
-## Verification note
+## Full Task 2 verification
 
-I accepted the report's recorded RED/GREEN, shared-regression, and byte-identity
-evidence without rerunning those suites. I ran only the focused validator probe
-shown above because the scheme boundary was a concrete review issue.
+- `RelatedDocumentLink(label, href)` is a minimal frozen record, and
+  `InstructionManual.related_documents` is appended with an empty tuple default
+  that preserves existing positional construction.
+- Related hrefs are validated during manual building and again during HTML
+  rendering. Labels and hrefs are escaped.
+- DB40 navigation uses the stable landing basename with the exact
+  `Review & installation sheet`, `Fabrication packet`, and `Review trace`
+  labels. Fabrication signoff copy points to the fabrication packet while
+  release/install ownership and installation/use HOLD language remain intact.
+- Header and footer related-document lists use navigation/list semantics and
+  distinct accessible landmark labels. They remain present in printable output;
+  interactive panel controls are the elements intentionally hidden for print.
+- Empty related-document defaults omit all new markup and CSS. The report's
+  frozen-timestamp comparison shows the non-cabinetry caddy HTML remains
+  byte-identical to Task 1, with the same SHA-256 on both sides.
+- The package contains no cabinetry geometry, model/shop-data,
+  purchasing-readiness, validation/CPG, release-state, installation drawing,
+  document-set, or composer implementation changes.
+
+## Evidence accepted
+
+I accepted the updated report's RED/GREEN history, `44 passed, 1 deselected`
+regression gate, byte-identity comparison, and clean diff check without
+rerunning those evidenced checks. I ran only the focused three-value validator
+probe described above.
