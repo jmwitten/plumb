@@ -1,5 +1,6 @@
 """End-to-end contract for the separate illustrated caddy manual."""
 
+import json
 import re
 import shutil
 import sys
@@ -42,6 +43,24 @@ def test_pair_has_exact_distinct_basenames_and_reciprocal_relative_links(pair):
     assert f'href="{manual.name}"' in technical.read_text()
     assert f'href="{technical.name}"' in manual.read_text()
     assert "file://" not in technical.read_text() + manual.read_text()
+
+
+def test_technical_companion_uses_the_same_five_panel_schedule(pair):
+    technical = Path(pair["technical_path"]).read_text()
+    match = re.search(
+        r'<script type="application/json" id="detail-data-armchair_caddy">'
+        r'(.*?)</script>',
+        technical,
+        flags=re.S,
+    )
+    assert match is not None
+    payload = json.loads(match.group(1))
+
+    assert [panel["number"] for panel in payload["instruction_panels"]] == [
+        1, 2, 3, 4, 5]
+    assert payload["parts"]["top board"]["first_panel"] == 1
+    assert payload["parts"]["rail-side screw +X upper 0"]["first_panel"] == 4
+    assert payload["parts"]["sofa arm"]["first_panel"] == 5
 
 
 def test_pair_compiles_the_detail_only_once(monkeypatch, tmp_path):

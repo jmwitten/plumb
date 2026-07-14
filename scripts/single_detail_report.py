@@ -1050,7 +1050,8 @@ def build_single_detail_html(name: str, detail, views_dir: Path, panel_cfg: dict
                              footer: dict = CADDY_FOOTER,
                              cut_note_context: str = _CUT_NOTE_CONTEXT,
                              extra_sections: tuple = (),
-                             companion_href: str | None = None) -> str:
+                             companion_href: str | None = None,
+                             instruction_manual=None) -> str:
     """Assemble the one-panel HTML build document, reusing consolidated_report's
     section builders. ``detail`` must be compiled + validated. ``design_store``
     (optional) is a SIBLING design-review store rendered as a second findings
@@ -1072,7 +1073,8 @@ def build_single_detail_html(name: str, detail, views_dir: Path, panel_cfg: dict
                   for v in panel_cfg["views"]}
     callouts = detail.rendered_callouts()
     labels_by_id = part_labels(detail.assembly.parts)
-    payload = build_viewer_payload(detail)
+    payload = build_viewer_payload(
+        detail, instruction_manual=instruction_manual)
     # A rectangular geometry primitive may approximate context such as a sofa
     # arm or floor, but its domain metadata must not leak into the reader as
     # "Boulder / natural stone / leveling nuts". Preserve the model-derived
@@ -1370,7 +1372,7 @@ def _consumer_for(spec_path: Path) -> dict:
 def build_document(out: Path, spec_path: Path = CADDY_SPEC,
                    preview: bool = False,
                    companion_href: str | None = None,
-                   *, compiled_detail=None) -> dict:
+                   *, compiled_detail=None, instruction_manual=None) -> dict:
     """Compile + validate the detail named by ``spec_path``, build its
     single-detail HTML build document (reusing consolidated_report's machinery),
     write it to ``out``, and return a summary dict
@@ -1399,7 +1401,8 @@ def build_document(out: Path, spec_path: Path = CADDY_SPEC,
             footer=consumer.get("footer", CADDY_FOOTER),
             cut_note_context=consumer.get("cut_note_context", _CUT_NOTE_CONTEXT),
             extra_sections=consumer.get("extra_sections", ()),
-            companion_href=companion_href)
+            companion_href=companion_href,
+            instruction_manual=instruction_manual)
 
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -52,7 +52,8 @@ def build_caddy_document_pair(
         encoding="utf-8")
     SDR.build_document(
         technical_path, spec_path=SDR.CADDY_SPEC, preview=False,
-        companion_href=MANUAL_BASENAME, compiled_detail=detail)
+        companion_href=MANUAL_BASENAME, compiled_detail=detail,
+        instruction_manual=manual)
 
     ordered_images = tuple(image_paths[index] for index in sorted(image_paths))
     return {

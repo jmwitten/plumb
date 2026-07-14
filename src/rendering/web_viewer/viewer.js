@@ -364,6 +364,8 @@
     var pendingPointer = null; // {x,y} slot-local, consumed on next frame
     var hovered = null; // partName currently emissive-lit
     var pinned = null; // partName pinned open
+    var currentPanel = 1;
+    var arrivalNames = {};
 
     function setEmissive(partName, hex) {
       var entry = partNodes[partName];
@@ -377,11 +379,19 @@
       });
     }
 
+    function refreshPartEmissive(partName) {
+      if (!partName) return;
+      var active =
+        partName === hovered || partName === pinned || !!arrivalNames[partName];
+      setEmissive(partName, active ? HL_COLOR : 0x000000);
+    }
+
     function highlight(partName) {
       if (hovered === partName) return;
-      if (hovered && hovered !== pinned) setEmissive(hovered, 0x000000);
+      var previous = hovered;
       hovered = partName;
-      if (partName) setEmissive(partName, HL_COLOR);
+      refreshPartEmissive(previous);
+      refreshPartEmissive(partName);
     }
 
     function showTooltipFor(partName, sx, sy) {
@@ -392,7 +402,7 @@
 
     function pin(partName, sx, sy) {
       pinned = partName;
-      setEmissive(partName, HL_COLOR);
+      refreshPartEmissive(partName);
       tip.classList.add("pinned");
       fillTooltip(tip, payload, partName);
       tip.innerHTML += '<div class="v-tip-pinhint">Pinned — Esc or click empty space to clear</div>';
@@ -401,8 +411,9 @@
 
     function unpin() {
       if (!pinned) return;
-      if (pinned !== hovered) setEmissive(pinned, 0x000000);
+      var previous = pinned;
       pinned = null;
+      refreshPartEmissive(previous);
       tip.classList.remove("pinned");
       tip.style.display = "none";
     }
@@ -477,6 +488,25 @@
     explodeWrap.appendChild(explode);
     controlsEl.appendChild(explodeWrap);
 
+    var assembly = null;
+    var assemblyCurrent = null;
+    if (payload.instruction_panels && payload.instruction_panels.length) {
+      var assemblyWrap = document.createElement("label");
+      assemblyWrap.className = "v-assembly";
+      assemblyWrap.appendChild(document.createTextNode("Assembly"));
+      assembly = document.createElement("input");
+      assembly.type = "range";
+      assembly.min = "1";
+      assembly.max = String(payload.instruction_panels.length);
+      assembly.step = "1";
+      assembly.value = "1";
+      assemblyWrap.appendChild(assembly);
+      assemblyCurrent = document.createElement("span");
+      assemblyCurrent.className = "v-assembly-current";
+      assemblyWrap.appendChild(assemblyCurrent);
+      controlsEl.appendChild(assemblyWrap);
+    }
+
     var hint = document.createElement("span");
     hint.className = "v-hint";
     hint.textContent = "Drag to orbit · scroll to zoom · hover a part";
@@ -493,7 +523,8 @@
     // frame (rotation-safe) so it holds under any GLB up-axis transform.
     var tmp = new THREE.Vector3();
     var q = new THREE.Quaternion();
-    explode.addEventListener("input", function () {
+
+    function applyExplode() {
       var t = parseFloat(explode.value);
       Object.keys(partNodes).forEach(function (name) {
         var entry = partNodes[name];
@@ -501,7 +532,7 @@
         for (var i = 0; i < entry.tops.length; i++) {
           var node = entry.tops[i];
           var orig = entry.origPos[i];
-          if (!v) {
+          if (!node.visible || !v) {
             node.position.copy(orig);
             continue;
           }
@@ -513,7 +544,38 @@
           node.position.copy(orig).add(tmp);
         }
       });
+    }
+
+    function applyAssemblyPanel(value) {
+      if (!assembly) return;
+      currentPanel = Math.max(
+        1, Math.min(payload.instruction_panels.length, parseInt(value, 10) || 1)
+      );
+      assembly.value = String(currentPanel);
+      var panel = payload.instruction_panels[currentPanel - 1];
+      assemblyCurrent.textContent =
+        "Panel " + currentPanel + " · " + panel.action;
+      arrivalNames = {};
+      panel.arrivals.forEach(function (name) { arrivalNames[name] = true; });
+      Object.keys(partNodes).forEach(function (name) {
+        var entry = partNodes[name];
+        var first_panel = payload.parts[name].first_panel;
+        var visible = first_panel <= currentPanel;
+        entry.tops.forEach(function (node) { node.visible = visible; });
+        refreshPartEmissive(name);
+      });
+      applyExplode();
+    }
+
+    explode.addEventListener("input", function () {
+      applyExplode();
     });
+    if (assembly) {
+      assembly.addEventListener("input", function () {
+        applyAssemblyPanel(assembly.value);
+      });
+      applyAssemblyPanel(1);
+    }
 
     // --- theme sync (highlight + dim line colors follow the sheet) ----------
     function refreshThemeColors() {
@@ -522,8 +584,9 @@
       dimGroup.children.forEach(function (line) {
         if (line.material && line.material.color) line.material.color.copy(c);
       });
-      if (hovered) setEmissive(hovered, HL_COLOR);
-      if (pinned) setEmissive(pinned, HL_COLOR);
+      Object.keys(arrivalNames).forEach(refreshPartEmissive);
+      refreshPartEmissive(hovered);
+      refreshPartEmissive(pinned);
     }
     var mql = window.matchMedia("(prefers-color-scheme: dark)");
     if (mql.addEventListener) mql.addEventListener("change", refreshThemeColors);

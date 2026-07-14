@@ -90,7 +90,55 @@ def _explode_for(detail, assembly) -> dict:
     return derive_explode_vectors(assembly, contacts)
 
 
-def build_viewer_payload(detail) -> dict:
+def _instruction_panel_payload(assembly, manual) -> tuple[dict[str, int], list[dict]]:
+    """Validate and project a manual's part-id schedule into GLB node names."""
+    rows = tuple(manual.part_schedule)
+    scheduled_ids = [part_id for part_id, _panel in rows]
+    duplicates = sorted({part_id for part_id in scheduled_ids
+                         if scheduled_ids.count(part_id) > 1})
+    if duplicates:
+        raise ValueError(
+            f"instruction panel schedule lists part ids more than once: {duplicates!r}")
+
+    parts_by_id = {part.id: part for part in assembly.parts}
+    known_ids = set(parts_by_id)
+    actual_ids = set(scheduled_ids)
+    unknown = sorted(actual_ids - known_ids)
+    if unknown:
+        raise ValueError(
+            f"instruction panel schedule has unknown part ids: {unknown!r}")
+    missing = sorted(known_ids - actual_ids)
+    if missing:
+        raise ValueError(
+            f"instruction panel schedule omits part ids: {missing!r}")
+
+    schedule = dict(rows)
+    panel_count = len(manual.panels)
+    invalid = sorted((part_id, panel) for part_id, panel in rows
+                     if not isinstance(panel, int)
+                     or panel < 1 or panel > panel_count)
+    if invalid:
+        raise ValueError(
+            f"instruction panel schedule has invalid panel numbers: {invalid!r}")
+
+    panels = []
+    for panel in manual.panels:
+        unknown_arrivals = sorted(set(panel.arrival_part_ids) - known_ids)
+        if unknown_arrivals:
+            raise ValueError(
+                f"instruction panel {panel.index} has unknown arrival part ids: "
+                f"{unknown_arrivals!r}")
+        panels.append({
+            "number": panel.index,
+            "title": panel.title,
+            "action": panel.action,
+            "arrivals": [parts_by_id[part_id].name
+                         for part_id in panel.arrival_part_ids],
+        })
+    return schedule, panels
+
+
+def build_viewer_payload(detail, instruction_manual=None) -> dict:
     """Build the tooltip/hover data contract for one detail.
 
     ``parts`` is keyed by ``Placed.name`` — the same name every exported GLB
@@ -105,6 +153,11 @@ def build_viewer_payload(detail) -> dict:
 
     explode_vectors = _explode_for(detail, assembly)
     labels = part_labels(assembly.parts)
+    panel_schedule = None
+    instruction_panels = None
+    if instruction_manual is not None:
+        panel_schedule, instruction_panels = _instruction_panel_payload(
+            assembly, instruction_manual)
 
     parts: dict[str, dict] = {}
     for p in assembly.parts:
@@ -145,14 +198,19 @@ def build_viewer_payload(detail) -> dict:
             "explode": [float(v) for v in explode],
             "stub_of": stub,
         }
+        if panel_schedule is not None:
+            parts[p.name]["first_panel"] = panel_schedule[p.id]
 
     slug = "".join(ch if ch.isalnum() else "_" for ch in detail.name.lower()).strip("_")
-    return {
+    payload = {
         "slug": slug,
         "name": detail.name,
         "parts": parts,
         "dimensions": detail.rendered_callouts(),
     }
+    if instruction_panels is not None:
+        payload["instruction_panels"] = instruction_panels
+    return payload
 
 
 #: Vendored three.js r147 UMD bundle, in load order: core assigns ``THREE``,
