@@ -14,6 +14,49 @@ three-drawer-cabinet branch is the live case): land them on main by
 (unrelated histories; a merge would drag the whole archived ancestry into
 main). Push main after merges.
 
+## ★ SESSION UPDATE 13 (2026-07-13 — STEPDOC/CPG +process COMPLETE + MERGED; caddy REDELIVERED)
+
++process is COMPLETE and merged to GitHub `main` @`a4ebb0b`. The language now
+has strict typed `process.cure` facts and typed `sequence.after` point
+constraints, with loader/serializer/compiler/site plumbing, loud runtime
+defense, and an honest repeat/fragment trust boundary. `Glued` supplies a safe
+typed default cure fact; authored facts refine it without inventing a generic
+duration or product claim.
+
+The one event graph now derives every bond/install-before-cure edge and carries
+authored cure-before-target edges with exact `why` provenance. The same facts
+inform axis-3 installability, derivation logs, the epistemic contract, the
+shared reader model, Markdown, and HTML. Caddy CAT-K authors both rail cures
+and both project-specific registration constraints. Cure is a standalone
+reader step; removing one claim removes it from every reader projection while
+the independent derived bond-before-cure facts survive. The old hand-written
+"Hidden rail joints — glue, then screws" fieldnote is retired.
+
+Fresh adversarial review found and closed malformed direct-runtime claims, a
+reusable-type docstring that owned consumer order, incomplete cross-surface
+reversion coverage, and branch-scope noise. Confirmation found no remaining
+Critical, Important, or Minor issues (`review-stepdoc-process-final.md`). The
+frozen final feature tree passed **1447 passed / 3 skipped / 1 xfailed** in
+905.23s; the merge tree was byte-identical to that gated tree.
+
+Caddy geometry hash remained
+`511f77d74c211a3a777e2388a520c54a20d15746373c2de70633be40b14a3a3d` and
+all ten view PNGs remained byte-identical. The regenerated technical document
+was checked in the live browser (typed cure steps/constraints present, retired
+fieldnote absent, zero console errors) and delivered byte-identically to the
+repo output, dated vault attachment, and `~/Downloads/Build Documents/`.
+Delivered HTML SHA-256:
+`66921ce2ff7d423bd2fb4b988b69395f3aa132b42728816d27458fe53cdfa5df`.
+
+A fresh document-only handyman read rated it buildable as a prototype but not
+without guessing and not a consumer manual (`review-stepdoc-process-builder.md`).
+That is the input to NEXT: the separately gated **+presentation** increment —
+generate `armchair_caddy_assembly_manual.html` as a separate offline document,
+with IKEA-style grouped panels, content-keyed images, station-complete
+hardware/tool callouts, cure as a hard break, and reciprocal relative links to
+the unchanged technical build document. Presentation must not invent missing
+engineering or product-selection truth.
+
 ## HISTORY REWRITE NOTE (2026-07-13, after SESSION UPDATE 11)
 
 The repo was pushed to private GitHub (jmwitten/plumb) and its FULL history
