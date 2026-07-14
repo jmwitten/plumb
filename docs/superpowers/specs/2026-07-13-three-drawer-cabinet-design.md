@@ -375,6 +375,26 @@ The reusable core must not assume full-cabinet width, a toe kick, floor support,
 three drawers, or absence of plumbing. If any of those assumptions appears in
 drawer-bank code or tests, the abstraction has been drawn at the wrong boundary.
 
+## Approved follow-up queue
+
+After DB40 is corrected, independently reviewed, and fully verified, add a
+base-language increment for fact-bound instruction templates before building the
+split-bank four-drawer vanity. The sequence is:
+
+1. finish and verify DB40 without changing the base language mid-release;
+2. add typed fact references and deterministic instruction templates to the
+   base language, with one reusable test matrix for binding, formatting,
+   provenance, missing facts, and unit conversion;
+3. migrate cabinetry fabrication, assembly, installation, and commissioning
+   instructions so catalog and derived dimensions are rendered from those fact
+   bindings rather than copied into unrestricted prose; and
+4. build the two-left/two-right vanity on the migrated cabinetry pack.
+
+This increment reduces bespoke synchronization tests. It does not replace
+domain-invariant tests: drawer clearance, hardware completeness, load limits,
+plumbing keepouts, and wall load-path rules still require cabinetry-specific
+positive and adversarial coverage.
+
 ## Explicit non-goals
 
 - arbitrary drawer counts or user-authored sizing formulas;

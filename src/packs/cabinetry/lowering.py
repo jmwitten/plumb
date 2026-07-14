@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from ...spec.schema import (
+    AuthoredStage,
     BondSpec,
     ComponentSpec,
     ContactSpec,
     DetailSpecDoc,
     OverlapSpec,
     RawSpec,
+    SequenceSpec,
     ValidationSpec,
 )
 from .model import CabinetModel
@@ -96,6 +98,48 @@ def lower_model(model: CabinetModel | object) -> DetailSpecDoc:
     stud_ids = tuple(
         part.part_id for part in model.parts if part.role.startswith("wall_stud_")
     )
+    sequence = SequenceSpec()
+    if drawer_bank is not None:
+        toe_ids = tuple(cid(role) for role in (
+            "toe_front", "toe_rear", "toe_left", "toe_right",
+        ))
+        carcass_ids = tuple(cid(role) for role in (
+            "left_end", "right_end", "bottom", "captured_back",
+            "front_stretcher", "rear_stretcher", "anchor_strip",
+        ))
+        drawer_ids = tuple(part.part_id for part in drawer_bank.parts)
+        anchor_ids = tuple(
+            cid(f"wall_anchor_{stud_id}") for stud_id in model.anchor_stud_ids
+        )
+        stages = [
+            AuthoredStage(
+                name="assembly.toe_base",
+                why=("The independent toe platform is assembled square before "
+                     "it supports the cabinet carcass."),
+                parts=toe_ids,
+            ),
+            AuthoredStage(
+                name="assembly.carcass",
+                why=("The empty carcass and captured back are assembled square "
+                     "before drawer assemblies are fitted."),
+                parts=carcass_ids,
+            ),
+            AuthoredStage(
+                name="assembly.drawer_boxes",
+                why=("Drawer boxes, applied fronts, and their adjustments are "
+                     "completed in the shop before conventional shipment."),
+                parts=drawer_ids,
+            ),
+        ]
+        if anchor_ids:
+            stages.append(AuthoredStage(
+                name="install.wall_anchor",
+                why=("The labeled drawers are removed for shipment and the "
+                     "empty carcass is set level and plumb before wall anchors "
+                     "are driven."),
+                parts=anchor_ids,
+            ))
+        sequence = SequenceSpec(stages=tuple(stages))
     return DetailSpecDoc(
         name=model.project_name,
         type=("cabinetry_frameless_drawer_base" if drawer_bank is not None
@@ -109,4 +153,5 @@ def lower_model(model: CabinetModel | object) -> DetailSpecDoc:
         ),
         roles={stud_id: "existing" for stud_id in stud_ids},
         context_grounds=frozenset(stud_ids),
+        sequence=sequence,
     )

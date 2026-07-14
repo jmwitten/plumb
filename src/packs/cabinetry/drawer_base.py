@@ -5,12 +5,17 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .catalogs import AssemblyFastenerProduct, WallAnchorProduct, get_assembly_fastener
-from .drawers import DrawerBankModel, build_drawer_bank
+from .drawers import (
+    DrawerBankModel,
+    build_drawer_bank,
+    solid_fastener_mass_upper_bound_kg,
+)
 from .profiles import ConstructionProfile
 from .schema import CabinetrySection, DrawerBaseDecl
 from .shell import (
     BaseShellModel,
     DerivedValue,
+    HardwareProvenance,
     HardwareSystem,
     MachiningFeature,
     PartModel,
@@ -19,7 +24,6 @@ from .shell import (
 )
 
 
-_SIDE_REVEAL_MM = 1.5
 _FRONT_THICKNESS_MM = 19.05
 _FRONT_FASTENER_ID = "grk_low_profile_cabinet_8x1_1_4_114069@2026.1"
 
@@ -85,8 +89,17 @@ class DrawerBaseModel:
             "front_fastener": self.front_fastener.product_id,
             "lateral_stabilizer": self.drawer_bank.stabilizer.product_id,
             "locking_device": self.drawer_bank.locking_device.product_id,
+            "locking_device_screw": (
+                self.drawer_bank.locking_device.installation_screw_product_id
+            ),
             "pull": self.drawer_bank.pull_product.product_id,
+            "pull_mounting_screw": (
+                self.drawer_bank.pull_product.mounting_screw_product_id
+            ),
             "runner": self.drawer_bank.runner.product_id,
+            "runner_installation_screw": (
+                self.drawer_bank.runner.installation_screw_product_id
+            ),
             "wall_anchor": self.wall_anchor.product_id,
         }
 
@@ -95,13 +108,48 @@ class DrawerBaseModel:
             "front_fastener": self.front_fastener.source_url,
             "lateral_stabilizer": self.drawer_bank.stabilizer.source_url,
             "locking_device": self.drawer_bank.locking_device.source_url,
+            "locking_device_screw": self.drawer_bank.locking_device.source_url,
             "pull": self.drawer_bank.pull_product.source_url,
+            "pull_mounting_screw": (
+                self.drawer_bank.pull_product.mounting_screw_source_url
+            ),
             "runner": self.drawer_bank.runner.source_url,
+            "runner_installation_screw": self.drawer_bank.runner.source_url,
             "wall_anchor": self.wall_anchor.source_url,
         }
 
     def sizing_policy_manifest(self) -> tuple[str, ...]:
         return (self.section.cabinets[0].drawer_bank.sizing_policy_id,)
+
+    def derived_fact_manifest(self) -> dict[str, object]:
+        """Expose build-driving dimensions and loads as structured facts."""
+
+        bank = self.drawer_bank
+        return {
+            "drawer_bank": {
+                "opening_width_mm": bank.opening_width_mm,
+                "opening_height_mm": bank.opening_height_mm,
+                "inside_depth_mm": bank.inside_depth_mm,
+                "inside_box_width_mm": bank.inside_box_width_mm,
+                "outside_box_width_mm": bank.outside_box_width_mm,
+                "box_length_mm": bank.box_length_mm,
+                "front_edge_reveal_mm": bank.front_edge_reveal_mm,
+                "front_gap_mm": bank.front_gap_mm,
+            },
+            "drawer_cells": {
+                cell.cell_id: {
+                    "front_height_mm": cell.front_height_mm,
+                    "box_height_mm": cell.box_height_mm,
+                    "bottom_clearance_mm": cell.bottom_clearance_mm,
+                    "wood_mass_kg": cell.wood_mass_kg,
+                    "moving_hardware_mass_kg": cell.moving_hardware_mass_kg,
+                    "moving_mass_kg": cell.moving_mass_kg,
+                    "contents_load_lb": cell.contents_load_lb,
+                    "rated_moving_load_lb": cell.rated_moving_load_lb,
+                }
+                for cell in bank.cells
+            },
+        }
 
 
 def build_drawer_base_model(
@@ -129,22 +177,36 @@ def build_drawer_base_model(
         opening_height_mm=shell.body_height_mm,
         inside_depth_mm=shell.inside_depth_mm,
         front_origin_mm=(
-            shell.x0_mm + _SIDE_REVEAL_MM,
+            shell.x0_mm + shell.profile.door_side_reveal_mm,
             shell.front_y_mm,
             shell.base_z_mm + cabinet.toe_kick_height_mm,
         ),
-        front_width_mm=cabinet.width_mm - 2 * _SIDE_REVEAL_MM,
+        front_width_mm=(
+            cabinet.width_mm - 2 * shell.profile.door_side_reveal_mm
+        ),
         front_thickness_mm=_FRONT_THICKNESS_MM,
         mounting_part_ids=(
             f"cabinetry.{cabinet.cabinet_id}.left_end",
             f"cabinetry.{cabinet.cabinet_id}.right_end",
         ),
         material_density_kg_m3=section.material_evidence.density_kg_m3,
+        front_attachment_fastener_mass_upper_bound_kg=(
+            solid_fastener_mass_upper_bound_kg(
+                front_fastener.diameter_mm,
+                front_fastener.length_mm,
+                4,
+            )
+        ),
+        front_edge_reveal_mm=shell.profile.door_top_reveal_mm,
+        front_gap_mm=shell.profile.door_center_gap_mm,
     )
 
     drawer_hardware: list[HardwareSystem] = []
-    for index, cell in enumerate(bank.cells):
-        drawer_hardware.extend(bank.hardware[index * 4:(index + 1) * 4])
+    bank_hardware_by_id = {system.system_id: system for system in bank.hardware}
+    for cell in bank.cells:
+        drawer_hardware.extend(
+            bank_hardware_by_id[system_id] for system_id in cell.hardware_ids
+        )
         drawer_hardware.append(HardwareSystem(
             system_id=(f"cabinetry.{cabinet.cabinet_id}.{cell.cell_id}."
                        "applied_front_fasteners"),
@@ -161,6 +223,14 @@ def build_drawer_base_model(
 
     source_map = dict(shell.source_map)
     source_map.update(bank.source_map)
+    for system in (*drawer_hardware, *shell.hardware):
+        source_map[system.system_id] = HardwareProvenance(
+            declared_at=f"hardware.{system.kind}",
+            rule=f"hardware.{system.kind}",
+            catalog_id=system.product_id,
+            archetype_id=cabinet.source_archetype,
+            source_url=system.source_url,
+        )
     return DrawerBaseModel(
         project_name=project_name,
         mode=section.mode,
@@ -176,7 +246,9 @@ def build_drawer_base_model(
         hardware=tuple(drawer_hardware) + shell.hardware,
         derived=shell.derived + bank.derived + (
             DerivedValue(
-                "front_width", cabinet.width_mm - 2 * _SIDE_REVEAL_MM, "mm",
+                "front_width",
+                cabinet.width_mm - 2 * shell.profile.door_side_reveal_mm,
+                "mm",
                 ("cabinet_width", "side_reveals"),
                 "drawer_front.full_overlay_width",
             ),
@@ -196,6 +268,7 @@ def build_drawer_base_model(
             "install.anchor_empty_carcass",
             "install.reinstall_by_identity",
             "install.commission_drawers",
+            "install.countertop",
         ),
         anchor_stud_ids=shell.anchor_stud_ids,
     )

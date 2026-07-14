@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from math import pi
 
 from .catalogs import (
     DrawerLockingDeviceProduct,
@@ -28,10 +29,8 @@ from .shell import (
 _SIDE_THICKNESS_MM = 16.0
 _BOTTOM_THICKNESS_MM = 12.0
 _BOTTOM_GROOVE_DEPTH_MM = 6.0
-_FRONT_EDGE_REVEAL_MM = 1.5
-_FRONT_GAP_MM = 2.0
-_MOVING_HARDWARE_ALLOWANCE_KG = 0.25
 _LB_PER_KG = 2.2046226218
+_STEEL_DENSITY_KG_M3 = 7850.0
 
 
 @dataclass(frozen=True)
@@ -42,6 +41,8 @@ class DrawerCellModel:
     front_height_mm: float
     box_height_mm: float
     contents_load_lb: float
+    wood_mass_kg: float
+    moving_hardware_mass_kg: float
     moving_mass_kg: float
     rated_moving_load_lb: float
     bottom_clearance_mm: float
@@ -66,6 +67,8 @@ class DrawerBankModel:
     locking_device: DrawerLockingDeviceProduct
     stabilizer: LateralStabilizerProduct
     pull_product: DrawerPullProduct
+    front_edge_reveal_mm: float
+    front_gap_mm: float
     cells: tuple[DrawerCellModel, ...]
     parts: tuple[PartModel, ...]
     machining: tuple[MachiningFeature, ...]
@@ -88,6 +91,27 @@ def _positive(value: float, name: str) -> None:
         raise ValueError(f"{name} must be greater than zero, got {value!r}")
 
 
+def solid_fastener_mass_upper_bound_kg(
+    diameter_mm: float,
+    length_mm: float,
+    quantity: int,
+) -> float:
+    """Return a conservative solid-steel cylinder mass for small fasteners."""
+
+    volume_m3 = pi * (diameter_mm / 2) ** 2 * length_mm * quantity * 1e-9
+    return volume_m3 * _STEEL_DENSITY_KG_M3
+
+
+def _pull_solid_envelope_mass_kg(pull: DrawerPullProduct) -> float:
+    """Bound pull mass as a solid bar plus two solid mounting legs."""
+
+    cross_width, cross_height = pull.cross_section_mm
+    leg_length = max(pull.height_mm - cross_height, 0.0)
+    solid_length = pull.overall_length_mm + 2 * leg_length
+    volume_m3 = cross_width * cross_height * solid_length * 1e-9
+    return volume_m3 * pull.material_density_upper_bound_kg_m3
+
+
 def build_drawer_bank(
     declaration: DrawerBankDecl,
     *,
@@ -101,6 +125,9 @@ def build_drawer_bank(
     front_thickness_mm: float,
     mounting_part_ids: tuple[str, ...],
     material_density_kg_m3: float,
+    front_attachment_fastener_mass_upper_bound_kg: float,
+    front_edge_reveal_mm: float,
+    front_gap_mm: float,
 ) -> DrawerBankModel:
     """Build a drawer bank using only its declared zone and product adapters."""
 
@@ -111,6 +138,10 @@ def build_drawer_bank(
         (front_width_mm, "front_width_mm"),
         (front_thickness_mm, "front_thickness_mm"),
         (material_density_kg_m3, "material_density_kg_m3"),
+        (front_attachment_fastener_mass_upper_bound_kg,
+         "front_attachment_fastener_mass_upper_bound_kg"),
+        (front_edge_reveal_mm, "front_edge_reveal_mm"),
+        (front_gap_mm, "front_gap_mm"),
     ):
         _positive(value, name)
     if not namespace.strip():
@@ -151,8 +182,8 @@ def build_drawer_bank(
         )
 
     declared_front_total = sum(cell.front_height_mm for cell in declaration.cells)
-    required_reveals = 2 * _FRONT_EDGE_REVEAL_MM + (
-        max(len(declaration.cells) - 1, 0) * _FRONT_GAP_MM
+    required_reveals = 2 * front_edge_reveal_mm + (
+        max(len(declaration.cells) - 1, 0) * front_gap_mm
     )
     if declared_front_total + required_reveals > opening_height_mm + 1e-6:
         raise ValueError(
@@ -160,10 +191,10 @@ def build_drawer_bank(
         )
 
     front_bottom_by_cell: dict[str, float] = {}
-    cursor_z = front_origin_mm[2] + _FRONT_EDGE_REVEAL_MM
+    cursor_z = front_origin_mm[2] + front_edge_reveal_mm
     for cell in reversed(declaration.cells):
         front_bottom_by_cell[cell.cell_id] = cursor_z
-        cursor_z += cell.front_height_mm + _FRONT_GAP_MM
+        cursor_z += cell.front_height_mm + front_gap_mm
 
     parts: list[PartModel] = []
     machining: list[MachiningFeature] = []
@@ -313,28 +344,37 @@ def build_drawer_bank(
                 source=runner.product_id,
                 face="rear_bottom",
             ))
-        for handed, x_location in (("left", 6.0),
-                                   ("right", inside_box_width - 6.0)):
+        for handed, x_location in (
+            ("left", runner.hook_bore_inset_from_side_mm),
+            ("right", inside_box_width - runner.hook_bore_inset_from_side_mm),
+        ):
             cell_machining.append(MachiningFeature(
                 feature_id=f"{box_back.part_id}.runner_hook_{handed}",
                 kind="runner_hook_bore",
                 part_id=box_back.part_id,
-                location_mm=(x_location, runner.hook_bore_mm[1]),
+                location_mm=(x_location, runner.hook_bore_height_from_bottom_mm),
                 diameter_mm=runner.hook_bore_mm[0],
-                depth_mm=_SIDE_THICKNESS_MM,
+                depth_mm=runner.hook_bore_mm[1],
                 source=runner.product_id,
                 face="rear",
             ))
-            cell_machining.append(MachiningFeature(
-                feature_id=f"{bottom.part_id}.locking_device_{handed}",
-                kind="locking_device_bore",
-                part_id=bottom.part_id,
-                location_mm=(x_location, 37.0),
-                diameter_mm=5.0,
-                depth_mm=_BOTTOM_THICKNESS_MM,
-                source=locking_device.product_id,
-                face="bottom",
-            ))
+        for handed in ("left", "right"):
+            for bore_index in range(1, locking_device.pilot_bores_per_device + 1):
+                cell_machining.append(MachiningFeature(
+                    feature_id=(f"{box_front.part_id}.locking_device_{handed}_"
+                                f"pilot_{bore_index}"),
+                    kind="locking_device_bore",
+                    part_id=box_front.part_id,
+                    location_mm=(),
+                    diameter_mm=locking_device.pilot_bore_diameter_mm,
+                    depth_mm=locking_device.pilot_bore_depth_mm,
+                    source=locking_device.product_id,
+                    face=f"{handed}_front_corner_at_75_deg",
+                    coordinate_system=(
+                        f"Blum {locking_device.template_sku} template at "
+                        "drawer front corner"
+                    ),
+                ))
         for mounting_part_id in mounting_part_ids:
             for station in runner.required_rear_fixing_stations_mm:
                 side_name = "left" if mounting_part_id == mounting_part_ids[0] else "right"
@@ -346,26 +386,24 @@ def build_drawer_bank(
                     location_mm=(runner.front_setback_mm + station,
                                  box_z - opening_origin_mm[2]
                                  + runner.mounting_line_mm),
-                    diameter_mm=5.0,
-                    depth_mm=13.0,
                     source=runner.product_id,
                     face="inside",
                 ))
         for index, location in enumerate((
-            (front_width_mm * 0.25, cell.front_height_mm * 0.25),
-            (front_width_mm * 0.75, cell.front_height_mm * 0.25),
-            (front_width_mm * 0.25, cell.front_height_mm * 0.75),
-            (front_width_mm * 0.75, cell.front_height_mm * 0.75),
+            (inside_box_width * 0.25, cell.box_height_mm * 0.25),
+            (inside_box_width * 0.75, cell.box_height_mm * 0.25),
+            (inside_box_width * 0.25, cell.box_height_mm * 0.75),
+            (inside_box_width * 0.75, cell.box_height_mm * 0.75),
         ), start=1):
             cell_machining.append(MachiningFeature(
-                feature_id=f"{applied_front.part_id}.attachment_{index}",
+                feature_id=f"{box_front.part_id}.applied_front_attachment_{index}",
                 kind="applied_front_attachment",
-                part_id=applied_front.part_id,
+                part_id=box_front.part_id,
                 location_mm=location,
-                diameter_mm=4.0,
-                depth_mm=front_thickness_mm,
+                diameter_mm=5.0,
+                depth_mm=box_front.thickness_mm,
                 source="drawer_front.applied",
-                face="rear",
+                face="inside",
             ))
         pull_center_x = front_width_mm / 2
         for handed, x_location in (
@@ -382,20 +420,21 @@ def build_drawer_bank(
                 source=pull.product_id,
                 face="front",
             ))
+        stabilizer_system_id = f"{namespace}.{cell.cell_id}.lateral_stabilizer"
         cell_machining.extend((
             MachiningFeature(
-                feature_id=f"{bottom.part_id}.stabilizer_gear_rack_cut",
+                feature_id=f"{stabilizer_system_id}.gear_rack_cut",
                 kind="stabilizer_gear_rack_cut",
-                part_id=bottom.part_id,
+                part_id=stabilizer_system_id,
                 location_mm=(0.0,),
                 length_mm=stabilizer.gear_rack_length_mm,
                 source=stabilizer.product_id,
                 face="hardware_stock",
             ),
             MachiningFeature(
-                feature_id=f"{bottom.part_id}.stabilizer_linkage_rod_cut",
+                feature_id=f"{stabilizer_system_id}.linkage_rod_cut",
                 kind="stabilizer_linkage_rod_cut",
-                part_id=bottom.part_id,
+                part_id=stabilizer_system_id,
                 location_mm=(0.0,),
                 length_mm=(opening_width_mm
                            - stabilizer.linkage_rod_cut_deduction_mm),
@@ -416,6 +455,15 @@ def build_drawer_bank(
                 source_url=runner.source_url,
             ),
             HardwareSystem(
+                system_id=f"{namespace}.{cell.cell_id}.runner_installation_screws",
+                kind="drawer_runner_installation_screw",
+                product_id=runner.installation_screw_product_id,
+                quantity=2 * runner.installation_screws_per_runner,
+                related_parts=mounting_part_ids,
+                evidence="manufacturer_rated",
+                source_url=runner.source_url,
+            ),
+            HardwareSystem(
                 system_id=f"{namespace}.{cell.cell_id}.locking_device_pair",
                 kind="drawer_locking_device_pair",
                 product_id=locking_device.product_id,
@@ -425,7 +473,18 @@ def build_drawer_bank(
                 source_url=locking_device.source_url,
             ),
             HardwareSystem(
-                system_id=f"{namespace}.{cell.cell_id}.lateral_stabilizer",
+                system_id=(f"{namespace}.{cell.cell_id}."
+                           "locking_device_installation_screws"),
+                kind="drawer_locking_device_screw",
+                product_id=locking_device.installation_screw_product_id,
+                quantity=(locking_device.quantity_per_drawer
+                          * locking_device.installation_screw_quantity_per_device),
+                related_parts=(bottom.part_id, box_front.part_id),
+                evidence="manufacturer_rated",
+                source_url=locking_device.source_url,
+            ),
+            HardwareSystem(
+                system_id=stabilizer_system_id,
                 kind="drawer_lateral_stabilizer",
                 product_id=stabilizer.product_id,
                 quantity=stabilizer.quantity_per_drawer,
@@ -442,19 +501,51 @@ def build_drawer_bank(
                 evidence="manufacturer_rated",
                 source_url=pull.source_url,
             ),
+            HardwareSystem(
+                system_id=f"{namespace}.{cell.cell_id}.pull_mounting_screws",
+                kind="drawer_pull_mounting_screw",
+                product_id=pull.mounting_screw_product_id,
+                quantity=(pull.quantity_per_drawer
+                          * pull.mounting_screw_quantity_per_pull),
+                related_parts=(applied_front.part_id,),
+                evidence="manufacturer_rated",
+                source_url=pull.mounting_screw_source_url,
+            ),
         ))
 
-        moving_mass = sum(
+        wood_mass = sum(
             part.length_mm * part.width_mm * part.thickness_mm * 1e-9
             * material_density_kg_m3
             for part in cell_parts
-        ) + _MOVING_HARDWARE_ALLOWANCE_KG
+        )
+        moving_hardware_mass = (
+            _pull_solid_envelope_mass_kg(pull)
+            + locking_device.quantity_per_drawer
+            * locking_device.mass_per_device_kg
+            + stabilizer.shipping_mass_kg
+            + solid_fastener_mass_upper_bound_kg(
+                locking_device.installation_screw_diameter_mm,
+                locking_device.installation_screw_length_mm,
+                locking_device.quantity_per_drawer
+                * locking_device.installation_screw_quantity_per_device,
+            )
+            + solid_fastener_mass_upper_bound_kg(
+                pull.thread_diameter_mm,
+                pull.mounting_screw_length_mm,
+                pull.quantity_per_drawer
+                * pull.mounting_screw_quantity_per_pull,
+            )
+            + front_attachment_fastener_mass_upper_bound_kg
+        )
+        moving_mass = wood_mass + moving_hardware_mass
         rated_moving_load = moving_mass * _LB_PER_KG + cell.contents_load_lb
         cells.append(DrawerCellModel(
             cell_id=cell.cell_id,
             front_height_mm=cell.front_height_mm,
             box_height_mm=cell.box_height_mm,
             contents_load_lb=cell.contents_load_lb,
+            wood_mass_kg=wood_mass,
+            moving_hardware_mass_kg=moving_hardware_mass,
             moving_mass_kg=moving_mass,
             rated_moving_load_lb=rated_moving_load,
             bottom_clearance_mm=runner.bottom_clearance_mm,
@@ -478,6 +569,8 @@ def build_drawer_bank(
         locking_device=locking_device,
         stabilizer=stabilizer,
         pull_product=pull,
+        front_edge_reveal_mm=front_edge_reveal_mm,
+        front_gap_mm=front_gap_mm,
         cells=tuple(cells),
         parts=tuple(parts),
         machining=tuple(machining),

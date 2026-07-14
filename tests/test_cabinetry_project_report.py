@@ -62,11 +62,16 @@ def test_report_projects_shop_evidence_sources_and_all_process_phases():
         "Fabrication", "Assembly & shipping", "Installation & commissioning",
     ):
         assert heading in html
+    assert "Target id" in html
+    assert "runner and lateral-stabilizer preparation" in html
+    assert "Full-height surveyed wall studs are omitted" in html
     for product in (
         "blum_movento_763_5330s@2026.1",
         "blum_t51_7601_pair@2026.1",
+        "blum_606n_no6x5_8@2026.1",
         "blum_zs7m686mu@2026.1",
         "hafele_vogue_155_01_613@2026.1",
+        "hafele_handle_screw_m4x26_022_35_261@2026.1",
     ):
         assert product in html
     for source in project.model.catalog_source_manifest().values():
@@ -105,6 +110,26 @@ def test_report_scene_excludes_full_height_site_context_but_keeps_install_anchor
     assert "DB40 wall anchor at stud_32" in names
     assert "DB40 wall anchor at stud_48" in names
     assert set(payload["parts"]) == names
+
+
+def test_drawer_detail_geometry_uses_bottom_blank_and_selected_hardware_facts():
+    project = compile_project_file(DB40)
+    model = project.model
+    facts = CPR.drawer_detail_geometry(model)
+    bottom = model.part("drawer_top_bottom")
+
+    assert facts["bottom_front_origin_mm"] == 10.0
+    assert facts["bottom_side_origin_mm"] == 10.0
+    assert facts["bottom_blank_width_mm"] == bottom.length_mm
+    assert facts["bottom_blank_depth_mm"] == bottom.width_mm
+    assert facts["runner_physical_length_mm"] == \
+        model.drawer_bank.runner.physical_length_mm
+    assert facts["pull_hole_spacing_mm"] == \
+        model.drawer_bank.pull_product.hole_spacing_mm
+    assert facts["locking_skus"] == (
+        model.drawer_bank.locking_device.left_sku,
+        model.drawer_bank.locking_device.right_sku,
+    )
 
 
 def test_dimension_projection_and_validation_share_the_mutated_model():

@@ -26,6 +26,13 @@ class Provenance:
 
 
 @dataclass(frozen=True)
+class HardwareProvenance(Provenance):
+    """Source-map provenance for purchased systems rather than cut parts."""
+
+    source_url: str = ""
+
+
+@dataclass(frozen=True)
 class DerivedValue:
     name: str
     value: float

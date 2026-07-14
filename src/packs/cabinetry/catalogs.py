@@ -94,11 +94,18 @@ class DrawerRunnerProduct:
     bottom_clearance_mm: float
     minimum_rear_notch_mm: float
     hook_bore_mm: tuple[float, float]
+    hook_bore_inset_from_side_mm: float
+    hook_bore_height_from_bottom_mm: float
     minimum_top_clearance_mm: float
     opening_height_deduction_mm: float
     front_setback_mm: float
     mounting_line_mm: float
     required_rear_fixing_stations_mm: tuple[float, ...]
+    installation_screw_product_id: str
+    installation_screw_sku: str
+    installation_screws_per_runner: int
+    installation_screw_diameter_mm: float
+    installation_screw_length_mm: float
     static_rating_lb: float
     dynamic_rating_lb: float
     motion: str
@@ -116,6 +123,18 @@ class DrawerLockingDeviceProduct:
     quantity_per_drawer: int
     minimum_inside_drawer_width_mm: float
     side_adjustment_mm: tuple[float, float]
+    pilot_bore_diameter_mm: float
+    pilot_bore_depth_mm: float
+    pilot_bores_per_device: int
+    installation_angle_deg: float
+    installation_screw_product_id: str
+    installation_screw_sku: str
+    installation_screw_quantity_per_device: int
+    installation_screw_diameter_mm: float
+    installation_screw_length_mm: float
+    mass_per_device_kg: float
+    mass_source_url: str
+    template_sku: str
     source_url: str
     source_date: str
 
@@ -133,6 +152,8 @@ class LateralStabilizerProduct:
     gear_rack_length_mm: float
     capacity_increase_lb: float
     quantity_per_drawer: int
+    shipping_mass_kg: float
+    mass_source_url: str
     source_url: str
     source_date: str
 
@@ -145,8 +166,20 @@ class DrawerPullProduct:
     sku: str
     finish: str
     hole_spacing_mm: float
+    overall_length_mm: float
+    cross_section_mm: tuple[float, float]
     thread: str
+    thread_diameter_mm: float
+    minimum_thread_engagement_factor: float
+    thread_engagement_reference_url: str
+    height_mm: float
+    material_density_upper_bound_kg_m3: float
     quantity_per_drawer: int
+    mounting_screw_product_id: str
+    mounting_screw_sku: str
+    mounting_screw_length_mm: float
+    mounting_screw_quantity_per_pull: int
+    mounting_screw_source_url: str
     source_url: str
     source_date: str
 
@@ -296,11 +329,18 @@ BLUM_MOVENTO_763_5330S = DrawerRunnerProduct(
     bottom_clearance_mm=16.0,
     minimum_rear_notch_mm=50.0,
     hook_bore_mm=(6.0, 10.0),
+    hook_bore_inset_from_side_mm=7.0,
+    hook_bore_height_from_bottom_mm=11.0,
     minimum_top_clearance_mm=7.0,
     opening_height_deduction_mm=23.0,
     front_setback_mm=3.0,
     mounting_line_mm=37.0,
     required_rear_fixing_stations_mm=(261.0, 357.0),
+    installation_screw_product_id="blum_606n_no6x5_8@2026.1",
+    installation_screw_sku="606N",
+    installation_screws_per_runner=2,
+    installation_screw_diameter_mm=0.1380 * 25.4,
+    installation_screw_length_mm=0.625 * 25.4,
     static_rating_lb=125.0,
     dynamic_rating_lb=110.0,
     motion="blumotion_soft_close",
@@ -317,6 +357,21 @@ BLUM_T51_7601_PAIR = DrawerLockingDeviceProduct(
     quantity_per_drawer=2,
     minimum_inside_drawer_width_mm=170.0,
     side_adjustment_mm=(-1.5, 1.5),
+    pilot_bore_diameter_mm=2.5,
+    pilot_bore_depth_mm=10.0,
+    pilot_bores_per_device=2,
+    installation_angle_deg=75.0,
+    installation_screw_product_id="blum_606n_no6x5_8@2026.1",
+    installation_screw_sku="606N",
+    installation_screw_quantity_per_device=2,
+    installation_screw_diameter_mm=0.1380 * 25.4,
+    installation_screw_length_mm=0.625 * 25.4,
+    mass_per_device_kg=0.05626,
+    mass_source_url=(
+        "https://s1.img-b.com/build.com/mediabase/specifications/blum/"
+        "1286412/blum-t51.7601l-specification-sheet.pdf"
+    ),
+    template_sku="T65.1600.01",
     source_url=_MOVENTO_SOURCE,
     source_date="2026-04-14",
 )
@@ -333,6 +388,11 @@ BLUM_ZS7M686MU = LateralStabilizerProduct(
     gear_rack_length_mm=560.0,
     capacity_increase_lb=0.0,
     quantity_per_drawer=1,
+    shipping_mass_kg=0.90 * 0.45359237,
+    mass_source_url=(
+        "https://www.mckillican.com/hardware/functional-hardware/slides/"
+        "zs7m686mu-movento-763769-lateral-stabilizer-set/2055928/"
+    ),
     source_url=(
         "https://d2.blum.com/services/BEC003/"
         "moventolatstab_ma_dok_bus_%24sen-us_%24aof_%24v3.pdf"
@@ -347,8 +407,28 @@ HAFELE_VOGUE_224_BLACK = DrawerPullProduct(
     sku="155.01.613",
     finish="matte black",
     hole_spacing_mm=224.0,
+    overall_length_mm=233.0,
+    cross_section_mm=(9.0, 9.0),
     thread="M4",
+    thread_diameter_mm=4.0,
+    minimum_thread_engagement_factor=1.5,
+    thread_engagement_reference_url=(
+        "https://standards.nasa.gov/sites/default/files/standards/NASA/"
+        "Baseline/0/NASA-STD-871928-WTMS-Baseline.pdf"
+    ),
+    height_mm=1.125 * 25.4,
+    material_density_upper_bound_kg_m3=7500.0,
     quantity_per_drawer=1,
+    mounting_screw_product_id=(
+        "hafele_handle_screw_m4x26_022_35_261@2026.1"
+    ),
+    mounting_screw_sku="022.35.261",
+    mounting_screw_length_mm=26.0,
+    mounting_screw_quantity_per_pull=2,
+    mounting_screw_source_url=(
+        "https://www.hafele.com/INTERSHOP/static/WFS/Haefele-COM-Site/"
+        "-Haefele-COM/en_US/opentext/assets/com/Hafele_Serbia_catalog.pdf"
+    ),
     source_url="https://www.hafele.com/us/en/product/handle-zinc/15501623/",
     source_date="2025-10-22",
 )

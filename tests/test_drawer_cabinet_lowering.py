@@ -51,7 +51,8 @@ def test_db40_composes_common_shell_with_real_drawer_bank():
         "door_left", "door_right", "adjustable_shelf", "shelf_pin_row"
     }
     assert len([role for role in roles if role.startswith("drawer_")
-                and not role.startswith("drawer_front_")]) == 15
+                and not role.startswith("drawer_front_")
+                and model.part(role).component_type == "plywood_panel"]) == 15
     assert len([role for role in roles if role.startswith("drawer_front_")]) == 3
     assert all(part.part_id in model.source_map for part in model.parts)
 
@@ -116,6 +117,22 @@ def test_db40_lowers_one_for_one_without_new_component_vocabulary():
                           prefix + f"drawer_{cell_id}_side_left")) in bonds
         assert frozenset((prefix + f"drawer_{cell_id}_front",
                           prefix + f"drawer_front_{cell_id}")) in bonds
+
+
+def test_db40_lowers_sound_placement_order_into_base_cpg():
+    project = _project()
+    stages = project.lowered_doc.sequence.stages
+
+    assert [stage.name for stage in stages] == [
+        "assembly.toe_base",
+        "assembly.carcass",
+        "assembly.drawer_boxes",
+        "install.wall_anchor",
+    ]
+    model_ids = {part.part_id for part in project.model.parts}
+    assert all(stage.why and stage.parts for stage in stages)
+    assert all(set(stage.parts) <= model_ids for stage in stages)
+    assert project.detail.sequence() == stages
 
 
 def test_db40_build_has_oriented_fronts_and_full_depth_boxes():

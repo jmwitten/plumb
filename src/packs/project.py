@@ -163,6 +163,15 @@ class PackedProject:
 
     def manifest(self) -> dict:
         model = self.model
+        catalog_manifest = getattr(model, "catalog_manifest", None)
+        catalogs = (
+            catalog_manifest()
+            if callable(catalog_manifest)
+            else {
+                "hinge": model.hinge.product_id,
+                "wall_anchor": model.wall_anchor.product_id,
+            }
+        )
         expanded = self.expanded_project_doc or self.project_doc
         expanded_payload = {
             "name": expanded.name,
@@ -176,7 +185,7 @@ class PackedProject:
             "mode": model.mode,
             "packs": {self.pack_id: self.pack_version},
             "profile": model.profile.profile_id,
-            "catalogs": model.catalog_manifest(),
+            "catalogs": catalogs,
             "release_ready": self.release_ready,
             "base_validation": (
                 "not_run" if self._base_report is None
@@ -202,12 +211,23 @@ class PackedProject:
             "evidence": [asdict(item) for item in self.report.evidence],
             "artifacts": self.artifacts.to_dict(),
         }
-        catalog_sources = model.catalog_source_manifest()
+        catalog_source_manifest = getattr(model, "catalog_source_manifest", None)
+        catalog_sources = (
+            catalog_source_manifest() if callable(catalog_source_manifest) else {}
+        )
         if catalog_sources:
             payload["catalog_sources"] = catalog_sources
-        sizing_policies = model.sizing_policy_manifest()
+        sizing_policy_manifest = getattr(model, "sizing_policy_manifest", None)
+        sizing_policies = (
+            sizing_policy_manifest() if callable(sizing_policy_manifest) else ()
+        )
         if sizing_policies:
             payload["sizing_policies"] = sorted(sizing_policies)
+        derived_fact_manifest = getattr(model, "derived_fact_manifest", None)
+        if callable(derived_fact_manifest):
+            derived_facts = derived_fact_manifest()
+            if derived_facts:
+                payload["derived_facts"] = derived_facts
         return _json_native(payload)
 
     def manifest_json(self) -> str:

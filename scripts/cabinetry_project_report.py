@@ -35,7 +35,9 @@ VIEW_CAPTIONS = {
     "plan": "Plan view showing cabinet depth and installation anchors.",
     "isometric": "Compiled product assembly; use Explore in 3D to isolate and explode parts.",
     "exploded": "Drawer-bank exploded diagram, grouped by stable top/middle/bottom identity.",
-    "drawer-detail": "Typical MOVENTO wood-drawer geometry and preparation dimensions.",
+    "drawer-detail": (
+        "Typical MOVENTO wood-drawer geometry with runner and lateral-stabilizer preparation."
+    ),
 }
 
 
@@ -85,8 +87,8 @@ def render_dimension_tables(model) -> str:
             ("Inside box width", _fmt(bank.inside_box_width_mm),
              "opening width − 42 mm"),
             ("Box length", _fmt(bank.box_length_mm), "runner nominal length"),
-            ("Side reveal", _fmt(1.5), "front policy"),
-            ("Inter-front gap", _fmt(2.0), "front policy"),
+            ("Side reveal", _fmt(bank.front_edge_reveal_mm), "front policy"),
+            ("Inter-front gap", _fmt(bank.front_gap_mm), "front policy"),
         )
         cell_rows = tuple(
             (
@@ -113,6 +115,28 @@ def render_dimension_tables(model) -> str:
         f"<h2>Dimensions</h2>{overall}"
         + _table(("Derived dimension", "Value", "Rule"), derived_rows)
     )
+
+
+def drawer_detail_geometry(model) -> dict[str, object]:
+    """Return model-bound facts used by the drawer-detail schematic."""
+
+    bank = model.drawer_bank
+    bottom = model.part("drawer_top_bottom")
+    return {
+        "bottom_front_origin_mm": (
+            bank.outside_box_width_mm - bottom.length_mm
+        ) / 2,
+        "bottom_side_origin_mm": (bank.box_length_mm - bottom.width_mm) / 2,
+        "bottom_blank_width_mm": bottom.length_mm,
+        "bottom_blank_depth_mm": bottom.width_mm,
+        "bottom_thickness_mm": bottom.thickness_mm,
+        "runner_physical_length_mm": bank.runner.physical_length_mm,
+        "pull_hole_spacing_mm": bank.pull_product.hole_spacing_mm,
+        "locking_skus": (
+            bank.locking_device.left_sku,
+            bank.locking_device.right_sku,
+        ),
+    }
 
 
 def _render_cut_list(project) -> str:
@@ -165,12 +189,15 @@ def _render_machining(project) -> str:
             _fmt(item.diameter_mm) if item.diameter_mm else "—",
             _fmt(item.depth_mm) if item.depth_mm else "—",
             _fmt(item.length_mm) if item.length_mm else "—",
+            _esc(item.face or "—"),
+            _esc(item.coordinate_system or "—"),
             f"<code>{_esc(item.source)}</code>",
         )
         for item in project.artifacts.machining_schedule
     )
     return "<h2>Machining schedule</h2>" + _table(
-        ("Part id", "Operation", "Location", "Diameter", "Depth", "Length", "Source"),
+        ("Target id", "Operation", "Location", "Diameter", "Depth", "Length",
+         "Face", "Datum/template", "Source"),
         rows,
     )
 
@@ -208,11 +235,14 @@ def _render_source_map(project) -> str:
             f"<code>{_esc(provenance.rule)}</code>",
             f"<code>{_esc(provenance.catalog_id or '—')}</code>",
             f"<code>{_esc(provenance.archetype_id or '—')}</code>",
+            (f'<a href="{_esc(provenance.source_url)}">source</a>'
+             if getattr(provenance, "source_url", "") else "—"),
         )
         for part_id, provenance in sorted(project.model.source_map.items())
     )
     return "<h2>Source map</h2>" + _table(
-        ("Part id", "Declared at", "Rule", "Catalog", "Archetype"), rows
+        ("Target id", "Declared at", "Rule", "Catalog", "Archetype", "Source"),
+        rows,
     )
 
 
@@ -254,7 +284,12 @@ def _gallery(images) -> str:
             f'<figcaption><strong>{_esc(view.replace("-", " ").title())}.</strong> '
             f'{_esc(VIEW_CAPTIONS[view])}</figcaption></figure>'
         )
-    return '<section><h2>Drawings</h2><div class="gallery">' + "".join(figures) + "</div></section>"
+    return (
+        '<section><h2>Drawings</h2><p>Full-height surveyed wall studs are omitted '
+        'from these product views for legibility; the canonical model, anchor '
+        'validation, evidence register, and installation instructions retain them.</p>'
+        '<div class="gallery">' + "".join(figures) + "</div></section>"
+    )
 
 
 def build_cabinetry_html(project, *, images: dict[str, str],
@@ -465,38 +500,97 @@ def _render_drawer_detail(project, path: Path) -> None:
     from matplotlib.patches import Rectangle
 
     model = project.model
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5), dpi=150)
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5), dpi=150)
     if hasattr(model, "drawer_bank"):
         bank = model.drawer_bank
         cell = bank.cells[0]
+        detail = drawer_detail_geometry(model)
+        side_thickness = model.part("drawer_top_side_left").thickness_mm
+        bottom_thickness = detail["bottom_thickness_mm"]
+        runner = bank.runner
+        stabilizer = bank.stabilizer
+        pull = bank.pull_product
+        locking = bank.locking_device
         ax = axes[0]
         ax.add_patch(Rectangle((0, 0), bank.outside_box_width_mm,
                                cell.box_height_mm, fill=False, linewidth=2))
-        ax.add_patch(Rectangle((16, 13), bank.inside_box_width_mm, 12,
+        ax.add_patch(Rectangle((detail["bottom_front_origin_mm"],
+                                runner.bottom_recess_mm),
+                               detail["bottom_blank_width_mm"], bottom_thickness,
                                facecolor="#d4b18a", edgecolor="#9b3a24"))
+        pull_center = bank.outside_box_width_mm / 2
+        pull_y = cell.box_height_mm * .72
+        pull_left = pull_center - pull.hole_spacing_mm / 2
+        pull_right = pull_center + pull.hole_spacing_mm / 2
+        ax.plot((pull_left, pull_right), (pull_y, pull_y),
+                color="#1f1f1f", linewidth=4)
+        ax.scatter((pull_left, pull_right), (pull_y, pull_y),
+                   color="#1f1f1f", s=18)
+        ax.scatter((side_thickness, bank.outside_box_width_mm - side_thickness),
+                   (5, 5), color="#355e7c", marker="s", s=32)
         ax.text(bank.outside_box_width_mm / 2, cell.box_height_mm / 2,
-                f"outside {_fmt(bank.outside_box_width_mm)}\ninside {_fmt(bank.inside_box_width_mm)}",
+                f"outside {_fmt(bank.outside_box_width_mm)}\n"
+                f"inside {_fmt(bank.inside_box_width_mm)}\n"
+                f"bottom blank {_fmt(detail['bottom_blank_width_mm'])}\n"
+                f"pull CTC {_fmt(detail['pull_hole_spacing_mm'])}\n"
+                f"locks {locking.left_sku} / {locking.right_sku}",
                 ha="center", va="center")
-        ax.set_title("Drawer cross-section")
+        ax.set_title("Front section and hardware proxies")
         ax = axes[1]
         ax.add_patch(Rectangle((0, 0), bank.box_length_mm, cell.box_height_mm,
                                fill=False, linewidth=2))
-        ax.add_patch(Rectangle((0, 13), bank.box_length_mm - 32, 12,
+        ax.add_patch(Rectangle((detail["bottom_side_origin_mm"],
+                                runner.bottom_recess_mm),
+                               detail["bottom_blank_depth_mm"],
+                               bottom_thickness,
                                facecolor="#d4b18a", edgecolor="#9b3a24"))
-        ax.plot((bank.box_length_mm - 50, bank.box_length_mm), (0, 0),
+        ax.plot((0, detail["runner_physical_length_mm"]), (3, 3),
+                color="#355e7c", linewidth=3)
+        ax.plot((bank.box_length_mm - runner.minimum_rear_notch_mm,
+                 bank.box_length_mm), (0, 0),
                 color="#9b3a24", linewidth=4)
         ax.text(bank.box_length_mm / 2, cell.box_height_mm / 2,
-                f"533 mm nominal\n50 mm rear notch · 6 × 10 mm hook bore",
+                f"{_fmt(bank.box_length_mm)} nominal\n"
+                f"{_fmt(runner.minimum_rear_notch_mm)} rear notch\n"
+                f"Ø{runner.hook_bore_mm[0]:g} × {runner.hook_bore_mm[1]:g} mm hook bore\n"
+                f"{runner.hook_bore_inset_from_side_mm:g} mm inset · "
+                f"{runner.hook_bore_height_from_bottom_mm:g} mm high\n"
+                f"runner physical {_fmt(detail['runner_physical_length_mm'])}",
                 ha="center", va="center")
         ax.set_title("Side and rear preparation")
+
+        ax = axes[2]
+        ax.add_patch(Rectangle((0, 0), bank.outside_box_width_mm,
+                               bank.box_length_mm, fill=False, linewidth=2))
+        rack_x = side_thickness * 1.5
+        rack_length = min(stabilizer.gear_rack_length_mm, bank.box_length_mm)
+        for x in (rack_x, bank.outside_box_width_mm - rack_x):
+            ax.plot((x, x), (0, rack_length), color="#9b3a24", linewidth=4)
+        linkage_length = bank.opening_width_mm - stabilizer.linkage_rod_cut_deduction_mm
+        linkage_left = (bank.outside_box_width_mm - linkage_length) / 2
+        linkage_y = rack_length * .55
+        ax.plot((linkage_left, linkage_left + linkage_length),
+                (linkage_y, linkage_y), color="#355e7c", linewidth=4)
+        ax.text(bank.outside_box_width_mm / 2, bank.box_length_mm * .8,
+                f"gear racks {_fmt(stabilizer.gear_rack_length_mm)}\n"
+                f"linkage rod {_fmt(linkage_length)}\n"
+                f"opening − {_fmt(stabilizer.linkage_rod_cut_deduction_mm)}",
+                ha="center", va="center")
+        ax.set_title("Lateral stabilizer cut schematic")
         for ax in axes:
             ax.set_aspect("equal")
             ax.autoscale_view()
             ax.axis("off")
+        fig.suptitle(
+            "Purchased hardware is shown as schematic visual proxies; "
+            "proxies are not capacity geometry.",
+            fontsize=10,
+        )
     else:
         axes[0].text(.5, .5, "Door/hinge detail is listed in the machining schedule.",
                      ha="center", va="center", transform=axes[0].transAxes)
         axes[1].axis("off")
+        axes[2].axis("off")
     fig.tight_layout()
     fig.savefig(path, facecolor="white")
     plt.close(fig)

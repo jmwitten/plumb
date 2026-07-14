@@ -42,20 +42,33 @@ def test_manifest_uses_model_catalog_protocol_and_records_policy():
         "front_fastener": "grk_low_profile_cabinet_8x1_1_4_114069@2026.1",
         "lateral_stabilizer": "blum_zs7m686mu@2026.1",
         "locking_device": "blum_t51_7601_pair@2026.1",
+        "locking_device_screw": "blum_606n_no6x5_8@2026.1",
         "pull": "hafele_vogue_155_01_613@2026.1",
+        "pull_mounting_screw": (
+            "hafele_handle_screw_m4x26_022_35_261@2026.1"
+        ),
         "runner": "blum_movento_763_5330s@2026.1",
+        "runner_installation_screw": "blum_606n_no6x5_8@2026.1",
         "wall_anchor": "grk_low_profile_cabinet_8x3_1_8@2026.1",
     }
     assert payload["catalog_sources"] == {
         "front_fastener": project.model.front_fastener.source_url,
         "lateral_stabilizer": project.model.drawer_bank.stabilizer.source_url,
         "locking_device": project.model.drawer_bank.locking_device.source_url,
+        "locking_device_screw": project.model.drawer_bank.locking_device.source_url,
         "pull": project.model.drawer_bank.pull_product.source_url,
+        "pull_mounting_screw": (
+            project.model.drawer_bank.pull_product.mounting_screw_source_url
+        ),
         "runner": project.model.drawer_bank.runner.source_url,
+        "runner_installation_screw": project.model.drawer_bank.runner.source_url,
         "wall_anchor": project.model.wall_anchor.source_url,
     }
     assert payload["archetypes"] == ["drawer_base_three@1"]
     assert payload["sizing_policies"] == ["progressive_clothing_3@1"]
+    assert payload["derived_facts"]["drawer_cells"]["top"]["moving_hardware_mass_kg"] > 0
+    assert "cabinetry.DB40.top.runner_installation_screws" in payload["source_map"]
+    assert payload["source_map"]["cabinetry.DB40.top.runner_installation_screws"]["source_url"]
     assert payload["release_ready"] is True
     assert payload["physical_tests"] == "not_performed"
     assert "certified" not in project.manifest_json().lower()
