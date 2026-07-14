@@ -456,42 +456,58 @@ def test_build_sequence_derives_cat_k_cures_before_side_screws_and_join(caddy):
     assert "sofa arm" not in loose
 
     graph = detail._connection_checks.event_graph
-    pairs = (
-        ("rail +X -> top underside (glued)",
-         "rail +X -> side +X inner face (screwed, face grain, upper + lower pairs)"),
-        ("rail -X -> top underside (glued)",
-         "rail -X -> side -X inner face (screwed, face grain, upper + lower pairs)"),
+    sources = (
+        "rail +X -> top underside (glued)",
+        "rail -X -> top underside (glued)",
+    )
+    targets = (
+        "rail +X -> side +X inner face (screwed, face grain, upper + lower pairs)",
+        "rail -X -> side -X inner face (screwed, face grain, upper + lower pairs)",
     )
     process_steps = [step for step in steps if step["process"] is not None]
     assert len(process_steps) == 2
     assert all(step["process"]["fact"].provenance ==
                "authored_process_fact" for step in process_steps)
-    for source, target in pairs:
+    for source in sources:
         bond = Event("drive", source, "")
         cure = Event("process", source, "cure")
-        (screws,) = graph.drives_of[target]
-        join = graph.join_of["whole detail"]
         assert graph.precedes(bond, cure)
-        assert graph.precedes(cure, screws)
-        assert graph.precedes(screws, join)
         cure_step = next(step for step in process_steps
                          if step["process"]["event"] == cure)
+        assert {claim["target"] for claim in cure_step["order_claims"]} == \
+            set(targets)
+        assert all(claim["role"] == "source"
+                   for claim in cure_step["order_claims"])
+        for target in targets:
+            (screws,) = graph.drives_of[target]
+            assert graph.precedes(cure, screws)
+
+    join = graph.join_of["whole detail"]
+    for target in targets:
+        (screws,) = graph.drives_of[target]
+        assert graph.precedes(screws, join)
         target_step = next(step for step in steps
                            if target in step["connections"])
-        assert cure_step["order_claims"][0]["role"] == "source"
-        assert target_step["order_claims"][0]["role"] == "target"
-        assert "not a universal" in cure_step["order_claims"][0]["why"]
+        assert {claim["source"] for claim in target_step["order_claims"]} == \
+            set(sources)
+        assert all(claim["role"] == "target"
+                   for claim in target_step["order_claims"])
+        assert all("not a universal" in claim["why"]
+                   for claim in target_step["order_claims"])
 
     # The rendered content is byte-stable and each authored why appears at
     # both ends of its point constraint.
     first = render_build_sequence_md(detail)
     assert first == render_build_sequence_md(detail)
-    for claim in detail.resolved_after():
-        assert first.count(claim.why) == 2
+    for why in {claim.why for claim in detail.resolved_after()}:
+        expected = 2 * sum(
+            len(claim.after) for claim in detail.resolved_after()
+            if claim.why == why)
+        assert first.count(why) == expected
     assert "No generic duration is represented" in first
 
 
-def test_cat_k_reversion_removes_only_one_authored_cure_dependency(caddy):
+def test_cat_k_reversion_removes_one_target_and_its_two_cure_dependencies(caddy):
     import html
     from types import SimpleNamespace
 
@@ -523,8 +539,9 @@ def test_cat_k_reversion_removes_only_one_authored_cure_dependency(caddy):
                 if edge.family == family
                 and (edge.a.kind == "process" or edge.b.kind == "process")}
 
-    # Reverting one authored point constraint removes exactly that claim at
-    # the graph boundary. Both independently derived bond->cure facts survive.
+    # Reverting one target claim removes both of that target's cross-cure
+    # dependencies at the graph boundary. The two independently derived
+    # bond->cure facts survive.
     assert full.constraints == claims
     assert reverted.constraints == (surviving_claim,)
     assert removed_claim not in reverted.constraints
@@ -533,53 +550,67 @@ def test_cat_k_reversion_removes_only_one_authored_cure_dependency(caddy):
     assert len(process_pairs(reverted, FAMILY_NECESSITY)) == 2
     removed = process_pairs(full, FAMILY_AUTHORED) - \
         process_pairs(reverted, FAMILY_AUTHORED)
-    assert len(removed) == 1
-    (source, target), = removed
-    assert source.subject == "rail -X -> top underside (glued)"
-    assert target.subject.startswith("rail -X -> side -X inner face")
+    assert len(removed) == 2
+    assert {source.subject for source, _target in removed} == {
+        "rail +X -> top underside (glued)",
+        "rail -X -> top underside (glued)",
+    }
+    assert all(target.subject.startswith("rail -X -> side -X inner face")
+               for _source, target in removed)
     assert process_pairs(reverted, FAMILY_AUTHORED) <= \
         process_pairs(full, FAMILY_AUTHORED)
 
     # The same removal must propagate through every authoritative and reader
     # projection; no stale second owner may preserve the deleted -X claim.
-    def authoritative_after_whys(checks):
+    def authoritative_after_connections(checks):
         facts = [fact for fact in checks.derived
                  if fact.rule == "sequence.after"]
         assert all(fact.source_type == "authoritative"
                    and fact.confidence == "official" for fact in facts)
-        return {fact.assumptions[0] for fact in facts}
+        return [fact.connection for fact in facts]
 
-    assert authoritative_after_whys(full_checks) == {
-        surviving_claim.why, removed_claim.why}
-    assert authoritative_after_whys(reverted_checks) == {
-        surviving_claim.why}
+    assert authoritative_after_connections(full_checks).count(
+        surviving_claim.connection) == 2
+    assert authoritative_after_connections(full_checks).count(
+        removed_claim.connection) == 2
+    assert authoritative_after_connections(reverted_checks) == [
+        surviving_claim.connection, surviving_claim.connection]
 
     full_rows = "\n".join(" | ".join(row)
                           for row in epistemic_contract_rows(full_checks))
     reverted_rows = "\n".join(
         " | ".join(row) for row in epistemic_contract_rows(reverted_checks))
-    assert surviving_claim.why in full_rows
-    assert removed_claim.why in full_rows
-    assert surviving_claim.why in reverted_rows
-    assert removed_claim.why not in reverted_rows
+    surviving_target = f"-> '{surviving_claim.connection}'"
+    removed_target = f"-> '{removed_claim.connection}'"
+    assert surviving_target in full_rows and removed_target in full_rows
+    assert surviving_target in reverted_rows and removed_target not in reverted_rows
 
     reverted_model = build_sequence_model(reverted_detail)
     assert reverted_model is not None
-    model_whys = {
-        order_claim["why"]
+    model_pairs = {
+        (order_claim["source"], order_claim["target"])
         for step in reverted_model[0]
         for order_claim in step["order_claims"]
     }
-    assert model_whys == {surviving_claim.why}
+    assert model_pairs == {
+        (after.connection, surviving_claim.connection)
+        for after in surviving_claim.after
+    }
 
     markdown = render_build_sequence_md(reverted_detail)
-    assert markdown.count(surviving_claim.why) == 2
-    assert removed_claim.why not in markdown
+    assert markdown.count(surviving_claim.why) == 4
+    assert (f"before installing {removed_claim.connection} — authored_sequence"
+            not in markdown)
+    assert (f"do not install {removed_claim.connection} until"
+            not in markdown)
 
     html_section = html.unescape(
         SDR._render_build_sequence_section(reverted_detail))
-    assert html_section.count(surviving_claim.why) == 2
-    assert removed_claim.why not in html_section
+    assert html_section.count(surviving_claim.why) == 4
+    assert (f"before installing {removed_claim.connection} — authored_sequence"
+            not in html_section)
+    assert (f"do not install {removed_claim.connection} until"
+            not in html_section)
 
 
 def test_cat_k_sequence_prose_exists_only_in_typed_authoring_surfaces():

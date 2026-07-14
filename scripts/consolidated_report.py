@@ -162,7 +162,9 @@ def web_glb_b64(assembly, out_dir: Path, tolerances) -> tuple[str, int, int]:
     glb_path = out_dir / "detail.web.glb"
     export_glb(assembly, glb_path, tolerance=lin, angular_tolerance=ang)
     raw = glb_path.read_bytes()
-    gz = gzip.compress(raw, compresslevel=9)
+    # Keep self-contained HTML byte-reproducible: gzip otherwise stamps the
+    # wall clock into its header even when the GLB bytes are unchanged.
+    gz = gzip.compress(raw, compresslevel=9, mtime=0)
     return base64.b64encode(gz).decode("ascii"), len(raw), len(gz)
 
 

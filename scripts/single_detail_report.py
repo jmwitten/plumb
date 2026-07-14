@@ -20,6 +20,7 @@ Usage:  python scripts/single_detail_report.py [--out PATH] [--preview]
 from __future__ import annotations
 
 import argparse
+import html as _html
 import json
 import shutil
 import sys
@@ -988,17 +989,44 @@ def _format_reader_data(value, namespace):
     return value
 
 
-def _title_block(detail, headline: str, tb: dict) -> str:
+def _relative_html_basename(value: str, field: str) -> str:
+    if (not isinstance(value, str) or not value
+            or Path(value).name != value
+            or "/" in value or "\\" in value
+            or not value.endswith(".html")):
+        raise ValueError(
+            f"{field} must be a relative HTML basename; got {value!r}")
+    return value
+
+
+def _title_block(detail, headline: str, tb: dict,
+                 companion_href: str | None = None) -> str:
     """The document header, from the consumer's ``title_block`` dict (eyebrow / h1 /
     lede / scale / stock) — parametrized so a second detail carries its OWN identity,
     not the caddy's (the caddy dict is unchanged from the hardcoded original)."""
     from detailgen.rendering.export import export_manifest  # noqa: F401 (parity)
+    companion = ""
+    if companion_href is not None:
+        href = _relative_html_basename(companion_href, "companion_href")
+        companion = f"""
+      <div style="margin-top:1rem;padding:.85rem 1rem;border:2px solid #1d4ed8;
+                  border-radius:8px;background:#eff6ff">
+        <a href="{_html.escape(href, quote=True)}"
+           style="font-weight:800;color:#1d4ed8;text-decoration:none">
+          Open the illustrated step-by-step assembly manual &rarr;
+        </a>
+        <div style="margin-top:.25rem;font-size:.9rem;color:#334155">
+          Five model-backed panels with ghosted prior work, numbered parts,
+          placement marks, tools, hardware, and stop gates.
+        </div>
+      </div>"""
     return f"""
   <header>
     <div class="tb-title">
       <div class="eyebrow">{tb['eyebrow']}</div>
       <h1>{tb['h1']}</h1>
       <p>{tb['lede']}</p>
+      {companion}
     </div>
     <dl class="tb-meta">
       <div><dt>Generated</dt><dd>{CR.generated_stamp()}</dd></div>
@@ -1021,7 +1049,8 @@ def build_single_detail_html(name: str, detail, views_dir: Path, panel_cfg: dict
                              buy_lede: str = CADDY_BUY_LEDE,
                              footer: dict = CADDY_FOOTER,
                              cut_note_context: str = _CUT_NOTE_CONTEXT,
-                             extra_sections: tuple = ()) -> str:
+                             extra_sections: tuple = (),
+                             companion_href: str | None = None) -> str:
     """Assemble the one-panel HTML build document, reusing consolidated_report's
     section builders. ``detail`` must be compiled + validated. ``design_store``
     (optional) is a SIBLING design-review store rendered as a second findings
@@ -1119,7 +1148,7 @@ def build_single_detail_html(name: str, detail, views_dir: Path, panel_cfg: dict
     parts = [
         head,
         '<div class="sheet">',
-        _title_block(detail, headline, title_block),
+        _title_block(detail, headline, title_block, companion_href),
         CR.render_panel(name, panel_cfg, detail, image_uris, callouts, slug),
         CR.render_coverage_section({name: detail}, {name: report}),
         _render_install_section(detail, report),
@@ -1339,7 +1368,9 @@ def _consumer_for(spec_path: Path) -> dict:
 
 
 def build_document(out: Path, spec_path: Path = CADDY_SPEC,
-                   preview: bool = False) -> dict:
+                   preview: bool = False,
+                   companion_href: str | None = None,
+                   *, compiled_detail=None) -> dict:
     """Compile + validate the detail named by ``spec_path``, build its
     single-detail HTML build document (reusing consolidated_report's machinery),
     write it to ``out``, and return a summary dict
@@ -1348,8 +1379,12 @@ def build_document(out: Path, spec_path: Path = CADDY_SPEC,
     spec_path = Path(spec_path)
     consumer = _consumer_for(spec_path)
     consumer["ensure_views"]()
-    detail = compile_spec_file(consumer["spec"])
-    report = detail.validate()
+    detail = compiled_detail
+    if detail is None:
+        detail = compile_spec_file(consumer["spec"])
+        report = detail.validate()
+    else:
+        report = detail.report or detail.validate()
 
     with tempfile.TemporaryDirectory() as td:
         html = build_single_detail_html(
@@ -1363,7 +1398,8 @@ def build_document(out: Path, spec_path: Path = CADDY_SPEC,
             buy_lede=consumer.get("buy_lede", CADDY_BUY_LEDE),
             footer=consumer.get("footer", CADDY_FOOTER),
             cut_note_context=consumer.get("cut_note_context", _CUT_NOTE_CONTEXT),
-            extra_sections=consumer.get("extra_sections", ()))
+            extra_sections=consumer.get("extra_sections", ()),
+            companion_href=companion_href)
 
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
