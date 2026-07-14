@@ -152,7 +152,8 @@ def _cover_sheet(consumer, cover_image: Path) -> str:
 
 
 def _inventory_sheet(consumer, number: int, inventory_rows,
-                     tools: tuple[str, ...]) -> str:
+                     tools: tuple[str, ...],
+                     parts_heading: str = "Parts") -> str:
     kit = (f'<aside class="kit-gate" role="note"><b>Before you start</b> '
            f'<span>{_e(consumer.kit_gate)}</span></aside>')
     parts = "".join(
@@ -169,7 +170,7 @@ def _inventory_sheet(consumer, number: int, inventory_rows,
     tool_rows = "".join(f"<li>{_e(tool)}</li>" for tool in tools)
     return (
         f'<section class="sheet inventory" data-page="{number}">'
-        f"{kit}<h2>Parts</h2><ul class=\"parts\">{parts}</ul>"
+        f'{kit}<h2>{_e(parts_heading)}</h2><ul class="parts">{parts}</ul>'
         f'<h2>Hardware</h2><ul class="letters">{letters}</ul>'
         f'<h2>Tools</h2><ul class="tools">{tool_rows}</ul>'
         "</section>")
@@ -210,12 +211,13 @@ h2 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
   padding: 0.6rem 0.8rem; font-size: 0.95rem; }
 .kit-gate b { display: block; text-transform: uppercase;
   letter-spacing: 0.06em; font-size: 0.8rem; }
-.inventory h2 { margin: 0.55rem 0 0.25rem; }
-ul.parts, ul.letters, ul.tools { list-style: none; margin: 0.1rem 0;
-  padding: 0; font-size: 0.78rem; }
-ul.parts li, ul.letters li, ul.tools li { display: flex; gap: 0.4rem;
-  align-items: center; margin: 0.14rem 0; min-width: 0;
+.inventory h2 { margin: 0.45rem 0 0.2rem; font-size: 1rem; }
+ul.parts, ul.letters, ul.tools { list-style: none; margin: 0.05rem 0;
+  padding: 0; font-size: 0.72rem; line-height: 1.25; }
+ul.parts li, ul.letters li, ul.tools li { display: flex; gap: 0.35rem;
+  align-items: center; margin: 0.09rem 0; min-width: 0;
   break-inside: avoid; }
+ul.parts .resource-icon { width: 1rem; height: 1rem; }
 ul.parts li span, ul.letters li span { overflow-wrap: anywhere; }
 ul.parts { columns: 2; column-gap: 1.1rem; }
 ul.letters { display: grid; grid-template-columns: 1fr 1fr;
@@ -334,6 +336,7 @@ def render_consumer_manual_html(
     *,
     cover_image: str | Path,
     inventory_rows=(),
+    parts_heading: str = "Parts",
     diagrams=None,
     viewer=None,
 ) -> str:
@@ -366,7 +369,8 @@ def render_consumer_manual_html(
             sheets.append(_cover_sheet(consumer, cover_image))
         elif page.kind == "inventory":
             sheets.append(_inventory_sheet(
-                consumer, page.number, inventory_rows, tools))
+                consumer, page.number, inventory_rows, tools,
+                parts_heading=parts_heading))
         elif page.kind == "record":
             sheets.append(_record_sheet(page))
         elif page.kind == "hold":

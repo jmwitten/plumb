@@ -583,13 +583,15 @@ def consumer_part_rows(project):
         item.description: item for item in project.artifacts.cut_list}
 
     def _cut_text(part) -> str:
+        # Units live in the kit-card heading ("cut sizes in mm") to keep
+        # thirty rows on one printed page.
         item = cut_by_description.get(part.name)
         if item is None:
             return ""
         dims = " × ".join(
             f"{round(value, 1):g}"
             for value in (item.length_mm, item.width_mm, item.thickness_mm))
-        return f" — cut {dims} mm"
+        return f" — {dims}"
 
     grouped: dict[str, list[str]] = {}
     for part in project.detail.assembly.parts:

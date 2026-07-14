@@ -108,6 +108,7 @@ def build_cabinetry_consumer_document(
             project.detail, consumer, image_paths,
             cover_image=cover_image,
             inventory_rows=consumer_part_rows(project),
+            parts_heading="Parts — cut sizes in mm",
             diagrams=consumer_diagrams(panels_manual),
             viewer=viewer,
         ),

@@ -141,6 +141,39 @@ After both fix rounds: 11 pages / **640** visible instructional words;
 consumer sha256
 `2ae10ec3efb9ba9d1442500845ac6605b97b193cde2b5a6c97aff99a3cf3c522`.
 
+## Iteration 2 — owner feedback round (2026-07-14 evening)
+
+Joel reviewed the delivered manual and asked for four changes; all landed:
+
+1. **"Too dark"** — the high-contrast work fill moved from near-black to a
+   mid gray (0.44) under black feature edges; prior assembly near-white.
+   Grayscale separation still ≥ 0.45 luminance (tested); `style_impl`
+   bumped so cached scenes regenerate.
+2. **"Show the sizes for each piece"** — the kit card is now "Parts — cut
+   sizes in mm": every row carries its typed pre-band L × W × T from the
+   released cut list (mutation-safe; digits asserted against the cut list
+   in tests).
+3. **"Where to screw the pieces together"** — nine frames now embed their
+   source panel's typed OperationDiagram (toe plan, glue-up sequence,
+   captured-back close order, six toe centers, box joinery, runner
+   stations, stabilizer order, front/pull patterns, anchor path) rendered
+   beside the scene in a grayscale consumer register. Hover titles and
+   aria machine names are stripped; station identity stays machine-
+   traceable via `data-fact-ref`. Frames may only reference diagrams their
+   own panel carries (projection-checked).
+4. **"3D models with explode"** — a screen-only "Explore the build in 3D"
+   section embeds the existing interactive viewer (explode control,
+   per-milestone part isolation, click-for-dimensions) from the shared
+   payload + GLB with the panel schedule; hidden entirely in print.
+   Verified live: canvas boots on click, page containment unchanged.
+
+Final iteration-2 artifact: 11 printed pages (Chrome-verified 11 = 11),
+640 visible instructional words, sha256
+`843bde0038e0c1eba372daf7aa0ae76a2b3e6c0866c54d38df111686e44d4e12`;
+36 consumer-suite tests + 80 adjacent-suite tests green. Note: the two
+fresh-context reviews predate this round; the changes are owner-directed
+and structurally tested, but a re-review has not been run.
+
 ## Honest gaps and notes
 
 - **Frame illustrations reuse panel visibility with frame-level focus.**

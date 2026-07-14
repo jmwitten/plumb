@@ -375,8 +375,10 @@ class TestIteration2:
         )
         rows = consumer_part_rows(project)
         assert rows
+        # every panel row carries its typed L × W × T (units in the card
+        # heading); the digits must match the released cut list
         for row in rows:
-            assert "cut" in row.label and "mm" in row.label, row.label
+            assert row.label.count("×") >= 3, row.label
         bottom = next(r for r in rows if "Cabinet bottom" in r.label)
         assert "977.9" in bottom.label and "580.5" in bottom.label
 
