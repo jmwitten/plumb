@@ -215,6 +215,8 @@ ul.tools li::before { content: "\\2022"; margin-right: 0.4rem; }
 .record th, .record td { border: 1.5px solid var(--ink); padding: 0.45rem;
   text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 .record .entry { width: 30%; height: 2.4rem; }
+.page-number { text-align: right; font-size: 0.72rem; color: #555;
+  padding-top: 0.25rem; }
 @media (max-width: 700px) {
   .sheet { width: 100%; min-height: 0; padding: 4vw; }
   ul.letters { grid-template-columns: 1fr; }
@@ -278,6 +280,14 @@ def render_consumer_manual_html(
             sheets.append(
                 f'<section class="sheet frames" data-page="{page.number}">'
                 + "".join(body) + "</section>")
+
+    total_pages = len(consumer.pages)
+    numbered = []
+    for page, sheet in zip(consumer.pages, sheets):
+        footer = (f'<div class="page-number">Page {page.number} of '
+                  f"{total_pages}</div>")
+        numbered.append(sheet.replace("</section>", footer + "</section>", 1))
+    sheets = numbered
 
     return (
         "<!doctype html>\n"

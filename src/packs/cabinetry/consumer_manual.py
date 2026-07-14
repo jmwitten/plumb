@@ -38,8 +38,10 @@ _NUMBER_TOKEN = re.compile(r"\d+(?:[./]\d+)*")
 _KIT_GATE = (
     "Begin only with the prepared kit: every part cut, edge-banded, bored, "
     "and labeled per the fabrication packet, with the signed "
-    "purchasing/cutting release record complete. This manual repeats no "
-    "fabrication work."
+    "purchasing/cutting release record complete. Parts — including handed "
+    "left/right pieces — are identified by their fabrication labels; stop "
+    "and re-label from the packet before assembling any unlabeled part. "
+    "This manual repeats no fabrication work."
 )
 
 
@@ -343,11 +345,11 @@ def consumer_action_frames(
             frame_id="assembly.drawer_runners.frame",
             panel_index=4,
             caption=(
-                "Clip the pinion housings and gear racks in place, then "
-                f"screw one runner pair ({runner}) to the cabinet at the "
-                f"{stations_per_runner} marked stations — "
-                f"{screws_per_runner} screws ({runner_screw}) per runner — "
-                "and close the runners."),
+                f"Clip the stabilizer set's ({stabilizer}) pinion housings "
+                "and gear racks in place, then screw one runner pair "
+                f"({runner}) to the cabinet at the {stations_per_runner} "
+                f"marked stations — {screws_per_runner} screws "
+                f"({runner_screw}) per runner — and close the runners."),
             source_step_ids=("assembly.drawer_hardware",),
             owned_event_keys=(),
             focus_part_ids=("plywood_panel-0", "plywood_panel-1"),
@@ -363,9 +365,9 @@ def consumer_action_frames(
             frame_id="assembly.drawer_lockdevices.frame",
             panel_index=4,
             caption=(
-                "Fit the cut linkage rod, pinion adapters, and locking "
-                "clips, then fix both handed locking devices "
-                f"({locking}) flush to the drawer-box bottom — "
+                f"Fit the set's ({stabilizer}) cut linkage rod, pinion "
+                "adapters, and locking clips, then fix both handed locking "
+                f"devices ({locking}) flush to the drawer-box bottom — "
                 f"{screws_per_locking_device} screws ({locking_screw}) each "
                 "— at the template-controlled angle."),
             source_step_ids=("assembly.drawer_hardware",),
@@ -476,13 +478,14 @@ def consumer_action_frames(
             caption=(
                 f"Drive {anchors} cabinet anchor screws ({anchor}) through "
                 "the wall anchor strip into the field-verified studs; seat "
-                "each washer head snug without crushing the strip. Never "
-                "substitute drywall anchors."),
+                "each washer head snug without crushing the strip."),
             source_step_ids=("install.wall_anchor",),
             owned_event_keys=(
                 "place:structural_screw-0", "place:structural_screw-1"),
             hardware=(FrameHardware(anchor, anchors),),
             tool="Drill and driver with the star drive bit",
+            warning=("Never substitute drywall anchors or rely on gypsum "
+                     "board; the screws must reach the verified studs."),
             allowed_numbers=_nums(anchors),
         ),
         FrameSpec(
