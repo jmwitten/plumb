@@ -1,8 +1,10 @@
 """B30 characterization oracle guarding the common-shell extraction.
 
 The hashes were captured once from committed pre-refactor behavior at be76370.
-They are reviewed compatibility facts, not baselines to regenerate when a
-refactor drifts.
+The physical cabinetry hashes remain those compatibility facts. The two base-
+language payload hashes were deliberately re-pinned after reader names and the
+complete STEPDOC sequence/declared-trust schemas added explicit empty fields;
+the reviewed old/new JSON diff contained only those new base fields.
 """
 
 from __future__ import annotations
@@ -64,7 +66,7 @@ def test_existing_b30_model_and_lowering_are_refactor_stable():
         "360fb7f04659bb861933ca9ff88f91041a436041f2b0744831f4f9863fd8917c"
     )
     assert _hash(project.lowered_doc) == (
-        "91e8288a342110b98dfb93ee13ceb84e8e3d7af9c2c9fc30315578dab597bfa8"
+        "dd73bcdf21a51e31075b8b8cf4f6b808223418addacbf2fe95338742b897fdd2"
     )
 
 
@@ -90,5 +92,5 @@ def test_existing_b30_findings_artifacts_and_manifests_are_refactor_stable():
         "9a6343eb919b70e9a4be92aae8631913d53ffe493f19ad2bcd64e6376bb7c43c"
     )
     assert _hash(project.manifest()) == (
-        "7f098a44124ef37aeeb9678544d7486c512449f4159327973ebf5eec1da36cf5"
+        "5c659e4cee7bba24cb9a48fa4aefedf60ddc54fd17850d2e4b07ae0b059c5b21"
     )
