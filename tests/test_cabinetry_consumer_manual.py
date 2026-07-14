@@ -215,3 +215,91 @@ class TestMutation:
                 panels_manual, project, confirmat_per_panel=(8, 5, 13),
                 _test_caption_override=(
                     "assembly.toe_base", "Drive 99 screws (A)."))
+
+
+@pytest.fixture(scope="module")
+def rendered(project, consumer, tmp_path_factory):
+    from PIL import Image
+
+    from detailgen.rendering.consumer_manual_html import (
+        render_consumer_manual_html,
+    )
+
+    image_dir = tmp_path_factory.mktemp("consumer_frames")
+    image_paths = {}
+    for page in consumer.pages:
+        for frame in page.frames:
+            path = image_dir / f"{frame.frame_id}.png"
+            Image.new("RGB", (4, 3), "white").save(path)
+            image_paths[frame.frame_id] = path
+    cover = image_dir / "cover.png"
+    Image.new("RGB", (4, 3), "white").save(cover)
+    return render_consumer_manual_html(
+        project.detail, consumer, image_paths, cover_image=cover)
+
+
+def _visible_text(html_text: str) -> str:
+    import re
+    text = re.sub(r"<style.*?</style>", " ", html_text, flags=re.S)
+    text = re.sub(r"<[^>]+>", " ", text)
+    return text
+
+
+class TestRenderedHtml:
+    def test_one_sheet_per_composed_page(self, consumer, rendered):
+        assert rendered.count('class="sheet') == len(consumer.pages)
+
+    def test_at_most_two_frames_per_sheet(self, rendered):
+        import re
+        for sheet in re.split(r'(?=<section class="sheet)', rendered):
+            assert sheet.count('<article class="frame"') <= 2
+
+    def test_hold_alert_precedes_any_hold_imagery(self, rendered):
+        import re
+        hold = next(s for s in re.split(r'(?=<section class="sheet)', rendered)
+                    if 'sheet hold' in s[:60])
+        alert = hold.index('role="alert"')
+        image = hold.index("<img") if "<img" in hold else len(hold)
+        assert alert < image
+
+    def test_every_image_is_a_data_uri(self, rendered):
+        import re
+        for src in re.findall(r'<img[^>]+src="([^"]+)"', rendered):
+            assert src.startswith("data:image/png;base64,")
+
+    def test_no_machine_tokens_in_visible_text(self, project, rendered):
+        text = _visible_text(rendered)
+        for token in consumer_forbidden_tokens(project):
+            assert token not in text, token
+
+    def test_letter_chips_and_repeat_badges_render(self, consumer, rendered):
+        frames = _frames(consumer)
+        repeated = next(f for f in frames if f.repeat > 1)
+        assert f"{repeated.repeat}&times;" in rendered
+        lettered = next(f for f in frames if f.hardware)
+        row = lettered.hardware[0]
+        assert f"<b>{row.letter}</b> &times;{row.quantity}" in rendered
+
+    def test_print_pagination_css_is_declared(self, rendered):
+        assert "@page" in rendered
+        assert "size: Letter" in rendered
+        assert "break-inside: avoid" in rendered
+        assert "break-after: page" in rendered
+
+    def test_mobile_containment_css_is_declared(self, rendered):
+        assert "@media" in rendered
+        assert "max-width: 100%" in rendered
+
+    def test_hardware_letter_card_lists_every_letter(self, consumer,
+                                                     rendered):
+        for letter in consumer.letters:
+            assert f'data-letter="{letter.letter}"' in rendered
+
+    def test_unknown_frame_image_fails_closed(self, project, consumer,
+                                              tmp_path):
+        from detailgen.rendering.consumer_manual_html import (
+            render_consumer_manual_html,
+        )
+        with pytest.raises(Exception, match="image"):
+            render_consumer_manual_html(
+                project.detail, consumer, {}, cover_image=tmp_path / "x.png")
