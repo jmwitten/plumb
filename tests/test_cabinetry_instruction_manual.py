@@ -268,7 +268,7 @@ def test_manual_instructions_and_inventory_are_pack_model_backed():
 
 
 def test_real_document_set_has_relative_links_and_six_shared_panel_assets(
-        tmp_path):
+        tmp_path, monkeypatch):
     scripts = ROOT / "scripts"
     sys.path.insert(0, str(scripts))
     try:
@@ -276,9 +276,27 @@ def test_real_document_set_has_relative_links_and_six_shared_panel_assets(
     finally:
         sys.path.remove(str(scripts))
 
+    calls = {"compile_project_file": 0, "render_product_views": 0}
+    real_compile_project_file = documents.compile_project_file
+    real_render_views = documents.CPR._render_views
+
+    def counted_compile_project_file(*args, **kwargs):
+        calls["compile_project_file"] += 1
+        return real_compile_project_file(*args, **kwargs)
+
+    def counted_render_views(*args, **kwargs):
+        calls["render_product_views"] += 1
+        return real_render_views(*args, **kwargs)
+
+    monkeypatch.setattr(
+        documents, "compile_project_file", counted_compile_project_file,
+    )
+    monkeypatch.setattr(documents.CPR, "_render_views", counted_render_views)
+
     result = documents.build_cabinetry_document_pair(
         tmp_path, project_path=DB40, image_size=(480, 360)
     )
+    assert calls == {"compile_project_file": 1, "render_product_views": 1}
     path_keys = (
         "technical_path", "manual_path", "fabrication_path", "audit_path",
     )
@@ -335,6 +353,12 @@ def test_real_document_set_has_relative_links_and_six_shared_panel_assets(
     for source_key, targets in required_links.items():
         for target in targets:
             assert f'href="{target}"' in documents_by_key[source_key]
+    viewer_markers = ('id="detail-data-', 'id="detail-glb-', "THREE.GLTFLoader")
+    for marker in viewer_markers:
+        assert marker in technical
+        assert marker not in manual
+        assert marker not in fabrication
+        assert marker not in audit
     assert '"instruction_panels":[' in technical
     payload = json.loads(re.search(
         r'<script type="application/json" id="detail-data-[^"]+">(.*?)</script>',

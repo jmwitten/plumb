@@ -23,6 +23,20 @@ import cabinetry_project_report as CPR  # noqa: E402
 DB40 = ROOT / "tests/fixtures/cabinetry/frameless_three_drawer_40.project.yaml"
 B30 = ROOT / "tests/fixtures/cabinetry/frameless_base_cabinet.project.yaml"
 PIXEL = "data:image/png;base64,iVBORw0KGgo="
+DB40_UNKNOWN_VERDICTS = (
+    ("cabinetry.performance.anchor_capacity", "UNKNOWN"),
+    ("cabinetry.performance.physical_tests", "UNKNOWN"),
+    ("cabinetry.performance.whole_cabinet_capacity", "UNKNOWN"),
+)
+DB40_STATUS_MATRIX = (
+    ("Model/shop-data gate", "PASS"),
+    ("Purchasing/cutting preflight", "OPEN"),
+    ("Whole-cabinet structural capacity", "UNKNOWN"),
+    ("Installation/use release", "HOLD"),
+)
+REVIEW_VIEWS = ("front", "installation-plan", "anchor-section")
+SHOP_VIEWS = ("front", "exploded", "drawer-detail")
+VIEWER_MARKERS = ('id="detail-data-', 'id="detail-glb-', "THREE.GLTFLoader")
 
 
 def _visible_text(document: str) -> str:
@@ -36,20 +50,50 @@ def _visible_text(document: str) -> str:
     return " ".join(unescape(without_tags).split())
 
 
-def _html(project):
+def _headings(document: str) -> tuple[str, ...]:
+    return tuple(
+        _visible_text(body)
+        for body in re.findall(
+            r"<h[1-6]\b[^>]*>(.*?)</h[1-6]\s*>",
+            document,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+    )
+
+
+def _images() -> dict[str, str]:
+    return {view: PIXEL for view in CPR.REQUIRED_VIEWS}
+
+
+def _review_html(project):
     project.require_fabrication_release()
-    images = {view: PIXEL for view in CPR.REQUIRED_VIEWS}
-    return CPR.build_cabinetry_html(
+    return CPR.build_cabinetry_review_html(
         project,
-        images=images,
+        images=_images(),
         viewer_payload=build_viewer_payload(project.detail),
         glb_b64="H4sIAAAAAAACAwMAAAAAAAAAAAA=",
     )
 
 
+def _fabrication_html(project):
+    project.require_fabrication_release()
+    return CPR.build_cabinetry_fabrication_html(project, images=_images())
+
+
+def _audit_html(project):
+    project.require_fabrication_release()
+    return CPR.build_cabinetry_audit_html(project)
+
+
 def test_db40_primary_sheet_owns_review_and_installation_within_reader_budget():
     project = compile_project_file(DB40)
-    html = _html(project)
+    assert tuple(
+        (finding.rule, finding.verdict)
+        for finding in project.report.findings
+        if finding.verdict == "UNKNOWN"
+    ) == DB40_UNKNOWN_VERDICTS
+
+    html = _review_html(project)
     visible = _visible_text(html)
     budgets = {
         "visible_words": (len(re.findall(r"\b[\w'’-]+\b", visible)), 2_500),
@@ -62,10 +106,6 @@ def test_db40_primary_sheet_owns_review_and_installation_within_reader_budget():
         if actual > limit
     }
     required_content = (
-        "Model/shop-data gate: PASS",
-        "Purchasing/cutting preflight: OPEN",
-        "Whole-cabinet structural capacity",
-        "Installation/use release: HOLD",
         "1016.00 mm",
         "876.30 mm",
         "590.55 mm",
@@ -78,28 +118,54 @@ def test_db40_primary_sheet_owns_review_and_installation_within_reader_budget():
         "wall flatness",
         "highest floor point",
         "signed, project-specific acceptance",
-        *(finding.rule for finding in project.report.findings
-          if finding.verdict == "UNKNOWN"),
         *(step.step_id for step in project.artifacts.installation_steps),
     )
     missing_content = tuple(item for item in required_content if item not in visible)
-    forbidden_headings = (
+    missing_status_pairs = tuple(
+        (component, status)
+        for component, status in DB40_STATUS_MATRIX
+        if f"{component}: {status}" not in visible
+    )
+    missing_unknown_rows = tuple(
+        (rule, verdict)
+        for rule, verdict in DB40_UNKNOWN_VERDICTS
+        if re.search(
+            rf"{re.escape(rule)}\s+{re.escape(verdict)}\b", visible,
+        ) is None
+    )
+    forbidden_headings = {
         "Cut list",
+        "Edge banding",
+        "Hardware schedule",
         "Machining schedule",
         "Fabrication",
+        "Assembly & shipping",
         "Validation findings",
         "Evidence register",
         "Source map",
+    }
+    owned_elsewhere = tuple(sorted(forbidden_headings.intersection(
+        _headings(html)
+    )))
+    missing_views = tuple(
+        view for view in REVIEW_VIEWS if f'data-view="{view}"' not in html
     )
-    owned_elsewhere = tuple(
-        heading for heading in forbidden_headings
-        if f"<h2>{heading}</h2>" in html
+    raw_views = tuple(
+        view for view in ("side", "plan", "exploded", "drawer-detail")
+        if f'data-view="{view}"' in html
     )
 
-    assert not (over_budget or missing_content or owned_elsewhere), {
+    assert not (
+        over_budget or missing_content or missing_status_pairs
+        or missing_unknown_rows or owned_elsewhere or missing_views or raw_views
+    ), {
         "over_budget": over_budget,
         "missing_content": missing_content,
+        "missing_status_pairs": missing_status_pairs,
+        "missing_unknown_rows": missing_unknown_rows,
         "headings_owned_by_companions": owned_elsewhere,
+        "missing_review_views": missing_views,
+        "raw_views_owned_elsewhere": raw_views,
     }
 
 
@@ -120,12 +186,7 @@ def test_build_cabinetry_html_wraps_the_focused_review_composer():
 
 def test_fabrication_composer_owns_complete_shop_and_assembly_ledgers():
     project = compile_project_file(DB40)
-    project.require_fabrication_release()
-
-    html = CPR.build_cabinetry_fabrication_html(
-        project,
-        images={view: PIXEL for view in CPR.REQUIRED_VIEWS},
-    )
+    html = _fabrication_html(project)
 
     for complete_renderer_output in (
         CPR._render_cut_list(project),
@@ -136,42 +197,75 @@ def test_fabrication_composer_owns_complete_shop_and_assembly_ledgers():
         CPR._render_steps("Assembly & shipping", project.artifacts.assembly_steps),
     ):
         assert complete_renderer_output in html
-    assert CPR._render_steps(
-        "Installation & commissioning", project.artifacts.installation_steps,
-    ) not in html
-    assert CPR._render_findings(project) not in html
-    assert CPR._render_source_map(project) not in html
+    assert all(f'data-view="{view}"' in html for view in SHOP_VIEWS)
+
+    forbidden_headings = {
+        "Installation & commissioning",
+        "Validation findings",
+        "Evidence register",
+        "Source map",
+    }
+    assert forbidden_headings.isdisjoint(_headings(html))
+    for step in project.artifacts.installation_steps:
+        assert step.step_id not in html
+    for finding in project.report.findings:
+        assert finding.rule not in html
+    for evidence in project.report.evidence:
+        assert evidence.evidence_id not in html
+    for marker in VIEWER_MARKERS:
+        assert marker not in html
 
 
 def test_audit_composer_owns_complete_findings_evidence_and_source_map():
     project = compile_project_file(DB40)
-    project.require_fabrication_release()
-
-    html = CPR.build_cabinetry_audit_html(project)
+    html = _audit_html(project)
 
     assert CPR._render_findings(project) in html
     assert CPR._render_source_map(project) in html
-    assert CPR._render_cut_list(project) not in html
-    assert CPR._render_machining(project) not in html
+    forbidden_headings = {
+        "Cut list",
+        "Edge banding",
+        "Hardware schedule",
+        "Machining schedule",
+        "Fabrication",
+        "Assembly & shipping",
+        "Installation & commissioning",
+        "Drawings",
+        "Interactive assembly",
+        "Part key",
+        "Dimensions",
+    }
+    assert forbidden_headings.isdisjoint(_headings(html))
+    for step in (
+        *project.artifacts.fabrication_steps,
+        *project.artifacts.assembly_steps,
+        *project.artifacts.installation_steps,
+    ):
+        assert step.step_id not in html
+    for marker in VIEWER_MARKERS:
+        assert marker not in html
 
 
-def test_report_requires_base_validation_and_projects_typed_release_state():
+def test_review_requires_base_validation_and_projects_typed_release_state():
     unvalidated = compile_project_file(DB40)
-    images = {view: PIXEL for view in CPR.REQUIRED_VIEWS}
     with pytest.raises(ValueError, match="fabrication-released"):
-        CPR.build_cabinetry_html(
+        CPR.build_cabinetry_review_html(
             unvalidated,
-            images=images,
+            images=_images(),
             viewer_payload=build_viewer_payload(unvalidated.detail),
             glb_b64="H4sIAAAAAAACAwMAAAAAAAAAAAA=",
         )
 
-    db40 = _html(compile_project_file(DB40))
-    assert "Fabrication/model gate: PASS" in db40
+    db40 = _review_html(compile_project_file(DB40))
+    assert "Model/shop-data gate: PASS" in db40
+    assert "Purchasing/cutting preflight: OPEN" in db40
+    assert "Fabrication/model gate" not in db40
     assert "Installation/use release: HOLD" in db40
 
-    b30 = _html(compile_project_file(B30))
-    assert "Fabrication/model gate: PASS" in b30
+    b30 = _review_html(compile_project_file(B30))
+    assert "Model/shop-data gate: PASS" in b30
+    assert "Purchasing/cutting preflight: OPEN" in b30
+    assert "Fabrication/model gate" not in b30
     assert "Installation/use release: PASS" in b30
     assert "Installation/use release: HOLD" not in b30
 
@@ -192,9 +286,9 @@ def test_future_db40_capacity_clearance_flips_typed_banner_without_html_edit():
     )
     project.require_release()
 
-    html = CPR.build_cabinetry_html(
+    html = CPR.build_cabinetry_review_html(
         project,
-        images={view: PIXEL for view in CPR.REQUIRED_VIEWS},
+        images=_images(),
         viewer_payload=build_viewer_payload(project.detail),
         glb_b64="H4sIAAAAAAACAwMAAAAAAAAAAAA=",
     )
@@ -223,20 +317,21 @@ def test_future_db40_capacity_clearance_flips_typed_banner_without_html_edit():
     assert "Installation/use release: PASS" in manual.lede
 
 
-def test_db40_report_contains_release_boundary_views_and_exact_dimensions():
+def test_db40_review_contains_release_boundary_views_and_exact_dimensions():
     project = compile_project_file(DB40)
-    html = _html(project)
+    html = _review_html(project)
 
-    assert "Fabrication/model gate: PASS" in html
+    assert "Model/shop-data gate: PASS" in html
+    assert "Purchasing/cutting preflight: OPEN" in html
+    assert "Fabrication/model gate" not in html
     assert "Installation/use release: HOLD" in html
     assert "Do not load, commission, or put the cabinet into service" in html
     assert "qualified cabinet or structural design professional" in html
     assert "serious or fatal crushing injury" in html
     assert "CPSC Anchor It! general guidance" in html
     assert "16 CFR part 1261 applies" in html
-    assert "Whole-cabinet structural capacity" in html
-    assert "UNKNOWN — not qualified" in html
-    for view in CPR.REQUIRED_VIEWS:
+    assert "Whole-cabinet structural capacity: UNKNOWN" in _visible_text(html)
+    for view in REVIEW_VIEWS:
         assert f'data-view="{view}"' in html
     for value in (
         "1016.00 mm", "876.30 mm", "590.55 mm", "977.90 mm",
@@ -244,21 +339,17 @@ def test_db40_report_contains_release_boundary_views_and_exact_dimensions():
         "967.90 mm", "935.90 mm", "533.00 mm", "1.50 mm", "2.00 mm",
     ):
         assert value in html
-    assert "cabinetry.DB40.drawer_top_side_left" in html
-    assert "cabinetry.DB40.drawer_middle_side_left" in html
-    assert "cabinetry.DB40.drawer_bottom_side_left" in html
 
 
-def test_report_projects_shop_evidence_sources_and_all_process_phases():
+def test_fabrication_projects_shop_sources_and_owned_process_phases():
     project = compile_project_file(DB40)
-    html = _html(project)
+    html = _fabrication_html(project)
 
     for heading in (
         "Cut list", "Edge banding", "Hardware schedule", "Machining schedule",
-        "Validation findings", "Evidence register", "Source map",
-        "Fabrication", "Assembly & shipping", "Installation & commissioning",
+        "Fabrication", "Assembly & shipping",
     ):
-        assert heading in html
+        assert heading in _headings(html)
     assert "Target id" in html
     assert "runner and lateral-stabilizer preparation" in html
     assert "Full-height surveyed wall studs are omitted" in html
@@ -276,14 +367,13 @@ def test_report_projects_shop_evidence_sources_and_all_process_phases():
     for step_id in (
         "fab.stabilizer_preparation", "shop.adjust_drawers",
         "ship.remove_drawers", "ship.empty_carcass",
-        "install.reinstall_by_identity", "install.commission_drawers",
     ):
         assert step_id in html
 
 
-def test_report_reuses_interactive_viewer_payload_and_is_self_contained():
+def test_review_reuses_interactive_viewer_payload_and_is_self_contained():
     project = compile_project_file(DB40)
-    html = _html(project)
+    html = _review_html(project)
     slug = build_viewer_payload(project.detail)["slug"]
 
     assert f'data-detail="{slug}"' in html
@@ -295,9 +385,9 @@ def test_report_reuses_interactive_viewer_payload_and_is_self_contained():
     assert 'src="http' not in html
 
 
-def test_report_uses_one_reader_vocabulary_for_hover_and_visible_part_key():
+def test_fabrication_uses_one_reader_vocabulary_for_hover_and_visible_part_key():
     project = compile_project_file(DB40)
-    html = _html(project)
+    html = _fabrication_html(project)
     assembly = CPR.product_view_assembly(project)
     payload = CPR.product_viewer_payload(project, assembly)
     expected = {
@@ -348,9 +438,9 @@ def test_product_hover_metadata_matches_the_per_part_cut_record():
         assert hover["material"] == cut.material
 
 
-def test_report_starts_with_builder_readiness_and_executable_machining_contract():
+def test_fabrication_starts_with_builder_readiness_and_machining_contract():
     project = compile_project_file(DB40)
-    html = _html(project)
+    html = _fabrication_html(project)
 
     for phrase in (
         "Before you start",
@@ -382,7 +472,7 @@ def test_report_starts_with_builder_readiness_and_executable_machining_contract(
 
 def test_base_cabinet_before_start_has_real_tool_requirements():
     project = compile_project_file(B30)
-    html = _html(project)
+    html = _fabrication_html(project)
 
     for phrase in (
         "Layout and checking", "Sheet breakdown", "Confirmat joinery",
@@ -396,7 +486,7 @@ def test_base_cabinet_before_start_has_real_tool_requirements():
 
 def test_report_does_not_authorize_declared_clothing_load_without_capacity():
     project = compile_project_file(DB40)
-    html = _html(project)
+    html = _review_html(project)
     install = "\n".join(
         step.instruction for step in project.artifacts.installation_steps
     )
@@ -409,7 +499,7 @@ def test_report_does_not_authorize_declared_clothing_load_without_capacity():
 
 def test_multi_source_evidence_renders_as_separate_valid_links():
     project = compile_project_file(DB40)
-    html = _html(project)
+    html = _audit_html(project)
     finding = project.report.by_rule("cabinetry.drawer.moving_hardware_mass")
     evidence = next(item for item in project.report.evidence
                     if item.evidence_id in finding.evidence_ids)
@@ -482,11 +572,12 @@ def test_dimension_projection_and_validation_share_the_mutated_model():
     assert "768.70 mm" in finding.message
 
 
-def test_same_report_surface_accepts_existing_door_base_project():
+def test_focused_review_and_fabrication_surfaces_accept_existing_door_base():
     project = compile_project_file(B30)
-    html = _html(project)
+    review = _review_html(project)
+    fabrication = _fabrication_html(project)
 
-    assert "B30 frameless base cabinet" in html
-    assert "door_left" in html
-    assert "Cut list" in html
-    assert "Explore in 3D" in html
+    assert "B30 frameless base cabinet" in review
+    assert "Explore in 3D" in review
+    assert "door_left" in fabrication
+    assert "Cut list" in _headings(fabrication)

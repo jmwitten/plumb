@@ -89,3 +89,47 @@ existing-test failures. The 19 unaffected tests passed.
 
 None. The failures match the approved plan and are isolated to the missing
 reader-surface implementation.
+
+## Review-fix round
+
+Addressed every Critical and Important item in
+`.superpowers/sdd/task-1-review.md`, in tests only:
+
+- moved retained release, installation, viewer, shop, product/source, tool,
+  machining, finding, evidence, and source-link facts onto their future owning
+  composers;
+- replaced positive requirements for the legacy `Fabrication/model gate`
+  label with exact `Model/shop-data gate: PASS` and
+  `Purchasing/cutting preflight: OPEN` pairs, while explicitly rejecting the
+  old label;
+- pinned the exact three DB40 UNKNOWN `(rule, verdict)` pairs at the compiled
+  model boundary and required the same rule/status pairs on A0/I1;
+- pinned all four status-matrix component/status pairs, including
+  `Whole-cabinet structural capacity: UNKNOWN`;
+- replaced markup-sensitive whole-block negatives with normalized heading
+  ownership plus forbidden installation-step, finding-rule, evidence-id, and
+  viewer-marker checks. Source-map target ids intentionally are not used as a
+  blanket S1+ negative because legitimate cut/hardware records own many of the
+  same model ids; normalized `Source map` heading absence and unique audit ids
+  enforce the non-duplication contract without contradicting S1+ completeness;
+- restricted A0/I1 to the installed front, installation plan, and anchor
+  section while explicitly excluding the raw side, plan, exploded, and drawer
+  detail views;
+- added compiler and shared product-view render call-count spies to require one
+  pass each per document-set generation; and
+- required viewer/GLB markers only in the technical/review document, retaining
+  all prior panel, diagram, link, hash, accessibility, and self-containment
+  assertions.
+
+The exact focused command after these fixes produced:
+
+```text
+16 failed, 8 passed in 23.58s
+```
+
+Fifteen failures are the intended `AttributeError`s for the three not-yet-built
+focused composers. The real document-set failure occurs only because the
+expected `fabrication_*` and `audit_*` return keys are absent; its new
+compile-once and render-once assertions pass before that missing-output check.
+There are no syntax, import, collection, fixture, legacy-contract, or production
+regressions. No production file was changed.
