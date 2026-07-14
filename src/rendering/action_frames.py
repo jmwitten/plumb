@@ -284,11 +284,13 @@ def project_action_frames(
         panel = panels_by_index[panel_index]
         panel_specs = specs_by_panel[panel_index]
         wildcards = [s for s in panel_specs if s.owned_event_keys == ("*",)]
-        if wildcards and len(panel_specs) > 1:
+        claiming_others = [s for s in panel_specs
+                           if s not in wildcards and s.owned_event_keys]
+        if wildcards and (len(wildcards) > 1 or claiming_others):
             raise FrameContractError(
                 f"panel {panel_index}: wildcard event ownership is only "
-                f"legal for a panel's sole frame; got {len(panel_specs)} "
-                f"frames including wildcard {wildcards[0].frame_id!r}")
+                "legal when no sibling frame claims events; wildcard "
+                f"{wildcards[0].frame_id!r} conflicts")
         for spec in panel_specs:
             for row in spec.hardware:
                 if row.letter not in known_letters:
