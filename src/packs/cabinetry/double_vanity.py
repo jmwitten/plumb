@@ -461,6 +461,12 @@ class PlumbingPath:
     access_min_mm: float
     topology: str = "independent_p_trap_to_wall"
 
+    def element(self, kind: str) -> AnalyticEnvelope:
+        matches = [element for element in self.elements if element.kind == kind]
+        if len(matches) != 1:
+            raise KeyError(f"expected one plumbing element {kind!r}")
+        return matches[0]
+
 
 @dataclass(frozen=True)
 class SinkBay:
@@ -875,13 +881,16 @@ def build_double_vanity_model(
         minimum_inside_depth_mm=477.0,
     )
     lower_runner = StudyRunner(
-        family_id="unselected_short_depth_runner@study",
+        family_id="blum_movento_763_3050s@2026.1",
         soft_close=True,
         full_extension=True,
-        selected_sku="",
-        source_url="",
-        minimum_drawer_length_mm=None,
-        minimum_inside_depth_mm=None,
+        selected_sku="763.3050S",
+        source_url=(
+            "https://d2.blum.com/services/BEC003/"
+            "movento_ep_dok_bus_%24sen-us_%24aof_%24v7.pdf"
+        ),
+        minimum_drawer_length_mm=305.0,
+        minimum_inside_depth_mm=325.0,
     )
 
     bays: list[SinkBay] = []
@@ -925,45 +934,77 @@ def build_double_vanity_model(
             countertop_underside_z,
             authority="manufacturer_dimensions_provisional_placement",
         )
-        tailpiece_radius = max(K20000.tailpiece_od_mm / 2, 25.0)
+        wastes = sorted(
+            section.assumed_site.wastes,
+            key=lambda point: abs(point.x_mm - center),
+        )
+        supplies = sorted(
+            section.assumed_site.supplies,
+            key=lambda point: abs(point.x_mm - center),
+        )[:2]
+        if not wastes or {point.kind for point in supplies} != {
+            "hot_supply", "cold_supply",
+        }:
+            raise ProjectSchemaError(
+                f"{bay_id} requires one assumed waste and hot/cold supplies"
+            )
+        waste = wastes[0]
+        supplies_by_kind = {point.kind: point for point in supplies}
+        tailpiece_radius = K7124_A.connection_od_mm / 2
         tailpiece = envelope(
             "tailpiece", center - tailpiece_radius,
             sink_center_y - tailpiece_radius,
-            fixture.z0_mm - 185.0,
+            fixture.z0_mm - K7124_A.body_height_mm,
             center + tailpiece_radius,
             sink_center_y + tailpiece_radius,
             fixture.z0_mm,
+            authority="manufacturer_product_bounding_envelope_vertical",
         )
+        trap_service_allowance = study_clearance if K8998.cleanout else 0.0
+        trap_half_width = max(K8998.inlet_od_mm, K8998.outlet_od_mm) / 2
         p_trap = envelope(
-            "p_trap", center - 100.0, sink_center_y - 50.0,
-            fixture.z0_mm - 255.0, center + 100.0,
-            sink_center_y + 100.0, fixture.z0_mm - 135.0,
+            "p_trap",
+            center - trap_half_width - trap_service_allowance,
+            waste.y_mm - K8998.overall_length_mm,
+            waste.z_mm - K8998.outlet_od_mm / 2,
+            center + trap_half_width + trap_service_allowance,
+            waste.y_mm,
+            waste.z_mm - K8998.outlet_od_mm / 2 + K8998.overall_height_mm,
+            authority=(
+                "manufacturer_gross_bounding_envelope_oriented_to_waste_"
+                "with_cleanout_service_allowance"
+            ),
         )
+        trap_arm_radius = K8998.outlet_od_mm / 2
         trap_arm = envelope(
-            "trap_arm", center - 35.0, sink_center_y + 70.0,
-            fixture.z0_mm - 205.0, center + 35.0, wall_y,
-            fixture.z0_mm - 155.0,
+            "trap_arm", waste.x_mm - trap_arm_radius,
+            waste.y_mm - trap_arm_radius,
+            waste.z_mm - trap_arm_radius,
+            waste.x_mm + trap_arm_radius, waste.y_mm,
+            waste.z_mm + trap_arm_radius,
+            authority="owner_assumed_waste_connection_bounding_envelope",
         )
-        hot_supply = envelope(
-            "hot_supply", center - 115.0, wall_y - 80.0,
-            fixture.z0_mm - 215.0, center - 85.0, wall_y,
-            fixture.z0_mm - 55.0,
-        )
-        cold_supply = envelope(
-            "cold_supply", center + 85.0, wall_y - 80.0,
-            fixture.z0_mm - 215.0, center + 115.0, wall_y,
-            fixture.z0_mm - 55.0,
-        )
-        hot_shutoff = envelope(
-            "hot_shutoff", center - 135.0, wall_y - 125.0,
-            fixture.z0_mm - 180.0, center - 65.0, wall_y - 55.0,
-            fixture.z0_mm - 110.0,
-        )
-        cold_shutoff = envelope(
-            "cold_shutoff", center + 65.0, wall_y - 125.0,
-            fixture.z0_mm - 180.0, center + 135.0, wall_y - 55.0,
-            fixture.z0_mm - 110.0,
-        )
+
+        def supply_envelopes(kind: str) -> tuple[AnalyticEnvelope, AnalyticEnvelope]:
+            point = supplies_by_kind[kind]
+            radius = 15.0
+            supply = envelope(
+                kind, point.x_mm - radius, point.y_mm - 80.0,
+                point.z_mm - radius, point.x_mm + radius, point.y_mm,
+                point.z_mm + radius,
+                authority="owner_assumed_supply_path_bounding_envelope",
+            )
+            shutoff = envelope(
+                kind.replace("supply", "shutoff"),
+                point.x_mm - 35.0, point.y_mm - 125.0,
+                point.z_mm - 35.0, point.x_mm + 35.0,
+                point.y_mm - 55.0, point.z_mm + 35.0,
+                authority="unproved_shutoff_service_bounding_envelope",
+            )
+            return supply, shutoff
+
+        hot_supply, hot_shutoff = supply_envelopes("hot_supply")
+        cold_supply, cold_shutoff = supply_envelopes("cold_supply")
         elements = (
             fixture, tailpiece, p_trap, trap_arm, hot_supply, cold_supply,
             hot_shutoff, cold_shutoff,
@@ -1007,15 +1048,17 @@ def build_double_vanity_model(
             item for item in elements
             if item.intersects_z(lower_base_z, lower_z1)
         )
-        if not lower_obstacles:
+        lower_available_depth = (
+            min(item.y0_mm for item in lower_obstacles) - box_front_y
+            - study_clearance
+            if lower_obstacles else
+            vanity.body_depth_mm - 22.0 - study_clearance
+        )
+        lower_depth = lower_runner.minimum_drawer_length_mm
+        assert lower_depth is not None
+        if lower_depth > lower_available_depth:
             raise ProjectSchemaError(
-                f"{bay_id} plumbing study has no lower-drawer obstacle geometry"
-            )
-        lower_obstacle_front = min(item.y0_mm for item in lower_obstacles)
-        lower_depth = lower_obstacle_front - box_front_y - study_clearance
-        if lower_depth <= 8 * IN:
-            raise ProjectSchemaError(
-                f"{bay_id} plumbing envelope leaves no useful lower drawer depth"
+                f"{bay_id} plumbing envelope cannot fit the selected lower runner"
             )
         chase_depths.append(vanity.body_depth_mm - 22.0 - lower_depth)
 
@@ -1631,15 +1674,115 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
         "calculated", source=model.code_profile.source_url,
     )
 
-    coordination_ok = topology_ok
+    tolerance = 1e-6
+    product_authority_complete = all((
+        model.sink.adapter_id,
+        model.sink.specification_url,
+        model.drain.adapter_id,
+        model.drain.specification_url,
+        model.trap.adapter_id,
+        model.trap.specification_url,
+    ))
+    connections_agree = (
+        abs(model.sink.tailpiece_od_mm - model.drain.connection_od_mm)
+        <= tolerance
+        and abs(model.drain.connection_od_mm - model.trap.inlet_od_mm)
+        <= tolerance
+    )
+    product_geometry_ok = topology_ok and connections_agree
     for path in model.plumbing_paths:
         if path.bay_id not in bays_by_id:
-            coordination_ok = False
+            product_geometry_ok = False
             continue
+        bay = bays_by_id[path.bay_id]
+        waste_candidates = sorted(
+            model.assumed_site.wastes,
+            key=lambda point: abs(point.x_mm - bay.sink_center_x_mm),
+        )
+        supply_candidates = sorted(
+            model.assumed_site.supplies,
+            key=lambda point: abs(point.x_mm - bay.sink_center_x_mm),
+        )[:2]
+        if (
+            not waste_candidates
+            or {point.kind for point in supply_candidates}
+            != {"hot_supply", "cold_supply"}
+        ):
+            product_geometry_ok = False
+            continue
+        waste = waste_candidates[0]
+        supplies_by_kind = {point.kind: point for point in supply_candidates}
+        try:
+            fixture = path.element("fixture_body")
+            tailpiece = path.element("tailpiece")
+            p_trap = path.element("p_trap")
+            trap_arm = path.element("trap_arm")
+            supplies_by_kind_and_path = {
+                kind: path.element(kind)
+                for kind in ("hot_supply", "cold_supply")
+            }
+        except KeyError:
+            product_geometry_ok = False
+            continue
+        trap_service_allowance = (
+            model.drawer(path.bay_id, "upper").closed_clearance_mm
+            if model.trap.cleanout else 0.0
+        )
+        if trap_service_allowance is None:
+            product_authority_complete = False
+            trap_service_allowance = 0.0
+        expected_trap_width = (
+            max(model.trap.inlet_od_mm, model.trap.outlet_od_mm)
+            + 2 * trap_service_allowance
+        )
+
+        def contains_point(
+            item: AnalyticEnvelope, point: RoughInPoint,
+        ) -> bool:
+            return (
+                item.x0_mm - tolerance <= point.x_mm <= item.x1_mm + tolerance
+                and item.y0_mm - tolerance <= point.y_mm <= item.y1_mm + tolerance
+                and item.z0_mm - tolerance <= point.z_mm <= item.z1_mm + tolerance
+            )
+
+        path_products_match = (
+            fixture == path.fixture_envelope
+            and abs(fixture.width_mm - model.sink.overall_width_mm) <= tolerance
+            and abs(fixture.depth_mm - model.sink.overall_depth_mm) <= tolerance
+            and abs(fixture.height_mm - model.sink.overall_height_mm) <= tolerance
+            and fixture.authority
+            == "manufacturer_dimensions_provisional_placement"
+            and abs(tailpiece.width_mm - model.drain.connection_od_mm)
+            <= tolerance
+            and abs(tailpiece.depth_mm - model.drain.connection_od_mm)
+            <= tolerance
+            and abs(tailpiece.height_mm - model.drain.body_height_mm)
+            <= tolerance
+            and tailpiece.authority
+            == "manufacturer_product_bounding_envelope_vertical"
+            and abs(p_trap.width_mm - expected_trap_width) <= tolerance
+            and abs(p_trap.depth_mm - model.trap.overall_length_mm)
+            <= tolerance
+            and abs(p_trap.height_mm - model.trap.overall_height_mm)
+            <= tolerance
+            and p_trap.authority
+            == (
+                "manufacturer_gross_bounding_envelope_oriented_to_waste_"
+                "with_cleanout_service_allowance"
+            )
+            and abs(p_trap.y1_mm - waste.y_mm) <= tolerance
+            and contains_point(trap_arm, waste)
+            and p_trap.contains(trap_arm)
+            and all(
+                contains_point(supplies_by_kind_and_path[kind], supplies_by_kind[kind])
+                for kind in ("hot_supply", "cold_supply")
+            )
+        )
+        product_geometry_ok = product_geometry_ok and path_products_match
         drawer = model.drawer(path.bay_id, "upper")
         void = _physical_upper_void_bounds(model, path.bay_id)
         if void is None:
-            coordination_ok = False
+            product_geometry_ok = False
             continue
         x0, y0, z0_, x1, y1, z1_ = void
         service = path.service_envelope
@@ -1680,25 +1823,57 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
                     ).at_mm[1]
                     - lower.box_depth_mm
                 ) <= 1e-6
-                and lower_obstacles
                 and all(
                     obstacle.y0_mm > lower_rear
                     for obstacle in lower_obstacles
                 )
             )
-        coordination_ok = coordination_ok and physical_matches
-    coordination_verdict = "UNKNOWN" if coordination_ok else "FAIL"
+        product_geometry_ok = product_geometry_ok and physical_matches
+
+    runners_authoritative = True
+    runners_fit = True
+    for drawer in model.drawers:
+        runner = drawer.runner
+        if not all((
+            runner.family_id,
+            runner.selected_sku,
+            runner.source_url,
+        )) or (
+            runner.minimum_drawer_length_mm is None
+            or runner.minimum_inside_depth_mm is None
+        ):
+            runners_authoritative = False
+            continue
+        if (
+            drawer.box_depth_mm + tolerance < runner.minimum_drawer_length_mm
+            or vanity.body_depth_mm + tolerance
+            < runner.minimum_inside_depth_mm
+        ):
+            runners_fit = False
+    product_authority_complete = (
+        product_authority_complete and runners_authoritative
+    )
+    coordination_ok = product_geometry_ok and runners_fit
+    coordination_verdict = (
+        "FAIL" if not coordination_ok else
+        "PASS" if product_authority_complete else
+        "UNKNOWN"
+    )
     add(
         "double_vanity.geometry.fixture_plumbing_drawer",
         coordination_verdict, "required",
-        "The manufacturer-sized fixture, provisional plumbing solids, service "
-        "envelopes, and physical drawer voids are internally consistent, but the "
-        "selected drain and trap dimensions do not drive those provisional solids. "
-        "Product fit, rough-in, tool access, and dynamic runner/removal therefore "
-        "remain UNKNOWN."
-        if coordination_ok else
-        "Fixture, plumbing, service, and drawer study geometry do not agree.",
-        "unknown" if coordination_ok else "calculated",
+        "Selected product IDs and dimensions drive the fixture, vertical drain, "
+        "oriented gross trap bounding envelopes, 1/2-inch cleanout allowance, "
+        "assumed rough-in endpoints, physical drawer clearances, and fitting "
+        "runner SKUs. Exact fitting shape, field rough-in, tool access, and "
+        "dynamic removal remain explicitly unproved release holds."
+        if coordination_verdict == "PASS" else
+        "Fixture, plumbing, service, runner, and drawer study geometry agree, "
+        "but one or more product authority fields are missing."
+        if coordination_verdict == "UNKNOWN" else
+        "Fixture, plumbing, service, runner, and drawer study geometry contradict "
+        "the selected products or assumed rough-ins.",
+        "calculated" if coordination_verdict != "UNKNOWN" else "unknown",
     )
 
     incompatible_runners = []
@@ -1725,10 +1900,9 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
         "double_vanity.drawer.runner_applicability",
         runner_verdict, "advisory",
         f"Incompatible runner studies: {incompatible_runners}; unselected "
-        f"runner families: {unknown_runners}. The selected 18-inch MOVENTO "
-        "runner applies only to the upper U drawers; each lower drawer "
-        "requires a separately selected short-depth full-extension soft-close "
-        "system before release.",
+        f"runner families: {unknown_runners}. The selected 18-inch and 12-inch "
+        "MOVENTO full-extension soft-close runners fit the modeled upper and "
+        "lower drawer depths; dynamic travel and removal remain gated.",
         "calculated" if runner_verdict != "UNKNOWN" else "unknown",
         source=model.drawer("left", "upper").runner.source_url,
     )

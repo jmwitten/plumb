@@ -224,9 +224,10 @@ def test_dv72_expands_to_two_independent_service_bays_and_four_drawers():
         assert upper.runner.minimum_drawer_length_mm == pytest.approx(457.0)
         assert upper.runner.minimum_inside_depth_mm == pytest.approx(477.0)
         assert upper.box_depth_mm >= upper.runner.minimum_drawer_length_mm
-        assert lower.runner.family_id == "unselected_short_depth_runner@study"
-        assert lower.runner.minimum_drawer_length_mm is None
-        assert not lower.runner.selected_sku
+        assert lower.runner.family_id.startswith("blum_movento")
+        assert lower.runner.minimum_drawer_length_mm == pytest.approx(305.0)
+        assert lower.runner.minimum_inside_depth_mm == pytest.approx(325.0)
+        assert lower.box_depth_mm >= lower.runner.minimum_drawer_length_mm
 
 
 def test_geometry_contains_four_physical_boxes_fronts_and_no_toe_kick():
@@ -345,7 +346,72 @@ def test_fixture_dimensions_drive_path_and_drawer_geometry(monkeypatch):
     assert changed.derived_fact_manifest() != baseline.derived_fact_manifest()
 
 
-def test_selected_drain_and_trap_do_not_receive_fake_geometry_pass():
+def test_drain_and_trap_dimensions_drive_geometry(monkeypatch):
+    import detailgen.packs.cabinetry.double_vanity as dv
+
+    baseline = _project().model
+    monkeypatch.setattr(dv, "K7124_A", replace(dv.K7124_A, body_height_mm=160.0))
+    monkeypatch.setattr(dv, "K8998", replace(dv.K8998, overall_length_mm=330.0))
+    changed = _project().model
+
+    assert changed.plumbing_paths[0].element("tailpiece").height_mm != pytest.approx(
+        baseline.plumbing_paths[0].element("tailpiece").height_mm
+    )
+    assert changed.plumbing_paths[0].element("p_trap").depth_mm != pytest.approx(
+        baseline.plumbing_paths[0].element("p_trap").depth_mm
+    )
+
+
+def test_lower_drawers_use_selected_12_in_movento():
+    model = _project().model
+
+    for bay in ("left", "right"):
+        runner = model.drawer(bay, "lower").runner
+        assert runner.selected_sku == "763.3050S"
+        assert runner.minimum_drawer_length_mm == pytest.approx(305.0)
+        assert runner.minimum_inside_depth_mm == pytest.approx(325.0)
+
+
+def test_product_and_assumed_rough_in_dimensions_drive_path_envelopes():
+    model = _project().model
+
+    for bay, path in zip(model.sink_bays, model.plumbing_paths):
+        waste = min(
+            model.assumed_site.wastes,
+            key=lambda point: abs(point.x_mm - bay.sink_center_x_mm),
+        )
+        tailpiece = path.element("tailpiece")
+        p_trap = path.element("p_trap")
+        trap_arm = path.element("trap_arm")
+        assert tailpiece.width_mm == pytest.approx(model.drain.connection_od_mm)
+        assert tailpiece.height_mm == pytest.approx(model.drain.body_height_mm)
+        assert p_trap.depth_mm == pytest.approx(model.trap.overall_length_mm)
+        assert p_trap.height_mm == pytest.approx(model.trap.overall_height_mm)
+        assert "gross_bounding_envelope" in p_trap.authority
+        assert trap_arm.x0_mm <= waste.x_mm <= trap_arm.x1_mm
+        assert trap_arm.y1_mm == pytest.approx(waste.y_mm)
+        assert trap_arm.z0_mm <= waste.z_mm <= trap_arm.z1_mm
+        for kind in ("hot_supply", "cold_supply"):
+            point = min(
+                (item for item in model.assumed_site.supplies if item.kind == kind),
+                key=lambda item: abs(item.x_mm - bay.sink_center_x_mm),
+            )
+            supply = path.element(kind)
+            assert (supply.x0_mm + supply.x1_mm) / 2 == pytest.approx(point.x_mm)
+            assert supply.y1_mm == pytest.approx(point.y_mm)
+            assert (supply.z0_mm + supply.z1_mm) / 2 == pytest.approx(point.z_mm)
+
+
+def test_selected_products_and_runner_geometry_pass_static_coordination():
+    findings = {finding.rule: finding for finding in _project().report.findings}
+
+    assert findings[
+        "double_vanity.geometry.fixture_plumbing_drawer"
+    ].verdict == "PASS"
+    assert findings["double_vanity.drawer.runner_applicability"].verdict == "PASS"
+
+
+def test_selected_drain_and_trap_contradictions_fail_geometry():
     from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
 
     model = _project().model
@@ -369,8 +435,19 @@ def test_selected_drain_and_trap_do_not_receive_fake_geometry_pass():
     coordination = findings[
         "double_vanity.geometry.fixture_plumbing_drawer"
     ]
-    assert coordination.verdict == "UNKNOWN"
-    assert "do not drive" in coordination.message
+    assert coordination.verdict == "FAIL"
+
+
+def test_missing_product_authority_keeps_static_coordination_unknown():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    missing = replace(model, drain=replace(model.drain, adapter_id=""))
+    finding = validate_double_vanity_model(missing).by_rule(
+        "double_vanity.geometry.fixture_plumbing_drawer"
+    )
+
+    assert finding.verdict == "UNKNOWN"
 
 
 def test_impossible_fixture_fails_loudly_instead_of_emitting_fake_clearance(
@@ -634,7 +711,7 @@ def test_dynamic_verification_state_is_orthogonal_to_static_coordination():
     }
     assert findings[
         "double_vanity.geometry.fixture_plumbing_drawer"
-    ].verdict == "UNKNOWN"
+    ].verdict == "PASS"
 
 
 def test_unreleased_drawer_parts_are_not_emitted_as_cut_list_dimensions():
@@ -677,17 +754,15 @@ def test_all_nine_study_release_gates_are_required_unknown_and_block_release():
     assert all(findings[rule].verdict == "UNKNOWN" for rule in expected)
     assert findings[
         "double_vanity.drawer.runner_applicability"
-    ].verdict == "UNKNOWN"
+    ].verdict == "PASS"
     assert findings[
         "double_vanity.drawer.runner_applicability"
     ].severity == "advisory"
-    assert len(project.report.blocking) == 10
+    assert len(project.report.blocking) == 9
     assert findings[
         "double_vanity.geometry.fixture_plumbing_drawer"
-    ].verdict == "UNKNOWN"
-    assert {finding.rule for finding in project.report.blocking} == expected | {
-        "double_vanity.geometry.fixture_plumbing_drawer"
-    }
+    ].verdict == "PASS"
+    assert {finding.rule for finding in project.report.blocking} == expected
     assert not project.report.fabrication_ready
     with pytest.raises(ProjectReleaseError, match="fixture_template"):
         project.require_release()
