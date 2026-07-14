@@ -6,6 +6,8 @@ from dataclasses import replace
 from pathlib import Path
 import sys
 
+import pytest
+
 from detailgen.packs import compile_project_file
 from detailgen.packs.cabinetry.validation import validate_model
 from detailgen.rendering.web_viewer import build_viewer_payload
@@ -22,7 +24,7 @@ PIXEL = "data:image/png;base64,iVBORw0KGgo="
 
 
 def _html(project):
-    project.require_release()
+    project.require_fabrication_release()
     images = {view: PIXEL for view in CPR.REQUIRED_VIEWS}
     return CPR.build_cabinetry_html(
         project,
@@ -32,11 +34,85 @@ def _html(project):
     )
 
 
+def test_report_requires_base_validation_and_projects_typed_release_state():
+    unvalidated = compile_project_file(DB40)
+    images = {view: PIXEL for view in CPR.REQUIRED_VIEWS}
+    with pytest.raises(ValueError, match="fabrication-released"):
+        CPR.build_cabinetry_html(
+            unvalidated,
+            images=images,
+            viewer_payload=build_viewer_payload(unvalidated.detail),
+            glb_b64="H4sIAAAAAAACAwMAAAAAAAAAAAA=",
+        )
+
+    db40 = _html(compile_project_file(DB40))
+    assert "Fabrication/model gate: PASS" in db40
+    assert "Installation/use release: HOLD" in db40
+
+    b30 = _html(compile_project_file(B30))
+    assert "Fabrication/model gate: PASS" in b30
+    assert "Installation/use release: PASS" in b30
+    assert "Installation/use release: HOLD" not in b30
+
+
+def test_future_db40_capacity_clearance_flips_typed_banner_without_html_edit():
+    project = compile_project_file(DB40)
+    cleared_rules = {
+        "cabinetry.performance.anchor_capacity",
+        "cabinetry.performance.whole_cabinet_capacity",
+    }
+    project.report = replace(
+        project.report,
+        findings=tuple(
+            replace(finding, verdict="PASS", evidence_level="calculated")
+            if finding.rule in cleared_rules else finding
+            for finding in project.report.findings
+        ),
+    )
+    project.require_release()
+
+    html = CPR.build_cabinetry_html(
+        project,
+        images={view: PIXEL for view in CPR.REQUIRED_VIEWS},
+        viewer_payload=build_viewer_payload(project.detail),
+        glb_b64="H4sIAAAAAAACAwMAAAAAAAAAAAA=",
+    )
+    assert "Installation/use release: PASS" in html
+    assert "Installation/use release: HOLD" not in html
+    release_gate = next(
+        step.instruction for step in project.artifacts.installation_steps
+        if step.step_id == "install.release_gate"
+    )
+    assert "Installation/use release: PASS" in release_gate
+    assert "INSTALLATION/USE HOLD" not in release_gate
+
+    from detailgen.packs.cabinetry.instruction_manual import (
+        build_cabinetry_instruction_manual,
+    )
+    manual = build_cabinetry_instruction_manual(
+        project,
+        technical_href="db40_build.html",
+        basename="db40_manual.html",
+    )
+    assert "INSTALLATION/USE HOLD" not in manual.lede
+    assert all(
+        "INSTALLATION/USE HOLD" not in item
+        for item in manual.panels[5].honesty
+    )
+    assert "Installation/use release: PASS" in manual.lede
+
+
 def test_db40_report_contains_release_boundary_views_and_exact_dimensions():
     project = compile_project_file(DB40)
     html = _html(project)
 
-    assert "Pack release: PASS" in html
+    assert "Fabrication/model gate: PASS" in html
+    assert "Installation/use release: HOLD" in html
+    assert "Do not load, commission, or put the cabinet into service" in html
+    assert "qualified cabinet or structural design professional" in html
+    assert "serious or fatal crushing injury" in html
+    assert "CPSC Anchor It! general guidance" in html
+    assert "16 CFR part 1261 applies" in html
     assert "Whole-cabinet structural capacity" in html
     assert "UNKNOWN — not qualified" in html
     for view in CPR.REQUIRED_VIEWS:
@@ -137,6 +213,93 @@ def test_report_uses_one_reader_vocabulary_for_hover_and_visible_part_key():
     }
 
 
+def test_product_hover_metadata_matches_the_per_part_cut_record():
+    project = compile_project_file(DB40)
+    assembly = CPR.product_view_assembly(project)
+    payload = CPR.product_viewer_payload(project, assembly)
+    machine_name_by_part_id = {
+        part.part_id: part.name for part in project.model.parts
+    }
+
+    for cut in project.artifacts.cut_list:
+        hover = payload["parts"][machine_name_by_part_id[cut.part_id]]
+        assert hover["qty"] == cut.quantity == 1
+        assert hover["material"] == cut.material
+
+
+def test_report_starts_with_builder_readiness_and_executable_machining_contract():
+    project = compile_project_file(DB40)
+    html = _html(project)
+
+    for phrase in (
+        "Before you start",
+        "Required tools and jigs",
+        "Material and inclusion boundary",
+        "Calculated moving load (not a rating)",
+        "Machining datum rules",
+        "Receiving part",
+        "Pitch axis",
+        "Physical qty",
+        "Procurement meaning",
+        "2 handed pieces = 1 left/right pair",
+        "T65.1600.01",
+        "5 mm pilot / 7 mm shank / 10 mm countersink",
+        "No generic numeric tolerance is invented",
+        "guided stepped drill and depth stop",
+        "measured-stock offcut trial",
+    ):
+        assert phrase in html
+    assert "Moving rated load" not in html
+    assert "rated_moving_load_lb" not in html
+    assert "Pre-band cut size" in html
+    assert "0.5 mm declared finished thickness" in html
+    assert "Bore locations are centers" in html
+    assert "groove/notch locations are lower-left feature origins" in html
+    assert sum(item.count for item in project.artifacts.machining_schedule
+               if item.kind == "confirmat_step_drill") == 26
+
+
+def test_base_cabinet_before_start_has_real_tool_requirements():
+    project = compile_project_file(B30)
+    html = _html(project)
+
+    for phrase in (
+        "Layout and checking", "Sheet breakdown", "Confirmat joinery",
+        "Doors and shelf", "System-32 boring jig", "Installation",
+        "PZ3", "001.22.485", "Safety and dust control",
+        "Safety glasses", "respiratory protection",
+    ):
+        assert phrase in html
+    assert 'href="https://files.hafele.co.uk/catalogfiles/www/105-61.pdf"' in html
+
+
+def test_report_does_not_authorize_declared_clothing_load_without_capacity():
+    project = compile_project_file(DB40)
+    html = _html(project)
+    install = "\n".join(
+        step.instruction for step in project.artifacts.installation_steps
+    )
+
+    assert "repeat operation with the declared" not in install
+    assert "Do not load or use the cabinet" in install
+    assert "40 lb" not in install
+    assert "whole-cabinet structural capacity" in html.lower()
+
+
+def test_multi_source_evidence_renders_as_separate_valid_links():
+    project = compile_project_file(DB40)
+    html = _html(project)
+    finding = project.report.by_rule("cabinetry.drawer.moving_hardware_mass")
+    evidence = next(item for item in project.report.evidence
+                    if item.evidence_id in finding.evidence_ids)
+    sources = evidence.source.split(" | ")
+
+    assert len(sources) >= 3
+    for source in sources:
+        assert f'href="{source}"' in html
+    assert f'href="{evidence.source}"' not in html
+
+
 def test_report_scene_excludes_full_height_site_context_but_keeps_install_anchors():
     project = compile_project_file(DB40)
 
@@ -168,6 +331,11 @@ def test_drawer_detail_geometry_uses_bottom_blank_and_selected_hardware_facts():
     assert facts["locking_skus"] == (
         model.drawer_bank.locking_device.left_sku,
         model.drawer_bank.locking_device.right_sku,
+    )
+    assert facts["rear_notch_mm"] == (50.0, 13.0)
+    assert facts["rear_hook_centers_mm"] == (
+        (7.0, 24.0),
+        (model.drawer_bank.inside_box_width_mm - 7.0, 24.0),
     )
 
 

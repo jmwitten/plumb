@@ -58,11 +58,16 @@ def default_pack_registry() -> PackRegistry:
 
     registry = PackRegistry()
     try:
-        from .cabinetry import FramelessCabinetryPack, FramelessVanityPack
+        from .cabinetry import (
+            DoubleSinkVanityPack,
+            FramelessCabinetryPack,
+            FramelessVanityPack,
+        )
     except ModuleNotFoundError as exc:
         if exc.name not in {"detailgen.packs.cabinetry", "detailgen.packs"}:
             raise
     else:
         registry.register(FramelessCabinetryPack())
         registry.register(FramelessVanityPack())
+        registry.register(DoubleSinkVanityPack())
     return registry

@@ -19,7 +19,7 @@ from .schema import BaseCabinetDecl, CabinetrySection, DrawerBaseDecl
 class Provenance:
     declared_at: str
     rule: str
-    pack_version: str = "cabinetry.frameless@1.0.0"
+    pack_version: str = "cabinetry.frameless@1.1.0"
     profile_id: str = ""
     catalog_id: str = ""
     archetype_id: str = ""
@@ -75,7 +75,12 @@ class MachiningFeature:
     width_mm: float = 0.0
     length_mm: float = 0.0
     face: str = ""
-    coordinate_system: str = "part_local_xy_from_cut_list_origin"
+    coordinate_system: str = (
+        "named face; origin=cut-list lower-left; +X=cut-list length; "
+        "+Y=cut-list width; no implicit mirror"
+    )
+    pitch_axis: str = ""
+    receiving_part_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -268,7 +273,7 @@ def build_base_shell(
     )
 
     base_depth = (
-        depth - cabinet.toe_kick_setback_mm
+        carcass_depth - groove_w - cabinet.toe_kick_setback_mm
         - 2 * profile.toe_base_member_thickness_mm
     )
     add_panel(
@@ -283,7 +288,11 @@ def build_base_shell(
         support_parts, "toe_rear", "base.toe_rear",
         length=width, panel_width=toe,
         thickness=profile.toe_base_member_thickness_mm,
-        at=(x0, front_y + depth, base_z), rotate=(("X", 90.0),),
+        # The back face stops at the bottom-groove front.  This keeps the
+        # attachment line in solid bottom stock instead of through the
+        # captured-back groove or on the bottom's rear edge.
+        at=(x0, front_y + carcass_depth - groove_w, base_z),
+        rotate=(("X", 90.0),),
         surface="concealed",
     )
     add_panel(
@@ -377,21 +386,29 @@ def build_base_shell(
 
     joinery_machining: list[MachiningFeature] = []
     side_rows = (
-        ("bottom", 3, 50.0, (carcass_depth - 100.0) / 2),
-        ("front_stretcher", 2, 25.0, 50.0),
-        ("rear_stretcher", 2, carcass_depth - profile.stretcher_depth_mm + 25.0,
-         50.0),
-        ("anchor_strip", 2, carcass_depth - back_t - t / 2, 50.0),
+        # receiving role, count, start (X,Y), pitch, pitch axis
+        ("bottom", 3, (t / 2, 50.0), (carcass_depth - 100.0) / 2, "Y"),
+        ("front_stretcher", 2, (body_h - t / 2, 25.0), 50.0, "Y"),
+        (
+            "rear_stretcher", 2,
+            (body_h - t / 2,
+             carcass_depth - profile.stretcher_depth_mm + 25.0),
+            50.0, "Y",
+        ),
+        (
+            "anchor_strip", 2,
+            (body_h - anchor_h + 25.0, carcass_depth - back_t - t / 2),
+            50.0, "X",
+        ),
     )
     for side_role in ("left_end", "right_end"):
         side_id = f"cabinetry.{cabinet.cabinet_id}.{side_role}"
-        for joint, count, y_start, pitch in side_rows:
+        for receiving_role, count, start, pitch, pitch_axis in side_rows:
             joinery_machining.append(MachiningFeature(
-                feature_id=f"{side_id}.confirmat_{joint}",
+                feature_id=f"{side_id}.confirmat_{receiving_role}",
                 kind="confirmat_step_drill",
                 part_id=side_id,
-                location_mm=(t / 2 if joint == "bottom" else body_h - t / 2,
-                             y_start),
+                location_mm=start,
                 diameter_mm=confirmat.blind_pilot_diameter_mm,
                 depth_mm=confirmat.length_mm - t,
                 pitch_mm=pitch,
@@ -400,22 +417,74 @@ def build_base_shell(
                 width_mm=confirmat.through_shank_diameter_mm,
                 length_mm=confirmat.countersink_diameter_mm,
                 face="outside",
+                coordinate_system=(
+                    "side outside face; origin=bottom-front corner; "
+                    "+X=up/cut-list length; +Y=toward wall/cut-list width"
+                ),
+                pitch_axis=pitch_axis,
+                receiving_part_id=(
+                    f"cabinetry.{cabinet.cabinet_id}.{receiving_role}"
+                ),
             ))
-    for role in ("toe_front", "toe_rear"):
-        part_id = f"cabinetry.{cabinet.cabinet_id}.{role}"
+    for rail_role in ("toe_front", "toe_rear"):
+        rail_id = f"cabinetry.{cabinet.cabinet_id}.{rail_role}"
+        for sleeper_role, x in (
+            ("toe_left", t / 2), ("toe_right", width - t / 2),
+        ):
+            joinery_machining.append(MachiningFeature(
+                feature_id=f"{rail_id}.confirmat_{sleeper_role}",
+                kind="confirmat_step_drill",
+                part_id=rail_id,
+                location_mm=(x, toe * 0.3),
+                diameter_mm=confirmat.blind_pilot_diameter_mm,
+                depth_mm=confirmat.length_mm - t,
+                pitch_mm=toe * 0.4,
+                count=2,
+                source=confirmat.product_id,
+                width_mm=confirmat.through_shank_diameter_mm,
+                length_mm=confirmat.countersink_diameter_mm,
+                face="outside",
+                coordinate_system=(
+                    "toe-rail outside face; origin=left-bottom corner; "
+                    "+X=right/cut-list length; +Y=up/cut-list width"
+                ),
+                pitch_axis="Y",
+                receiving_part_id=(
+                    f"cabinetry.{cabinet.cabinet_id}.{sleeper_role}"
+                ),
+            ))
+
+    toe_attachment_x = inside_w / 4
+    toe_attachment_pitch = inside_w / 4
+    toe_attachment_y = {
+        "toe_front": (
+            cabinet.toe_kick_setback_mm
+            + profile.toe_base_member_thickness_mm / 2
+        ),
+        "toe_rear": (
+            carcass_depth - groove_w
+            - profile.toe_base_member_thickness_mm / 2
+        ),
+    }
+    bottom_id = f"cabinetry.{cabinet.cabinet_id}.bottom"
+    for rail_role in ("toe_front", "toe_rear"):
         joinery_machining.append(MachiningFeature(
-            feature_id=f"{part_id}.confirmat_sleepers",
-            kind="confirmat_step_drill",
-            part_id=part_id,
-            location_mm=(t / 2, toe * 0.3),
-            diameter_mm=confirmat.blind_pilot_diameter_mm,
-            depth_mm=confirmat.length_mm - t,
-            pitch_mm=toe * 0.4,
-            count=4,
-            source=confirmat.product_id,
-            width_mm=confirmat.through_shank_diameter_mm,
-            length_mm=confirmat.countersink_diameter_mm,
-            face="outside",
+            feature_id=f"{bottom_id}.toe_attachment_{rail_role}",
+            kind="toe_attachment_station",
+            part_id=bottom_id,
+            location_mm=(toe_attachment_x, toe_attachment_y[rail_role]),
+            pitch_mm=toe_attachment_pitch,
+            count=3,
+            source=toe_attachment.product_id,
+            face="top",
+            coordinate_system=(
+                "cabinet-bottom top face; origin=front-left corner; "
+                "+X=right/cut-list length; +Y=toward wall/cut-list width"
+            ),
+            pitch_axis="X",
+            receiving_part_id=(
+                f"cabinetry.{cabinet.cabinet_id}.{rail_role}"
+            ),
         ))
 
     hardware = (

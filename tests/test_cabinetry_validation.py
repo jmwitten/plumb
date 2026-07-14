@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -47,6 +48,9 @@ def test_release_fixture_passes_required_checks_without_claiming_certification()
     assert report.by_rule("cabinetry.hardware.hinge_fit").verdict == "PASS"
     assert report.by_rule("cabinetry.material.design_properties").verdict == "PASS"
     assert report.by_rule("cabinetry.install.studs").verdict == "PASS"
+    assert report.by_rule(
+        "cabinetry.joinery.toe_attachment_machining"
+    ).verdict == "PASS"
 
     hinge_quantity = report.by_rule("cabinetry.hardware.hinge_quantity")
     assert hinge_quantity.verdict == "PASS"
@@ -143,6 +147,115 @@ def test_anchor_geometry_uses_real_cabinet_screw_and_checks_stud_embedment():
     assert product.length_mm == pytest.approx(3.125 * 25.4)
     assert product.source_url.startswith("https://www.grkfasteners.com/")
     assert report.by_rule("cabinetry.install.anchor_embedment").verdict == "PASS"
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"location_mm": (-999.0, -999.0)},
+        {"depth_mm": 0.0},
+        {"face": "inside"},
+        {"coordinate_system": ""},
+    ],
+)
+def test_impossible_shell_joinery_machining_blocks_release(changes):
+    from detailgen.packs.cabinetry.validation import validate_model
+
+    model = _model()
+    old = next(row for row in model.machining
+               if row.kind == "confirmat_step_drill")
+    bad = replace(old, **changes)
+    model = replace(
+        model,
+        machining=tuple(bad if row == old else row for row in model.machining),
+    )
+
+    finding = validate_model(model).by_rule("cabinetry.joinery.shell_machining")
+    assert finding.verdict == "FAIL"
+    assert finding.blocking
+
+
+def test_shell_joinery_cannot_be_retargeted_to_an_unrelated_site_part():
+    from detailgen.packs.cabinetry.validation import validate_model
+
+    model = _model()
+    old = next(row for row in model.machining
+               if row.kind == "confirmat_step_drill")
+    bad = replace(
+        old,
+        receiving_part_id=model.part("wall_stud_stud_32").part_id,
+    )
+    model = replace(
+        model,
+        machining=tuple(bad if row == old else row for row in model.machining),
+    )
+
+    finding = validate_model(model).by_rule("cabinetry.joinery.shell_machining")
+    assert finding.verdict == "FAIL"
+    assert finding.blocking
+
+
+def test_toe_attachment_has_executable_safe_rows_and_rear_rail_geometry():
+    from detailgen.packs.cabinetry.validation import validate_model
+
+    model = _model()
+    bottom = model.part("bottom")
+    rear = model.part("toe_rear")
+    rows = tuple(item for item in model.machining
+                 if item.kind == "toe_attachment_station")
+    groove = next(item for item in model.machining
+                  if item.kind == "captured_back_groove"
+                  and item.part_id == bottom.part_id)
+
+    assert len(rows) == 2
+    assert sum(item.count for item in rows) == 6
+    assert rear.at_mm[1] - bottom.at_mm[1] == pytest.approx(
+        groove.location_mm[1]
+    )
+    assert all(item.diameter_mm == item.depth_mm == 0 for item in rows)
+    assert validate_model(model).by_rule(
+        "cabinetry.joinery.toe_attachment_machining"
+    ).verdict == "PASS"
+
+
+def test_toe_attachment_row_cannot_be_retargeted_to_a_site_part():
+    from detailgen.packs.cabinetry.validation import validate_model
+
+    model = _model()
+    old = next(item for item in model.machining
+               if item.kind == "toe_attachment_station")
+    bad = replace(old, receiving_part_id=model.part("wall_stud_stud_32").part_id)
+    model = replace(
+        model,
+        machining=tuple(bad if item == old else item for item in model.machining),
+    )
+    finding = validate_model(model).by_rule(
+        "cabinetry.joinery.toe_attachment_machining"
+    )
+    assert finding.verdict == "FAIL"
+    assert finding.blocking
+
+
+def test_no_in_span_anchor_target_blocks_without_crashing_artifact_generation():
+    from detailgen.packs.cabinetry.artifacts import build_artifacts
+    from detailgen.packs.cabinetry.validation import validate_model
+
+    model = replace(_model(), anchor_stud_ids=())
+    report = validate_model(model)
+    artifacts = build_artifacts(model, report)
+
+    assert report.by_rule("cabinetry.install.studs").verdict == "FAIL"
+    assert report.by_rule("cabinetry.install.anchor_embedment").verdict == "FAIL"
+    capacity = report.by_rule("cabinetry.performance.anchor_capacity")
+    assert "not represented" in capacity.message
+    assert capacity.affected
+    assert not report.release_ready
+    instruction = next(
+        step.instruction for step in artifacts.installation_steps
+        if step.step_id == "install.wall_anchor"
+    )
+    assert "STOP" in instruction
+    assert "do not drill or install" in instruction.lower()
 
 
 def test_report_order_and_summary_are_deterministic():

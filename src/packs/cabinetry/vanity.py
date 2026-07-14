@@ -23,8 +23,8 @@ from .artifacts import (
     CabinetArtifacts,
     CutListItem,
     EdgeBandItem,
-    HardwareItem,
     WorkStep,
+    _hardware_item,
 )
 from .catalogs import (
     get_adhesive,
@@ -471,7 +471,7 @@ def build_vanity_model(section: VanitySection, *, project_name: str) -> VanityMo
         ))
         source_map[part_id] = Provenance(
             f"vanity.cabinet.{vanity.vanity_id}", rule,
-            pack_version="vanity.frameless@1.0.0",
+            pack_version="vanity.frameless@1.1.0",
             profile_id=profile.profile_id,
             archetype_id=vanity.source_archetype,
         )
@@ -555,7 +555,7 @@ def build_vanity_model(section: VanitySection, *, project_name: str) -> VanityMo
         ))
         source_map[part_id] = Provenance(
             f"site.wall.studs.{stud.stud_id}", "site.surveyed_stud",
-            pack_version="vanity.frameless@1.0.0", profile_id=profile.profile_id,
+            pack_version="vanity.frameless@1.1.0", profile_id=profile.profile_id,
         )
 
     backing = section.mounting.backing
@@ -584,7 +584,7 @@ def build_vanity_model(section: VanitySection, *, project_name: str) -> VanityMo
         ))
         source_map[part_id] = Provenance(
             "vanity.mounting.backing", "site.verified_blocking_2x8",
-            pack_version="vanity.frameless@1.0.0", profile_id=profile.profile_id,
+            pack_version="vanity.frameless@1.1.0", profile_id=profile.profile_id,
         )
         backing_segments.append((part_id, seg_start, seg_end))
 
@@ -636,7 +636,7 @@ def build_vanity_model(section: VanitySection, *, project_name: str) -> VanityMo
             (f"site.wall.studs.{target.target_id}"
              if target.kind == "stud" else "vanity.mounting.backing"),
             "vanity.mount.structural_anchor",
-            pack_version="vanity.frameless@1.0.0", profile_id=profile.profile_id,
+            pack_version="vanity.frameless@1.1.0", profile_id=profile.profile_id,
             catalog_id=anchor.product_id,
         )
 
@@ -1161,10 +1161,7 @@ def build_vanity_artifacts(model: VanityModel, report: CabinetReport) -> Cabinet
         for part in fabricated for edge in part.edge_bands
     )
     hardware = tuple(
-        HardwareItem(
-            item.system_id, item.kind, item.product_id, item.quantity,
-            item.source_url, item.evidence, item.related_parts,
-        )
+        _hardware_item(item, source_url=item.source_url)
         for item in sorted(model.hardware, key=lambda item: item.system_id)
     )
     panel_ids = tuple(part.part_id for part in fabricated)
@@ -1262,8 +1259,8 @@ def build_vanity_artifacts(model: VanityModel, report: CabinetReport) -> Cabinet
                  "reveals, closure, finish damage, and clean-up.", evidence="unknown"),
     )
     return CabinetArtifacts(
-        "detailgen/vanity-artifacts/v1", model.project_name,
-        "vanity.frameless@1.0.0", model.profile.profile_id, model.mode, False,
+        "detailgen/vanity-artifacts/v2", model.project_name,
+        "vanity.frameless@1.1.0", model.profile.profile_id, model.mode, False,
         cut_list, edge_banding, hardware,
         tuple(sorted(model.machining, key=lambda item: item.feature_id)),
         fabrication_steps, assembly_steps, installation_steps,
@@ -1273,7 +1270,7 @@ def build_vanity_artifacts(model: VanityModel, report: CabinetReport) -> Cabinet
 class FramelessVanityPack:
     pack_id = "vanity.frameless"
     major_version = 1
-    version = "1.0.0"
+    version = "1.1.0"
     section_keys = ("site", "vanity")
 
     def parse(self, doc) -> VanitySection:

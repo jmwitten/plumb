@@ -104,11 +104,22 @@ def _instruction_panel_payload(assembly, manual) -> tuple[dict[str, int], list[d
     parts_by_id = {part.id: part for part in assembly.parts}
     known_ids = set(parts_by_id)
     actual_ids = set(scheduled_ids)
+    excluded_ids = set(manual.excluded_part_ids)
+    unknown_excluded = sorted(excluded_ids - known_ids)
+    if unknown_excluded:
+        raise ValueError(
+            "instruction panel schedule excludes unknown part ids: "
+            f"{unknown_excluded!r}")
+    duplicated_as_excluded = sorted(actual_ids & excluded_ids)
+    if duplicated_as_excluded:
+        raise ValueError(
+            "instruction panel schedule both lists and excludes part ids: "
+            f"{duplicated_as_excluded!r}")
     unknown = sorted(actual_ids - known_ids)
     if unknown:
         raise ValueError(
             f"instruction panel schedule has unknown part ids: {unknown!r}")
-    missing = sorted(known_ids - actual_ids)
+    missing = sorted(known_ids - actual_ids - excluded_ids)
     if missing:
         raise ValueError(
             f"instruction panel schedule omits part ids: {missing!r}")
@@ -201,7 +212,7 @@ def build_viewer_payload(detail, instruction_manual=None) -> dict:
             "explode": [float(v) for v in explode],
             "stub_of": stub,
         }
-        if panel_schedule is not None:
+        if panel_schedule is not None and p.id in panel_schedule:
             parts[p.name]["first_panel"] = panel_schedule[p.id]
 
     slug = "".join(ch if ch.isalnum() else "_" for ch in detail.name.lower()).strip("_")

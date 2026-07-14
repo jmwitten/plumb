@@ -45,6 +45,8 @@ class ConstructionProfile:
     delivery_state: str
     panel_modulus_elasticity_mpa: float
     panel_density_kg_m3: float
+    edge_band_thickness_mm: float
+    edge_band_product_id: str
 
 
 FRAMELESS_PLYWOOD_SHOP_V1 = ConstructionProfile(
@@ -86,6 +88,11 @@ FRAMELESS_PLYWOOD_SHOP_V1 = ConstructionProfile(
     # override them in a future product catalog rather than inheriting silently.
     panel_modulus_elasticity_mpa=6895.0,
     panel_density_kg_m3=680.0,
+    # Finished model dimensions include this declared band build. Raw cut-list
+    # dimensions subtract it on every treated edge. The matching product/SKU
+    # remains a procurement gate, but its thickness may no longer be implicit.
+    edge_band_thickness_mm=0.5,
+    edge_band_product_id="shop_selected_matching_edge_band_0_5@1",
 )
 
 _PROFILES = {FRAMELESS_PLYWOOD_SHOP_V1.profile_id: FRAMELESS_PLYWOOD_SHOP_V1}

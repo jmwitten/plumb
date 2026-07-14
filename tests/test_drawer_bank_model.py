@@ -95,7 +95,7 @@ def test_bank_emits_required_drawer_and_runner_machining():
     assert kinds.count("runner_rear_notch") == 6
     assert kinds.count("runner_hook_bore") == 6
     assert kinds.count("locking_device_bore") == 12
-    assert kinds.count("runner_fixing_station") == 12
+    assert kinds.count("runner_fixing_station") == 30
     assert kinds.count("applied_front_attachment") == 12
     assert kinds.count("pull_bore") == 6
     valid_targets = (
@@ -107,7 +107,7 @@ def test_bank_emits_required_drawer_and_runner_machining():
     hook_bores = [feature for feature in bank.machining
                   if feature.kind == "runner_hook_bore"]
     assert {feature.location_mm[0] for feature in hook_bores} == {7.0, 928.9}
-    assert {feature.location_mm[1] for feature in hook_bores} == {11.0}
+    assert {feature.location_mm[1] for feature in hook_bores} == {24.0}
     assert {feature.depth_mm for feature in hook_bores} == {10.0}
     locking_bores = [feature for feature in bank.machining
                      if feature.kind == "locking_device_bore"]
@@ -119,7 +119,7 @@ def test_bank_emits_required_drawer_and_runner_machining():
     }
     runner_stations = [feature for feature in bank.machining
                        if feature.kind == "runner_fixing_station"]
-    assert {feature.diameter_mm for feature in runner_stations} == {0.0}
+    assert {feature.diameter_mm for feature in runner_stations} == {2.5}
     assert {feature.depth_mm for feature in runner_stations} == {0.0}
     assert {feature.face for feature in runner_stations} == {"inside"}
     front_attachments = [feature for feature in bank.machining
@@ -144,27 +144,30 @@ def test_bank_pins_complete_hardware_set_for_each_drawer():
     bank = _build()
 
     assert [system.kind for system in bank.hardware] == [
+        "drawer_box_joinery_fastener",
         "drawer_runner_pair", "drawer_runner_installation_screw",
         "drawer_locking_device_pair",
         "drawer_locking_device_screw", "drawer_lateral_stabilizer",
         "drawer_pull", "drawer_pull_mounting_screw",
+        "drawer_box_joinery_fastener",
         "drawer_runner_pair", "drawer_runner_installation_screw",
         "drawer_locking_device_pair",
         "drawer_locking_device_screw", "drawer_lateral_stabilizer",
         "drawer_pull", "drawer_pull_mounting_screw",
+        "drawer_box_joinery_fastener",
         "drawer_runner_pair", "drawer_runner_installation_screw",
         "drawer_locking_device_pair",
         "drawer_locking_device_screw", "drawer_lateral_stabilizer",
         "drawer_pull", "drawer_pull_mounting_screw",
     ]
-    assert [system.quantity for system in bank.hardware] == [2, 4, 2, 4, 1, 1, 2] * 3
+    assert [system.quantity for system in bank.hardware] == [8, 2, 10, 2, 4, 1, 1, 2] * 3
     assert all(cell.wood_mass_kg > 0 for cell in bank.cells)
     assert all(cell.moving_hardware_mass_kg > 0 for cell in bank.cells)
     assert all(cell.moving_mass_kg == pytest.approx(
         cell.wood_mass_kg + cell.moving_hardware_mass_kg
     ) for cell in bank.cells)
     assert all(cell.moving_mass_kg > 0 for cell in bank.cells)
-    assert all(cell.rated_moving_load_lb < bank.runner.dynamic_rating_lb
+    assert all(cell.calculated_moving_load_lb < bank.runner.dynamic_rating_lb
                for cell in bank.cells)
 
 

@@ -54,6 +54,24 @@ def test_caddy_manual_is_a_separate_relative_companion(caddy):
     assert manual.basename == "armchair_caddy_assembly_manual.html"
 
 
+def test_manual_identity_and_proof_copy_are_detail_configurable(caddy):
+    manual = build_instruction_manual(
+        caddy,
+        "technical.html",
+        title="Custom model-backed manual",
+        basename="custom_assembly_manual.html",
+        lede=("Custom proof boundary with {declared_constraints} authored "
+              "constraints."),
+    )
+
+    assert manual.title == "Custom model-backed manual"
+    assert manual.basename == "custom_assembly_manual.html"
+    assert manual.lede.startswith("Custom proof boundary")
+
+    with pytest.raises(ValueError, match="relative HTML basename"):
+        build_instruction_manual(caddy, basename="folder/manual.html")
+
+
 def test_caddy_panels_cover_each_reader_step_once(caddy):
     manual = build_instruction_manual(
         caddy, "armchair_caddy_build_document.html")

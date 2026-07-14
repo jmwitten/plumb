@@ -92,13 +92,36 @@ class PackedProject:
                 detail=finding.message,
                 verdict=verdict,
             ))
+        split_release = bool(getattr(
+            self.report, "installation_use_blocking_rules", ()
+        ))
+        installation_use_ready = self.installation_use_ready
+        fabrication_ready = self.fabrication_ready
+        installation_steps = self.artifacts.installation_steps
+        policy = getattr(self.report, "installation_use_policy", None)
+        if policy is not None:
+            installation_steps = tuple(
+                replace(
+                    step,
+                    instruction=policy.release_gate_instruction(
+                        released=installation_use_ready
+                    ),
+                ) if step.step_id == "install.release_gate" else step
+                for step in installation_steps
+            )
         self.artifacts = replace(
             self.artifacts,
-            release_ready=bool(
-                self.report.release_ready
-                and self._base_report.ok
-                and self._required_coverage_ok()
+            release_ready=installation_use_ready,
+            fabrication_ready=fabrication_ready,
+            installation_use_ready=installation_use_ready,
+            release_scope=(
+                "full" if split_release and installation_use_ready
+                else "fabrication_only" if split_release and fabrication_ready
+                else "none" if split_release
+                else "unified"
             ),
+            release_contract="split" if split_release else "unified",
+            installation_steps=installation_steps,
         )
         return self._base_report
 
@@ -116,19 +139,37 @@ class PackedProject:
         return self._base_report
 
     @property
-    def release_ready(self) -> bool:
+    def fabrication_ready(self) -> bool:
         # Pack checks alone are not the release gate: until the unchanged base
         # geometry sweep has actually run, readiness is unknown and therefore
-        # false. ``require_release``/``validate`` supplies that evidence.
+        # false. ``require_fabrication_release``/``validate`` supplies evidence.
         return bool(
-            self.report.release_ready
+            getattr(self.report, "fabrication_ready", self.report.release_ready)
             and self._base_report is not None
             and self._base_report.ok
             and self._required_coverage_ok()
         )
 
-    def require_release(self):
-        if not self.report.release_ready:
+    @property
+    def installation_use_ready(self) -> bool:
+        return bool(
+            self.fabrication_ready
+            and getattr(
+                self.report, "installation_use_ready", self.report.release_ready
+            )
+        )
+
+    @property
+    def release_ready(self) -> bool:
+        """Conservative compatibility alias for installation/use readiness."""
+
+        return self.installation_use_ready
+
+    def require_fabrication_release(self):
+        report_ready = getattr(
+            self.report, "fabrication_ready", self.report.release_ready
+        )
+        if not report_ready:
             lines = "\n".join(
                 f"[{finding.verdict}] {finding.rule}: {finding.message}"
                 for finding in self.report.blocking
@@ -155,6 +196,22 @@ class PackedProject:
             raise ProjectReleaseError(
                 f"{self.project_doc.name}: required base coverage blocked "
                 f"release:\n" + "\n".join(missing)
+            )
+        return self
+
+    def require_release(self):
+        self.require_fabrication_release()
+        if not getattr(
+            self.report, "installation_use_ready", self.report.release_ready
+        ):
+            blockers = getattr(self.report, "installation_use_blocking", ())
+            lines = "\n".join(
+                f"[{finding.verdict}] {finding.rule}: {finding.message}"
+                for finding in blockers
+            )
+            raise ProjectReleaseError(
+                f"{self.project_doc.name}: installation/use release blocked:\n"
+                f"{lines}"
             )
         return self
 
@@ -211,6 +268,20 @@ class PackedProject:
             "evidence": [asdict(item) for item in self.report.evidence],
             "artifacts": self.artifacts.to_dict(),
         }
+        if getattr(self.report, "installation_use_blocking_rules", ()):
+            payload.update({
+                "fabrication_ready": self.fabrication_ready,
+                "installation_use_ready": self.installation_use_ready,
+                "release_contract": "split",
+                "release_scope": (
+                    "full" if self.installation_use_ready else
+                    "fabrication_only" if self.fabrication_ready else
+                    "none"
+                ),
+            })
+            policy = getattr(self.report, "installation_use_policy", None)
+            if policy is not None:
+                payload["installation_use_policy"] = asdict(policy)
         catalog_source_manifest = getattr(model, "catalog_source_manifest", None)
         catalog_sources = (
             catalog_source_manifest() if callable(catalog_source_manifest) else {}
@@ -228,6 +299,11 @@ class PackedProject:
             derived_facts = derived_fact_manifest()
             if derived_facts:
                 payload["derived_facts"] = derived_facts
+        catalog_asset_manifest = getattr(model, "catalog_asset_manifest", None)
+        if callable(catalog_asset_manifest):
+            catalog_assets = catalog_asset_manifest()
+            if catalog_assets:
+                payload["catalog_assets"] = catalog_assets
         return _json_native(payload)
 
     def manifest_json(self) -> str:

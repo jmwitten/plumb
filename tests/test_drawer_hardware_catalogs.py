@@ -22,17 +22,25 @@ def test_movento_21_in_runner_pins_geometry_rating_and_soft_close():
     assert runner.bottom_recess_mm == pytest.approx(13)
     assert runner.bottom_clearance_mm == pytest.approx(16)
     assert runner.minimum_rear_notch_mm == pytest.approx(50)
+    assert runner.minimum_rear_notch_height_mm == pytest.approx(13)
     assert runner.hook_bore_mm == pytest.approx((6, 10))
     assert runner.hook_bore_inset_from_side_mm == pytest.approx(7)
-    assert runner.hook_bore_height_from_bottom_mm == pytest.approx(11)
+    assert runner.hook_bore_height_above_notch_mm == pytest.approx(11)
+    assert runner.hook_bore_height_from_bottom_mm == pytest.approx(24)
     assert runner.minimum_top_clearance_mm == pytest.approx(7)
     assert runner.opening_height_deduction_mm == pytest.approx(23)
     assert runner.front_setback_mm == pytest.approx(3)
-    assert runner.mounting_line_mm == pytest.approx(37)
-    assert runner.required_rear_fixing_stations_mm == pytest.approx((261, 357))
+    assert runner.mounting_line_mm == pytest.approx(38)
+    assert runner.required_fixing_stations_mm == pytest.approx(
+        (10, 32, 37, 261, 357)
+    )
     assert runner.installation_screw_product_id == "blum_606n_no6x5_8@2026.1"
     assert runner.installation_screw_sku == "606N"
-    assert runner.installation_screws_per_runner == 2
+    assert runner.installation_screws_per_runner == 5
+    assert runner.installation_pilot_diameter_mm == pytest.approx(2.5)
+    assert runner.installation_pilot_depth_mm == 0
+    assert runner.installation_drive == "#2 Phillips"
+    assert runner.required_tool_skus == ("T65.9000", "DB-2.5mm", "DB-6mm")
     assert runner.static_rating_lb == pytest.approx(125)
     assert runner.dynamic_rating_lb == pytest.approx(110)
     assert runner.motion == "blumotion_soft_close"

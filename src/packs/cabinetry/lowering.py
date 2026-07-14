@@ -105,11 +105,20 @@ def lower_model(model: CabinetModel | object) -> DetailSpecDoc:
         toe_ids = tuple(cid(role) for role in (
             "toe_front", "toe_rear", "toe_left", "toe_right",
         ))
-        carcass_ids = tuple(cid(role) for role in (
-            "left_end", "right_end", "bottom", "captured_back",
-            "front_stretcher", "rear_stretcher", "anchor_strip",
+        open_carcass_ids = tuple(cid(role) for role in (
+            "left_end", "bottom", "front_stretcher",
         ))
-        drawer_ids = tuple(part.part_id for part in drawer_bank.parts)
+        close_back_ids = tuple(cid(role) for role in (
+            "captured_back", "rear_stretcher", "right_end", "anchor_strip",
+        ))
+        drawer_box_ids = tuple(
+            part.part_id for part in drawer_bank.parts
+            if not part.role.startswith("drawer_front_")
+        )
+        applied_front_ids = tuple(
+            part.part_id for part in drawer_bank.parts
+            if part.role.startswith("drawer_front_")
+        )
         anchor_ids = tuple(
             cid(f"wall_anchor_{stud_id}") for stud_id in model.anchor_stud_ids
         )
@@ -121,16 +130,30 @@ def lower_model(model: CabinetModel | object) -> DetailSpecDoc:
                 parts=toe_ids,
             ),
             AuthoredStage(
-                name="assembly.carcass",
-                why=("The empty carcass and captured back are assembled square "
-                     "before drawer assemblies are fitted."),
-                parts=carcass_ids,
+                name="assembly.open_carcass",
+                why=("The left side, bottom, and front stretcher are joined "
+                     "first so the captured-back groove perimeter remains open."),
+                parts=open_carcass_ids,
+            ),
+            AuthoredStage(
+                name="assembly.close_captured_back",
+                why=("The captured back enters the open left and bottom grooves "
+                     "before the rear stretcher and right side close its other "
+                     "two grooved edges."),
+                parts=close_back_ids,
             ),
             AuthoredStage(
                 name="assembly.drawer_boxes",
-                why=("Drawer boxes, applied fronts, and their adjustments are "
-                     "completed in the shop before conventional shipment."),
-                parts=drawer_ids,
+                why=("The three labeled drawer boxes are a parallel shop batch "
+                     "after the carcass is square and available for runner fit."),
+                parts=drawer_box_ids,
+            ),
+            AuthoredStage(
+                name="assembly.fronts_hardware",
+                why=("Applied fronts are fitted and adjusted on the completed "
+                     "drawer boxes before their identities are recorded for "
+                     "conventional shipment."),
+                parts=applied_front_ids,
             ),
         ]
         if anchor_ids:

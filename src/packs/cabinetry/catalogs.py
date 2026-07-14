@@ -63,6 +63,9 @@ class AssemblyFastenerProduct:
     drive: str
     source_url: str
     source_date: str
+    tooling_sku: str = ""
+    tooling_source_url: str = ""
+    verified_panel_setting_mm: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -93,19 +96,25 @@ class DrawerRunnerProduct:
     bottom_recess_mm: float
     bottom_clearance_mm: float
     minimum_rear_notch_mm: float
+    minimum_rear_notch_height_mm: float
     hook_bore_mm: tuple[float, float]
     hook_bore_inset_from_side_mm: float
+    hook_bore_height_above_notch_mm: float
     hook_bore_height_from_bottom_mm: float
     minimum_top_clearance_mm: float
     opening_height_deduction_mm: float
     front_setback_mm: float
     mounting_line_mm: float
-    required_rear_fixing_stations_mm: tuple[float, ...]
+    required_fixing_stations_mm: tuple[float, ...]
     installation_screw_product_id: str
     installation_screw_sku: str
     installation_screws_per_runner: int
     installation_screw_diameter_mm: float
     installation_screw_length_mm: float
+    installation_pilot_diameter_mm: float
+    installation_pilot_depth_mm: float
+    installation_drive: str
+    required_tool_skus: tuple[str, ...]
     static_rating_lb: float
     dynamic_rating_lb: float
     motion: str
@@ -268,10 +277,13 @@ HAFELE_CONFIRMAT_7X50 = AssemblyFastenerProduct(
     countersink_diameter_mm=10.0,
     drive="PZ3",
     source_url=(
-        "https://www.hafele.com/INTERSHOP/static/WFS/Haefele-COM-Site/"
-        "-Haefele-COM/en_US/opentext/assets/com/Hafele_Serbia_catalog.pdf"
+        "https://www.hafele.com/us/en/product/countersunk-connector-confirmat-"
+        "countersunk-head-for-drill-hole-5-mm-pz3/P-00861434/"
     ),
     source_date="2026",
+    tooling_sku="001.22.485",
+    tooling_source_url="https://files.hafele.co.uk/catalogfiles/www/105-61.pdf",
+    verified_panel_setting_mm=16.0,
 )
 
 GRK_CABINET_8X1_1_4 = AssemblyFastenerProduct(
@@ -328,19 +340,27 @@ BLUM_MOVENTO_763_5330S = DrawerRunnerProduct(
     bottom_recess_mm=13.0,
     bottom_clearance_mm=16.0,
     minimum_rear_notch_mm=50.0,
+    minimum_rear_notch_height_mm=13.0,
     hook_bore_mm=(6.0, 10.0),
     hook_bore_inset_from_side_mm=7.0,
-    hook_bore_height_from_bottom_mm=11.0,
+    hook_bore_height_above_notch_mm=11.0,
+    hook_bore_height_from_bottom_mm=24.0,
     minimum_top_clearance_mm=7.0,
     opening_height_deduction_mm=23.0,
     front_setback_mm=3.0,
-    mounting_line_mm=37.0,
-    required_rear_fixing_stations_mm=(261.0, 357.0),
+    mounting_line_mm=38.0,
+    required_fixing_stations_mm=(10.0, 32.0, 37.0, 261.0, 357.0),
     installation_screw_product_id="blum_606n_no6x5_8@2026.1",
     installation_screw_sku="606N",
-    installation_screws_per_runner=2,
+    installation_screws_per_runner=5,
     installation_screw_diameter_mm=0.1380 * 25.4,
     installation_screw_length_mm=0.625 * 25.4,
+    installation_pilot_diameter_mm=2.5,
+    # Blum specifies Ø2.5 for 606N but does not publish a cabinet-side pilot
+    # depth in the cited schedule. Zero means deliberately unspecified.
+    installation_pilot_depth_mm=0.0,
+    installation_drive="#2 Phillips",
+    required_tool_skus=("T65.9000", "DB-2.5mm", "DB-6mm"),
     static_rating_lb=125.0,
     dynamic_rating_lb=110.0,
     motion="blumotion_soft_close",
@@ -426,8 +446,7 @@ HAFELE_VOGUE_224_BLACK = DrawerPullProduct(
     mounting_screw_length_mm=26.0,
     mounting_screw_quantity_per_pull=2,
     mounting_screw_source_url=(
-        "https://www.hafele.com/INTERSHOP/static/WFS/Haefele-COM-Site/"
-        "-Haefele-COM/en_US/opentext/assets/com/Hafele_Serbia_catalog.pdf"
+        "https://www.hafele.com/us/en/search/?query=022.35.261"
     ),
     source_url="https://www.hafele.com/us/en/product/handle-zinc/15501623/",
     source_date="2025-10-22",

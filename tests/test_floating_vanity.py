@@ -264,6 +264,12 @@ def test_all_vanity_artifact_steps_use_the_closed_evidence_vocabulary(tmp_path):
     assert "certified" not in {
         step.evidence for step in steps
     }
+    assert all(item.quantity_unit and item.procurement_note
+               for item in project.artifacts.hardware_schedule)
+    anchors = next(item for item in project.artifacts.hardware_schedule
+                   if item.kind == "wall_hung_structural_anchor_system")
+    assert anchors.quantity_unit == "screw"
+    assert anchors.procurement_note == f"{anchors.quantity} individual screws"
 
 
 def test_vanity_manifest_is_deterministic_and_names_pack(tmp_path):
@@ -271,4 +277,5 @@ def test_vanity_manifest_is_deterministic_and_names_pack(tmp_path):
     second = _compile(_raw(), tmp_path)
 
     assert first.manifest_json() == second.manifest_json()
-    assert first.manifest()["packs"] == {"vanity.frameless": "1.0.0"}
+    assert first.manifest()["packs"] == {"vanity.frameless": "1.1.0"}
+    assert first.artifacts.schema == "detailgen/vanity-artifacts/v2"

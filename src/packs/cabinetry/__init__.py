@@ -5,6 +5,7 @@ from __future__ import annotations
 from ...spec import compile_spec
 from ..project import PackedProject, ProjectSchemaError
 from .artifacts import build_artifacts
+from .double_vanity import DoubleSinkVanityPack
 from .drawer_base import build_drawer_base_model
 from .lowering import lower_model
 from .model import build_model
@@ -23,7 +24,7 @@ from .vanity import FramelessVanityPack
 class FramelessCabinetryPack:
     pack_id = "cabinetry.frameless"
     major_version = 1
-    version = "1.0.0"
+    version = "1.1.0"
     section_keys = ("site", "cabinetry")
 
     def parse(self, doc) -> CabinetrySection:
@@ -71,5 +72,6 @@ class FramelessCabinetryPack:
 
 
 __all__ = [
-    "CabinetrySection", "FramelessCabinetryPack", "FramelessVanityPack"
+    "CabinetrySection", "DoubleSinkVanityPack", "FramelessCabinetryPack",
+    "FramelessVanityPack",
 ]

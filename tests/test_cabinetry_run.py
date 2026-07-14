@@ -101,8 +101,35 @@ def test_real_two_cabinet_run_compiles_to_one_base_detail(tmp_path):
     assert sequence[2].parts
     connector_ids = set(sequence[1].parts)
     assert connector_ids <= {part.part_id for part in project.model.parts}
+    connector_labels = {
+        component.reader_name
+        for component in project.lowered_doc.components
+        if component.id in connector_ids
+    }
+    assert connector_labels == {
+        f"Cabinet connector — B30 to B30R — position {index}"
+        for index in range(1, 5)
+    }
     overlaps = {
         (item.a, item.b) for item in project.lowered_doc.validation.expected_overlaps
     }
     assert all(sum(1 for a, _ in overlaps if a == connector_id) == 2
                for connector_id in connector_ids)
+    connector_line = next(
+        item for item in project.artifacts.hardware_schedule
+        if item.kind == "cabinet_to_cabinet_connection"
+    )
+    assert connector_line.quantity_unit == "screw"
+    assert connector_line.procurement_note == "4 individual screws"
+
+
+def test_connector_reader_label_is_unambiguous_when_ids_contain_to():
+    from detailgen.packs.cabinetry.labels import reader_name_for_role
+
+    left = "base_to_sink"
+    right = "linen_to_wall"
+    role = f"case_connector_{len(left)}_{left}_{right}_3"
+
+    assert reader_name_for_role(role) == (
+        "Cabinet connector — base_to_sink to linen_to_wall — position 3"
+    )

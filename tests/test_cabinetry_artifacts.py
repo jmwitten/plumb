@@ -86,7 +86,7 @@ def test_hardware_schedule_uses_pinned_blum_and_grk_products():
 
 
 def test_joinery_instructions_pin_count_spacing_pilot_and_countersink():
-    _, _, artifacts = _built()
+    model, _, artifacts = _built()
     text = " ".join(
         step.instruction.lower() for step in artifacts.fabrication_steps
         + artifacts.assembly_steps
@@ -101,8 +101,18 @@ def test_joinery_instructions_pin_count_spacing_pilot_and_countersink():
         "6 grk #8 x 1-1/4",
         "titebond original",
         "6 mil",
+        "front-rail y 85.725 mm",
+        "rear-rail y 564.650 mm",
+        "pilot diameter/depth, installation torque, or connection capacity",
     ):
         assert phrase in text
+    toe_row = next(item for item in model.machining
+                   if item.kind == "toe_attachment_station")
+    expected_x = ", ".join(
+        f"{toe_row.location_mm[0] + toe_row.pitch_mm * index:.3f} mm"
+        for index in range(toe_row.count)
+    )
+    assert expected_x.lower() in text
 
 
 def test_canonical_machining_schedule_contains_every_model_feature():
@@ -115,7 +125,10 @@ def test_canonical_machining_schedule_contains_every_model_feature():
     grooves = [item for item in artifacts.machining_schedule
                if item.kind == "captured_back_groove"]
     assert len(grooves) == 4
-    assert all(item.coordinate_system == "part_local_xy_from_cut_list_origin"
+    assert all(item.coordinate_system == (
+        "named face; origin=cut-list lower-left; +X=cut-list length; "
+        "+Y=cut-list width; no implicit mirror"
+    )
                for item in grooves)
 
 
@@ -180,7 +193,7 @@ def test_artifact_manifest_is_canonical_and_json_serializable():
 
     assert encoded_a == encoded_b
     payload = json.loads(encoded_a)
-    assert payload["schema"] == "detailgen/cabinetry-artifacts/v1"
+    assert payload["schema"] == "detailgen/cabinetry-artifacts/v2"
     # Artifacts built from pack rules alone cannot claim release until the
     # ordinary base-geometry sweep also runs through PackedProject.
     assert payload["release_ready"] is False

@@ -6,9 +6,14 @@ import dataclasses
 import json
 from dataclasses import dataclass
 
+from ...core.units import IN
 from .evidence import EVIDENCE_LEVELS
 from .model import CabinetModel, MachiningFeature
-from .validation import CabinetReport
+from .validation import (
+    CabinetReport,
+    anchor_embedment_facts,
+    toe_attachment_facts,
+)
 
 
 @dataclass(frozen=True)
@@ -33,6 +38,9 @@ class EdgeBandItem:
     length_mm: float
     material: str
     source_rule: str
+    thickness_mm: float = 0.0
+    product_id: str = ""
+    cut_size_basis: str = ""
 
 
 @dataclass(frozen=True)
@@ -44,6 +52,10 @@ class HardwareItem:
     source_url: str
     evidence: str
     related_parts: tuple[str, ...]
+    quantity_unit: str = "piece"
+    procurement_note: str = ""
+    procedure_url: str = ""
+    procedure_label: str = ""
 
 
 @dataclass(frozen=True)
@@ -77,9 +89,62 @@ class CabinetArtifacts:
     fabrication_steps: tuple[WorkStep, ...]
     assembly_steps: tuple[WorkStep, ...]
     installation_steps: tuple[WorkStep, ...]
+    fabrication_ready: bool = False
+    installation_use_ready: bool = False
+    release_scope: str = "unified"
+    release_contract: str = "unified"
 
     def to_dict(self) -> dict:
-        return dataclasses.asdict(self)
+        payload = dataclasses.asdict(self)
+        # Procedure metadata is additive v2 detail. Preserve the established
+        # artifact bytes for product lines that have no typed procedure link.
+        for item in payload["hardware_schedule"]:
+            if not item["procedure_url"] and not item["procedure_label"]:
+                item.pop("procedure_url")
+                item.pop("procedure_label")
+        # The split gate is additive.  Products using the established unified
+        # release contract retain byte-identical artifact payloads.
+        if payload["release_scope"] == "unified":
+            payload.pop("fabrication_ready")
+            payload.pop("installation_use_ready")
+            payload.pop("release_scope")
+            payload.pop("release_contract")
+        return payload
+
+
+def _toe_attachment_schedule_instruction(model) -> str:
+    _rows, _product, _penetration, valid = toe_attachment_facts(model)
+    if not valid:
+        return (
+            "STOP — the toe-attachment model or two-row station schedule is "
+            "invalid. Do not drill or attach the carcass to the platform until "
+            "the required validation finding passes."
+        )
+    rows = tuple(sorted(
+        (item for item in model.machining
+         if item.kind == "toe_attachment_station"),
+        key=lambda item: item.receiving_part_id,
+    ))
+    if len(rows) != 2:  # defensive mirror of toe_attachment_facts
+        raise AssertionError("valid toe attachment must contain exactly two rows")
+    x_stations = tuple(
+        rows[0].location_mm[0] + rows[0].pitch_mm * index
+        for index in range(rows[0].count)
+    )
+    y_by_receiver = {
+        row.receiving_part_id.rsplit(".", 1)[-1]: row.location_mm[1]
+        for row in rows
+    }
+    return (
+        "Mark the six bottom-to-toe screw centers from the cabinet-bottom "
+        "front-left origin: X "
+        + ", ".join(f"{value:.3f} mm" for value in x_stations)
+        + f" on both rows; front-rail Y {y_by_receiver['toe_front']:.3f} mm "
+        f"and rear-rail Y {y_by_receiver['toe_rear']:.3f} mm. These are "
+        "layout centers for the scheduled #8 x 1-1/4 in screws. The selected "
+        "adapter does not establish a pilot diameter/depth, installation "
+        "torque, or connection capacity; do not invent those values."
+    )
 
 
 def _edge_length(part, edge: str) -> float:
@@ -96,6 +161,34 @@ def _edge_length(part, edge: str) -> float:
     raise ValueError(f"unknown edge-band edge {edge!r} on {part.part_id}")
 
 
+def _preband_cut_dimensions(part, thickness_mm: float) -> tuple[float, float]:
+    """Return raw blank dimensions for finished-size modeled panels."""
+
+    length = part.length_mm - thickness_mm * sum(
+        edge in {"left", "right"} for edge in part.edge_bands
+    )
+    width = part.width_mm - thickness_mm * sum(
+        edge in {"top", "bottom", "front", "back"}
+        for edge in part.edge_bands
+    )
+    if length <= 0 or width <= 0:
+        raise ValueError(
+            f"edge band consumes the raw blank for {part.part_id}: "
+            f"{length:g} x {width:g} mm"
+        )
+    return length, width
+
+
+def _human_list(values: tuple[str, ...]) -> str:
+    if not values:
+        return ""
+    if len(values) == 1:
+        return values[0]
+    if len(values) == 2:
+        return f"{values[0]} and {values[1]}"
+    return ", ".join(values[:-1]) + f", and {values[-1]}"
+
+
 def _hardware_source(model: CabinetModel, product_id: str) -> str:
     if product_id == model.hinge.product_id:
         return model.hinge.source_url
@@ -104,9 +197,96 @@ def _hardware_source(model: CabinetModel, product_id: str) -> str:
     return "frameless_plywood_shop_v1@1.0.0"
 
 
+def _hardware_quantity_contract(kind: str, quantity: int) -> tuple[str, str]:
+    """Translate numeric hardware counts into an unambiguous buying meaning."""
+
+    if kind in {"drawer_runner_pair", "drawer_locking_device_pair"}:
+        return "handed piece", f"{quantity} handed pieces = 1 left/right pair"
+    if kind in {
+        "drawer_runner_installation_screw", "drawer_locking_device_screw",
+        "drawer_pull_mounting_screw", "applied_front_fastener_system",
+        "drawer_box_joinery_fastener", "carcass_confirmat_system",
+        "toe_base_attachment_system", "wall_anchor_system",
+        "cabinet_to_cabinet_connection", "wall_hung_structural_anchor_system",
+    }:
+        return "screw", f"{quantity} individual screws"
+    if kind == "drawer_lateral_stabilizer":
+        return "complete set", "1 complete stabilizer set per drawer"
+    if kind == "drawer_pull":
+        return "pull", "1 pull per drawer"
+    if kind == "concealed_hinge_system":
+        return "hinge", f"{quantity} complete hinges"
+    if kind == "adjustable_shelf_support_system":
+        return "support", f"{quantity} individual shelf supports"
+    if kind == "wood_adhesive":
+        return "container", "shop supply; quantity is one procurement line"
+    return "piece", f"{quantity} individual pieces"
+
+
+def _hardware_item(
+    system,
+    *,
+    source_url: str,
+    procedure_url: str = "",
+    procedure_label: str = "",
+) -> HardwareItem:
+    unit, note = _hardware_quantity_contract(system.kind, system.quantity)
+    return HardwareItem(
+        system_id=system.system_id,
+        kind=system.kind,
+        product_id=system.product_id,
+        quantity=system.quantity,
+        source_url=source_url,
+        evidence=system.evidence,
+        related_parts=system.related_parts,
+        quantity_unit=unit,
+        procurement_note=note,
+        procedure_url=procedure_url,
+        procedure_label=procedure_label,
+    )
+
+
+def _drawer_hardware_procedure(model, system) -> tuple[str, str]:
+    """Keep product evidence and controlling procedures as separate fields."""
+
+    runner = model.drawer_bank.runner
+    locking = model.drawer_bank.locking_device
+    stabilizer = model.drawer_bank.stabilizer
+    if system.kind == "drawer_runner_pair":
+        return (
+            runner.source_url,
+            "Blum MOVENTO guide — pages 9–10 (adjustment, insertion, and "
+            "removal), pages 11–15 (drawer preparation and runner mounting), "
+            "and page 41 (T65.1600.01 template)",
+        )
+    if system.kind == "drawer_runner_installation_screw":
+        return (
+            runner.source_url,
+            "Blum MOVENTO guide — pages 14–15 (runner stations and 606N fixing)",
+        )
+    if system.kind == "drawer_locking_device_pair":
+        return (
+            locking.source_url,
+            "Blum MOVENTO guide — pages 11 and 32, plus page 41 "
+            "(locking-device template)",
+        )
+    if system.kind == "drawer_locking_device_screw":
+        return (
+            locking.source_url,
+            "Blum MOVENTO guide — page 11 (two-hole, 75° locking-device "
+            "installation) and page 41 (T65.1600.01 template)",
+        )
+    if system.kind == "drawer_lateral_stabilizer":
+        return (
+            stabilizer.source_url,
+            "Blum lateral-stabilizer installation — steps 1–9, pages 1–2",
+        )
+    return "", ""
+
+
 def build_artifacts(model: CabinetModel, report: CabinetReport) -> CabinetArtifacts:
     if hasattr(model, "drawer_bank"):
-        return _build_drawer_artifacts(model)
+        return _build_drawer_artifacts(model, report)
 
     cabinet = model.section.cabinets[0]
     fabricated = sorted(
@@ -123,8 +303,12 @@ def build_artifacts(model: CabinetModel, report: CabinetReport) -> CabinetArtifa
             role=part.role,
             description=part.name,
             quantity=1,
-            length_mm=part.length_mm,
-            width_mm=part.width_mm,
+            length_mm=_preband_cut_dimensions(
+                part, model.profile.edge_band_thickness_mm
+            )[0],
+            width_mm=_preband_cut_dimensions(
+                part, model.profile.edge_band_thickness_mm
+            )[1],
             thickness_mm=part.thickness_mm,
             material=("prefinished plywood" if part.role != "captured_back"
                       else "1/4-inch plywood back"),
@@ -139,22 +323,22 @@ def build_artifacts(model: CabinetModel, report: CabinetReport) -> CabinetArtifa
             edge=edge,
             operation="band",
             length_mm=_edge_length(part, edge),
-            material="applied matching edge band",
+            material=(f"declared {model.profile.edge_band_thickness_mm:g} mm "
+                      "matching edge band; final SKU pending"),
             source_rule="surface_policy.exposed_or_semi_exposed_edge",
+            thickness_mm=model.profile.edge_band_thickness_mm,
+            product_id=model.profile.edge_band_product_id,
+            cut_size_basis=("model geometry is finished size; cut list is the "
+                            "pre-band blank"),
         )
         for part in fabricated
         for edge in part.edge_bands
     )
     hardware_schedule = tuple(
-        HardwareItem(
-            system_id=system.system_id,
-            kind=system.kind,
-            product_id=system.product_id,
-            quantity=system.quantity,
+        _hardware_item(
+            system,
             source_url=(system.source_url
                         or _hardware_source(model, system.product_id)),
-            evidence=system.evidence,
-            related_parts=system.related_parts,
         )
         for system in sorted(model.hardware, key=lambda item: item.system_id)
     )
@@ -198,9 +382,18 @@ def build_artifacts(model: CabinetModel, report: CabinetReport) -> CabinetArtifa
             "manufacturer_rated",
         ),
         WorkStep(
+            37, "fab.toe_attachment",
+            _toe_attachment_schedule_instruction(model),
+            (model.part("bottom").part_id,),
+            "calculated",
+        ),
+        WorkStep(
             40, "fab.edge_band",
-            "Apply, trim, and inspect every edge band in the derived edge-band "
-            "map; do not band concealed captured-back groove edges.",
+            f"Apply the declared {model.profile.edge_band_thickness_mm:g} mm "
+            "finished-thickness edge band in the derived map, then trim and "
+            "inspect. "
+            "Cut-list dimensions are pre-band blanks; finished model geometry "
+            "includes the band. Do not band concealed captured-back groove edges.",
             tuple(item.part_id for item in edge_banding),
         ),
         WorkStep(
@@ -237,28 +430,34 @@ def build_artifacts(model: CabinetModel, report: CabinetReport) -> CabinetArtifa
         WorkStep(
             20, "assembly.carcass",
             "Apply Titebond Original at the manufacturer's minimum 6 mil spread "
-            "to the approved carcass joints, seat the bottom and stretchers "
-            "between the ends within the 4-6 minute open time, and install the "
-            "remaining scheduled 7 x 50 mm Confirmat screws without over-driving.",
+            "to the approved joints. Lay the left side flat, attach the bottom "
+            "and front stretcher within the 4-6 minute open time, and leave the "
+            "right side and rear stretcher off so the captured-back grooves remain "
+            "open. Install only the corresponding 7 x 50 mm Confirmats.",
             tuple(f"cabinetry.{cabinet.cabinet_id}.{role}" for role in
                   ("left_end", "right_end", "bottom", "front_stretcher",
                    "rear_stretcher")),
         ),
         WorkStep(
             30, "assembly.back",
-            "Slide and seat the captured back in its grooves, install the anchor "
-            "strip against the back, then pull the carcass square by matching diagonals.",
+            "Slide the captured back into the open left-side and bottom grooves; "
+            "seat the rear stretcher groove over its top edge, add the right side "
+            "to close the fourth groove, and drive the remaining Confirmats. "
+            "Install the anchor strip, then pull the carcass square by matching "
+            "diagonals before cure.",
             (f"cabinetry.{cabinet.cabinet_id}.captured_back",
              f"cabinetry.{cabinet.cabinet_id}.anchor_strip"),
         ),
         WorkStep(
             35, "assembly.toe_attach",
-            "Seat the carcass on the shop-leveled toe base and drive 6 GRK #8 x "
-            "1-1/4 in Low Profile Cabinet screws through the bottom into the front "
-            "and rear toe rails at the generated three-per-rail spacing.",
+            "Seat the carcass on the shop-leveled toe base, align the two marked "
+            "rows over the front/rear rail centerlines, and drive 6 GRK #8 x "
+            "1-1/4 in Low Profile Cabinet screws at the scheduled centers "
+            "through the bottom "
+            "without entering the captured-back groove.",
             tuple(f"cabinetry.{cabinet.cabinet_id}.{role}" for role in
                   ("bottom", "toe_front", "toe_rear")),
-            "manufacturer_rated",
+            "calculated",
         ),
         WorkStep(
             40, "assembly.hardware_dry_fit",
@@ -276,7 +475,19 @@ def build_artifacts(model: CabinetModel, report: CabinetReport) -> CabinetArtifa
             panel_ids,
         ),
     )
-    studs = ", ".join(model.anchor_stud_ids)
+    studs = ", ".join(model.anchor_stud_ids) or "no modeled stud targets"
+    if model.anchor_stud_ids:
+        wall_anchor_instruction = (
+            "Drive the scheduled GRK cabinet screws through the anchor strip "
+            f"into field-verified studs {studs}; do not substitute a drywall "
+            "anchor or rely on gypsum board for structural attachment."
+        )
+    else:
+        wall_anchor_instruction = (
+            "STOP — no modeled structural anchor targets are available. Do not "
+            "drill or install the cabinet until at least two field-verified stud "
+            "targets and their matching modeled screw paths have been released."
+        )
     installation_steps = (
         WorkStep(
             10, "install.release_gate",
@@ -314,9 +525,7 @@ def build_artifacts(model: CabinetModel, report: CabinetReport) -> CabinetArtifa
         ),
         WorkStep(
             60, "install.wall_anchor",
-            f"Drive the scheduled GRK cabinet screws through the anchor strip "
-            f"into field-verified studs {studs}; do not substitute a drywall anchor "
-            "or rely on gypsum board for structural attachment.",
+            wall_anchor_instruction,
             tuple(f"cabinetry.{cabinet.cabinet_id}.wall_anchor_{stud_id}"
                   for stud_id in model.anchor_stud_ids),
             "manufacturer_rated",
@@ -353,9 +562,9 @@ def build_artifacts(model: CabinetModel, report: CabinetReport) -> CabinetArtifa
         ),
     )
     return CabinetArtifacts(
-        schema="detailgen/cabinetry-artifacts/v1",
+        schema="detailgen/cabinetry-artifacts/v2",
         project=model.project_name,
-        pack="cabinetry.frameless@1.0.0",
+        pack="cabinetry.frameless@1.1.0",
         profile=model.profile.profile_id,
         mode=model.mode,
         # This builder has only the pack report. The project wrapper flips the
@@ -374,8 +583,19 @@ def build_artifacts(model: CabinetModel, report: CabinetReport) -> CabinetArtifa
     )
 
 
-def _build_drawer_artifacts(model) -> CabinetArtifacts:
+def _build_drawer_artifacts(model, report: CabinetReport) -> CabinetArtifacts:
     """Build shop-to-commissioning data for a conventional drawer shipment."""
+
+    def material_label(part) -> str:
+        if abs(part.thickness_mm - model.profile.carcass_thickness_mm) <= 1e-6:
+            return (
+                f"{model.section.material_evidence.product} — declared primary "
+                "panel; finish face/grain to verify"
+            )
+        return (
+            f"{part.thickness_mm:g} mm plywood — product/finish not pinned; "
+            "verify actual thickness and TSCA record"
+        )
 
     fabricated = tuple(sorted(
         (part for part in model.parts if part.component_type == "plywood_panel"),
@@ -386,11 +606,14 @@ def _build_drawer_artifacts(model) -> CabinetArtifacts:
         role=part.role,
         description=part.name,
         quantity=1,
-        length_mm=part.length_mm,
-        width_mm=part.width_mm,
+        length_mm=_preband_cut_dimensions(
+            part, model.profile.edge_band_thickness_mm
+        )[0],
+        width_mm=_preband_cut_dimensions(
+            part, model.profile.edge_band_thickness_mm
+        )[1],
         thickness_mm=part.thickness_mm,
-        material=("1/4-inch plywood back" if part.role == "captured_back"
-                  else "prefinished plywood"),
+        material=material_label(part),
         surface_class=part.surface_class,
         source_rule=model.source_map[part.part_id].rule,
     ) for part in fabricated)
@@ -399,40 +622,41 @@ def _build_drawer_artifacts(model) -> CabinetArtifacts:
         edge=edge,
         operation="band",
         length_mm=_edge_length(part, edge),
-        material="applied matching edge band",
+        material=(f"declared {model.profile.edge_band_thickness_mm:g} mm "
+                  "matching edge band; final SKU pending"),
         source_rule="surface_policy.exposed_or_semi_exposed_edge",
+        thickness_mm=model.profile.edge_band_thickness_mm,
+        product_id=model.profile.edge_band_product_id,
+        cut_size_basis=("model geometry is finished size; cut list is the "
+                        "pre-band blank"),
     ) for part in fabricated for edge in part.edge_bands)
-    hardware_schedule = tuple(HardwareItem(
-        system_id=system.system_id,
-        kind=system.kind,
-        product_id=system.product_id,
-        quantity=system.quantity,
-        source_url=system.source_url,
-        evidence=system.evidence,
-        related_parts=system.related_parts,
-    ) for system in sorted(model.hardware, key=lambda item: item.system_id))
+    hardware_schedule = tuple(
+        _hardware_item(
+            system,
+            source_url=system.source_url,
+            procedure_url=_drawer_hardware_procedure(model, system)[0],
+            procedure_label=_drawer_hardware_procedure(model, system)[1],
+        )
+        for system in sorted(model.hardware, key=lambda item: item.system_id)
+    )
     cabinet = model.section.cabinets[0]
     runner = model.drawer_bank.runner
     stabilizer = model.drawer_bank.stabilizer
     pull = model.drawer_bank.pull_product
     locking = model.drawer_bank.locking_device
+    drawer_joinery = model.drawer_bank.joinery_fastener
     linkage_rod_cut_mm = (
         model.drawer_bank.opening_width_mm
         - stabilizer.linkage_rod_cut_deduction_mm
     )
-    fixing_stations = " and ".join(
-        f"{station:g} mm" for station in runner.required_rear_fixing_stations_mm
-    )
+    fixing_stations = _human_list(tuple(
+        f"{station:g} mm" for station in runner.required_fixing_stations_mm
+    ))
     locking_skus = f"{locking.left_sku} / {locking.right_sku}"
     minimum_pull_engagement_mm = (
         pull.thread_diameter_mm * pull.minimum_thread_engagement_factor
     )
     box_bottom_thickness = model.part("drawer_top_bottom").thickness_mm
-    contents_loads = sorted({cell.contents_load_lb for cell in model.drawer_bank.cells})
-    contents_load_text = (
-        f"{contents_loads[0]:g} lb" if len(contents_loads) == 1
-        else "/".join(f"{value:g} lb" for value in contents_loads)
-    )
     panel_ids = tuple(item.part_id for item in cut_list)
     drawer_ids = tuple(part.part_id for part in model.drawer_bank.parts)
     drawer_box_ids = tuple(
@@ -481,6 +705,12 @@ def _build_drawer_artifacts(model) -> CabinetArtifacts:
             machining_by_kind.get("captured_back_groove", ()),
         ),
         WorkStep(
+            35, "fab.toe_attachment",
+            _toe_attachment_schedule_instruction(model),
+            machining_by_kind.get("toe_attachment_station", ()),
+            "calculated",
+        ),
+        WorkStep(
             40, "fab.drawer_bottom_grooves",
             "Machine the twelve captured drawer-bottom grooves at the generated "
             f"{runner.bottom_recess_mm:g} mm bottom recess; use a common setup "
@@ -489,11 +719,32 @@ def _build_drawer_artifacts(model) -> CabinetArtifacts:
             "manufacturer_rated",
         ),
         WorkStep(
+            45, "fab.drawer_box_joinery",
+            f"Step-drill the two generated positions at each front and rear "
+            f"corner of every drawer side for the pinned "
+            f"{drawer_joinery.diameter_mm:g} x "
+            f"{drawer_joinery.length_mm:g} mm Confirmat: "
+            f"{drawer_joinery.blind_pilot_diameter_mm:g} mm receiving-edge "
+            f"pilot, {drawer_joinery.through_shank_diameter_mm:g} mm side-panel "
+            f"shank hole, and {drawer_joinery.countersink_diameter_mm:g} mm "
+            f"countersink using Häfele {drawer_joinery.tooling_sku}. Keep every "
+            "lower fastener above the captured-bottom groove and use the named "
+            "receiving part in the machining schedule. First drill a clamped "
+            "same-lot plywood coupon at the 16 mm setting; reject splitting, "
+            "delamination, or void breakout.",
+            machining_by_kind.get("drawer_box_confirmat_step_drill", ()),
+            "manufacturer_rated",
+        ),
+        WorkStep(
             50, "fab.drawer_rear_preparation",
-            f"Cut both {runner.minimum_rear_notch_mm:g} mm minimum rear notches "
-            f"and drill both {runner.hook_bore_mm[0]:g} x "
-            f"{runner.hook_bore_mm[1]:g} mm rear hook bores on each drawer "
-            "exactly from the MOVENTO schedule.",
+            f"On each drawer back—not the side panels—cut the two "
+            f"{runner.minimum_rear_notch_mm:g} x "
+            f"{runner.minimum_rear_notch_height_mm:g} mm lower-corner notches. "
+            f"From the same back-face lower-left datum drill the two Ø"
+            f"{runner.hook_bore_mm[0]:g} x {runner.hook_bore_mm[1]:g} mm hook "
+            f"bores at {runner.hook_bore_inset_from_side_mm:g} mm from each "
+            f"side and {runner.hook_bore_height_from_bottom_mm:g} mm above the "
+            "back bottom, exactly from the MOVENTO schedule.",
             tuple(dict.fromkeys(
                 machining_by_kind.get("runner_rear_notch", ())
                 + machining_by_kind.get("runner_hook_bore", ())
@@ -514,15 +765,18 @@ def _build_drawer_artifacts(model) -> CabinetArtifacts:
         WorkStep(
             60, "fab.runner_fixing",
             f"Lay out and mark the generated left/right runner fixing stations "
-            f"at the "
-            f"{runner.front_setback_mm:g} mm setback and the required "
-            f"{fixing_stations} rear stations; keep each drawer elevation tied "
+            f"at the required {fixing_stations} coordinates measured directly "
+            f"from the cabinet front; do not add the "
+            f"{runner.front_setback_mm:g} mm runner-front setback to those hole "
+            f"coordinates. Keep each drawer elevation tied "
             f"to its top/middle/bottom identity. Mark these for "
             f"{runner.installation_screw_sku} installation screws at "
-            f"{runner.installation_screws_per_runner} screws per runner. Do not "
-            "drill an unsourced clearance or pilot diameter; use attachment "
-            "preparation appropriate to the verified cabinet material and the "
-            "screw manufacturer's instructions.",
+            f"{runner.installation_screws_per_runner} screws per runner; drill "
+            f"the source-backed Ø{runner.installation_pilot_diameter_mm:g} mm "
+            f"pilots and drive with {runner.installation_drive}. The cited Blum "
+            "schedule does not specify a cabinet-side pilot depth, so pilot "
+            "depth is not claimed; set it for the selected side material and "
+            "screw without breaking through.",
             model.drawer_bank.mounting_part_ids,
             "manufacturer_rated",
         ),
@@ -562,9 +816,13 @@ def _build_drawer_artifacts(model) -> CabinetArtifacts:
         ),
         WorkStep(
             100, "fab.edge_band",
-            "Apply, trim, and inspect every generated edge band, including all "
+            f"Apply the declared {model.profile.edge_band_thickness_mm:g} mm "
+            "finished-thickness band to every generated edge, then trim and "
+            "inspect, including all "
             "four edges of the three fronts and the exposed top edges of each "
-            "drawer box; do not band captured-groove edges.",
+            "drawer box. Cut-list length/width values are the pre-band blanks; "
+            "finished model dimensions and reveals include the band. Do not band "
+            "captured-groove edges.",
             tuple(dict.fromkeys(item.part_id for item in edge_banding)),
         ),
     )
@@ -580,33 +838,43 @@ def _build_drawer_artifacts(model) -> CabinetArtifacts:
         ),
         WorkStep(
             20, "assembly.carcass",
-            "Apply the pinned wood adhesive within its open time, seat the bottom "
-            "and stretchers between the ends, and install the scheduled Confirmat "
-            "screws without over-driving.",
+            "Apply the pinned wood adhesive within its open time. Lay the left side "
+            "flat, attach the bottom and front stretcher, and leave the right side "
+            "and rear stretcher off so the captured-back grooves remain open. "
+            "Drive only the corresponding Confirmats without over-driving.",
             tuple(f"cabinetry.{cabinet.cabinet_id}.{role}" for role in
                   ("left_end", "right_end", "bottom", "front_stretcher",
                    "rear_stretcher")),
         ),
         WorkStep(
             30, "assembly.back",
-            "Seat the captured back in all four grooves, install the anchor strip, "
-            "and pull the carcass square by matching diagonals before cure.",
+            "Slide the captured back into the open left-side and bottom grooves; "
+            "seat the rear stretcher groove over its top edge, add the right side "
+            "to close the fourth groove, and drive the remaining Confirmats. "
+            "Install the anchor strip and pull the carcass square by matching "
+            "diagonals before cure.",
             tuple(f"cabinetry.{cabinet.cabinet_id}.{role}" for role in
                   ("captured_back", "anchor_strip")),
         ),
         WorkStep(
             40, "assembly.toe_attach",
-            "Seat the carcass on the shop-leveled toe platform and drive the six "
-            "scheduled toe-attachment screws into the front and rear rails.",
+            "Seat the carcass on the shop-leveled toe platform, align the two "
+            "marked rows over the front/rear rail centerlines, and drive the six "
+            "scheduled toe-attachment screws through the bottom without entering "
+            "the captured-back groove.",
             tuple(f"cabinetry.{cabinet.cabinet_id}.{role}" for role in
                   ("bottom", "toe_front", "toe_rear")),
-            "manufacturer_rated",
+            "calculated",
         ),
         WorkStep(
             50, "assembly.drawer_boxes",
-            f"Assemble each labeled box square: sides around front/back, "
+            f"Assemble each labeled box square with two Confirmat screws at "
+            f"each of four corners—never a glue-only butt joint: sides around "
+            f"front/back, "
             f"{box_bottom_thickness:g} mm bottom fully seated in all four "
-            "grooves, equal diagonals, and rear notches/hooks unobstructed.",
+            "grooves, equal diagonals, and rear notches/hooks unobstructed. "
+            "Use no glue-strength credit on prefinished faces; the drawer-box "
+            "capacity remains explicitly unqualified.",
             drawer_box_ids,
         ),
         WorkStep(
@@ -667,19 +935,54 @@ def _build_drawer_artifacts(model) -> CabinetArtifacts:
         ),
         WorkStep(
             110, "ship.empty_carcass",
-            "Ship the empty carcass and toe platform without drawer weight, brace "
-            "the opening against racking, protect exposed edges, and transport the "
-            "three labeled drawers separately.",
+            "Brace and ship the empty carcass and its attached toe platform as "
+            "one unit without drawer weight; protect exposed edges and transport "
+            "the three labeled drawers separately. The six bottom-to-toe screws "
+            "remain the final modeled attachment and are not removed for shipping.",
             case_ids,
         ),
     )
 
-    studs = ", ".join(model.anchor_stud_ids)
+    studs = ", ".join(model.anchor_stud_ids) or "no modeled stud targets"
+    anchor_layout = ", ".join(
+        f"{stud_id} at "
+        f"{model.part(f'wall_anchor_{stud_id}').at_mm[0] - model.shell.x0_mm:.2f} mm"
+        for stud_id in model.anchor_stud_ids
+    )
+    if model.anchor_stud_ids:
+        first_anchor = model.part(f"wall_anchor_{model.anchor_stud_ids[0]}")
+        anchor_height_text = (
+            f"all {first_anchor.at_mm[2] - model.shell.base_z_mm:.2f} mm "
+            "above the verified high-floor datum"
+        )
+    else:
+        anchor_height_text = (
+            "no anchor elevation can be released until at least two targets "
+            "are modeled"
+        )
+    anchor_stack_mm, anchor_embedment_mm, _, _ = anchor_embedment_facts(model)
+    if model.anchor_stud_ids:
+        wall_anchor_instruction = (
+            "Drive the scheduled GRK cabinet screws through the anchor strip "
+            f"into field-verified studs {studs}. From the cabinet's left edge, "
+            f"the modeled centers are {anchor_layout}, and {anchor_height_text}. "
+            f"The {anchor_stack_mm / IN:.3f} in modeled stack leaves "
+            f"{anchor_embedment_mm / IN:.3f} in stud embedment. Do not "
+            "substitute drywall anchors or rely on gypsum board. The selected "
+            "adapter provides no installation torque, so no installation torque "
+            "is claimed here; follow the current GRK instructions and seat the "
+            "washer head without crushing the anchor strip."
+        )
+    else:
+        wall_anchor_instruction = (
+            "STOP — no modeled structural anchor targets are available. Do not "
+            "drill or install the cabinet until at least two field-verified stud "
+            "targets and their matching modeled screw paths have been released."
+        )
     installation_steps = (
         WorkStep(
             10, "install.release_gate",
-            "Confirm the pack release report has no required FAIL or UNKNOWN "
-            "finding and retain the explicit whole-cabinet capacity limitation.",
+            report.installation_use_policy.release_gate_instruction(released=False),
             evidence="unknown",
         ),
         WorkStep(
@@ -697,7 +1000,8 @@ def _build_drawer_artifacts(model) -> CabinetArtifacts:
         ),
         WorkStep(
             40, "install.toe_base",
-            f"Set the independent toe platform at the "
+            "After the installation/use hold is cleared, set the empty cabinet "
+            "and its attached toe platform together at the "
             f"{cabinet.toe_kick_setback_mm:g} mm setback, shim only "
             "over stable bearing points, and make it level and square to the datum.",
             tuple(f"cabinetry.{cabinet.cabinet_id}.{role}" for role in
@@ -705,16 +1009,15 @@ def _build_drawer_artifacts(model) -> CabinetArtifacts:
         ),
         WorkStep(
             50, "install.set_empty_carcass",
-            "Set and level the empty carcass on the toe platform; check plumb and "
-            "equal diagonals and shim the wall interface without twisting the box.",
+            "With the attached toe platform bearing on its final shims, verify the "
+            "empty carcass is level and plumb with equal diagonals; shim the wall "
+            "interface without twisting the box and recheck all six toe screws.",
             tuple(f"cabinetry.{cabinet.cabinet_id}.{role}" for role in
                   ("left_end", "right_end", "bottom", "anchor_strip")),
         ),
         WorkStep(
             60, "install.wall_anchor",
-            f"Drive the scheduled GRK cabinet screws through the anchor strip "
-            f"into field-verified studs {studs}; do not substitute drywall "
-            "anchors or rely on gypsum board.",
+            wall_anchor_instruction,
             tuple(f"cabinetry.{cabinet.cabinet_id}.wall_anchor_{stud_id}"
                   for stud_id in model.anchor_stud_ids),
             "manufacturer_rated",
@@ -729,31 +1032,34 @@ def _build_drawer_artifacts(model) -> CabinetArtifacts:
         ),
         WorkStep(
             90, "install.commission_drawers",
-            "Commission and record acceptance: cycle every drawer through full "
+            "Unloaded fit check only: cycle every drawer through full "
             f"extension; verify quiet BLUMOTION closure, "
             f"{model.drawer_bank.front_edge_reveal_mm:.2f} mm perimeter reveals, "
             f"{model.drawer_bank.front_gap_mm:.2f} mm inter-front gaps, flush faces, "
-            "and no racking; repeat operation "
-            f"with the declared {contents_load_text} clothing load; inspect "
+            "and no racking; inspect "
             "runner, locking-device, "
             "stabilizer, pull, front, toe, and wall-anchor fastener seating; enter "
-            "measurements and corrections in the signed acceptance record.",
+            "measurements and corrections in the signed fit record. Do not load "
+            "or use the cabinet; the declared clothing load is a design input, "
+            "not an authorized commissioning load, until the whole load path is "
+            "qualified.",
             drawer_ids + case_ids,
             "unknown",
         ),
         WorkStep(
             100, "install.countertop",
-            "After drawer commissioning and acceptance, verify the front and "
-            "rear stretchers provide the declared countertop support plane, then "
-            "follow the countertop supplier's attachment and overhang requirements.",
+            "HOLD countertop attachment until the project-specific load-path "
+            "review and countertop selection are complete. Then verify the front "
+            "and rear stretchers provide the declared support plane and follow the "
+            "countertop supplier's attachment and overhang requirements.",
             tuple(f"cabinetry.{cabinet.cabinet_id}.{role}" for role in
                   ("front_stretcher", "rear_stretcher")),
         ),
     )
     return CabinetArtifacts(
-        schema="detailgen/cabinetry-artifacts/v1",
+        schema="detailgen/cabinetry-artifacts/v2",
         project=model.project_name,
-        pack="cabinetry.frameless@1.0.0",
+        pack="cabinetry.frameless@1.1.0",
         profile=model.profile.profile_id,
         mode=model.mode,
         release_ready=False,
@@ -766,6 +1072,8 @@ def _build_drawer_artifacts(model) -> CabinetArtifacts:
         fabrication_steps=fabrication_steps,
         assembly_steps=assembly_steps,
         installation_steps=installation_steps,
+        release_scope="none",
+        release_contract="split",
     )
 
 

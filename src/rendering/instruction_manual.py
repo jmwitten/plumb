@@ -31,6 +31,7 @@ _ICON_GEOMETRY = {
     "driver": '<path d="M3 7h11v7H3zM14 9h5v3h-5M6 14l-2 7h5l1-7M19 10.5h3"/>',
     "countersink": '<path d="M4 5h16M7 5l5 8 5-8M12 13v8M9 18l3 3 3-3"/>',
     "fit": '<path d="M4 8h16M4 16h16M7 5L4 8l3 3M17 13l3 3-3 3"/>',
+    "ppe": '<path d="M3 12h5l2-3h4l2 3h5M4 12v4h5l2-3h2l2 3h5v-4M12 9V4M9 6l3-2 3 2"/>',
 }
 
 
@@ -55,6 +56,18 @@ def _rows(rows, class_name: str) -> str:
     return f'<ul class="{class_name}">{body}</ul>'
 
 
+def _procedure_links(rows) -> str:
+    if not rows:
+        return ""
+    body = "".join(
+        f'<li data-link-kind="{_e(row.kind)}"><a href="{_e(row.href)}" '
+        f'rel="noreferrer">{_e(row.label)}</a></li>'
+        for row in rows)
+    return (
+        '<aside class="procedure-links"><h3>Manufacturer procedures and product references</h3>'
+        f'<ul>{body}</ul></aside>')
+
+
 def _callout_rows(detail, panel) -> str:
     labels = part_labels(detail.assembly.parts)
     candidates = panel.arrival_part_ids or panel.focus_part_ids
@@ -71,6 +84,94 @@ def _callout_rows(detail, panel) -> str:
             f'<li><span class="callout-number">{number}</span>'
             f'<span>{_e(count_text + family)}</span></li>')
     return '<ol class="picture-key">' + "".join(rows) + "</ol>"
+
+
+def _diagram_primitive_svg(primitive, marker_id: str) -> str:
+    coords = primitive.coords
+    role = _e(primitive.role)
+    label = _e(primitive.label)
+    title = f"<title>{label}</title>" if label else ""
+    fact_ref = _e(primitive.fact_ref)
+    common = (
+        f'class="diagram-mark role-{role}" aria-label="{label}" '
+        f'data-fact-ref="{fact_ref}"')
+    if primitive.kind == "rect" and len(coords) == 4:
+        x, y, width, height = coords
+        return (
+            f'<rect {common} x="{x:g}" y="{y:g}" width="{width:g}" '
+            f'height="{height:g}">{title}</rect>')
+    if primitive.kind == "line" and len(coords) == 4:
+        x1, y1, x2, y2 = coords
+        return (
+            f'<line {common} x1="{x1:g}" y1="{y1:g}" x2="{x2:g}" '
+            f'y2="{y2:g}">{title}</line>')
+    if primitive.kind == "arrow" and len(coords) == 4:
+        x1, y1, x2, y2 = coords
+        return (
+            f'<line {common} x1="{x1:g}" y1="{y1:g}" x2="{x2:g}" '
+            f'y2="{y2:g}" marker-end="url(#{marker_id})">{title}</line>')
+    if primitive.kind == "circle" and len(coords) == 3:
+        cx, cy, radius = coords
+        return (
+            f'<circle {common} cx="{cx:g}" cy="{cy:g}" r="{radius:g}">'
+            f'{title}</circle>')
+    if primitive.kind == "text" and len(coords) == 2 and primitive.label:
+        x, y = coords
+        return (
+            f'<text {common} x="{x:g}" y="{y:g}" text-anchor="middle">'
+            f'{label}</text>')
+    raise InstructionPresentationError(
+        f"unsupported diagram primitive {primitive.kind!r} with "
+        f"{len(coords)} coordinates")
+
+
+def _diagram_coordinate_key(diagram) -> tuple[str, str]:
+    """Expose every exact plotted coordinate without relying on hover."""
+
+    points = tuple(
+        primitive for primitive in diagram.primitives
+        if primitive.model_point_mm
+    )
+    if not points:
+        return "", ""
+    key_id = "coordinate-key-" + "".join(
+        char if char.isalnum() else "-" for char in diagram.diagram_id)
+    rows = "".join(
+        '<li class="diagram-coordinate-row" '
+        f'data-fact-ref="{_e(primitive.fact_ref)}" '
+        f'data-model-point="{_e(",".join(f"{value:g}" for value in primitive.model_point_mm))}">'
+        f'{_e(primitive.label)}</li>'
+        for primitive in points
+    )
+    return (
+        f'<section class="diagram-coordinate-key" id="{_e(key_id)}">'
+        f'<h4>Compiled coordinate key — {len(points)} marks</h4>'
+        f'<ol>{rows}</ol></section>',
+        key_id,
+    )
+
+
+def _diagram_html(diagram) -> str:
+    marker_id = "arrow-" + "".join(
+        char if char.isalnum() else "-" for char in diagram.diagram_id)
+    marks = "".join(
+        _diagram_primitive_svg(primitive, marker_id)
+        for primitive in diagram.primitives)
+    coordinate_key, key_id = _diagram_coordinate_key(diagram)
+    described_by = f' aria-describedby="{_e(key_id)}"' if key_id else ""
+    return f"""
+      <figure class="operation-diagram" data-diagram-id="{_e(diagram.diagram_id)}">
+        <h3>{_e(diagram.title)}</h3>
+        <svg viewBox="0 0 100 100" role="img"
+             aria-label="{_e(diagram.title)}"{described_by}
+             preserveAspectRatio="xMidYMid meet">
+          <defs><marker id="{_e(marker_id)}" markerWidth="7" markerHeight="7"
+            refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z"/></marker></defs>
+          {marks}
+        </svg>
+        <figcaption>{_e(diagram.caption)}</figcaption>
+        {coordinate_key}
+      </figure>"""
 
 
 def _panel_html(detail, panel, image_path: Path, total: int) -> str:
@@ -96,6 +197,13 @@ def _panel_html(detail, panel, image_path: Path, total: int) -> str:
     process_badge = (
         f'<span class="badge hard-stop">{_e(panel.process_kind)} gate</span>'
         if panel.process_kind else "")
+    diagrams = ""
+    if panel.diagrams:
+        diagrams = (
+            '<section class="operation-diagrams" aria-label="Operation diagrams">'
+            + "".join(_diagram_html(diagram) for diagram in panel.diagrams)
+            + "</section>"
+        )
 
     return f"""
     <article class="instruction-panel" id="panel-{panel.index}"
@@ -122,10 +230,12 @@ def _panel_html(detail, panel, image_path: Path, total: int) -> str:
           <i class="swatch ghost"></i>prior work ghosted</span>
         </figcaption>
       </figure>
+      {diagrams}
       <section class="directions">
         <h3>Do this</h3>
         <ol>{instructions}</ol>
       </section>
+      {_procedure_links(panel.procedure_links)}
       {stations}
       {why}
       {honesty}
@@ -163,6 +273,8 @@ def render_instruction_manual_html(detail, manual, image_paths: dict[int, Path])
     total = len(manual.panels)
     declared_constraints = len(
         detail._connection_checks.event_graph.constraints)
+    lede = manual.lede.replace(
+        "{declared_constraints}", str(declared_constraints))
     navigation_script = """
 <script>
 (() => {
@@ -197,6 +309,7 @@ def render_instruction_manual_html(detail, manual, image_paths: dict[int, Path])
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
 <title>{_e(manual.title)}</title>
 <style>
 :root{{--ink:#111827;--muted:#475569;--line:#cbd5e1;--paper:#fff;--blue:#2563eb;
@@ -209,6 +322,7 @@ body{{margin:0;background:#e2e8f0;color:var(--ink);font:16px/1.48 -apple-system,
 h1{{font-size:clamp(2rem,5vw,3.25rem);line-height:1.05;margin:.35rem 0 .75rem}} h2,h3{{line-height:1.2}}
 .lede{{max-width:760px;color:#dbeafe;font-size:1.07rem}} .manual-link{{display:inline-block;margin-top:.8rem;padding:.65rem .85rem;border:1px solid #93c5fd;border-radius:7px;color:white;font-weight:750;text-decoration:none}}
 .generated{{margin-top:1rem;font-size:.78rem;color:#94a3b8}}
+.safety-banner{{margin:0;padding:.7rem 1.2rem;background:#fff7ed;border-bottom:2px solid #c2410c;color:#7c2d12;font-weight:750}}
 .overview{{padding:1.4rem 2.25rem;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1.1fr 1fr;gap:1.25rem}}
 .overview h2{{margin:.1rem 0 .55rem;font-size:1.05rem}} .inventory{{margin:.2rem 0;list-style:none;padding:0}} .inventory li{{display:flex;align-items:center;gap:.5rem;margin:.4rem 0}}
 .panel-index{{display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem}}
@@ -229,22 +343,51 @@ figcaption{{display:flex;align-items:center;flex-wrap:wrap;gap:.6rem 1rem;paddin
 .picture-key{{display:flex;gap:.8rem 1.15rem;flex-wrap:wrap;list-style:none;margin:0;padding:0}} .picture-key li{{display:flex;align-items:center;gap:.35rem}}
 .callout-number{{display:inline-grid;place-items:center;width:1.55rem;height:1.55rem;border:2px solid var(--ink);border-radius:50%;background:white;font-weight:850}}
 .render-legend{{margin-left:auto;color:var(--muted)}} .swatch{{display:inline-block;width:.85rem;height:.85rem;border:1px solid #64748b;margin:0 .3rem 0 .8rem;vertical-align:-.1rem}} .current{{background:#9a7b4f}} .ghost{{background:#e5e7eb}}
+.operation-diagrams{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.8rem;margin:1rem 1.2rem}}
+.operation-diagram{{margin:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:white}}
+.operation-diagram h3{{margin:0;padding:.55rem .75rem;background:#f8fafc;border-bottom:1px solid var(--line);font-size:.95rem}}
+.operation-diagram svg{{display:block;width:100%;height:auto;max-height:390px;background:#fff}}
+.operation-diagram figcaption{{display:block;padding:.55rem .75rem;border-top:1px solid var(--line);font-size:.84rem;color:var(--muted)}}
+.diagram-coordinate-key{{padding:.55rem .75rem;border-top:1px solid var(--line);background:#eff6ff}}
+.diagram-coordinate-key h4{{margin:.1rem 0 .35rem;font-size:.82rem}}
+.diagram-coordinate-key ol{{margin:.2rem 0;padding-left:1.25rem;columns:2;column-gap:1.5rem}}
+.diagram-coordinate-row{{break-inside:avoid;margin:.2rem 0;font-size:.75rem}}
+.diagram-mark{{vector-effect:non-scaling-stroke;stroke:var(--ink);stroke-width:1.25;fill:#d6c09a}}
+.diagram-mark.role-prior{{fill:#e5e7eb;stroke:#64748b}}
+.diagram-mark.role-hold{{fill:#fff;stroke:#dc2626;stroke-dasharray:4 3}}
+.diagram-mark.role-receiver{{fill:#dbeafe;stroke:var(--blue);stroke-width:1.6}}
+.diagram-mark.role-groove{{fill:none;stroke:#dc2626;stroke-width:2.5}}
+.diagram-mark.role-motion{{fill:none;stroke:var(--blue);stroke-width:2}}
+.diagram-mark.role-fastener{{fill:var(--ink);stroke:#fff;stroke-width:.8}}
+.diagram-mark.role-station{{fill:var(--blue);stroke:#fff;stroke-width:.8}}
+.diagram-mark.role-hardware{{fill:#f59e0b;stroke:#78350f;stroke-width:1.1}}
+text.diagram-mark{{fill:var(--ink);stroke:none;font-size:3px;font-weight:800}}
+text.diagram-mark.role-hold{{fill:#dc2626;stroke:none;font-size:3px}}
+.diagram-mark.role-datum{{fill:var(--ink);stroke:none;font-size:3px;font-weight:800}}
+.operation-diagram marker path{{fill:var(--blue)}}
 .directions,.station-box,.why,.honesty{{margin:1rem 1.2rem;padding:.8rem 1rem;border-radius:7px}} .directions{{padding:0 1rem}} .directions h3,.station-box h3,.why h3,.honesty h3{{font-size:1rem;margin:.1rem 0 .45rem}}
 .directions li,.station-box li{{margin:.35rem 0}} .station-box{{background:var(--blue-soft);border-left:5px solid var(--blue)}}
 .station-box ul{{margin:.2rem 0;padding-left:1.2rem}} .why{{background:var(--amber-soft);border-left:5px solid #d97706}} .why p,.honesty p{{margin:.3rem 0}}
+.procedure-links{{margin:1rem 1.2rem;padding:.7rem 1rem;border:1px solid #93c5fd;border-radius:7px;background:var(--blue-soft)}}
+.procedure-links h3{{font-size:1rem;margin:.1rem 0 .35rem}} .procedure-links ul{{margin:.2rem 0;padding-left:1.2rem}}
+.procedure-links a{{color:var(--blue);font-weight:750;overflow-wrap:anywhere}}
 .honesty{{background:var(--red-soft);border-left:5px solid #dc2626}} .panel-nav{{display:flex;justify-content:space-between;padding:.8rem 1.2rem;border-top:1px solid var(--line)}}
 .panel-nav a{{color:var(--blue);font-weight:750;text-decoration:none}} .panel-nav .disabled{{visibility:hidden}}
 .manual-foot{{padding:1.5rem 2.25rem 2rem;border-top:1px solid var(--line);background:#f8fafc}} .manual-foot a{{color:var(--blue);font-weight:800}}
-@media(max-width:700px){{.overview{{grid-template-columns:1fr}}.instruction-panel{{margin:1rem .5rem}}.manual-head,.overview{{padding-left:1rem;padding-right:1rem}}.panel-index{{grid-template-columns:repeat(3,1fr)}}.render-legend{{width:100%;margin-left:0}}.panel-controls{{grid-template-columns:auto 1fr auto}}#panel-progress{{grid-column:1/-1;text-align:center}}}}
+@media(max-width:700px){{.overview{{grid-template-columns:1fr}}.instruction-panel{{margin:1rem .5rem}}.manual-head,.overview{{padding-left:1rem;padding-right:1rem}}.panel-index{{grid-template-columns:repeat(3,1fr)}}.render-legend{{width:100%;margin-left:0}}.panel-controls{{grid-template-columns:auto 1fr auto}}#panel-progress{{grid-column:1/-1;text-align:center}}.diagram-coordinate-key ol{{columns:1}}}}
 @media print{{body{{background:white}}.manual{{box-shadow:none;max-width:none}}.instruction-panel{{break-inside:avoid;margin:1rem 0}}.panel-nav{{display:none}}.panel-controls{{display:none}}.manual-link{{color:white}}}}
 </style></head><body><main class="manual">
 <header class="manual-head"><div class="eyebrow">Model-backed · illustrated assembly</div>
 <h1>{_e(manual.title)}</h1>
-<p class="lede">This is one machine-checked build order from the validated construction process graph. A blocking modeled failure blocks release. Its phase boundary includes {_e(declared_constraints)} authored process-order constraints; their declared reasons are printed where they apply. Deterministic tie-breaks between otherwise independent events are a readable build choice, not proof that no other valid order exists. Colored parts are current work, pale gray parts are already present, and blue marks share the compiled measurements used by the placement text. Prototype only: structural capacity, stability, sliding resistance, insertion travel, and hot-drink use remain unproved; do not treat it as load-bearing or use it for hot liquids until a representative build is validated.</p>
+<p class="lede">{_e(lede)}</p>
 <a class="manual-link" href="{_e(manual.technical_href)}">Open the technical build document &rarr;</a>
-<div class="generated">Generated {_e(generated)} · Offline/self-contained</div></header>
+<div class="generated">Generated {_e(generated)} · Core document embedded; external manufacturer links require internet</div></header>
+<aside class="safety-banner" role="note"><strong>Safety throughout.</strong>
+Wear safety glasses for cutting, drilling, routing, and powered fastening; use
+hearing protection, effective dust extraction, and material-appropriate
+respiratory protection. Follow every tool and product manufacturer instruction.</aside>
 <section class="overview"><div><h2>Parts and required consumables</h2>{inventory}</div>
-<div><h2>Five-panel build path</h2><nav class="panel-index">{nav}</nav></div></section>
+<div><h2>{total}-panel build path</h2><nav class="panel-index">{nav}</nav></div></section>
 <nav class="panel-controls" aria-label="Assembly panel navigator">
   <button id="panel-prev" type="button">&larr;</button>
   <input id="panel-slider" type="range" min="1" max="{total}" value="1" step="1"

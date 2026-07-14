@@ -23,6 +23,7 @@ DRAWER_RULES = {
     "cabinetry.drawer.inside_depth",
     "cabinetry.drawer.box_height",
     "cabinetry.drawer.bottom_geometry",
+    "cabinetry.drawer.box_joinery_completeness",
     "cabinetry.drawer.rear_preparation",
     "cabinetry.drawer.runner_fixing",
     "cabinetry.drawer.locking_devices",
@@ -94,13 +95,55 @@ def test_valid_db40_has_complete_drawer_rules_without_door_checks_or_overclaim()
     rules = {finding.rule for finding in report.findings}
 
     assert DRAWER_RULES <= rules
+    assert report.by_rule(
+        "cabinetry.joinery.toe_attachment_machining"
+    ).verdict == "PASS"
     assert all(report.by_rule(rule).verdict == "PASS" for rule in DRAWER_RULES)
     assert not {"cabinetry.hardware.hinge_fit", "cabinetry.shelf.deflection"} & rules
     capacity = report.by_rule("cabinetry.performance.whole_cabinet_capacity")
     assert capacity.verdict == "UNKNOWN"
     assert capacity.severity == "advisory"
     assert capacity.evidence_level == "unknown"
-    assert report.release_ready
+    assert report.fabrication_ready
+    assert not report.installation_use_ready
+    assert not report.release_ready
+
+
+def test_no_in_span_anchor_target_blocks_without_crashing_artifact_generation():
+    from detailgen.packs.cabinetry.artifacts import build_artifacts
+
+    model = replace(_model(), anchor_stud_ids=())
+    report = validate_model(model)
+    artifacts = build_artifacts(model, report)
+
+    assert report.by_rule("cabinetry.install.studs").verdict == "FAIL"
+    anchor = report.by_rule("cabinetry.install.anchor_embedment")
+    assert anchor.verdict == "FAIL"
+    assert anchor.affected
+    capacity = report.by_rule("cabinetry.performance.anchor_capacity")
+    assert "not represented" in capacity.message
+    assert capacity.affected
+    assert not report.release_ready
+    instruction = next(
+        step.instruction for step in artifacts.installation_steps
+        if step.step_id == "install.wall_anchor"
+    )
+    assert "STOP" in instruction
+    assert "do not drill or install" in instruction.lower()
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"at_mm": (812.8, 1055.625, 806.45)},
+        {"length_mm": 1.0},
+    ],
+)
+def test_modeled_wall_anchor_must_match_the_declared_path(changes):
+    model = _replace_part(_model(), "wall_anchor_stud_32", **changes)
+    _assert_required_fail(
+        model, "cabinetry.install.anchor_embedment", "modeled wall-anchor"
+    )
 
 
 def test_front_height_mutation_breaks_exact_reveal_equation():
@@ -156,6 +199,128 @@ def test_bottom_recess_or_clearance_mutation_fails():
     )
 
 
+def test_missing_drawer_corner_fastener_row_fails_joinery_completeness():
+    model = _model()
+    missing = next(
+        row for row in model.drawer_bank.machining
+        if row.kind == "drawer_box_confirmat_step_drill"
+    )
+    model = _replace_machining(
+        model, tuple(row for row in model.machining if row is not missing)
+    )
+    _assert_required_fail(
+        model, "cabinetry.drawer.box_joinery_completeness", "machining"
+    )
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"depth_mm": 0.0},
+        {"location_mm": (-999.0, -999.0)},
+        {"face": "inside"},
+        {"coordinate_system": ""},
+    ],
+)
+def test_impossible_drawer_corner_machining_fails(changes):
+    model = _model()
+    old = next(row for row in model.machining
+               if row.kind == "drawer_box_confirmat_step_drill")
+    bad = replace(old, **changes)
+    model = _replace_machining(
+        model, tuple(bad if item == old else item for item in model.machining)
+    )
+    _assert_required_fail(
+        model, "cabinetry.drawer.box_joinery_completeness", "machining"
+    )
+
+
+def test_missing_toe_attachment_station_blocks_drawer_cabinet_release():
+    model = _model()
+    removed = next(item for item in model.machining
+                   if item.kind == "toe_attachment_station")
+    model = _replace_machining(
+        model, tuple(item for item in model.machining if item != removed)
+    )
+    _assert_required_fail(
+        model, "cabinetry.joinery.toe_attachment_machining", "station"
+    )
+
+
+@pytest.mark.parametrize(
+    "role,changes",
+    [
+        ("toe_rear", {"at_mm": (1109.6, 574.175, 500.0)}),
+        ("toe_rear", {"rotate": ()}),
+        ("toe_left", {"at_mm": (1109.6, 595.25, 500.0)}),
+    ],
+)
+def test_toe_attachment_requires_full_three_dimensional_platform_contact(
+        role, changes):
+    model = _replace_part(_model(), role, **changes)
+    _assert_required_fail(
+        model, "cabinetry.joinery.toe_attachment_machining", "station"
+    )
+
+
+@pytest.mark.parametrize("mutation", ["retarget", "groove_intersection"])
+def test_invalid_toe_schedule_emits_a_stop_instruction_not_unsafe_coordinates(
+        mutation):
+    from detailgen.packs.cabinetry.artifacts import build_artifacts
+
+    model = _model()
+    old = next(item for item in model.machining
+               if item.kind == "toe_attachment_station"
+               and item.receiving_part_id.endswith("toe_rear"))
+    if mutation == "retarget":
+        bad = replace(
+            old,
+            receiving_part_id=model.part("wall_stud_stud_32").part_id,
+        )
+    else:
+        bad = replace(old, location_mm=(old.location_mm[0], 580.025))
+    model = _replace_machining(
+        model, tuple(bad if item == old else item for item in model.machining)
+    )
+    report = validate_model(model)
+    artifacts = build_artifacts(model, report)
+    instruction = next(
+        step.instruction for step in artifacts.fabrication_steps
+        if step.step_id == "fab.toe_attachment"
+    )
+
+    assert report.by_rule(
+        "cabinetry.joinery.toe_attachment_machining"
+    ).verdict == "FAIL"
+    assert instruction.startswith("STOP")
+    assert "580.025" not in instruction
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"location_mm": (9999.0, 9999.0)},
+        {"width_mm": 0.0},
+        {"depth_mm": 0.0},
+        {"face": "outside"},
+        {"coordinate_system": ""},
+        {"count": 3, "pitch_mm": 9999.0, "pitch_axis": "X"},
+        {"source": "unsourced"},
+    ],
+)
+def test_impossible_drawer_bottom_groove_fails(changes):
+    model = _model()
+    old = next(row for row in model.machining
+               if row.kind == "drawer_bottom_groove")
+    bad = replace(old, **changes)
+    model = _replace_machining(
+        model, tuple(bad if item == old else item for item in model.machining)
+    )
+    _assert_required_fail(
+        model, "cabinetry.drawer.bottom_geometry", "groove"
+    )
+
+
 @pytest.mark.parametrize("kind", ["runner_rear_notch", "runner_hook_bore"])
 def test_missing_rear_notch_or_hook_bore_fails(kind):
     model = _model()
@@ -196,6 +361,29 @@ def test_rear_hook_bores_must_be_paired_on_each_drawer_back():
     )
 
 
+@pytest.mark.parametrize(
+    "kind,changes",
+    [
+        ("runner_rear_notch", {"face": "front"}),
+        ("runner_rear_notch", {"source": "unsourced"}),
+        ("runner_rear_notch", {"coordinate_system": ""}),
+        ("runner_hook_bore", {"face": "front"}),
+        ("runner_hook_bore", {"source": "unsourced"}),
+        ("runner_hook_bore", {"coordinate_system": ""}),
+    ],
+)
+def test_rear_preparation_requires_the_pinned_face_source_and_datum(kind, changes):
+    model = _model()
+    old = next(item for item in model.machining if item.kind == kind)
+    bad = replace(old, **changes)
+    model = _replace_machining(
+        model, tuple(bad if item == old else item for item in model.machining)
+    )
+    _assert_required_fail(
+        model, "cabinetry.drawer.rear_preparation", "Rear preparation"
+    )
+
+
 def test_missing_locking_device_template_bore_fails():
     model = _model()
     removed = next(item for item in model.machining
@@ -221,6 +409,19 @@ def test_wrong_locking_device_template_angle_fails():
     )
 
 
+def test_locking_device_bore_must_remain_one_template_point():
+    model = _model()
+    old = next(item for item in model.machining
+               if item.kind == "locking_device_bore")
+    unsafe = replace(old, count=3, pitch_mm=9999.0, pitch_axis="X")
+    model = _replace_machining(
+        model, tuple(unsafe if item == old else item for item in model.machining)
+    )
+    _assert_required_fail(
+        model, "cabinetry.drawer.locking_devices", "template pilot bores"
+    )
+
+
 def test_missing_required_runner_fixing_station_fails():
     model = _model()
     removed = next(item for item in model.machining
@@ -229,7 +430,7 @@ def test_missing_required_runner_fixing_station_fails():
         model, tuple(item for item in model.machining if item != removed)
     )
     _assert_required_fail(
-        model, "cabinetry.drawer.runner_fixing", "11 of 12"
+        model, "cabinetry.drawer.runner_fixing", "29 of 30"
     )
 
 
@@ -247,11 +448,43 @@ def test_runner_fixing_station_cannot_invent_an_oversized_pilot_bore():
     model = _replace_machining(
         model, tuple(unsafe if item == old else item for item in model.machining)
     )
-
     _assert_required_fail(
         model,
         "cabinetry.drawer.runner_fixing",
-        "station-only marks with no unsourced pilot diameter/depth",
+        "Preparation is Ø2.5 mm with #2 Phillips drive; the adapter does "
+        "not claim a cabinet-side pilot depth",
+    )
+
+
+def test_runner_fixing_station_must_remain_one_pinned_point():
+    model = _model()
+    old = next(item for item in model.machining
+               if item.kind == "runner_fixing_station")
+    unsafe = replace(old, count=3, pitch_mm=9999.0, pitch_axis="X")
+    model = _replace_machining(
+        model, tuple(unsafe if item == old else item for item in model.machining)
+    )
+    _assert_required_fail(
+        model, "cabinetry.drawer.runner_fixing", "30 of 30"
+    )
+
+
+def test_runner_fixing_stations_cannot_collapse_to_duplicate_positions():
+    model = _model()
+    fixing = tuple(item for item in model.machining
+                   if item.kind == "runner_fixing_station")
+    collapsed = {
+        item.feature_id: replace(
+            item, location_mm=(10.0, item.location_mm[1])
+        )
+        for item in fixing
+    }
+    model = _replace_machining(
+        model,
+        tuple(collapsed.get(item.feature_id, item) for item in model.machining),
+    )
+    _assert_required_fail(
+        model, "cabinetry.drawer.runner_fixing", "30 of 30"
     )
 
 
@@ -301,6 +534,19 @@ def test_missing_wide_drawer_stabilizer_fails():
     )
 
 
+@pytest.mark.parametrize(
+    "kind", ["stabilizer_gear_rack_cut", "stabilizer_linkage_rod_cut"]
+)
+def test_missing_stabilizer_stock_cut_blocks_release(kind):
+    model = _model()
+    model = _replace_machining(
+        model, tuple(item for item in model.machining if item.kind != kind)
+    )
+    _assert_required_fail(
+        model, "cabinetry.drawer.lateral_stabilizer", kind
+    )
+
+
 def test_stabilizer_can_never_credit_runner_capacity():
     model = _model()
     stabilizer = replace(model.drawer_bank.stabilizer, capacity_increase_lb=25.0)
@@ -327,7 +573,7 @@ def test_missing_moving_hardware_mass_source_blocks_release():
 def test_moving_assembly_plus_contents_over_dynamic_rating_fails():
     model = _model()
     cells = tuple(
-        replace(cell, moving_mass_kg=40.0, rated_moving_load_lb=128.18)
+        replace(cell, moving_mass_kg=40.0, calculated_moving_load_lb=128.18)
         if cell.cell_id == "bottom" else cell
         for cell in model.drawer_bank.cells
     )
@@ -399,6 +645,31 @@ def test_front_attachment_hole_on_decorative_face_fails():
     )
     _assert_required_fail(
         model, "cabinetry.drawer.front_fastener_stack", "applied_front_attachment"
+    )
+
+
+@pytest.mark.parametrize(
+    "kind,changes",
+    [
+        ("pull_bore", {"count": 3, "pitch_mm": 9999.0, "pitch_axis": "X"}),
+        ("pull_bore", {"face": "rear"}),
+        ("pull_bore", {"coordinate_system": ""}),
+        ("applied_front_attachment", {
+            "count": 3, "pitch_mm": 9999.0, "pitch_axis": "X",
+        }),
+        ("applied_front_attachment", {"location_mm": (9999.0, 9999.0)}),
+        ("applied_front_attachment", {"coordinate_system": ""}),
+    ],
+)
+def test_front_machining_requires_one_exact_in_bounds_point(kind, changes):
+    model = _model()
+    old = next(item for item in model.machining if item.kind == kind)
+    unsafe = replace(old, **changes)
+    model = _replace_machining(
+        model, tuple(unsafe if item == old else item for item in model.machining)
+    )
+    _assert_required_fail(
+        model, "cabinetry.drawer.front_fastener_stack", kind
     )
 
 

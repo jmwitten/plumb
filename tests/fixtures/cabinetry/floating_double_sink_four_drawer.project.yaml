@@ -1,0 +1,44 @@
+name: DV72 floating double-sink four-drawer vanity study
+units: in
+packs: [vanity.double_sink@1]
+
+site:
+  wall:
+    id: north_wall
+    type: stud_wall
+    plane:
+      origin: [0, 22, 0]
+      normal: [0, -1, 0]
+    length: 144
+    height: 96
+    finish_thickness: 0.5
+    studs:
+      - {id: stud_16, position: 16, verified: true}
+      - {id: stud_32, position: 32, verified: true}
+      - {id: stud_48, position: 48, verified: true}
+      - {id: stud_64, position: 64, verified: true}
+      - {id: stud_80, position: 80, verified: true}
+      - {id: stud_96, position: 96, verified: true}
+      - {id: stud_112, position: 112, verified: true}
+      - {id: stud_128, position: 128, verified: true}
+  floor:
+    high_point_elevation: 0
+    verified: true
+  environment:
+    building_enclosed: true
+    wet_work_complete: true
+    hvac_operating: true
+    acclimation_hours: 72
+
+double_vanity:
+  mode: study
+  archetype: floating_double_sink_four_drawer@1
+  id: DV72
+  profile: frameless_plywood_shop_v1@1.0.0
+  placement:
+    against: north_wall
+    from_left_datum: 24
+  jurisdiction: nyc_2022
+  sink: kohler_caxton_k20000@2024-06-10
+  faucet: kohler_purist_t14414_4_k410_k@2026.1
+

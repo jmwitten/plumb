@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ...core.units import IN
+from .catalogs import get_assembly_fastener
 from .evidence import EvidenceRecord
 from .model import CabinetModel
 
@@ -32,18 +33,100 @@ class CabinetFinding:
 
 
 @dataclass(frozen=True)
+class InstallationUsePolicy:
+    """One sourced owner-clearance contract projected to every reader surface."""
+
+    policy_id: str
+    blocking_rules: tuple[str, ...]
+    hazard_statement: str
+    clearance_authority: str
+    required_evidence: tuple[str, ...]
+    source_url: str
+    scope_source_url: str
+    scope_note: str
+
+    def reader_notice(self, *, released: bool = False) -> str:
+        evidence = "; ".join(self.required_evidence)
+        if released:
+            return (
+                "Installation/use release: PASS. Preserve the signed, "
+                f"project-specific acceptance covering {evidence}, and follow "
+                "its installation, inspection, loading, and use conditions."
+            )
+        return (
+            f"{self.hazard_statement} INSTALLATION/USE HOLD: only "
+            f"{self.clearance_authority} may clear this hold with signed, "
+            f"project-specific acceptance covering {evidence}. "
+            "Do not load, commission, or put the cabinet into service; do not "
+            "anchor it or attach a countertop until that acceptance exists. "
+            f"{self.scope_note}"
+        )
+
+    def release_gate_instruction(self, *, released: bool = False) -> str:
+        return (
+            "Confirm the fabrication/model gate has no required FAIL or UNKNOWN. "
+            + self.reader_notice(released=released)
+        )
+
+
+@dataclass(frozen=True)
 class CabinetReport:
     mode: str
     findings: tuple[CabinetFinding, ...]
     evidence: tuple[EvidenceRecord, ...]
+    # Some products can be safely fabricated while project-specific structural
+    # work still blocks installation and use. The typed policy is the one source
+    # for blocker ownership, reader wording, clearance authority, and evidence.
+    installation_use_policy: InstallationUsePolicy | None = None
+
+    def __post_init__(self):
+        if self.installation_use_policy is None:
+            return
+        finding_rules = {finding.rule for finding in self.findings}
+        blockers = self.installation_use_policy.blocking_rules
+        if not blockers:
+            raise ValueError("installation/use policy must name blocking rules")
+        if len(blockers) != len(set(blockers)):
+            raise ValueError("installation/use policy has duplicate blocking rules")
+        missing = sorted(set(blockers) - finding_rules)
+        if missing:
+            raise ValueError(
+                "installation/use policy references unknown blocking rules: "
+                f"{missing}"
+            )
+
+    @property
+    def installation_use_blocking_rules(self) -> tuple[str, ...]:
+        return (
+            self.installation_use_policy.blocking_rules
+            if self.installation_use_policy is not None else ()
+        )
 
     @property
     def blocking(self) -> tuple[CabinetFinding, ...]:
         return tuple(finding for finding in self.findings if finding.blocking)
 
     @property
-    def release_ready(self) -> bool:
+    def fabrication_ready(self) -> bool:
         return not self.blocking
+
+    @property
+    def installation_use_blocking(self) -> tuple[CabinetFinding, ...]:
+        rules = set(self.installation_use_blocking_rules)
+        return tuple(
+            finding for finding in self.findings
+            if finding.rule in rules and finding.verdict != "PASS"
+        )
+
+    @property
+    def installation_use_ready(self) -> bool:
+        return self.fabrication_ready and not self.installation_use_blocking
+
+    @property
+    def release_ready(self) -> bool:
+        """Conservative compatibility alias for complete installation/use release."""
+
+        return self.installation_use_ready
 
     def by_rule(self, rule: str) -> CabinetFinding:
         matches = [finding for finding in self.findings if finding.rule == rule]
@@ -71,7 +154,10 @@ class CabinetReport:
             f"{count} {severity} {verdict.lower()}"
             for (severity, verdict), count in sorted(counts.items())
         ]
-        readiness = "ready" if self.release_ready else "blocked"
+        if self.fabrication_ready and not self.installation_use_ready:
+            readiness = "fabrication ready; installation/use held"
+        else:
+            readiness = "ready" if self.release_ready else "blocked"
         return (
             f"Cabinet {self.mode} validation: {readiness}; "
             f"{', '.join(pieces)}. KCMA physical testing: not performed."
@@ -165,15 +251,100 @@ def _stud_facts(model):
     )
 
 
-def _anchor_embedment_facts(model):
-    profile = model.profile
-    stack = (
-        profile.carcass_thickness_mm + profile.back_thickness_mm
-        + profile.back_inset_mm + model.section.site.wall.finish_thickness_mm
+def anchor_embedment_facts(model):
+    """Derive the anchor path from the placed screws and wall geometry.
+
+    The catalog adapter supplies the intended product.  Release truth comes
+    from the modeled screw instances: each must begin at the anchor-strip
+    head plane, align to its declared stud, and retain the catalog geometry.
+    """
+
+    anchor_strip = model.part("anchor_strip")
+    expected_head_plane_y = anchor_strip.at_mm[1] - anchor_strip.thickness_mm
+    stud_front_plane_y = (
+        model.section.site.wall.plane_origin_mm[1]
+        + model.section.site.wall.finish_thickness_mm
     )
-    embedment = model.wall_anchor.length_mm - stack
+    expected_z = anchor_strip.at_mm[2] + anchor_strip.width_mm / 2
+    studs = {
+        stud.stud_id: stud for stud in model.section.site.wall.studs
+    }
+    anchors = []
+    geometry_ok = bool(model.anchor_stud_ids)
+    expected_ids = set()
+    for stud_id in model.anchor_stud_ids:
+        part_id = (
+            f"cabinetry.{model.section.cabinets[0].cabinet_id}."
+            f"wall_anchor_{stud_id}"
+        )
+        expected_ids.add(part_id)
+        try:
+            anchor = model.part(f"wall_anchor_{stud_id}")
+            stud = studs[stud_id]
+        except KeyError:
+            geometry_ok = False
+            continue
+        anchors.append(anchor)
+        expected_x = (
+            model.section.site.wall.plane_origin_mm[0] + stud.position_mm
+        )
+        geometry_ok = geometry_ok and (
+            anchor.part_id == part_id
+            and anchor.component_type == "structural_screw"
+            and anchor.rotate == (("X", 90.0),)
+            and all(abs(actual - expected) <= 1e-6 for actual, expected in zip(
+                anchor.at_mm,
+                (expected_x, expected_head_plane_y, expected_z),
+            ))
+            and abs(anchor.length_mm - model.wall_anchor.length_mm) <= 1e-6
+            and abs(anchor.width_mm - model.wall_anchor.diameter_mm) <= 1e-6
+            and abs(anchor.thickness_mm - model.wall_anchor.diameter_mm) <= 1e-6
+            and abs(anchor.params_dict().get("length", -1)
+                    - model.wall_anchor.length_mm) <= 1e-6
+            and abs(anchor.params_dict().get("diameter", -1)
+                    - model.wall_anchor.diameter_mm) <= 1e-6
+        )
+
+    systems = tuple(
+        system for system in model.hardware
+        if system.kind == "wall_anchor_system"
+    )
+    geometry_ok = geometry_ok and (
+        len(anchors) == len(model.anchor_stud_ids)
+        and len(systems) == 1
+        and systems[0].product_id == model.wall_anchor.product_id
+        and systems[0].quantity == len(model.anchor_stud_ids)
+        and set(systems[0].related_parts) == expected_ids
+    )
+    if anchors:
+        paths = tuple(stud_front_plane_y - anchor.at_mm[1]
+                      for anchor in anchors)
+        stack = max(paths)
+        embedment = min(
+            anchor.length_mm - path
+            for anchor, path in zip(anchors, paths)
+        )
+    else:
+        stack = stud_front_plane_y - expected_head_plane_y
+        embedment = 0.0
     minimum = 1.25 * IN
-    return stack, embedment, minimum, embedment + 1e-9 >= minimum
+    return (
+        stack,
+        embedment,
+        minimum,
+        geometry_ok and embedment + 1e-9 >= minimum,
+    )
+
+
+def _anchor_affected(model) -> tuple[str, ...]:
+    cabinet_id = model.section.cabinets[0].cabinet_id
+    return (
+        tuple(
+            f"cabinetry.{cabinet_id}.wall_anchor_{stud_id}"
+            for stud_id in model.anchor_stud_ids
+        )
+        or (model.part("anchor_strip").part_id,)
+    )
 
 
 def _missing_site_conditions(model) -> list[str]:
@@ -198,11 +369,311 @@ def _countertop_support_ok(model) -> bool:
     }
 
 
+def _expanded_locations_in_bounds(row, part) -> bool:
+    """Check every repeated X/Y feature location against its cut blank."""
+
+    if row.count < 1 or len(row.location_mm) != 2:
+        return False
+    x, y = row.location_mm
+    end_x, end_y = x, y
+    if row.count > 1:
+        if row.pitch_mm <= 0 or row.pitch_axis not in {"X", "Y"}:
+            return False
+        if row.pitch_axis == "X":
+            end_x += row.pitch_mm * (row.count - 1)
+        else:
+            end_y += row.pitch_mm * (row.count - 1)
+    return (
+        -1e-6 <= x <= part.length_mm + 1e-6
+        and -1e-6 <= end_x <= part.length_mm + 1e-6
+        and -1e-6 <= y <= part.width_mm + 1e-6
+        and -1e-6 <= end_y <= part.width_mm + 1e-6
+    )
+
+
+def _shell_joinery_facts(model):
+    """Validate common carcass/toe machining independently of its generator."""
+
+    rows = tuple(row for row in model.machining
+                 if row.kind == "confirmat_step_drill")
+    systems = tuple(system for system in model.hardware
+                    if system.kind == "carcass_confirmat_system")
+    product = get_assembly_fastener(
+        "hafele_confirmat_7x50_264_42_190@2026.1"
+    )
+    part_by_id = {part.part_id: part for part in model.parts}
+    part = model.part
+    carcass_depth = part("bottom").width_mm
+    expected_rows = {}
+    for side_role in ("left_end", "right_end"):
+        side = part(side_role)
+        for receiving_role, count, location, pitch, axis in (
+            ("bottom", 3, (side.thickness_mm / 2, 50.0),
+             (carcass_depth - 100.0) / 2, "Y"),
+            ("front_stretcher", 2,
+             (side.length_mm - side.thickness_mm / 2, 25.0), 50.0, "Y"),
+            ("rear_stretcher", 2,
+             (side.length_mm - side.thickness_mm / 2,
+              carcass_depth - part("rear_stretcher").width_mm + 25.0),
+             50.0, "Y"),
+            ("anchor_strip", 2,
+             (side.length_mm - part("anchor_strip").width_mm + 25.0,
+              carcass_depth - part("captured_back").thickness_mm
+              - side.thickness_mm / 2),
+             50.0, "X"),
+        ):
+            feature_id = f"{side.part_id}.confirmat_{receiving_role}"
+            expected_rows[feature_id] = (
+                side.part_id,
+                part(receiving_role).part_id,
+                count,
+                location,
+                pitch,
+                axis,
+            )
+    for rail_role in ("toe_front", "toe_rear"):
+        rail = part(rail_role)
+        for sleeper_role, x in (
+            ("toe_left", rail.thickness_mm / 2),
+            ("toe_right", rail.length_mm - rail.thickness_mm / 2),
+        ):
+            feature_id = f"{rail.part_id}.confirmat_{sleeper_role}"
+            expected_rows[feature_id] = (
+                rail.part_id,
+                part(sleeper_role).part_id,
+                2,
+                (x, rail.width_mm * 0.3),
+                rail.width_mm * 0.4,
+                "Y",
+            )
+    actual_by_id = {row.feature_id: row for row in rows}
+    expected_related_parts = {
+        part(role).part_id for role in (
+            "left_end", "right_end", "bottom", "front_stretcher",
+            "rear_stretcher", "anchor_strip", "toe_front", "toe_rear",
+            "toe_left", "toe_right",
+        )
+    }
+    valid = (
+        len(systems) == 1
+        and systems[0].product_id == product.product_id
+        and bool(systems[0].source_url)
+        and systems[0].quantity == 26
+        and set(systems[0].related_parts) == expected_related_parts
+        and set(actual_by_id) == set(expected_rows)
+        and sum(row.count for row in rows) == systems[0].quantity
+        and all(
+            (
+                row.part_id,
+                row.receiving_part_id,
+                row.count,
+                row.location_mm,
+                row.pitch_mm,
+                row.pitch_axis,
+            ) == expected_rows[row.feature_id]
+            and row.part_id in part_by_id
+            and row.receiving_part_id in part_by_id
+            and row.receiving_part_id != row.part_id
+            and row.face == "outside"
+            and bool(row.coordinate_system.strip())
+            and _expanded_locations_in_bounds(row, part_by_id[row.part_id])
+            and abs(row.depth_mm - (
+                product.length_mm - part_by_id[row.part_id].thickness_mm
+            )) <= 1e-6
+            and abs(row.diameter_mm - product.blind_pilot_diameter_mm) <= 1e-6
+            and abs(row.width_mm - product.through_shank_diameter_mm) <= 1e-6
+            and abs(row.length_mm - product.countersink_diameter_mm) <= 1e-6
+            and row.source == product.product_id
+            for row in rows
+        )
+    )
+    return rows, product, valid
+
+
+def toe_attachment_facts(model):
+    """Validate the bottom-to-toe schedule and its solid-material path."""
+
+    rows = tuple(row for row in model.machining
+                 if row.kind == "toe_attachment_station")
+    systems = tuple(system for system in model.hardware
+                    if system.kind == "toe_base_attachment_system")
+    product = get_assembly_fastener(
+        "grk_low_profile_cabinet_8x1_1_4_114069@2026.1"
+    )
+    bottom = model.part("bottom")
+    toe_t = model.part("toe_front").thickness_mm
+    groove_rows = tuple(
+        row for row in model.machining
+        if row.kind == "captured_back_groove"
+        and row.part_id == bottom.part_id
+    )
+    if len(groove_rows) == 1:
+        groove = groove_rows[0]
+        groove_front_y = groove.location_mm[1]
+        groove_ok = (
+            abs(groove_front_y + groove.width_mm - bottom.width_mm) <= 1e-6
+        )
+    else:
+        groove = None
+        groove_front_y = bottom.width_mm
+        groove_ok = False
+
+    expected = {}
+    datum = (
+        "cabinet-bottom top face; origin=front-left corner; "
+        "+X=right/cut-list length; +Y=toward wall/cut-list width"
+    )
+    y_by_role = {
+        "toe_front": (
+            model.section.cabinets[0].toe_kick_setback_mm + toe_t / 2
+        ),
+        "toe_rear": groove_front_y - toe_t / 2,
+    }
+    for role in ("toe_front", "toe_rear"):
+        feature_id = f"{bottom.part_id}.toe_attachment_{role}"
+        expected[feature_id] = (
+            model.part(role).part_id,
+            (bottom.length_mm / 4, y_by_role[role]),
+        )
+    actual = {row.feature_id: row for row in rows}
+    penetration = product.length_mm - bottom.thickness_mm
+    path_ok = groove_ok and penetration > 0
+    for role in ("toe_front", "toe_rear"):
+        rail = model.part(role)
+        rail_front_y = rail.at_mm[1] - rail.thickness_mm - bottom.at_mm[1]
+        rail_back_y = rail.at_mm[1] - bottom.at_mm[1]
+        station_y = y_by_role[role]
+        path_ok = path_ok and (
+            station_y - product.diameter_mm / 2 >= rail_front_y - 1e-6
+            and station_y + product.diameter_mm / 2 <= rail_back_y + 1e-6
+            and penetration <= rail.width_mm + 1e-6
+        )
+    path_ok = path_ok and (
+        model.part("toe_rear").at_mm[1] - bottom.at_mm[1]
+        == groove_front_y
+        and all(
+            abs(model.part(role).length_mm - (
+                groove_front_y
+                - model.section.cabinets[0].toe_kick_setback_mm
+                - 2 * toe_t
+            )) <= 1e-6
+            for role in ("toe_left", "toe_right")
+        )
+    )
+    cabinet = model.section.cabinets[0]
+    toe_height = cabinet.toe_kick_height_mm
+    toe_x = bottom.at_mm[0] - toe_t
+    toe_z = bottom.at_mm[2] - toe_height
+    front_back_y = (
+        bottom.at_mm[1] + cabinet.toe_kick_setback_mm + toe_t
+    )
+    rear_back_y = bottom.at_mm[1] + groove_front_y
+    sleeper_length = (
+        groove_front_y - cabinet.toe_kick_setback_mm - 2 * toe_t
+    )
+    expected_geometry = {
+        "toe_front": (
+            (toe_x, front_back_y, toe_z),
+            (("X", 90.0),),
+            bottom.length_mm + 2 * toe_t,
+        ),
+        "toe_rear": (
+            (toe_x, rear_back_y, toe_z),
+            (("X", 90.0),),
+            bottom.length_mm + 2 * toe_t,
+        ),
+        "toe_left": (
+            (toe_x, front_back_y, toe_z),
+            (("X", 90.0), ("Z", 90.0)),
+            sleeper_length,
+        ),
+        "toe_right": (
+            (bottom.at_mm[0] + bottom.length_mm, front_back_y, toe_z),
+            (("X", 90.0), ("Z", 90.0)),
+            sleeper_length,
+        ),
+    }
+    for role, (expected_at, expected_rotation, expected_length) in \
+            expected_geometry.items():
+        member = model.part(role)
+        path_ok = path_ok and (
+            all(abs(actual - expected) <= 1e-6
+                for actual, expected in zip(member.at_mm, expected_at))
+            and member.rotate == expected_rotation
+            and abs(member.length_mm - expected_length) <= 1e-6
+            and abs(member.width_mm - toe_height) <= 1e-6
+            and abs(member.thickness_mm - toe_t) <= 1e-6
+        )
+    expected_related = {
+        bottom.part_id,
+        model.part("toe_front").part_id,
+        model.part("toe_rear").part_id,
+    }
+    valid = (
+        len(systems) == 1
+        and systems[0].product_id == product.product_id
+        and systems[0].quantity == 6
+        and set(systems[0].related_parts) == expected_related
+        and set(actual) == set(expected)
+        and sum(row.count for row in rows) == systems[0].quantity
+        and all(
+            row.part_id == bottom.part_id
+            and (row.receiving_part_id, row.location_mm)
+            == expected[row.feature_id]
+            and row.count == 3
+            and abs(row.pitch_mm - bottom.length_mm / 4) <= 1e-6
+            and row.pitch_axis == "X"
+            and row.diameter_mm == 0
+            and row.depth_mm == 0
+            and row.width_mm == 0
+            and row.length_mm == 0
+            and row.source == product.product_id
+            and row.face == "top"
+            and row.coordinate_system == datum
+            and _expanded_locations_in_bounds(row, bottom)
+            for row in rows
+        )
+        and path_ok
+    )
+    return rows, product, penetration, valid
+
+
 def _validate_drawer_model(model) -> CabinetReport:
     """Validate the drawer product without running door/hinge/shelf rules."""
 
     findings: list[CabinetFinding] = []
     evidence: list[EvidenceRecord] = []
+    installation_policy = InstallationUsePolicy(
+        policy_id="cabinetry.db40.installation_use@1",
+        blocking_rules=(
+            "cabinetry.performance.anchor_capacity",
+            "cabinetry.performance.whole_cabinet_capacity",
+        ),
+        hazard_statement=(
+            "TIP-OVER HAZARD — an unsecured or under-designed cabinet can tip "
+            "and cause serious or fatal crushing injury."
+        ),
+        clearance_authority="a qualified cabinet or structural design professional",
+        required_evidence=(
+            "cabinet, toe-platform, and anchor load-path calculations",
+            "dead, countertop, contents, and service loads",
+            "substrate species, grade, and condition",
+            "fastener count, spacing, edge/end distances, and embedment",
+        ),
+        source_url=(
+            "https://www.cpsc.gov/Safety-Education/Safety-Education-Centers/"
+            "AnchorItgov"
+        ),
+        scope_source_url=(
+            "https://www.cpsc.gov/Business--Manufacturing/Business-Education/"
+            "Business-Guidance/Clothing-Storage-Units"
+        ),
+        scope_note=(
+            "This is conservative CPSC-informed owner guidance, not a claim "
+            "that 16 CFR part 1261 applies; CPSC excludes built-in units intended "
+            "to be permanently attached from that clothing-storage-unit scope."
+        ),
+    )
 
     def add(
         rule: str,
@@ -253,6 +724,38 @@ def _validate_drawer_model(model) -> CabinetReport:
          "Cabinet dimensions do not leave a positive, buildable carcass opening."),
         "derived",
         affected=(f"cabinetry.{cabinet.cabinet_id}",),
+    )
+
+    shell_rows, shell_fastener, shell_joinery_ok = _shell_joinery_facts(model)
+    add(
+        "cabinetry.joinery.shell_machining",
+        "PASS" if shell_joinery_ok else "FAIL",
+        "required",
+        f"Carcass/toe joinery has {len(shell_rows)} machining rows and "
+        f"{sum(row.count for row in shell_rows)} fastener positions; each "
+        "position must be in its cut blank, name its receiving part and "
+        f"datum, and match {shell_fastener.sku} step-drill geometry.",
+        "manufacturer_rated",
+        source=shell_fastener.source_url,
+        affected=tuple(row.part_id for row in shell_rows),
+    )
+
+    toe_rows, toe_fastener, toe_penetration, toe_attachment_ok = \
+        toe_attachment_facts(model)
+    add(
+        "cabinetry.joinery.toe_attachment_machining",
+        "PASS" if toe_attachment_ok else "FAIL",
+        "required",
+        f"Toe attachment has {len(toe_rows)} rows / "
+        f"{sum(row.count for row in toe_rows)} stations for "
+        f"{toe_fastener.sku}; modeled rail penetration is "
+        f"{toe_penetration:.2f} mm. Stations must remain in solid bottom/rail "
+        "stock ahead of the captured-back groove. Pilot diameter/depth, torque, "
+        "and connection capacity are not claimed.",
+        "calculated",
+        source=toe_fastener.source_url,
+        affected=tuple(row.part_id for row in toe_rows)
+                 or (model.part("bottom").part_id,),
     )
 
     oversize = _oversize_panel_ids(model)
@@ -394,6 +897,11 @@ def _validate_drawer_model(model) -> CabinetReport:
     )
 
     bottom_rows = []
+    groove_rows = tuple(
+        row for row in model.machining if row.kind == "drawer_bottom_groove"
+    )
+    part_by_id = {part.part_id: part for part in model.parts}
+    groove_geometry_ok = True
     for cell in bank.cells:
         side = model.part(f"drawer_{cell.cell_id}_side_left")
         bottom = model.part(f"drawer_{cell.cell_id}_bottom")
@@ -404,17 +912,46 @@ def _validate_drawer_model(model) -> CabinetReport:
             cell.bottom_clearance_mm,
             bottom.thickness_mm,
         ))
+        expected_ids = {
+            model.part(f"drawer_{cell.cell_id}_{role}").part_id
+            for role in ("side_left", "side_right", "front", "back")
+        }
+        cell_grooves = tuple(row for row in groove_rows
+                             if row.part_id in expected_ids)
+        groove_geometry_ok = groove_geometry_ok and (
+            len(cell_grooves) == 4
+            and {row.part_id for row in cell_grooves} == expected_ids
+            and all(
+                row.location_mm == (0.0, runner.bottom_recess_mm)
+                and row.count == 1
+                and row.pitch_mm == 0
+                and row.pitch_axis == ""
+                and 0 < row.depth_mm <= part_by_id[row.part_id].thickness_mm
+                and abs(row.width_mm - bottom.thickness_mm) <= 1e-6
+                and abs(row.length_mm
+                        - part_by_id[row.part_id].length_mm) <= 1e-6
+                and row.face == "inside"
+                and row.source == "drawer_box.captured_bottom"
+                and bool(row.coordinate_system.strip())
+                and row.location_mm[0] + row.length_mm
+                    <= part_by_id[row.part_id].length_mm + 1e-6
+                and row.location_mm[1] + row.width_mm
+                    <= part_by_id[row.part_id].width_mm + 1e-6
+                for row in cell_grooves
+            )
+        )
     bottom_ok = all(
         abs(recess - runner.bottom_recess_mm) <= 1e-6
         and abs(clearance - runner.bottom_clearance_mm) <= 1e-6
         and abs(thickness - 12.0) <= 1e-6
         for _, recess, clearance, thickness in bottom_rows
-    )
+    ) and groove_geometry_ok
     add(
         "cabinetry.drawer.bottom_geometry",
         "PASS" if bottom_ok else "FAIL",
         "required",
-        "Captured-bottom geometry (recess/clearance/thickness): "
+        "Captured-bottom geometry and groove machining "
+        "(recess/clearance/thickness): "
         + ", ".join(
             f"{cell} recess {recess:.2f} mm, clearance {clearance:.2f} mm, "
             f"thickness {thickness:.2f} mm"
@@ -428,6 +965,109 @@ def _validate_drawer_model(model) -> CabinetReport:
                        for cell in bank.cells),
     )
 
+    joinery_rows = tuple(
+        item for item in model.machining
+        if item.kind == "drawer_box_confirmat_step_drill"
+    )
+    joinery_systems = tuple(
+        system for system in model.hardware
+        if system.kind == "drawer_box_joinery_fastener"
+    )
+    expected_joinery_pairs = {
+        (
+            model.part(f"drawer_{cell.cell_id}_side_{hand}").part_id,
+            model.part(f"drawer_{cell.cell_id}_{end}").part_id,
+        )
+        for cell in bank.cells
+        for hand in ("left", "right")
+        for end in ("front", "back")
+    }
+    actual_joinery_pairs = {
+        (row.part_id, row.receiving_part_id) for row in joinery_rows
+    }
+    expected_joinery_geometry = {}
+    for cell in bank.cells:
+        side = model.part(f"drawer_{cell.cell_id}_side_left")
+        lower_y = max(
+            38.1,
+            runner.bottom_recess_mm
+            + model.part(f"drawer_{cell.cell_id}_bottom").thickness_mm
+            + 10.0,
+        )
+        upper_y = side.width_mm - 25.4
+        for hand in ("left", "right"):
+            side_id = model.part(
+                f"drawer_{cell.cell_id}_side_{hand}"
+            ).part_id
+            expected_joinery_geometry[
+                (side_id, model.part(f"drawer_{cell.cell_id}_front").part_id)
+            ] = ((side.thickness_mm / 2, lower_y), upper_y - lower_y)
+            expected_joinery_geometry[
+                (side_id, model.part(f"drawer_{cell.cell_id}_back").part_id)
+            ] = ((side.length_mm - side.thickness_mm / 2, lower_y),
+                 upper_y - lower_y)
+    expected_system_ids = {
+        f"{bank.namespace}.{cell.cell_id}.box_joinery_confirmats"
+        for cell in bank.cells
+    }
+    joinery_ok = (
+        len(joinery_rows) == len(bank.cells) * 4
+        and sum(row.count for row in joinery_rows) == len(bank.cells) * 8
+        and actual_joinery_pairs == expected_joinery_pairs
+        and all(
+            row.count == 2
+            and row.pitch_axis == "Y"
+            and (row.location_mm, row.pitch_mm)
+            == expected_joinery_geometry[
+                (row.part_id, row.receiving_part_id)
+            ]
+            and row.source == bank.joinery_fastener.product_id
+            and row.part_id in part_by_id
+            and row.receiving_part_id in part_by_id
+            and row.receiving_part_id != row.part_id
+            and row.face == "outside"
+            and bool(row.coordinate_system.strip())
+            and _expanded_locations_in_bounds(row, part_by_id[row.part_id])
+            and abs(
+                row.depth_mm
+                - (bank.joinery_fastener.length_mm
+                   - part_by_id[row.part_id].thickness_mm)
+            ) <= 1e-6
+            and abs(row.diameter_mm
+                    - bank.joinery_fastener.blind_pilot_diameter_mm) <= 1e-6
+            and abs(row.width_mm
+                    - bank.joinery_fastener.through_shank_diameter_mm) <= 1e-6
+            and abs(row.length_mm
+                    - bank.joinery_fastener.countersink_diameter_mm) <= 1e-6
+            for row in joinery_rows
+        )
+        and {system.system_id for system in joinery_systems}
+        == expected_system_ids
+        and all(
+            system.quantity == 8
+            and system.product_id == bank.joinery_fastener.product_id
+            and bool(system.source_url)
+            for system in joinery_systems
+        )
+    )
+    add(
+        "cabinetry.drawer.box_joinery_completeness",
+        "PASS" if joinery_ok else "FAIL",
+        "required",
+        (
+            f"Drawer-box corner joinery has {len(joinery_rows)} machining "
+            f"rows / {sum(row.count for row in joinery_rows)} fastener "
+            f"positions and {len(joinery_systems)} sourced hardware systems; "
+            f"required {len(bank.cells) * 4} rows / {len(bank.cells) * 8} "
+            f"positions / {len(bank.cells)} systems."
+        ),
+        "manufacturer_rated",
+        source=bank.joinery_fastener.source_url,
+        affected=tuple(sorted({
+            part_id for pair in expected_joinery_pairs for part_id in pair
+        })),
+    )
+
     rear_notches = tuple(item for item in model.machining
                          if item.kind == "runner_rear_notch")
     hook_bores = tuple(item for item in model.machining
@@ -436,6 +1076,19 @@ def _validate_drawer_model(model) -> CabinetReport:
     expected_hook_x = (
         runner.hook_bore_inset_from_side_mm,
         bank.inside_box_width_mm - runner.hook_bore_inset_from_side_mm,
+    )
+    notch_positions_ok = all(
+        len(cell_notches := tuple(
+            item for item in rear_notches
+            if item.part_id == model.part(
+                f"drawer_{cell.cell_id}_back"
+            ).part_id
+        )) == 2
+        and {item.location_mm for item in cell_notches} == {
+            (0.0, 0.0),
+            (bank.inside_box_width_mm - runner.minimum_rear_notch_mm, 0.0),
+        }
+        for cell in bank.cells
     )
     hook_positions_ok = all(
         len(cell_bores := tuple(
@@ -452,14 +1105,31 @@ def _validate_drawer_model(model) -> CabinetReport:
     rear_ok = (
         len(rear_notches) == expected_rear_count
         and len(hook_bores) == expected_rear_count
-        and all(item.width_mm + 1e-6 >= runner.minimum_rear_notch_mm
+        and all(abs(item.width_mm - runner.minimum_rear_notch_mm) <= 1e-6
+                and abs(item.depth_mm
+                        - runner.minimum_rear_notch_height_mm) <= 1e-6
+                and item.count == 1
+                and item.face == "rear_face_lower_edge"
+                and item.source == runner.product_id
+                and item.coordinate_system == (
+                    "drawer-back rear face; origin=lower-left corner; "
+                    "+X=right/cut-list length; +Y=up/cut-list width"
+                )
                 for item in rear_notches)
         and all(abs(item.diameter_mm - runner.hook_bore_mm[0]) <= 1e-6
                 and abs(item.depth_mm - runner.hook_bore_mm[1]) <= 1e-6
                 and abs(item.location_mm[1]
                         - runner.hook_bore_height_from_bottom_mm) <= 1e-6
+                and item.count == 1
+                and item.face == "rear"
+                and item.source == runner.product_id
+                and item.coordinate_system == (
+                    "drawer-back rear face; origin=lower-left corner; "
+                    "+X=right/cut-list length; +Y=up/cut-list width"
+                )
                 for item in hook_bores)
         and hook_positions_ok
+        and notch_positions_ok
     )
     add(
         "cabinetry.drawer.rear_preparation",
@@ -467,8 +1137,10 @@ def _validate_drawer_model(model) -> CabinetReport:
         "required",
         f"Rear preparation has runner_rear_notch {len(rear_notches)} of "
         f"{expected_rear_count} and runner_hook_bore {len(hook_bores)} of "
-        f"{expected_rear_count}; required notch >= "
-        f"{runner.minimum_rear_notch_mm:.0f} mm and hook bore "
+        f"{expected_rear_count}; required notch "
+        f"{runner.minimum_rear_notch_mm:.0f} x "
+        f"{runner.minimum_rear_notch_height_mm:.0f} mm in each drawer back "
+        f"and hook bore "
         f"Ø{runner.hook_bore_mm[0]:.0f} x {runner.hook_bore_mm[1]:.0f} mm "
         f"at {runner.hook_bore_inset_from_side_mm:.0f} mm side inset and "
         f"{runner.hook_bore_height_from_bottom_mm:.0f} mm bottom height.",
@@ -482,20 +1154,51 @@ def _validate_drawer_model(model) -> CabinetReport:
                    if item.kind == "runner_fixing_station")
     expected_fixing_count = (
         len(bank.cells) * len(bank.mounting_part_ids)
-        * len(runner.required_rear_fixing_stations_mm)
+        * len(runner.required_fixing_stations_mm)
     )
-    valid_x = {
-        runner.front_setback_mm + station
-        for station in runner.required_rear_fixing_stations_mm
+    expected_fixing_y = {
+        cell.cell_id: (
+            model.part(f"drawer_{cell.cell_id}_side_left").at_mm[2]
+            - model.part("left_end").at_mm[2]
+            + runner.mounting_line_mm
+            - runner.bottom_clearance_mm
+        )
+        for cell in bank.cells
     }
+    expected_fixing = {}
+    for cell in bank.cells:
+        for index, mounting_part_id in enumerate(bank.mounting_part_ids):
+            side_name = "left" if index == 0 else "right"
+            for station in runner.required_fixing_stations_mm:
+                feature_id = (
+                    f"{mounting_part_id}.{cell.cell_id}.runner_"
+                    f"fixing_{side_name}_{station:g}"
+                )
+                expected_fixing[feature_id] = (
+                    mounting_part_id,
+                    (station, expected_fixing_y[cell.cell_id]),
+                )
+    actual_fixing = {item.feature_id: item for item in fixing}
     fixing_ok = (
         len(fixing) == expected_fixing_count
-        and all(item.part_id in bank.mounting_part_ids
-                and item.location_mm[0] in valid_x
-                and item.diameter_mm == 0.0
-                and item.depth_mm == 0.0
+        and set(actual_fixing) == set(expected_fixing)
+        and all(
+                (item.part_id, item.location_mm)
+                == expected_fixing[item.feature_id]
+                and abs(item.diameter_mm
+                        - runner.installation_pilot_diameter_mm) <= 1e-6
+                and abs(item.depth_mm
+                        - runner.installation_pilot_depth_mm) <= 1e-6
                 and item.source == runner.product_id
                 and item.face == "inside"
+                and item.count == 1
+                and item.pitch_mm == 0
+                and item.pitch_axis == ""
+                and item.coordinate_system == (
+                    "cabinet-side inside face; origin=front-bottom of side "
+                    "blank; +X=rearward/cut-list width; "
+                    "+Y=up/cut-list length"
+                )
                 for item in fixing)
     )
     runner_pair_missing = []
@@ -529,14 +1232,16 @@ def _validate_drawer_model(model) -> CabinetReport:
         "PASS" if fixing_ok else "FAIL",
         "required",
         f"Runner mounting schedule contains {len(fixing)} of "
-        f"{expected_fixing_count} required fixing stations at front setback "
-        f"{runner.front_setback_mm:.0f} mm plus stations "
-        f"{list(runner.required_rear_fixing_stations_mm)}; missing/wrong runner "
+        f"{expected_fixing_count} required fixing stations at cabinet-front "
+        f"coordinates {list(runner.required_fixing_stations_mm)} mm and "
+        f"elevations {expected_fixing_y}; the {runner.front_setback_mm:.0f} mm "
+        f"runner-front setback is not added to those coordinates; missing/wrong runner "
         f"pairs: {runner_pair_missing}; missing/wrong "
         f"{runner.installation_screw_sku} fixing-screw sets: "
-        f"{runner_screw_missing}. These are station-only marks with no unsourced "
-        "pilot diameter/depth; attachment preparation must suit the selected "
-        "cabinet material.",
+        f"{runner_screw_missing}. Preparation is Ø"
+        f"{runner.installation_pilot_diameter_mm:g} mm with "
+        f"{runner.installation_drive} drive; the adapter does not claim a "
+        "cabinet-side pilot depth.",
         "manufacturer_rated",
         source=runner.source_url,
         affected=tuple(bank.mounting_part_ids),
@@ -612,6 +1317,9 @@ def _validate_drawer_model(model) -> CabinetReport:
             and item.coordinate_system == expected_coordinate_system
             and item.source == bank.locking_device.product_id
             and not item.location_mm
+            and item.count == 1
+            and item.pitch_mm == 0
+            and item.pitch_axis == ""
             for item in locking_bores
         )
     )
@@ -639,16 +1347,57 @@ def _validate_drawer_model(model) -> CabinetReport:
             for cell in bank.cells
         ),
     )
+    stabilizer_cut_issues = []
+    stabilizer_cuts = tuple(
+        item for item in model.machining
+        if item.kind in {
+            "stabilizer_gear_rack_cut", "stabilizer_linkage_rod_cut",
+        }
+    )
+    cuts_by_id = {item.feature_id: item for item in stabilizer_cuts}
+    expected_cut_ids = set()
+    cut_datum = "hardware stock; origin=one cut end; +X=stock length"
+    for cell in bank.cells:
+        system_id = f"{bank.namespace}.{cell.cell_id}.lateral_stabilizer"
+        for kind, suffix, length in (
+            ("stabilizer_gear_rack_cut", "gear_rack_cut",
+             bank.stabilizer.gear_rack_length_mm),
+            ("stabilizer_linkage_rod_cut", "linkage_rod_cut",
+             bank.opening_width_mm
+             - bank.stabilizer.linkage_rod_cut_deduction_mm),
+        ):
+            feature_id = f"{system_id}.{suffix}"
+            expected_cut_ids.add(feature_id)
+            item = cuts_by_id.get(feature_id)
+            if item is None or not (
+                item.kind == kind
+                and item.part_id == system_id
+                and item.location_mm == (0.0,)
+                and abs(item.length_mm - length) <= 1e-6
+                and item.count == 1
+                and item.pitch_mm == 0
+                and item.pitch_axis == ""
+                and item.source == bank.stabilizer.product_id
+                and item.face == "hardware_stock"
+                and item.coordinate_system == cut_datum
+            ):
+                stabilizer_cut_issues.append(
+                    f"{cell.cell_id}:{kind}"
+                )
+    if set(cuts_by_id) != expected_cut_ids:
+        stabilizer_cut_issues.append("unexpected_or_duplicate_stabilizer_cut")
+
     add(
         "cabinetry.drawer.lateral_stabilizer",
-        "FAIL" if stabilizer_missing else "PASS",
+        "FAIL" if stabilizer_missing or stabilizer_cut_issues else "PASS",
         "required",
         (f"Wide-opening stabilizer is missing or wrong for cells "
-         f"{stabilizer_missing}; {bank.opening_width_mm:.2f} mm exceeds the "
+         f"{stabilizer_missing}; stock-cut issues: {stabilizer_cut_issues}; "
+         f"{bank.opening_width_mm:.2f} mm exceeds the "
          f"{bank.stabilizer.recommended_from_opening_mm:.2f} mm recommendation."
-         if stabilizer_missing else
-         f"All drawers carry the pinned lateral stabilizer required for the "
-         f"{bank.opening_width_mm:.2f} mm opening."),
+         if stabilizer_missing or stabilizer_cut_issues else
+         f"All drawers carry the pinned lateral stabilizer and both exact "
+         f"stock cuts required for the {bank.opening_width_mm:.2f} mm opening."),
         "manufacturer_rated",
         source=bank.stabilizer.source_url,
         affected=tuple(
@@ -674,11 +1423,15 @@ def _validate_drawer_model(model) -> CabinetReport:
         ),
     )
 
-    mass_sources = (
+    mass_sources = tuple(dict.fromkeys((
         bank.locking_device.mass_source_url,
+        bank.locking_device.source_url,
         bank.stabilizer.mass_source_url,
         bank.pull_product.source_url,
-    )
+        bank.pull_product.mounting_screw_source_url,
+        bank.joinery_fastener.source_url,
+        model.front_fastener.source_url,
+    )))
     mass_sources_ok = all(source.strip() for source in mass_sources)
     mass_math_ok = all(
         cell.wood_mass_kg > 0
@@ -704,9 +1457,9 @@ def _validate_drawer_model(model) -> CabinetReport:
             f"{cell.moving_mass_kg:.3f} kg"
             for cell in bank.cells
         )
-        + ("; all locking-device, stabilizer, and pull mass inputs have "
+        + ("; all moving-hardware mass inputs have "
            "traceable sources." if mass_sources_ok else
-           "; one or more locking-device, stabilizer, or pull mass inputs "
+           "; one or more moving-hardware mass inputs "
            "lack a traceable source."),
         "calculated" if mass_sources_ok else "unknown",
         source=" | ".join(source for source in mass_sources if source),
@@ -716,14 +1469,16 @@ def _validate_drawer_model(model) -> CabinetReport:
     )
 
     overloaded = [cell for cell in bank.cells
-                  if cell.rated_moving_load_lb > runner.dynamic_rating_lb + 1e-6]
+                  if cell.calculated_moving_load_lb >
+                  runner.dynamic_rating_lb + 1e-6]
     load_ok = not overloaded
     add(
         "cabinetry.drawer.moving_load",
         "PASS" if load_ok else "FAIL",
         "required",
         "Moving assembly plus declared contents by cell: "
-        + ", ".join(f"{cell.cell_id} {cell.rated_moving_load_lb:.2f} lb"
+        + ", ".join(f"{cell.cell_id} "
+                    f"{cell.calculated_moving_load_lb:.2f} lb"
                     for cell in bank.cells)
         + f"; selected runner dynamic rating is {runner.dynamic_rating_lb:.2f} lb.",
         "calculated",
@@ -798,6 +1553,15 @@ def _validate_drawer_model(model) -> CabinetReport:
                 and abs(item.diameter_mm - 5.0) <= 1e-6
                 and abs(item.depth_mm - applied_front.thickness_mm) <= 1e-6
                 and item.source == pull.product_id
+                and item.face == "front"
+                and item.coordinate_system == (
+                    "applied-front finished face; origin=lower-left corner; "
+                    "+X=right/cut-list length; +Y=up/cut-list width"
+                )
+                and item.count == 1
+                and item.pitch_mm == 0
+                and item.pitch_axis == ""
+                and _expanded_locations_in_bounds(item, applied_front)
                 for item in pull_bores
             )
         )
@@ -811,11 +1575,25 @@ def _validate_drawer_model(model) -> CabinetReport:
         ]
         attachment_holes_ok = (
             len(attachment_holes) == 4
+            and {item.location_mm for item in attachment_holes} == {
+                (bank.inside_box_width_mm * x_factor,
+                 cell.box_height_mm * y_factor)
+                for x_factor in (0.25, 0.75)
+                for y_factor in (0.25, 0.75)
+            }
             and all(
                 abs(item.diameter_mm - 5.0) <= 1e-6
                 and abs(item.depth_mm - box_front.thickness_mm) <= 1e-6
                 and item.face == "inside"
                 and item.source == "drawer_front.applied"
+                and item.coordinate_system == (
+                    "drawer box-front inside face; origin=lower-left corner; "
+                    "+X=right/cut-list length; +Y=up/cut-list width"
+                )
+                and item.count == 1
+                and item.pitch_mm == 0
+                and item.pitch_axis == ""
+                and _expanded_locations_in_bounds(item, box_front)
                 for item in attachment_holes
             )
         )
@@ -1046,18 +1824,20 @@ def _validate_drawer_model(model) -> CabinetReport:
     )
 
     anchor_stack, embedment, min_embedment, embedment_ok = \
-        _anchor_embedment_facts(model)
+        anchor_embedment_facts(model)
     add(
         "cabinetry.install.anchor_embedment",
         "PASS" if embedment_ok else "FAIL",
         "required",
-        f"{model.wall_anchor.product} leaves {embedment / IN:.3f} in stud "
-        f"embedment after the modeled {anchor_stack / IN:.3f} in stack; pack "
-        f"minimum is {min_embedment / IN:.2f} in.",
+        f"The modeled wall-anchor path for {model.wall_anchor.product} leaves "
+        f"{embedment / IN:.3f} in stud embedment after the modeled "
+        f"{anchor_stack / IN:.3f} in stack; pack minimum is "
+        f"{min_embedment / IN:.2f} in. Every modeled screw must start at the "
+        "anchor-strip head plane, align with its declared stud, and retain "
+        "the selected catalog geometry.",
         "calculated",
         source=model.wall_anchor.source_url,
-        affected=tuple(f"cabinetry.{cabinet.cabinet_id}.wall_anchor_{stud_id}"
-                       for stud_id in model.anchor_stud_ids),
+        affected=_anchor_affected(model),
     )
 
     missing_conditions = _missing_site_conditions(model)
@@ -1088,13 +1868,18 @@ def _validate_drawer_model(model) -> CabinetReport:
         "cabinetry.performance.anchor_capacity",
         "UNKNOWN",
         "advisory",
-        "The floor-supported base cabinet has anchor product, count, location, "
-        "and embedment represented; lateral/withdrawal demand and connection "
-        "capacity are not calculated in v1.",
+        (
+            "The floor-supported base cabinet has anchor product, count, "
+            "location, and embedment represented; lateral/withdrawal demand "
+            "and connection capacity are not calculated in v1."
+            if embedment_ok else
+            "A complete, geometrically valid wall-anchor path is not represented; "
+            "lateral/withdrawal demand and connection capacity also remain "
+            "uncalculated."
+        ),
         "unknown",
         source=model.wall_anchor.source_url,
-        affected=tuple(f"cabinetry.{cabinet.cabinet_id}.wall_anchor_{stud_id}"
-                       for stud_id in model.anchor_stud_ids),
+        affected=_anchor_affected(model),
     )
     add(
         "cabinetry.performance.whole_cabinet_capacity",
@@ -1116,11 +1901,29 @@ def _validate_drawer_model(model) -> CabinetReport:
         "unknown",
         standard_ref="ANSI/KCMA A161.1-2022",
     )
+    add(
+        "cabinetry.safety.tip_over_policy",
+        "PASS",
+        "advisory",
+        (
+            "A sourced, conservative tip-over notice and owner-clearance policy "
+            "is attached to the installation/use gate. It does not establish "
+            "connection capacity or assert that 16 CFR part 1261 applies."
+        ),
+        "public_guidance",
+        source=(installation_policy.source_url + " | "
+                + installation_policy.scope_source_url),
+        standard_ref=(
+            "CPSC Anchor It! general guidance; permanently attached built-ins "
+            "are outside the cited clothing-storage-unit rule scope"
+        ),
+    )
 
     return CabinetReport(
         mode=model.mode,
         findings=tuple(sorted(findings, key=lambda finding: finding.rule)),
         evidence=tuple(sorted(evidence, key=lambda item: item.evidence_id)),
+        installation_use_policy=installation_policy,
     )
 
 
@@ -1176,6 +1979,38 @@ def validate_model(model: CabinetModel) -> CabinetReport:
          "Cabinet dimensions do not leave a positive, buildable carcass opening."),
         "derived",
         affected=(f"cabinetry.{cabinet.cabinet_id}",),
+    )
+
+    shell_rows, shell_fastener, shell_joinery_ok = _shell_joinery_facts(model)
+    add(
+        "cabinetry.joinery.shell_machining",
+        "PASS" if shell_joinery_ok else "FAIL",
+        "required",
+        f"Carcass/toe joinery has {len(shell_rows)} machining rows and "
+        f"{sum(row.count for row in shell_rows)} fastener positions; each "
+        "position must be in its cut blank, name its receiving part and "
+        f"datum, and match {shell_fastener.sku} step-drill geometry.",
+        "manufacturer_rated",
+        source=shell_fastener.source_url,
+        affected=tuple(row.part_id for row in shell_rows),
+    )
+
+    toe_rows, toe_fastener, toe_penetration, toe_attachment_ok = \
+        toe_attachment_facts(model)
+    add(
+        "cabinetry.joinery.toe_attachment_machining",
+        "PASS" if toe_attachment_ok else "FAIL",
+        "required",
+        f"Toe attachment has {len(toe_rows)} rows / "
+        f"{sum(row.count for row in toe_rows)} stations for "
+        f"{toe_fastener.sku}; modeled rail penetration is "
+        f"{toe_penetration:.2f} mm. Stations must remain in solid bottom/rail "
+        "stock ahead of the captured-back groove. Pilot diameter/depth, torque, "
+        "and connection capacity are not claimed.",
+        "calculated",
+        source=toe_fastener.source_url,
+        affected=tuple(row.part_id for row in toe_rows)
+                 or (model.part("bottom").part_id,),
     )
 
     oversize = _oversize_panel_ids(model)
@@ -1312,20 +2147,20 @@ def validate_model(model: CabinetModel) -> CabinetReport:
     )
 
     stack, embedment, min_embedment, embedment_ok = \
-        _anchor_embedment_facts(model)
+        anchor_embedment_facts(model)
     add(
         "cabinetry.install.anchor_embedment",
         "PASS" if embedment_ok else "FAIL",
         "required",
-        f"{model.wall_anchor.product} leaves {embedment / IN:.3f} in stud "
-        f"embedment after the modeled {stack / IN:.3f} in stack; pack minimum "
-        f"is {min_embedment / IN:.2f} in.",
+        f"The modeled wall-anchor path for {model.wall_anchor.product} leaves "
+        f"{embedment / IN:.3f} in stud embedment after the modeled "
+        f"{stack / IN:.3f} in stack; pack minimum is "
+        f"{min_embedment / IN:.2f} in. Every modeled screw must start at the "
+        "anchor-strip head plane, align with its declared stud, and retain "
+        "the selected catalog geometry.",
         "calculated",
         source=model.wall_anchor.source_url,
-        affected=tuple(
-            f"cabinetry.{cabinet.cabinet_id}.wall_anchor_{stud_id}"
-            for stud_id in model.anchor_stud_ids
-        ),
+        affected=_anchor_affected(model),
     )
 
     missing_conditions = _missing_site_conditions(model)
@@ -1356,15 +2191,18 @@ def validate_model(model: CabinetModel) -> CabinetReport:
         "cabinetry.performance.anchor_capacity",
         "UNKNOWN",
         "advisory",
-        "The floor-supported base cabinet has anchor product, count, location, "
-        "and embedment represented; lateral/withdrawal demand and connection "
-        "capacity are not calculated in v1.",
+        (
+            "The floor-supported base cabinet has anchor product, count, "
+            "location, and embedment represented; lateral/withdrawal demand "
+            "and connection capacity are not calculated in v1."
+            if embedment_ok else
+            "A complete, geometrically valid wall-anchor path is not represented; "
+            "lateral/withdrawal demand and connection capacity also remain "
+            "uncalculated."
+        ),
         "unknown",
         source=model.wall_anchor.source_url,
-        affected=tuple(
-            f"cabinetry.{cabinet.cabinet_id}.wall_anchor_{stud_id}"
-            for stud_id in model.anchor_stud_ids
-        ),
+        affected=_anchor_affected(model),
     )
     add(
         "cabinetry.performance.physical_tests",

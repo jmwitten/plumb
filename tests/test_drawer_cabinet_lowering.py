@@ -93,7 +93,7 @@ def test_db40_has_pinned_hardware_and_required_machining_per_drawer():
                or system.kind == "applied_front_fastener_system")
     assert model.drawer_bank.inside_depth_mm >= model.drawer_bank.runner.minimum_inside_depth_mm
     assert len([item for item in model.machining
-                if item.kind == "runner_fixing_station"]) == 12
+                if item.kind == "runner_fixing_station"]) == 30
 
 
 def test_db40_lowers_one_for_one_without_new_component_vocabulary():
@@ -148,14 +148,29 @@ def test_db40_lowers_sound_placement_order_into_base_cpg():
 
     assert [stage.name for stage in stages] == [
         "assembly.toe_base",
-        "assembly.carcass",
+        "assembly.open_carcass",
+        "assembly.close_captured_back",
         "assembly.drawer_boxes",
+        "assembly.fronts_hardware",
         "install.wall_anchor",
     ]
     model_ids = {part.part_id for part in project.model.parts}
     assert all(stage.why and stage.parts for stage in stages)
     assert all(set(stage.parts) <= model_ids for stage in stages)
     assert project.detail.sequence() == stages
+    by_name = {stage.name: set(stage.parts) for stage in stages}
+    assert "cabinetry.DB40.right_end" not in by_name["assembly.open_carcass"]
+    assert "cabinetry.DB40.rear_stretcher" not in \
+        by_name["assembly.open_carcass"]
+    assert {
+        "cabinetry.DB40.captured_back",
+        "cabinetry.DB40.right_end",
+        "cabinetry.DB40.rear_stretcher",
+    } <= by_name["assembly.close_captured_back"]
+    assert all(
+        not part_id.rsplit(".", 1)[-1].startswith("drawer_front_")
+        for part_id in by_name["assembly.drawer_boxes"]
+    )
 
 
 def test_db40_build_has_oriented_fronts_and_full_depth_boxes():

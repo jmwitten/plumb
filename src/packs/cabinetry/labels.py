@@ -32,6 +32,9 @@ _DRAWER_BOX = re.compile(
 _DRAWER_FRONT = re.compile(r"^drawer_front_(?P<cell>top|middle|bottom)$")
 _WALL_STUD = re.compile(r"^wall_stud_(?P<stud>.+)$")
 _WALL_ANCHOR = re.compile(r"^wall_anchor_(?P<stud>.+)$")
+_CASE_CONNECTOR = re.compile(
+    r"^case_connector_(?P<left_len>\d+)_(?P<pair>.+)_(?P<position>\d+)$"
+)
 _MEMBER_NAMES = {
     "side_left": "left side",
     "side_right": "right side",
@@ -61,6 +64,20 @@ def reader_name_for_role(role: str) -> str:
     match = _WALL_ANCHOR.fullmatch(role)
     if match:
         return f"Wall anchor ({match.group('stud').replace('_', ' ')})"
+    match = _CASE_CONNECTOR.fullmatch(role)
+    if match:
+        pair = match.group("pair")
+        left_length = int(match.group("left_len"))
+        if left_length < 1 or len(pair) <= left_length or pair[left_length] != "_":
+            raise ValueError(
+                f"cabinetry connector role {role!r} has an invalid "
+                "length-prefixed cabinet pair"
+            )
+        left, right = pair[:left_length], pair[left_length + 1:]
+        return (
+            f"Cabinet connector — {left} to {right} — "
+            f"position {match.group('position')}"
+        )
     raise ValueError(
         f"cabinetry role {role!r} has no reader-facing label; add it to the "
         "closed cabinetry vocabulary before generating documents"

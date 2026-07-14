@@ -16,6 +16,7 @@ if str(_REPO / "src") not in sys.path:
     sys.path.insert(0, str(_REPO / "src"))
 
 from detailgen.packs import compile_project_file  # noqa: E402
+from detailgen.packs.cabinetry.catalogs import get_assembly_fastener  # noqa: E402
 from detailgen.assemblies.assembly import DetailAssembly  # noqa: E402
 from detailgen.rendering.export import export_glb, export_png  # noqa: E402
 from detailgen.rendering.part_labels import part_labels  # noqa: E402
@@ -48,6 +49,12 @@ def _esc(value) -> str:
 
 def _fmt(value: float) -> str:
     return f"{value:.2f} mm"
+
+
+def _number(value: float) -> str:
+    """Format a catalog or machining number without false trailing precision."""
+
+    return f"{value:g}"
 
 
 def _table(headers, rows, *, css_class="") -> str:
@@ -97,13 +104,14 @@ def render_dimension_tables(model) -> str:
                 _fmt(model.part(f"drawer_front_{cell.cell_id}").width_mm),
                 _fmt(model.part(f"drawer_{cell.cell_id}_side_left").width_mm),
                 f"{cell.contents_load_lb:.0f} lb",
-                f"{cell.rated_moving_load_lb:.2f} lb",
+                f"{cell.calculated_moving_load_lb:.2f} lb",
             )
             for cell in bank.cells
         )
         product = _table(("Drawer-bank dimension", "Value", "Derivation"), bank_rows)
         cells = _table(
-            ("Cell", "Front height", "Box height", "Contents", "Moving rated load"),
+            ("Cell", "Front height", "Box height", "Declared contents",
+             "Calculated moving load (not a rating)"),
             cell_rows,
         )
         return f"<h2>Dimensions</h2>{overall}{product}{cells}"
@@ -137,22 +145,45 @@ def drawer_detail_geometry(model) -> dict[str, object]:
             bank.locking_device.left_sku,
             bank.locking_device.right_sku,
         ),
+        "rear_notch_mm": (
+            bank.runner.minimum_rear_notch_mm,
+            bank.runner.minimum_rear_notch_height_mm,
+        ),
+        "rear_hook_centers_mm": (
+            (
+                bank.runner.hook_bore_inset_from_side_mm,
+                bank.runner.hook_bore_height_from_bottom_mm,
+            ),
+            (
+                bank.inside_box_width_mm
+                - bank.runner.hook_bore_inset_from_side_mm,
+                bank.runner.hook_bore_height_from_bottom_mm,
+            ),
+        ),
     }
 
 
 def _render_cut_list(project) -> str:
+    labels = reader_labels_by_part_id(project)
     rows = tuple(
         (
-            f"<code>{_esc(item.part_id)}</code>", _esc(item.role),
+            '<span aria-label="not checked">□</span>',
+            _esc(labels[item.part_id]),
+            f"<code>{_esc(item.part_id)}</code>", str(item.quantity),
             _fmt(item.length_mm), _fmt(item.width_mm), _fmt(item.thickness_mm),
             _esc(item.material), _esc(item.source_rule),
         )
         for item in project.artifacts.cut_list
     )
-    return "<h2>Cut list</h2>" + _table(
-        ("Part id", "Role", "Length", "Width", "Thickness", "Material", "Rule"),
+    return (
+        "<h2>Cut list</h2><p><strong>Pre-band cut size:</strong> Length and "
+        "width are raw blank dimensions. The compiled geometry and front "
+        "reveal checks use finished dimensions after the declared band build.</p>"
+        + _table(
+        ("Done", "Reader name", "Part id", "Qty", "Pre-band cut length",
+         "Pre-band cut width", "Panel thickness", "Material", "Rule"),
         rows,
-    )
+    ))
 
 
 def reader_labels_by_part_id(project) -> dict[str, str]:
@@ -200,11 +231,14 @@ def _render_part_key(project) -> str:
 def _render_edge_banding(project) -> str:
     rows = tuple(
         (f"<code>{_esc(item.part_id)}</code>", _esc(item.edge),
-         _fmt(item.length_mm), _esc(item.material))
+         _fmt(item.length_mm), _fmt(item.thickness_mm),
+         f"<code>{_esc(item.product_id)}</code>", _esc(item.material),
+         _esc(item.cut_size_basis))
         for item in project.artifacts.edge_banding
     )
     return "<h2>Edge banding</h2>" + _table(
-        ("Part id", "Edge", "Length", "Material"), rows
+        ("Part id", "Edge", "Length", "Finished thickness", "Product",
+         "Material", "Cut-size basis"), rows
     )
 
 
@@ -213,6 +247,7 @@ def _render_hardware(project) -> str:
         (
             f"<code>{_esc(item.system_id)}</code>", _esc(item.kind),
             f"<code>{_esc(item.product_id)}</code>", str(item.quantity),
+            _esc(item.quantity_unit), _esc(item.procurement_note),
             (f'<a href="{_esc(item.source_url)}">manufacturer source</a>'
              if item.source_url else "—"),
             _esc(item.evidence),
@@ -220,29 +255,112 @@ def _render_hardware(project) -> str:
         for item in project.artifacts.hardware_schedule
     )
     return "<h2>Hardware schedule</h2>" + _table(
-        ("System", "Kind", "Product", "Qty", "Source", "Evidence"), rows
+        ("System", "Kind", "Product", "Physical qty", "Unit",
+         "Procurement meaning", "Source", "Evidence"), rows
     )
 
 
 def _render_machining(project) -> str:
+    def operation(item) -> str:
+        if item.kind in {
+            "confirmat_step_drill", "drawer_box_confirmat_step_drill",
+        }:
+            return (
+                f"{_number(item.diameter_mm)} mm pilot / "
+                f"{_number(item.width_mm)} mm shank / "
+                f"{_number(item.length_mm)} mm countersink"
+            )
+        return item.kind
+
+    def location_semantics(item) -> str:
+        kind = item.kind.lower()
+        if "groove" in kind or "notch" in kind:
+            return "lower-left feature origin"
+        if any(token in kind for token in (
+            "bore", "drill", "fixing", "attachment",
+        )):
+            return "feature center"
+        if "cut" in kind:
+            return "cut origin"
+        return "feature datum"
+
+    def control_method(item) -> str:
+        kind = item.kind.lower()
+        if "groove" in kind:
+            return "measured-stock offcut trial; sliding seated fit"
+        if "confirmat" in kind:
+            return "guided stepped drill and depth stop"
+        if any(token in kind for token in (
+            "hinge", "mounting_plate", "locking_device", "runner_fixing",
+        )):
+            return "named manufacturer template/instructions"
+        if "notch" in kind:
+            return "hard template; verify paired runner fit"
+        return "marked datum plus sacrificial-backup trial"
+
     rows = tuple(
         (
-            f"<code>{_esc(item.part_id)}</code>", _esc(item.kind),
+            f"<code>{_esc(item.part_id)}</code>", _esc(operation(item)),
+            (f"<code>{_esc(item.receiving_part_id)}</code>"
+             if item.receiving_part_id else "—"),
             _esc(" × ".join(f"{value:g}" for value in item.location_mm)),
+            _esc(location_semantics(item)),
+            _esc(control_method(item)),
             _fmt(item.diameter_mm) if item.diameter_mm else "—",
             _fmt(item.depth_mm) if item.depth_mm else "—",
+            _fmt(item.width_mm) if item.width_mm else "—",
             _fmt(item.length_mm) if item.length_mm else "—",
+            str(item.count),
+            _fmt(item.pitch_mm) if item.count > 1 else "—",
+            _esc(item.pitch_axis or "—"),
             _esc(item.face or "—"),
             _esc(item.coordinate_system or "—"),
             f"<code>{_esc(item.source)}</code>",
         )
         for item in project.artifacts.machining_schedule
     )
-    return "<h2>Machining schedule</h2>" + _table(
-        ("Target id", "Operation", "Location", "Diameter", "Depth", "Length",
-         "Face", "Datum/template", "Source"),
-        rows,
+    return (
+        "<h2>Machining schedule</h2>"
+        "<div class=\"notice\"><h3>Machining datum rules</h3>"
+        "<p>Mark the physical origin and axes stated in each row before "
+        "machining. Bore locations are centers; groove/notch locations are "
+        "lower-left feature origins. The Location meaning column resolves every "
+        "other operation explicitly. No generic numeric tolerance is invented: "
+        "the row's Control method governs by template, depth stop, or measured-fit "
+        "trial. Count repeats the stated location at the "
+        "stated Pitch along the stated Pitch axis. For a "
+        "Confirmat row, the target part receives the through-shank hole and "
+        "countersink while the named Receiving part receives the centered "
+        "blind pilot. Make a trial groove in offcut from the selected stock "
+        "and verify a sliding, fully seated fit; do not assume nominal plywood "
+        "equals measured thickness.</p></div>"
+        + _table(
+            ("Target id", "Operation", "Receiving part", "Start location",
+             "Location meaning",
+             "Control",
+             "Pilot/diameter", "Depth", "Width/cutter",
+             "Length/countersink", "Count", "Pitch", "Pitch axis", "Face",
+             "Datum/template", "Source"),
+            rows,
+        )
     )
+
+
+def _source_links(source: str) -> str:
+    """Render a provenance list without turning several URLs into one bad href."""
+
+    values = tuple(value.strip() for value in str(source).split(" | ")
+                   if value.strip())
+    if not values:
+        return "—"
+    rendered = []
+    for index, value in enumerate(values, start=1):
+        if value.startswith(("https://", "http://")):
+            label = "source" if len(values) == 1 else f"source {index}"
+            rendered.append(f'<a href="{_esc(value)}">{label}</a>')
+        else:
+            rendered.append(_esc(value))
+    return " · ".join(rendered)
 
 
 def _render_findings(project) -> str:
@@ -258,8 +376,8 @@ def _render_findings(project) -> str:
         (
             f"<code>{_esc(item.evidence_id)}</code>", _esc(item.level),
             _esc(item.statement),
-            (f'<a href="{_esc(item.source)}">source</a>'
-             if str(item.source).startswith("http") else _esc(item.source or "—")),
+            _source_links(item.source),
+            _esc(item.standard_ref or "—"),
         )
         for item in project.report.evidence
     )
@@ -267,7 +385,10 @@ def _render_findings(project) -> str:
         "<h2>Validation findings</h2>"
         + _table(("Rule", "Verdict", "Severity", "Message", "Evidence"), finding_rows)
         + "<h2>Evidence register</h2>"
-        + _table(("Evidence id", "Level", "Statement", "Source"), evidence_rows)
+        + _table(
+            ("Evidence id", "Level", "Statement", "Source", "Standard/scope"),
+            evidence_rows,
+        )
     )
 
 
@@ -307,7 +428,10 @@ def _viewer_block(images, payload, glb_b64) -> str:
 <section class="viewer-section">
   <h2>Interactive assembly</h2>
   <p>Click a component to inspect its dimensions and fabrication record; use the
-     explode control to separate the compiled parts.</p>
+     explode control to separate the compiled parts. The scene contains every
+     cut wood part and the two installation anchors; purchased runners, locks,
+     stabilizers, pulls, screws, and glue remain schedule items or explicitly
+     labeled schematic proxies, not false detailed geometry.</p>
   <div class="viewer-slot" data-detail="{_esc(slug)}">
     <img src="{images['isometric']}" alt="Interactive DB40 assembly">
     <button type="button" class="viewer-btn">Explore in 3D</button>
@@ -316,6 +440,125 @@ def _viewer_block(images, payload, glb_b64) -> str:
 <script type="application/json" id="detail-data-{_esc(slug)}">{payload_json}</script>
 <script type="text/plain" id="detail-glb-{_esc(slug)}">{glb_b64}</script>
 """
+
+
+def _render_before_start(project) -> str:
+    """A builder-first readiness sheet projected from selected adapters."""
+
+    model = project.model
+    bank = getattr(model, "drawer_bank", None)
+    edge_band_net_mm = sum(item.length_mm for item in project.artifacts.edge_banding)
+    tool_rows = []
+    if bank is not None:
+        tool_rows = [
+            ("Safety and dust control",
+             "Safety glasses and hearing protection; effective source dust "
+             "extraction and respiratory protection selected for the panel "
+             "product and tool. Follow the current tool/material instructions."),
+            ("Layout and checking",
+             "Metric rule/tape, marking knife or sharp pencil, two squares, "
+             "straightedge, clamps, and diagonal measurement."),
+            ("Sheet breakdown",
+             "Table saw or track saw with a supported guide; router or table-saw "
+             "groove setup; offcut for every fit trial."),
+            ("Confirmat joinery",
+             f'<a href="{_esc(bank.joinery_fastener.tooling_source_url)}">'
+             f"Häfele {bank.joinery_fastener.tooling_sku}</a> guided/stepped "
+             f"tooling for "
+             f"{_number(bank.joinery_fastener.blind_pilot_diameter_mm)} mm pilot, "
+             f"{_number(bank.joinery_fastener.through_shank_diameter_mm)} mm "
+             f"shank, and "
+             f"{_number(bank.joinery_fastener.countersink_diameter_mm)} mm "
+             f"countersink; {bank.joinery_fastener.drive} driver bit; depth stops."),
+            ("MOVENTO preparation",
+             f"Blum {bank.locking_device.template_sku} template, Ø"
+             f"{_number(bank.locking_device.pilot_bore_diameter_mm)} mm extension "
+             f"bit, {', '.join(bank.runner.required_tool_skus)}, depth stops/"
+             "collar, 50 × 13 mm back-notch template, and the selected "
+             "runner/stabilizer instructions."),
+            ("Fronts and pulls",
+             f"Ø5 mm bit, sacrificial backer, spacers, clamps, and "
+             f"{_number(bank.pull_product.hole_spacing_mm)} mm pull-layout check."),
+            ("Installation",
+             "Laser or spirit level, plumb reference, verified stud-locating "
+             "method, shims at bearing points, drill/driver, and the scheduled "
+             f"{model.wall_anchor.drive} bit."),
+        ]
+    else:
+        joinery = next(
+            row for row in model.machining if row.kind == "confirmat_step_drill"
+        )
+        joinery_product = get_assembly_fastener(joinery.source)
+        tool_rows = [
+            ("Safety and dust control",
+             "Safety glasses and hearing protection; effective source dust "
+             "extraction and respiratory protection selected for the panel "
+             "product and tool. Follow the current tool/material instructions."),
+            ("Layout and checking",
+             "Metric rule/tape, marking knife or sharp pencil, two squares, "
+             "straightedge, clamps, and diagonal measurement."),
+            ("Sheet breakdown",
+             "Table saw or track saw with a supported guide; router or "
+             "table-saw groove setup; offcut for every fit trial."),
+            ("Confirmat joinery",
+             f'<a href="{_esc(joinery_product.tooling_source_url)}">Häfele '
+             f"{_esc(joinery_product.tooling_sku)}</a> guided/stepped tooling "
+             f"for {_number(joinery.diameter_mm)} mm "
+             f"pilot, {_number(joinery.width_mm)} mm shank, and "
+             f"{_number(joinery.length_mm)} mm countersink; depth stops and "
+             f"a {joinery_product.drive} driver bit."),
+            ("Doors and shelf",
+             f"Ø{_number(model.hinge.cup_diameter_mm)} mm hinge-cup bit with "
+             f"{_number(model.hinge.cup_depth_mm)} mm depth stop; System-32 "
+             "boring jig/fence, Ø5 mm bit, sacrificial backer, and the "
+             f"{model.hinge.sku} instructions."),
+            ("Installation",
+             "Laser or spirit level, plumb reference, verified stud-locating "
+             "method, shims at bearing points, drill/driver, and the scheduled "
+             f"{model.wall_anchor.drive} bit."),
+        ]
+    boundary_rows = (
+        ("Primary declared panel record",
+         f"{model.section.material_evidence.product}; verify supplier label, "
+         "lot, actual thickness, finish face, and grain/face direction before cutting."),
+        ("Cut parts", f"{len(project.artifacts.cut_list)} individually identified "
+         "pieces; each row is one receiving/checkoff record."),
+        ("Edge band", f"Net modeled application length {_fmt(edge_band_net_mm)}; "
+         f"{model.profile.edge_band_thickness_mm:g} mm declared finished "
+         "thickness is included in model dimensions and subtracted from raw "
+         "cut sizes. Product/SKU, roll size, waste, and order allowance remain "
+         "procurement gates."),
+        ("Sheet purchasing", "Sheet nesting, kerf, yield, and sheet count are not "
+         "derived in this pack increment; create and approve a nesting plan before purchase."),
+        ("Field/by others", "Countertop and its attachment, wall repair, shims, "
+         "scribe fillers, packaging, and finish touch-up are not supplied by this cut list."),
+    )
+    vocabulary_rows = (
+        ("Cabinet side", "The main left or right carcass panel; older shop "
+         "language may call this an end panel."),
+        ("Drawer box front/back", "The structural 16 mm pieces between the two "
+         "drawer-box sides."),
+        ("Applied drawer front", "The visible decorative front attached after "
+         "the drawer box is square; e.g. Bottom drawer front."),
+        ("Drawer-box bottom", "The captured 12 mm panel in one drawer. Bottom "
+         "drawer means the lowest complete drawer, not this panel."),
+        ("Target / receiving part", "For stepped joinery the target receives "
+         "the through-hole and countersink; the receiver gets the blind edge pilot."),
+    )
+    return (
+        '<section class="before-start"><h2>Before you start</h2>'
+        '<p class="lede">Do not begin fabrication until every required jig, '
+        'selected material, manufacturer instruction, and unresolved field '
+        'condition below has been checked. Machine dimensions are nominal '
+        'model values; a named template or measured-fit trial controls where stated.</p>'
+        '<h3>Required tools and jigs</h3>'
+        + _table(("Work", "Requirement"), tuple(tool_rows))
+        + '<h3>Material and inclusion boundary</h3>'
+        + _table(("Category", "What this document proves or excludes"), boundary_rows)
+        + '<h3>Vocabulary used everywhere</h3>'
+        + _table(("Term", "Meaning"), vocabulary_rows)
+        + '</section>'
+    )
 
 
 def _gallery(images) -> str:
@@ -336,9 +579,14 @@ def _gallery(images) -> str:
 
 
 def build_cabinetry_html(project, *, images: dict[str, str],
-                          viewer_payload: dict, glb_b64: str) -> str:
-    """Pure HTML composition from one already-released PackedProject."""
+                          viewer_payload: dict, glb_b64: str,
+                          companion_href: str | None = None) -> str:
+    """Pure HTML composition from one fabrication-released PackedProject."""
 
+    if project.base_report is None or not project.fabrication_ready:
+        raise ValueError(
+            "cabinetry report requires a fabrication-released project"
+        )
     missing = set(REQUIRED_VIEWS) - images.keys()
     if missing:
         raise ValueError(f"missing cabinetry report views: {sorted(missing)}")
@@ -350,6 +598,33 @@ def build_cabinetry_html(project, *, images: dict[str, str],
     base_text = ("PASS" if project.base_report is not None and project.base_report.ok
                  else "NOT RUN")
     title = project.project_doc.name
+    if companion_href is not None and (
+        Path(companion_href).name != companion_href
+        or not companion_href.endswith(".html")
+    ):
+        raise ValueError("companion_href must be a relative HTML basename")
+    companion_link = (
+        f'<a class="companion-link" href="{_esc(companion_href)}">'
+        "Open the illustrated assembly manual →</a>"
+        if companion_href else ""
+    )
+    if project.installation_use_ready:
+        installation_status = (
+            '<div class="status pass"><b>Installation/use release: PASS</b>'
+            "The typed pack and base-language installation/use gates pass for "
+            "this project.</div>"
+        )
+    else:
+        policy = project.report.installation_use_policy
+        hold_text = (
+            policy.reader_notice(released=False) if policy is not None
+            else "Installation/use remains blocked by the active typed findings."
+        )
+        installation_status = (
+            '<div class="status fail"><b>Installation/use release: HOLD</b>'
+            + _esc(hold_text)
+            + '</div>'
+        )
     css = f"""
 :root {{ --ink:#18212b; --muted:#5e6b78; --line:#bec8d0; --faint:#dde3e8;
   --sheet:#fff; --acc:#9b3a24; --acc-soft:#f7e9e5; --chipbg:#f3f5f6; }}
@@ -374,6 +649,9 @@ th,td {{ padding:7px 8px; border:1px solid var(--faint); text-align:left; vertic
 th {{ background:#eef1f3; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }}
 td code {{ font-size:10.5px; overflow-wrap:anywhere; }} a {{ color:var(--acc); }}
 .verdict {{ font-weight:800; }} footer {{ margin-top:42px; padding-top:16px; border-top:2px solid var(--ink); color:var(--muted); }}
+.notice,.before-start .lede {{ background:var(--acc-soft); border-left:4px solid var(--acc); padding:10px 14px; }}
+.companion-link {{ display:inline-block;margin-top:9px;padding:8px 11px;
+  border:1px solid var(--acc);border-radius:6px;font-weight:800;text-decoration:none; }}
 {viewer_css()}
 @media (max-width:900px) {{ .sheet {{ padding:20px 16px 40px; }} header {{ grid-template-columns:1fr; }}
   .gallery {{ grid-template-columns:1fr 1fr; }} }}
@@ -382,25 +660,27 @@ td code {{ font-size:10.5px; overflow-wrap:anywhere; }} a {{ color:var(--acc); }
 """
     body = "".join((
         f"""<header><div><div class="eyebrow">cabinetry.frameless@1 · model-backed build document</div>
-<h1>{_esc(title)}</h1><p>Fabrication, assembly, conventional shipping, installation,
-and commissioning data generated from the expanded pack model and the unchanged
-DetailSpec assembly.</p></div><div class="status-grid">
-<div class="status"><b>Pack release: PASS</b>{_esc(project.report.summary)}</div>
+<h1>{_esc(title)}</h1><p>Fabrication, assembly, conventional shipping, and installation-planning
+data generated from the expanded pack model and the unchanged
+DetailSpec assembly.</p>{companion_link}</div><div class="status-grid">
+<div class="status"><b>Fabrication/model gate: PASS</b>{_esc(project.report.summary)}</div>
 <div class="status"><b>Base geometry: {base_text}</b>Collision, contact, connectivity, and intrinsic checks.</div>
 <div class="status unknown"><b>Whole-cabinet structural capacity</b>{whole_text}</div>
+{installation_status}
 <div class="status"><b>Product</b>{_fmt(cabinet.width_mm)} W × {_fmt(cabinet.height_mm)} H × {_fmt(cabinet.depth_mm)} D</div>
 </div></header>""",
+        _render_before_start(project),
         _gallery(images),
         _viewer_block(images, viewer_payload, glb_b64),
         f"<section>{_render_part_key(project)}</section>",
         f"<section>{render_dimension_tables(project.model)}</section>",
         f"<section>{_render_cut_list(project)}{_render_edge_banding(project)}</section>",
         f"<section>{_render_hardware(project)}{_render_machining(project)}</section>",
-        f"<section>{_render_findings(project)}</section>",
-        f"<section>{_render_source_map(project)}</section>",
         f"<section>{_render_steps('Fabrication', project.artifacts.fabrication_steps)}</section>",
         f"<section>{_render_steps('Assembly & shipping', project.artifacts.assembly_steps)}</section>",
         f"<section>{_render_steps('Installation & commissioning', project.artifacts.installation_steps)}</section>",
+        f"<section>{_render_findings(project)}</section>",
+        f"<section>{_render_source_map(project)}</section>",
         f"<footer>Generated from <code>{_esc(project.project_doc.name)}</code>. "
         "Manufacturer ratings apply only under their documented product conditions; "
         "this document is not a code approval or structural certification.</footer>",
@@ -437,17 +717,33 @@ def product_view_assembly(project) -> DetailAssembly:
     return assembly
 
 
-def product_viewer_payload(project, assembly: DetailAssembly) -> dict:
+def product_viewer_payload(project, assembly: DetailAssembly,
+                           instruction_manual=None) -> dict:
     """Project the canonical viewer metadata onto the product-only scene."""
 
-    payload = build_viewer_payload(project.detail)
+    payload = build_viewer_payload(project.detail, instruction_manual)
     names = {part.name for part in assembly.parts}
+    model_by_name = {part.name: part for part in project.model.parts}
+    cut_by_part_id = {
+        item.part_id: item for item in project.artifacts.cut_list
+    }
+    parts = {}
+    for name, value in payload["parts"].items():
+        if name not in names:
+            continue
+        row = dict(value)
+        modeled = model_by_name.get(name)
+        cut = cut_by_part_id.get(modeled.part_id) if modeled is not None else None
+        if cut is not None:
+            # A hover describes this identified piece.  Do not leak a pooled
+            # base-language BOM-group quantity or generic material name into
+            # the pack document when its canonical cut record is more exact.
+            row["qty"] = cut.quantity
+            row["material"] = cut.material
+        parts[name] = row
     return {
         **payload,
-        "parts": {
-            name: value for name, value in payload["parts"].items()
-            if name in names
-        },
+        "parts": parts,
     }
 
 
@@ -526,13 +822,13 @@ def _render_front_drawing(project, path: Path) -> None:
     )
     ax.annotate(
         labels["cabinet_bottom"],
-        xy=(cabinet.width_mm * .5, cabinet.toe_kick_height_mm),
-        xytext=(cabinet.width_mm * .5, cabinet.toe_kick_height_mm - 32),
+        xy=(cabinet.width_mm * .24, cabinet.toe_kick_height_mm),
+        xytext=(cabinet.width_mm * .20, cabinet.toe_kick_height_mm - 34),
         ha="center", va="top",
         arrowprops={"arrowstyle": "-", "color": "#9b3a24"}, fontsize=8,
     )
     ax.text(
-        cabinet.width_mm * .5, cabinet.toe_kick_height_mm * .45,
+        cabinet.width_mm * .72, cabinet.toe_kick_height_mm * .45,
         labels["toe_front"], ha="center", va="center", fontsize=8,
         color="#48392e",
     )
@@ -554,7 +850,9 @@ def _render_exploded_drawing(project, path: Path) -> None:
 
     model = project.model
     cabinet = model.section.cabinets[0]
-    fig, ax = plt.subplots(figsize=(9, 6), dpi=150)
+    labels = reader_labels_by_part_id(project)
+    fig, axes = plt.subplots(1, 2, figsize=(15, 7), dpi=150)
+    ax = axes[0]
     ax.add_patch(Rectangle((0, 0), cabinet.width_mm, cabinet.height_mm,
                            fill=False, linewidth=2, edgecolor="#18212b"))
     if hasattr(model, "drawer_bank"):
@@ -569,13 +867,72 @@ def _render_exploded_drawing(project, path: Path) -> None:
                                    model.drawer_bank.outside_box_width_mm * .72,
                                    cell.box_height_mm, fill=False,
                                    edgecolor="#9b3a24", linewidth=1.5))
-            ax.text(shift + 5, z + front.width_mm + 10, cell.cell_id,
-                    color="#9b3a24", fontsize=9, weight="bold")
+            ax.text(
+                shift + 5, z + front.width_mm + 10,
+                labels[front.part_id], color="#9b3a24", fontsize=8,
+                weight="bold",
+            )
     ax.set_xlim(-40, cabinet.width_mm + 280)
     ax.set_ylim(-40, cabinet.height_mm + 70)
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.set_title("Exploded front/box groups — offsets are diagrammatic")
+    ax.set_title("Drawer-bank groups — offsets are diagrammatic")
+
+    detail = axes[1]
+    if hasattr(model, "drawer_bank"):
+        prefix = f"cabinetry.{cabinet.cabinet_id}."
+        cell_id = model.drawer_bank.cells[0].cell_id
+        roles = {
+            "applied": f"drawer_front_{cell_id}",
+            "front": f"drawer_{cell_id}_front",
+            "back": f"drawer_{cell_id}_back",
+            "left": f"drawer_{cell_id}_side_left",
+            "right": f"drawer_{cell_id}_side_right",
+            "bottom": f"drawer_{cell_id}_bottom",
+        }
+        parts = {key: labels[prefix + role] for key, role in roles.items()}
+        patches = {
+            "applied": Rectangle((.10, .03), .80, .10,
+                                 facecolor="#d4b18a", edgecolor="#493a2e"),
+            "front": Rectangle((.20, .23), .60, .06,
+                               facecolor="#e4c9a8", edgecolor="#493a2e"),
+            "bottom": Rectangle((.23, .36), .54, .30,
+                                facecolor="#ead9bf", edgecolor="#9b3a24"),
+            "left": Rectangle((.14, .33), .06, .48,
+                              facecolor="#d4b18a", edgecolor="#493a2e"),
+            "right": Rectangle((.80, .33), .06, .48,
+                               facecolor="#d4b18a", edgecolor="#493a2e"),
+            "back": Rectangle((.23, .77), .54, .06,
+                              facecolor="#e4c9a8", edgecolor="#493a2e"),
+        }
+        for item in patches.values():
+            detail.add_patch(item)
+        callouts = {
+            "applied": ((.50, .08), (.50, -.02), "center", "top"),
+            "front": ((.50, .26), (.50, .17), "center", "top"),
+            "bottom": ((.50, .51), (.50, .51), "center", "center"),
+            "left": ((.17, .57), (.02, .57), "left", "center"),
+            "right": ((.83, .57), (.98, .57), "right", "center"),
+            "back": ((.50, .80), (.50, .92), "center", "bottom"),
+        }
+        for key, (xy, text_xy, horizontal, vertical) in callouts.items():
+            detail.annotate(
+                parts[key], xy=xy, xytext=text_xy, xycoords="axes fraction",
+                textcoords="axes fraction", ha=horizontal, va=vertical,
+                fontsize=8,
+                arrowprops={"arrowstyle": "-", "color": "#9b3a24"},
+            )
+        detail.text(
+            .5, .98,
+            "One typical drawer; all six labels match the cut list and 3D hover",
+            transform=detail.transAxes, ha="center", va="top", fontsize=8,
+            color="#48392e",
+        )
+    detail.set_xlim(0, 1)
+    detail.set_ylim(-.08, 1.02)
+    detail.set_aspect("equal")
+    detail.axis("off")
+    detail.set_title("Typical drawer — exploded construction map")
     fig.tight_layout()
     fig.savefig(path, facecolor="white")
     plt.close(fig)
@@ -625,27 +982,28 @@ def _render_drawer_detail(project, path: Path) -> None:
                 ha="center", va="center")
         ax.set_title("Front section and hardware proxies")
         ax = axes[1]
-        ax.add_patch(Rectangle((0, 0), bank.box_length_mm, cell.box_height_mm,
+        back_width = bank.inside_box_width_mm
+        notch_width, notch_height = detail["rear_notch_mm"]
+        ax.add_patch(Rectangle((0, 0), back_width, cell.box_height_mm,
                                fill=False, linewidth=2))
-        ax.add_patch(Rectangle((detail["bottom_side_origin_mm"],
-                                runner.bottom_recess_mm),
-                               detail["bottom_blank_depth_mm"],
-                               bottom_thickness,
-                               facecolor="#d4b18a", edgecolor="#9b3a24"))
-        ax.plot((0, detail["runner_physical_length_mm"]), (3, 3),
-                color="#355e7c", linewidth=3)
-        ax.plot((bank.box_length_mm - runner.minimum_rear_notch_mm,
-                 bank.box_length_mm), (0, 0),
-                color="#9b3a24", linewidth=4)
-        ax.text(bank.box_length_mm / 2, cell.box_height_mm / 2,
-                f"{_fmt(bank.box_length_mm)} nominal\n"
-                f"{_fmt(runner.minimum_rear_notch_mm)} rear notch\n"
-                f"Ø{runner.hook_bore_mm[0]:g} × {runner.hook_bore_mm[1]:g} mm hook bore\n"
-                f"{runner.hook_bore_inset_from_side_mm:g} mm inset · "
-                f"{runner.hook_bore_height_from_bottom_mm:g} mm high\n"
-                f"runner physical {_fmt(detail['runner_physical_length_mm'])}",
+        for x in (0, back_width - notch_width):
+            ax.add_patch(Rectangle(
+                (x, 0), notch_width, notch_height,
+                facecolor="white", edgecolor="#9b3a24", hatch="///",
+                linewidth=1.5,
+            ))
+        hook_x = [point[0] for point in detail["rear_hook_centers_mm"]]
+        hook_y = [point[1] for point in detail["rear_hook_centers_mm"]]
+        ax.scatter(hook_x, hook_y, color="#355e7c", s=38, zorder=3)
+        ax.text(back_width / 2, cell.box_height_mm / 2,
+                f"DRAWER BACK — rear face\n"
+                f"two {_number(notch_width)} × {_number(notch_height)} mm notches\n"
+                f"Ø{runner.hook_bore_mm[0]:g} × {runner.hook_bore_mm[1]:g} mm hook bores\n"
+                f"centers ({_number(hook_x[0])}, {_number(hook_y[0])}) and "
+                f"({_number(hook_x[1])}, {_number(hook_y[1])}) mm\n"
+                "origin = lower-left corner",
                 ha="center", va="center")
-        ax.set_title("Side and rear preparation")
+        ax.set_title("Drawer back — notch and hook preparation")
 
         ax = axes[2]
         ax.add_patch(Rectangle((0, 0), bank.outside_box_width_mm,
@@ -665,13 +1023,23 @@ def _render_drawer_detail(project, path: Path) -> None:
                 f"opening − {_fmt(stabilizer.linkage_rod_cut_deduction_mm)}",
                 ha="center", va="center")
         ax.set_title("Lateral stabilizer cut schematic")
+        # These are machining schematics, not scaled elevations. Keeping an
+        # equal data aspect compresses a ~1 m drawer width into a strip too
+        # shallow to read. Let each panel use its available height while the
+        # printed dimensions remain the controlling geometry.
+        axes[0].set_xlim(-30, bank.outside_box_width_mm + 30)
+        axes[0].set_ylim(-15, max(cell.box_height_mm * 1.25, 160))
+        axes[1].set_xlim(-30, bank.inside_box_width_mm + 30)
+        axes[1].set_ylim(-15, max(cell.box_height_mm * 1.25, 160))
+        axes[2].set_xlim(-30, bank.outside_box_width_mm + 30)
+        axes[2].set_ylim(-25, bank.box_length_mm + 40)
         for ax in axes:
-            ax.set_aspect("equal")
-            ax.autoscale_view()
+            ax.set_aspect("auto")
             ax.axis("off")
         fig.suptitle(
             "Purchased hardware is shown as schematic visual proxies; "
-            "proxies are not capacity geometry.",
+            "proxies are not capacity geometry. Panels are not to scale; "
+            "printed dimensions control.",
             fontsize=10,
         )
     else:
@@ -719,14 +1087,32 @@ def generate_build_document(project_path: str | Path, out_path: str | Path) -> P
     project_path = Path(project_path)
     out_path = Path(out_path)
     project = compile_project_file(project_path)
-    project.require_release()
+    project.require_fabrication_release()
+    return generate_released_build_document(project, out_path)
+
+
+def generate_released_build_document(
+    project,
+    out_path: str | Path,
+    *,
+    companion_href: str | None = None,
+    instruction_manual=None,
+) -> Path:
+    """Render one fabrication-released project without recompiling it."""
+
+    if project.base_report is None or not project.fabrication_ready:
+        raise ValueError(
+            "cabinetry report requires a fabrication-released project"
+        )
+    out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     assembly = product_view_assembly(project)
     images = _render_views(project, assembly, out_path.parent)
-    payload = product_viewer_payload(project, assembly)
+    payload = product_viewer_payload(project, assembly, instruction_manual)
     glb_b64 = _web_glb_b64(assembly, out_path.parent / "_glb")
     document = build_cabinetry_html(
-        project, images=images, viewer_payload=payload, glb_b64=glb_b64
+        project, images=images, viewer_payload=payload, glb_b64=glb_b64,
+        companion_href=companion_href,
     )
     out_path.write_text(document, encoding="utf-8")
     return out_path

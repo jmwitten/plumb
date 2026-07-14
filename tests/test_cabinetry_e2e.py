@@ -45,7 +45,7 @@ def test_manifest_records_versions_evidence_and_no_conformity_claim():
     payload = project.manifest()
 
     assert payload["schema"] == "detailgen/packed-project/v1"
-    assert payload["packs"] == {"cabinetry.frameless": "1.0.0"}
+    assert payload["packs"] == {"cabinetry.frameless": "1.1.0"}
     assert payload["profile"] == "frameless_plywood_shop_v1@1.0.0"
     assert payload["catalogs"] == {
         "hinge": "blum_clip_top_blumotion_110_h002@2025.1",

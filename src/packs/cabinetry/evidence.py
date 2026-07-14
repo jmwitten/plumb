@@ -13,6 +13,7 @@ EVIDENCE_LEVELS = frozenset({
     "certified",
     "assumed",
     "unknown",
+    "public_guidance",
 })
 
 
@@ -31,4 +32,3 @@ class EvidenceRecord:
                 f"unknown evidence level {self.level!r}; known: "
                 f"{sorted(EVIDENCE_LEVELS)}"
             )
-

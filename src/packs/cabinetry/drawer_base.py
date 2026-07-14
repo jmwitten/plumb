@@ -86,6 +86,9 @@ class DrawerBaseModel:
 
     def catalog_manifest(self) -> dict[str, str]:
         return {
+            "drawer_box_joinery_fastener": (
+                self.drawer_bank.joinery_fastener.product_id
+            ),
             "front_fastener": self.front_fastener.product_id,
             "lateral_stabilizer": self.drawer_bank.stabilizer.product_id,
             "locking_device": self.drawer_bank.locking_device.product_id,
@@ -105,6 +108,9 @@ class DrawerBaseModel:
 
     def catalog_source_manifest(self) -> dict[str, str]:
         return {
+            "drawer_box_joinery_fastener": (
+                self.drawer_bank.joinery_fastener.source_url
+            ),
             "front_fastener": self.front_fastener.source_url,
             "lateral_stabilizer": self.drawer_bank.stabilizer.source_url,
             "locking_device": self.drawer_bank.locking_device.source_url,
@@ -145,7 +151,7 @@ class DrawerBaseModel:
                     "moving_hardware_mass_kg": cell.moving_hardware_mass_kg,
                     "moving_mass_kg": cell.moving_mass_kg,
                     "contents_load_lb": cell.contents_load_lb,
-                    "rated_moving_load_lb": cell.rated_moving_load_lb,
+                    "calculated_moving_load_lb": cell.calculated_moving_load_lb,
                 }
                 for cell in bank.cells
             },

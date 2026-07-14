@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
 
+import pytest
+
 from detailgen.core.registry import components, materials
-from detailgen.packs import compile_project, compile_project_file
+from detailgen.packs import (
+    ProjectReleaseError,
+    compile_project,
+    compile_project_file,
+)
 
 
 ROOT = Path(__file__).parents[1]
@@ -17,29 +24,75 @@ FIXTURE = ROOT / "tests/fixtures/cabinetry/frameless_three_drawer_40.project.yam
 EXAMPLE = ROOT / "details/frameless_three_drawer_40.project.yaml"
 
 
-def test_real_db40_compiles_builds_and_passes_both_release_gates():
+def test_real_db40_passes_fabrication_gate_but_holds_installation_and_use():
     project = compile_project_file(FIXTURE)
-    assert project.report.release_ready
+    assert project.report.fabrication_ready
+    assert not project.report.installation_use_ready
+    assert not project.report.release_ready
     assert not project.release_ready
     assert not project.artifacts.release_ready
+    assert project.manifest()["release_contract"] == "split"
+    assert project.manifest()["release_scope"] == "none"
+    assert project.manifest()["artifacts"]["release_contract"] == "split"
+    assert project.manifest()["artifacts"]["release_scope"] == "none"
 
     assembly = project.build()
     base_report = project.validate()
 
     assert base_report.ok, "\n".join(str(item) for item in base_report.blocking)
-    assert project.release_ready
-    assert project.artifacts.release_ready
+    assert project.fabrication_ready
+    assert not project.release_ready
+    assert project.artifacts.fabrication_ready
+    assert not project.artifacts.installation_use_ready
+    assert not project.artifacts.release_ready
     assert len(assembly.parts) == len(project.model.parts)
-    assert project.require_release() is project
+    assert project.require_fabrication_release() is project
+    with pytest.raises(ProjectReleaseError, match="installation/use release blocked"):
+        project.require_release()
+
+
+def test_installation_policy_rejects_unknown_blocker_rule_references():
+    project = compile_project_file(FIXTURE)
+    bad_policy = replace(
+        project.report.installation_use_policy,
+        blocking_rules=("cabinetry.performance.typo",),
+    )
+    with pytest.raises(ValueError, match="unknown blocking rules"):
+        replace(project.report, installation_use_policy=bad_policy)
+
+
+def test_failed_base_validation_keeps_nested_and_top_level_scope_at_none(
+    monkeypatch,
+):
+    from detailgen.validation.checks import Finding
+
+    project = compile_project_file(FIXTURE)
+    failed = project.detail.validate()
+    failed.add(Finding(
+        check="interference",
+        subject="DB40",
+        passed=False,
+        detail="test-only base failure",
+    ))
+    monkeypatch.setattr(project.detail, "validate", lambda: failed)
+    project.validate()
+
+    payload = project.manifest()
+    assert not project.fabrication_ready
+    assert payload["release_scope"] == "none"
+    assert payload["artifacts"]["release_scope"] == "none"
 
 
 def test_manifest_uses_model_catalog_protocol_and_records_policy():
     project = compile_project_file(FIXTURE)
-    project.require_release()
+    project.require_fabrication_release()
     payload = project.manifest()
 
     assert payload["catalogs"] == {
         "front_fastener": "grk_low_profile_cabinet_8x1_1_4_114069@2026.1",
+        "drawer_box_joinery_fastener": (
+            "hafele_confirmat_7x50_264_42_190@2026.1"
+        ),
         "lateral_stabilizer": "blum_zs7m686mu@2026.1",
         "locking_device": "blum_t51_7601_pair@2026.1",
         "locking_device_screw": "blum_606n_no6x5_8@2026.1",
@@ -52,6 +105,9 @@ def test_manifest_uses_model_catalog_protocol_and_records_policy():
         "wall_anchor": "grk_low_profile_cabinet_8x3_1_8@2026.1",
     }
     assert payload["catalog_sources"] == {
+        "drawer_box_joinery_fastener": (
+            project.model.drawer_bank.joinery_fastener.source_url
+        ),
         "front_fastener": project.model.front_fastener.source_url,
         "lateral_stabilizer": project.model.drawer_bank.stabilizer.source_url,
         "locking_device": project.model.drawer_bank.locking_device.source_url,
@@ -69,7 +125,13 @@ def test_manifest_uses_model_catalog_protocol_and_records_policy():
     assert payload["derived_facts"]["drawer_cells"]["top"]["moving_hardware_mass_kg"] > 0
     assert "cabinetry.DB40.top.runner_installation_screws" in payload["source_map"]
     assert payload["source_map"]["cabinetry.DB40.top.runner_installation_screws"]["source_url"]
-    assert payload["release_ready"] is True
+    assert payload["release_ready"] is False
+    assert payload["fabrication_ready"] is True
+    assert payload["installation_use_ready"] is False
+    assert payload["release_contract"] == "split"
+    assert payload["release_scope"] == "fabrication_only"
+    assert payload["artifacts"]["release_contract"] == "split"
+    assert payload["artifacts"]["release_scope"] == "fabrication_only"
     assert payload["physical_tests"] == "not_performed"
     assert "certified" not in project.manifest_json().lower()
     assert json.loads(project.manifest_json()) == payload

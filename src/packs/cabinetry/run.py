@@ -15,8 +15,8 @@ from ...spec.schema import (
 )
 from .artifacts import (
     CabinetArtifacts,
-    HardwareItem,
     WorkStep,
+    _hardware_item,
     build_artifacts,
 )
 from .catalogs import get_assembly_fastener
@@ -100,7 +100,9 @@ def build_run_model(section: CabinetrySection, *, project_name: str) -> CabinetR
             ids.append(part_id)
             connector_parts.append(PartModel(
                 part_id=part_id,
-                role=f"case_connector_{pair}_{index}",
+                role=(f"case_connector_{len(left_cabinet.cabinet_id)}_"
+                      f"{left_cabinet.cabinet_id}_{right_cabinet.cabinet_id}_"
+                      f"{index}"),
                 name=f"{left_cabinet.cabinet_id} to "
                      f"{right_cabinet.cabinet_id} case connector {index}",
                 component_type="structural_screw",
@@ -321,15 +323,15 @@ def build_run_artifacts(run: CabinetRunModel, report: CabinetReport) -> CabinetA
             f"cabinetry.{right.section.cabinets[0].cabinet_id}.left_end",
         )
     )
-    run_hardware = HardwareItem(
+    run_hardware = _hardware_item(HardwareSystem(
         system_id="cabinetry.run.case_connectors",
         kind="cabinet_to_cabinet_connection",
         product_id=connector.product_id,
         quantity=4 * (len(run.cabinets) - 1),
-        source_url=connector.source_url,
         evidence="manufacturer_rated",
         related_parts=related,
-    )
+        source_url=connector.source_url,
+    ), source_url=connector.source_url)
     fabrication_steps = tuple(
         step for index, (model, artifact) in enumerate(zip(run.cabinets, singles))
         for step in _prefixed_steps(
@@ -382,9 +384,9 @@ def build_run_artifacts(run: CabinetRunModel, report: CabinetReport) -> CabinetA
         for index, step in enumerate(ordered)
     )
     return CabinetArtifacts(
-        schema="detailgen/cabinetry-artifacts/v1",
+        schema="detailgen/cabinetry-artifacts/v2",
         project=run.project_name,
-        pack="cabinetry.frameless@1.0.0",
+        pack="cabinetry.frameless@1.1.0",
         profile=run.profile.profile_id,
         mode=run.mode,
         release_ready=False,

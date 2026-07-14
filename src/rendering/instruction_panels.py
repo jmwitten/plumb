@@ -31,6 +31,44 @@ class DisplayRow:
 
 
 @dataclass(frozen=True)
+class ProcedureLink:
+    """Typed manufacturer link; references are not mislabeled as procedures."""
+
+    label: str
+    href: str
+    source_ref: str
+    kind: str = "product_reference"
+
+
+@dataclass(frozen=True)
+class DiagramPrimitive:
+    """One allow-listed vector mark in a reader-facing operation diagram.
+
+    ``coords`` are normalized SVG coordinates.  ``model_point_mm`` retains the
+    compiled coordinate behind a plotted station so tests and downstream
+    readers can prove the illustration did not become a second source of truth.
+    """
+
+    kind: str
+    coords: tuple[float, ...]
+    role: str = "work"
+    label: str = ""
+    model_point_mm: tuple[float, ...] = ()
+    fact_ref: str = ""
+
+
+@dataclass(frozen=True)
+class OperationDiagram:
+    """Typed, model-derived 2D operation view rendered without raw SVG input."""
+
+    diagram_id: str
+    title: str
+    caption: str
+    primitives: tuple[DiagramPrimitive, ...]
+    source_refs: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class PlacementStation:
     """One geometry-derived placement instruction shared by text and image."""
 
@@ -70,6 +108,8 @@ class InstructionPanel:
     honesty: tuple[str, ...] = ()
     hardware: tuple[DisplayRow, ...] = ()
     tools: tuple[DisplayRow, ...] = ()
+    procedure_links: tuple[ProcedureLink, ...] = ()
+    diagrams: tuple[OperationDiagram, ...] = ()
     stations: tuple[PlacementStation, ...] = ()
     content_key: str = ""
 
@@ -83,6 +123,24 @@ class InstructionManual:
     step_edges: tuple[tuple[int, int], ...]
     part_schedule: tuple[tuple[str, int], ...]
     inventory: tuple[DisplayRow, ...]
+    lede: str
+    excluded_part_ids: tuple[str, ...] = ()
+
+
+_CADDY_MANUAL_LEDE = (
+    "This is one machine-checked build order from the validated construction "
+    "process graph. A blocking modeled failure blocks release. Its phase "
+    "boundary includes {declared_constraints} authored process-order "
+    "constraints; their declared reasons are printed where they apply. "
+    "Deterministic tie-breaks between otherwise independent events are a "
+    "readable build choice, not proof that no other valid order exists. "
+    "Colored parts are current work, pale gray parts are already present, and "
+    "blue marks share the compiled measurements used by the placement text. "
+    "Prototype only: structural capacity, stability, sliding resistance, "
+    "insertion travel, and hot-drink use remain unproved; do not treat it as "
+    "load-bearing or use it for hot liquids until a representative build is "
+    "validated."
+)
 
 
 # Small reader-register vocabulary keyed only by typed model facts. Sentence
@@ -524,9 +582,19 @@ def _source_events(graph, steps, cohort) -> tuple[tuple[str, str, str], ...]:
 def build_instruction_manual(
     detail,
     technical_href: str = "armchair_caddy_build_document.html",
+    *,
+    title: str = "Armchair Coffee Caddy — Illustrated Assembly Manual",
+    basename: str = "armchair_caddy_assembly_manual.html",
+    lede: str = _CADDY_MANUAL_LEDE,
+    excluded_part_ids: tuple[str, ...] = (),
 ) -> InstructionManual:
     """Build the pure instruction-manual model for a validated detail."""
     technical_href = _relative_html_basename(technical_href, "technical_href")
+    basename = _relative_html_basename(basename, "basename")
+    if not isinstance(title, str) or not title.strip():
+        raise ValueError("title must be non-empty")
+    if not isinstance(lede, str) or not lede.strip():
+        raise ValueError("lede must be non-empty")
     checks = getattr(detail, "_connection_checks", None)
     graph = getattr(checks, "event_graph", None)
     if graph is None:
@@ -544,6 +612,22 @@ def build_instruction_manual(
     cohorts = _panel_cohorts(steps, actions)
     labels = part_labels(detail.assembly.parts)
 
+    by_id = {part.id: part for part in detail.assembly.parts}
+    excluded = tuple(dict.fromkeys(excluded_part_ids))
+    unknown_excluded = sorted(set(excluded) - set(by_id))
+    if unknown_excluded:
+        raise InstructionPresentationError(
+            f"manual excludes unknown part ids: {unknown_excluded!r}")
+    roles = detail.roles()
+    invalid_excluded = sorted(
+        part_id for part_id in excluded
+        if roles.get(by_id[part_id].name) != "existing"
+    )
+    if invalid_excluded:
+        raise InstructionPresentationError(
+            "manual may exclude only parts declared with the existing role; "
+            f"invalid exclusions: {invalid_excluded!r}")
+
     event_to_step = _step_event_map(graph, steps)
     cohort_of_step = {
         step_index: panel_index
@@ -552,6 +636,8 @@ def build_instruction_manual(
     }
     schedule = {}
     for part in detail.assembly.parts:
+        if part.id in excluded:
+            continue
         if part.id in graph.context_parts:
             join_panel = next(
                 (i for i, cohort in enumerate(cohorts, start=1)
@@ -575,9 +661,11 @@ def build_instruction_manual(
             detail, graph, steps, cohort, action, labels,
             installs_by_connection)
         arrivals = tuple(part.id for part in detail.assembly.parts
-                         if schedule[part.id] == panel_index)
+                         if part.id in schedule
+                         and schedule[part.id] == panel_index)
         visible = tuple(part.id for part in detail.assembly.parts
-                        if schedule[part.id] <= panel_index)
+                        if part.id in schedule
+                        and schedule[part.id] <= panel_index)
         if action == "prepare":
             focus = arrivals
         elif action == "cure":
@@ -603,14 +691,17 @@ def build_instruction_manual(
         ))
 
     return InstructionManual(
-        title="Armchair Coffee Caddy — Illustrated Assembly Manual",
-        basename="armchair_caddy_assembly_manual.html",
+        title=title,
+        basename=basename,
         technical_href=technical_href,
         panels=tuple(panels),
         step_edges=step_edges,
         part_schedule=tuple((p.id, schedule[p.id])
-                            for p in detail.assembly.parts),
+                            for p in detail.assembly.parts
+                            if p.id not in excluded),
         inventory=(*_inventory(detail, labels), *_consumable_inventory(graph)),
+        lede=lede,
+        excluded_part_ids=excluded,
     )
 
 

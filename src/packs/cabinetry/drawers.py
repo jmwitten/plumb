@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from math import pi
 
 from .catalogs import (
+    AssemblyFastenerProduct,
     DrawerLockingDeviceProduct,
     DrawerPullProduct,
     DrawerRunnerProduct,
@@ -13,6 +14,7 @@ from .catalogs import (
     get_drawer_locking_device,
     get_drawer_pull,
     get_drawer_runner,
+    get_assembly_fastener,
     get_lateral_stabilizer,
 )
 from .schema import DrawerBankDecl
@@ -44,7 +46,7 @@ class DrawerCellModel:
     wood_mass_kg: float
     moving_hardware_mass_kg: float
     moving_mass_kg: float
-    rated_moving_load_lb: float
+    calculated_moving_load_lb: float
     bottom_clearance_mm: float
     part_ids: tuple[str, ...]
     machining_ids: tuple[str, ...]
@@ -67,6 +69,7 @@ class DrawerBankModel:
     locking_device: DrawerLockingDeviceProduct
     stabilizer: LateralStabilizerProduct
     pull_product: DrawerPullProduct
+    joinery_fastener: AssemblyFastenerProduct
     front_edge_reveal_mm: float
     front_gap_mm: float
     cells: tuple[DrawerCellModel, ...]
@@ -155,6 +158,9 @@ def build_drawer_bank(
     )
     stabilizer = get_lateral_stabilizer(declaration.stabilizer_product_id)
     pull = get_drawer_pull(declaration.pull_product_id)
+    joinery_fastener = get_assembly_fastener(
+        "hafele_confirmat_7x50_264_42_190@2026.1"
+    )
 
     if _SIDE_THICKNESS_MM > runner.maximum_side_thickness_mm:
         raise ValueError(
@@ -320,7 +326,60 @@ def build_drawer_bank(
             bands=("top", "bottom", "left", "right"),
         )
 
+        # Two mechanically fixed butt joints at the front and two at the back.
+        # The fastener centerlines stay above the captured-bottom groove; the
+        # receiving edge is named so a row cannot silently account only for
+        # the through-hole in the side panel.
+        lower_joinery_y = max(
+            38.1,
+            runner.bottom_recess_mm + _BOTTOM_THICKNESS_MM + 10.0,
+        )
+        upper_joinery_y = cell.box_height_mm - 25.4
+        if upper_joinery_y <= lower_joinery_y:
+            raise ValueError(
+                f"drawer {cell.cell_id!r} box height {cell.box_height_mm:g} mm "
+                "cannot fit two corner fasteners clear of the bottom groove"
+            )
+        for side, handed in ((side_left, "left"), (side_right, "right")):
+            for receiving, end_x, end_name in (
+                (box_front, _SIDE_THICKNESS_MM / 2, "front"),
+                (box_back, runner.nominal_length_mm - _SIDE_THICKNESS_MM / 2,
+                 "back"),
+            ):
+                cell_machining.append(MachiningFeature(
+                    feature_id=(f"{side.part_id}.confirmat_{end_name}"),
+                    kind="drawer_box_confirmat_step_drill",
+                    part_id=side.part_id,
+                    location_mm=(end_x, lower_joinery_y),
+                    diameter_mm=joinery_fastener.blind_pilot_diameter_mm,
+                    depth_mm=(joinery_fastener.length_mm
+                              - _SIDE_THICKNESS_MM),
+                    pitch_mm=upper_joinery_y - lower_joinery_y,
+                    count=2,
+                    source=joinery_fastener.product_id,
+                    width_mm=joinery_fastener.through_shank_diameter_mm,
+                    length_mm=joinery_fastener.countersink_diameter_mm,
+                    face="outside",
+                    coordinate_system=(
+                        f"{handed} drawer-side outside face; "
+                        "origin=front-bottom corner; +X=rearward/cut-list "
+                        "length; +Y=up/cut-list width"
+                    ),
+                    pitch_axis="Y",
+                    receiving_part_id=receiving.part_id,
+                ))
+
         for grooved_part in (side_left, side_right, box_front, box_back):
+            if "side_" in grooved_part.role:
+                groove_datum = (
+                    "drawer-side inside face; origin=front-bottom corner; "
+                    "+X=rearward/cut-list length; +Y=up/cut-list width"
+                )
+            else:
+                groove_datum = (
+                    "drawer-front/back inside face; origin=lower-left corner; "
+                    "+X=right/cut-list length; +Y=up/cut-list width"
+                )
             cell_machining.append(MachiningFeature(
                 feature_id=f"{grooved_part.part_id}.bottom_groove",
                 kind="drawer_bottom_groove",
@@ -331,18 +390,25 @@ def build_drawer_bank(
                 length_mm=grooved_part.length_mm,
                 face="inside",
                 source="drawer_box.captured_bottom",
+                coordinate_system=groove_datum,
             ))
-        for side in (side_left, side_right):
+        for handed, x_location in (
+            ("left", 0.0),
+            ("right", box_back.length_mm - runner.minimum_rear_notch_mm),
+        ):
             cell_machining.append(MachiningFeature(
-                feature_id=f"{side.part_id}.runner_rear_notch",
+                feature_id=f"{box_back.part_id}.runner_rear_notch_{handed}",
                 kind="runner_rear_notch",
-                part_id=side.part_id,
-                location_mm=(runner.nominal_length_mm - runner.minimum_rear_notch_mm,
-                             0.0),
-                depth_mm=runner.bottom_clearance_mm,
+                part_id=box_back.part_id,
+                location_mm=(x_location, 0.0),
+                depth_mm=runner.minimum_rear_notch_height_mm,
                 width_mm=runner.minimum_rear_notch_mm,
                 source=runner.product_id,
-                face="rear_bottom",
+                face="rear_face_lower_edge",
+                coordinate_system=(
+                    "drawer-back rear face; origin=lower-left corner; "
+                    "+X=right/cut-list length; +Y=up/cut-list width"
+                ),
             ))
         for handed, x_location in (
             ("left", runner.hook_bore_inset_from_side_mm),
@@ -357,6 +423,10 @@ def build_drawer_bank(
                 depth_mm=runner.hook_bore_mm[1],
                 source=runner.product_id,
                 face="rear",
+                coordinate_system=(
+                    "drawer-back rear face; origin=lower-left corner; "
+                    "+X=right/cut-list length; +Y=up/cut-list width"
+                ),
             ))
         for handed in ("left", "right"):
             for bore_index in range(1, locking_device.pilot_bores_per_device + 1):
@@ -376,18 +446,27 @@ def build_drawer_bank(
                     ),
                 ))
         for mounting_part_id in mounting_part_ids:
-            for station in runner.required_rear_fixing_stations_mm:
+            for station in runner.required_fixing_stations_mm:
                 side_name = "left" if mounting_part_id == mounting_part_ids[0] else "right"
                 cell_machining.append(MachiningFeature(
                     feature_id=(f"{mounting_part_id}.{cell.cell_id}.runner_"
                                 f"fixing_{side_name}_{station:g}"),
                     kind="runner_fixing_station",
                     part_id=mounting_part_id,
-                    location_mm=(runner.front_setback_mm + station,
-                                 box_z - opening_origin_mm[2]
-                                 + runner.mounting_line_mm),
+                    location_mm=(
+                        station,
+                        box_z - front_origin_mm[2]
+                        + runner.mounting_line_mm - runner.bottom_clearance_mm,
+                    ),
+                    diameter_mm=runner.installation_pilot_diameter_mm,
+                    depth_mm=runner.installation_pilot_depth_mm,
                     source=runner.product_id,
                     face="inside",
+                    coordinate_system=(
+                        "cabinet-side inside face; origin=front-bottom of side "
+                        "blank; +X=rearward/cut-list width; "
+                        "+Y=up/cut-list length"
+                    ),
                 ))
         for index, location in enumerate((
             (inside_box_width * 0.25, cell.box_height_mm * 0.25),
@@ -404,6 +483,10 @@ def build_drawer_bank(
                 depth_mm=box_front.thickness_mm,
                 source="drawer_front.applied",
                 face="inside",
+                coordinate_system=(
+                    "drawer box-front inside face; origin=lower-left corner; "
+                    "+X=right/cut-list length; +Y=up/cut-list width"
+                ),
             ))
         pull_center_x = front_width_mm / 2
         for handed, x_location in (
@@ -419,6 +502,10 @@ def build_drawer_bank(
                 depth_mm=front_thickness_mm,
                 source=pull.product_id,
                 face="front",
+                coordinate_system=(
+                    "applied-front finished face; origin=lower-left corner; "
+                    "+X=right/cut-list length; +Y=up/cut-list width"
+                ),
             ))
         stabilizer_system_id = f"{namespace}.{cell.cell_id}.lateral_stabilizer"
         cell_machining.extend((
@@ -430,6 +517,9 @@ def build_drawer_bank(
                 length_mm=stabilizer.gear_rack_length_mm,
                 source=stabilizer.product_id,
                 face="hardware_stock",
+                coordinate_system=(
+                    "hardware stock; origin=one cut end; +X=stock length"
+                ),
             ),
             MachiningFeature(
                 feature_id=f"{stabilizer_system_id}.linkage_rod_cut",
@@ -440,11 +530,26 @@ def build_drawer_bank(
                            - stabilizer.linkage_rod_cut_deduction_mm),
                 source=stabilizer.product_id,
                 face="hardware_stock",
+                coordinate_system=(
+                    "hardware stock; origin=one cut end; +X=stock length"
+                ),
             ),
         ))
 
         related_box_parts = tuple(part.part_id for part in cell_parts[:5])
         cell_hardware.extend((
+            HardwareSystem(
+                system_id=f"{namespace}.{cell.cell_id}.box_joinery_confirmats",
+                kind="drawer_box_joinery_fastener",
+                product_id=joinery_fastener.product_id,
+                quantity=8,
+                related_parts=(
+                    side_left.part_id, side_right.part_id,
+                    box_front.part_id, box_back.part_id,
+                ),
+                evidence="manufacturer_rated",
+                source_url=joinery_fastener.source_url,
+            ),
             HardwareSystem(
                 system_id=f"{namespace}.{cell.cell_id}.runner_pair",
                 kind="drawer_runner_pair",
@@ -536,9 +641,14 @@ def build_drawer_bank(
                 * pull.mounting_screw_quantity_per_pull,
             )
             + front_attachment_fastener_mass_upper_bound_kg
+            + solid_fastener_mass_upper_bound_kg(
+                joinery_fastener.diameter_mm,
+                joinery_fastener.length_mm,
+                8,
+            )
         )
         moving_mass = wood_mass + moving_hardware_mass
-        rated_moving_load = moving_mass * _LB_PER_KG + cell.contents_load_lb
+        calculated_moving_load = moving_mass * _LB_PER_KG + cell.contents_load_lb
         cells.append(DrawerCellModel(
             cell_id=cell.cell_id,
             front_height_mm=cell.front_height_mm,
@@ -547,7 +657,7 @@ def build_drawer_bank(
             wood_mass_kg=wood_mass,
             moving_hardware_mass_kg=moving_hardware_mass,
             moving_mass_kg=moving_mass,
-            rated_moving_load_lb=rated_moving_load,
+            calculated_moving_load_lb=calculated_moving_load,
             bottom_clearance_mm=runner.bottom_clearance_mm,
             part_ids=tuple(part.part_id for part in cell_parts),
             machining_ids=tuple(feature.feature_id for feature in cell_machining),
@@ -569,6 +679,7 @@ def build_drawer_bank(
         locking_device=locking_device,
         stabilizer=stabilizer,
         pull_product=pull,
+        joinery_fastener=joinery_fastener,
         front_edge_reveal_mm=front_edge_reveal_mm,
         front_gap_mm=front_gap_mm,
         cells=tuple(cells),
