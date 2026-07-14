@@ -69,7 +69,9 @@ def _consumer_diagram_html(diagram) -> str:
         f'<defs><marker id="{_e(marker_id)}" markerWidth="7" '
         'markerHeight="7" refX="6" refY="3.5" orient="auto">'
         '<path d="M0,0 L7,3.5 L0,7 z"/></marker></defs>'
-        f"{marks}</svg></figure>")
+        f"{marks}</svg>"
+        f'<figcaption class="op-caption">{_e(diagram.caption)}'
+        "</figcaption></figure>")
 
 
 def _frame_html(detail, frame, number: int | None, image_path: Path,
@@ -192,7 +194,10 @@ def _record_sheet(page) -> str:
 
 
 _STYLE = """
-:root { --ink: #14161a; --line: #444; --paper: #fff; }
+/* --acc themes the embedded 3D viewer's hover highlight and dimension
+   lines (viewer.js reads it; its orange fallback read as yellow on the
+   gray parts). */
+:root { --ink: #14161a; --line: #444; --paper: #fff; --acc: #2563eb; }
 * { box-sizing: border-box; }
 body { margin: 0; background: #d8dbe0; color: var(--ink);
   font: 15px/1.45 -apple-system, "Segoe UI", "Helvetica Neue", sans-serif; }
@@ -228,7 +233,7 @@ ul.tools li::before { content: "\\2022"; margin-right: 0.4rem; }
   stroke: var(--ink); stroke-width: 1.8; stroke-linecap: round;
   stroke-linejoin: round; }
 .frame { border: 3px solid var(--ink); border-radius: 10px;
-  padding: 0.5rem 0.7rem 0.7rem; margin: 0 0 0.55rem;
+  padding: 0.4rem 0.6rem 0.5rem; margin: 0 0 0.45rem;
   break-inside: avoid; }
 .frame header { display: flex; align-items: center; gap: 0.5rem;
   flex-wrap: wrap; margin-bottom: 0.35rem; }
@@ -249,7 +254,7 @@ ul.tools li::before { content: "\\2022"; margin-right: 0.4rem; }
 .frame .figures { display: flex; gap: 0.35rem; align-items: center;
   justify-content: center; }
 .frame .scene-figure { flex: 1 1 55%; min-width: 0; }
-.frame img { display: block; max-width: 100%; max-height: 2.6in;
+.frame img { display: block; max-width: 100%; max-height: 2.45in;
   width: auto; height: auto; margin: 0 auto; background: var(--paper); }
 .op-diagram { flex: 0 1 42%; min-width: 0; margin: 0;
   border: 1.5px solid var(--ink); border-radius: 6px; overflow: hidden; }
@@ -257,7 +262,10 @@ ul.tools li::before { content: "\\2022"; margin-right: 0.4rem; }
   font-weight: 700; border-bottom: 1.5px solid var(--ink);
   background: #f2f2f2; }
 .op-diagram svg { display: block; width: 100%; height: auto;
-  max-height: 2.3in; background: var(--paper); }
+  max-height: 1.45in; background: var(--paper); }
+.op-caption { padding: 0.12rem 0.35rem; font-size: 0.57rem;
+  line-height: 1.28; color: #333; border-top: 1px solid var(--line);
+  border-bottom: 0; background: var(--paper); font-weight: 400; }
 .diagram-mark { vector-effect: non-scaling-stroke; stroke: var(--ink);
   stroke-width: 1.1; fill: #cfcfcf; }
 .diagram-mark.role-prior { fill: #ececec; stroke: #777; }
@@ -280,13 +288,14 @@ text.diagram-mark, .diagram-mark.role-datum { fill: var(--ink);
 text.diagram-mark.role-hold { fill: var(--ink); stroke: none; }
 .op-diagram marker path { fill: var(--ink); }
 .inset-note { font-size: 0.8rem; color: var(--line); }
-.caption { font-size: 0.98rem; margin: 0.35rem 0 0.15rem; }
+.caption { font-size: 0.95rem; margin: 0.3rem 0 0.1rem;
+  line-height: 1.38; }
 .tool { margin: 0.1rem 0; font-size: 0.82rem; color: #222; }
 .tool::before { content: "Tool: "; font-weight: 800; }
 .warning, .hold-note { display: flex; gap: 0.5rem; align-items: baseline;
   border: 3px solid var(--ink); border-left-width: 12px; border-radius: 6px;
-  padding: 0.28rem 0.55rem; margin: 0.3rem 0; font-weight: 600;
-  font-size: 0.85rem; }
+  padding: 0.2rem 0.5rem; margin: 0.25rem 0; font-weight: 600;
+  font-size: 0.8rem; line-height: 1.3; }
 .hold-frame { border-width: 6px; }
 .hold-frame .warning { font-size: 1.05rem; }
 .picture-key { list-style: none; display: flex; flex-wrap: wrap;

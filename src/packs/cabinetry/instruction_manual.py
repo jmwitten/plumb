@@ -438,20 +438,25 @@ def _toe_platform_diagram(project) -> OperationDiagram:
     sleeper = project.model.part("toe_left")
     width = front.length_mm
     depth = sleeper.length_mm + 2.0 * front.thickness_mm
-    rail_h = 5.0
-    sleeper_w = max(3.5, 54.0 * front.thickness_mm / width)
+    # The plan box keeps the platform's true proportions: canvas height is
+    # derived from the typed depth/width ratio, not a hand-laid square.
+    box_w = 54.0
+    box_h = box_w * depth / width
+    rail_h = min(5.0, box_h / 4.0)
+    sleeper_w = max(3.5, box_w * front.thickness_mm / width)
     setback = project.model.profile.toe_kick_setback_mm
     primitives = [
-        _mark("rect", 8, 8, 54, rail_h, role="work", label="Rear toe rail",
+        _mark("rect", 8, 8, box_w, rail_h, role="work", label="Rear toe rail",
               fact_ref=project.model.part("toe_rear").part_id),
-        _mark("rect", 8, 57, 54, rail_h, role="work", label="Front toe rail",
-              fact_ref=front.part_id),
-        _mark("rect", 8, 8 + rail_h, sleeper_w, 49 - rail_h,
+        _mark("rect", 8, 8 + box_h - rail_h, box_w, rail_h, role="work",
+              label="Front toe rail", fact_ref=front.part_id),
+        _mark("rect", 8, 8 + rail_h, sleeper_w, box_h - 2.0 * rail_h,
               role="work", label="Left toe sleeper"),
-        _mark("rect", 62 - sleeper_w, 8 + rail_h, sleeper_w, 49 - rail_h,
+        _mark("rect", 8 + box_w - sleeper_w, 8 + rail_h, sleeper_w,
+              box_h - 2.0 * rail_h,
               role="work", label="Right toe sleeper"),
         _mark(
-            "text", 35, 67, role="datum",
+            "text", 35, 8 + box_h + 9, role="datum",
             label=f"FRONT / {setback:.1f} mm setback",
             fact_ref="profile.toe_kick_setback_mm",
         ),
@@ -695,28 +700,40 @@ def _toe_attachment_diagram(project) -> OperationDiagram:
         row for row in _machining(project, "captured_back_groove")
         if row.part_id == bottom.part_id
     )
-    groove_a = _plot_point(0, groove.location_mm[1], width, depth)
-    groove_b = _plot_point(
-        width, groove.location_mm[1] + groove.width_mm, width, depth)
+    # True-proportion plan box: canvas height derives from the typed
+    # depth/width ratio (the bottom is a wide rectangle, not a square).
+    box_w = 84.0
+    box_h = box_w * depth / width
+
+    def plot(x_mm: float, y_mm: float) -> tuple[float, float]:
+        return (
+            8.0 + box_w * x_mm / width,
+            8.0 + box_h * (1.0 - y_mm / depth),
+        )
+
+    groove_a = plot(0, groove.location_mm[1])
+    groove_b = plot(width, groove.location_mm[1] + groove.width_mm)
     groove_top = min(groove_a[1], groove_b[1])
     groove_height = abs(groove_a[1] - groove_b[1])
     primitives = [
-        _mark("rect", 8, 8, 84, 84, role="prior", label="Cabinet bottom — plan view"),
+        _mark("rect", 8, 8, box_w, box_h, role="prior",
+              label="Cabinet bottom — plan view"),
         _mark(
-            "rect", 8, groove_top, 84, groove_height, role="groove",
+            "rect", 8, groove_top, box_w, groove_height, role="groove",
             label=(
                 "Captured-back groove — Y "
                 f"{groove.location_mm[1]:.3f} to "
                 f"{groove.location_mm[1] + groove.width_mm:.3f} mm; keep clear"
             ), fact_ref=groove.feature_id,
         ),
-        _mark("text", 16, 98, role="datum", label="FRONT-LEFT DATUM"),
+        _mark("text", 16, 8 + box_h + 6, role="datum",
+              label="FRONT-LEFT DATUM"),
         _mark("text", 50, 5, role="datum", label="REAR / CAPTURED-BACK GROOVE"),
     ]
     for row in rows:
         y = row.location_mm[1]
-        p0 = _plot_point(0, y, width, depth)
-        p1 = _plot_point(width, y, width, depth)
+        p0 = plot(0, y)
+        p1 = plot(width, y)
         rail = "front" if row.receiving_part_id.endswith("toe_front") else "rear"
         primitives.append(_mark(
             "line", *p0, *p1, role="receiver",
@@ -728,7 +745,7 @@ def _toe_attachment_diagram(project) -> OperationDiagram:
                 row.location_mm[0] + index * row.pitch_mm,
                 row.location_mm[1],
             )
-            px, py = _plot_point(*model_point, width, depth)
+            px, py = plot(*model_point)
             primitives.append(_mark(
                 "circle", px, py, 1.5, role="station",
                 label=(

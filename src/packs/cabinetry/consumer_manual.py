@@ -582,14 +582,26 @@ def consumer_part_rows(project):
     cut_by_description = {
         item.description: item for item in project.artifacts.cut_list}
 
+    def _inches(mm: float) -> str:
+        # Tape-measure register: a construction fraction only when the
+        # compiled size actually lands on a sixteenth; otherwise honest
+        # decimal inches (the fabrication packet keeps mm precision).
+        from ...details.base import fmt_frac_in
+
+        inches = mm / 25.4
+        sixteenths = round(inches * 16)
+        if abs(inches - sixteenths / 16) < 1e-6:
+            return fmt_frac_in(inches)
+        return f'{inches:.2f}"'
+
     def _cut_text(part) -> str:
-        # Units live in the kit-card heading ("cut sizes in mm") to keep
-        # thirty rows on one printed page.
+        # Panel sizes read in inches (owner preference); metric-native
+        # hardware keeps mm on the lettered hardware card.
         item = cut_by_description.get(part.name)
         if item is None:
             return ""
         dims = " × ".join(
-            f"{round(value, 1):g}"
+            _inches(value)
             for value in (item.length_mm, item.width_mm, item.thickness_mm))
         return f" — {dims}"
 

@@ -56,8 +56,17 @@ class TestBudgets:
     def test_at_most_12_printed_letter_pages(self, consumer):
         assert len(consumer.pages) <= 12
 
-    def test_at_most_1500_visible_instructional_words(self, consumer):
-        assert visible_instructional_words(consumer) <= 1500
+    def test_at_most_1500_visible_instructional_words(self, consumer,
+                                                      panels_manual):
+        from detailgen.packs.cabinetry.consumer_manual import (
+            consumer_diagrams,
+        )
+        diagrams = consumer_diagrams(panels_manual)
+        extra = tuple(
+            diagrams[d].caption
+            for page in consumer.pages for frame in page.frames
+            for d in frame.detail_diagram_ids)
+        assert visible_instructional_words(consumer, extra) <= 1500
 
     def test_page_kinds_cover_the_required_surfaces(self, consumer):
         kinds = [page.kind for page in consumer.pages]
@@ -375,12 +384,16 @@ class TestIteration2:
         )
         rows = consumer_part_rows(project)
         assert rows
-        # every panel row carries its typed L × W × T (units in the card
-        # heading); the digits must match the released cut list
+        # every panel row carries its typed L × W × T in inches (units in
+        # the card heading); values derive from the released cut list —
+        # clean sixteenths as tape fractions, everything else as honest
+        # decimal inches
         for row in rows:
             assert row.label.count("×") >= 3, row.label
         bottom = next(r for r in rows if "Cabinet bottom" in r.label)
-        assert "977.9" in bottom.label and "580.5" in bottom.label
+        assert '38-1/2"' in bottom.label      # 977.9 mm
+        assert '22.86"' in bottom.label       # 580.525 mm (not a sixteenth)
+        assert '3/4"' in bottom.label         # 19.05 mm
 
     def test_screw_frames_carry_their_panel_diagrams(self, consumer,
                                                      panels_manual):

@@ -174,6 +174,41 @@ Final iteration-2 artifact: 11 printed pages (Chrome-verified 11 = 11),
 fresh-context reviews predate this round; the changes are owner-directed
 and structurally tested, but a re-review has not been run.
 
+## Iteration 3 — owner feedback round two (2026-07-14 late evening)
+
+1. **Units** — kit-card cut sizes now read in inches ("Parts — cut sizes in
+   inches"): tape fractions when the compiled size lands exactly on a
+   sixteenth (30-1/2", 3/4"), honest decimal inches otherwise (23.23");
+   metric-native hardware (Blum screws) stays mm on the hardware card.
+2. **Viewer highlight color** — the embedded viewer reads its accent from
+   the `--acc` CSS variable; the consumer page now sets it to the repo's
+   dimension blue (#2563eb), replacing the orange fallback that read as
+   yellow on the parts. Technical documents are unaffected (they define
+   their own theme).
+3. **Diagram readability** — the owner could not interpret the unlabeled
+   pictograms because the consumer register had stripped both hover labels
+   AND the typed captions. Every consumer diagram now shows its typed
+   explanatory caption in small print; caption words are counted in the
+   word budget (now 1,159 of 1,500 with all diagram captions included).
+4. **True proportions** — the toe-platform and toe-attachment "plan view"
+   diagrams drew hand-laid square boxes; both now derive the plan-box
+   aspect from the typed width/depth, so the wide platform and cabinet
+   bottom render as the rectangles they are. (This edits the shared
+   diagram builders; the frozen delivered four-document set is untouched,
+   but future technical regenerations pick up the corrected proportions.)
+5. **Connectors in the explode view** — answered as a modeling fact, not
+   patched: except for the two wall anchors, the cabinetry pack represents
+   purchased fasteners/hardware as typed schedules, contracts, and
+   machining stations rather than 3D bodies, so the exploded scene has no
+   connector geometry to show. Labeled schematic connector proxies at the
+   typed stations are a candidate follow-up (the 2D drawer-detail drawing
+   already uses that pattern).
+
+Print re-verified after the caption additions forced a layout rebalance:
+11 composed sheets = 11 printed pages; sha256
+`f97833932200dcaa45ca3ff8cc6a591e3821933f3435931426ccfd9bc3c10cb0`;
+116 tests green across the affected suites.
+
 ## Honest gaps and notes
 
 - **Frame illustrations reuse panel visibility with frame-level focus.**

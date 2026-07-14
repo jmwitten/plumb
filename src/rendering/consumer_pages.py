@@ -118,12 +118,14 @@ def compose_consumer_manual(
     )
 
 
-def visible_instructional_words(manual: ConsumerManual) -> int:
+def visible_instructional_words(manual: ConsumerManual,
+                                extra_texts=()) -> int:
     """Count reader-visible instructional words.
 
     Counts the cover caption and every frame's caption, warning, hold, and
-    tool text on frame/hold pages. Inventory and record pages are excluded
-    by the acceptance definition.
+    tool text on frame/hold pages, plus any ``extra_texts`` the renderer
+    makes visible (e.g. operation-diagram captions). Inventory and record
+    pages are excluded by the acceptance definition.
     """
     total = len(manual.cover_caption.split())
     for page in manual.pages:
@@ -131,4 +133,6 @@ def visible_instructional_words(manual: ConsumerManual) -> int:
             for text in (frame.caption, frame.warning, frame.hold,
                          frame.tool):
                 total += len(text.split())
+    for text in extra_texts:
+        total += len(text.split())
     return total

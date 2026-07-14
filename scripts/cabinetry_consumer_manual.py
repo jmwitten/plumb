@@ -94,6 +94,8 @@ def build_cabinetry_consumer_document(
         project.detail, panels_manual, image_dir,
         size=image_size, style="high_contrast")
 
+    diagrams_by_id = consumer_diagrams(panels_manual)
+
     viewer_assets = CPR.render_shared_product_assets(
         project, out_dir / "consumer_viewer",
         instruction_manual=panels_manual)
@@ -108,8 +110,8 @@ def build_cabinetry_consumer_document(
             project.detail, consumer, image_paths,
             cover_image=cover_image,
             inventory_rows=consumer_part_rows(project),
-            parts_heading="Parts — cut sizes in mm",
-            diagrams=consumer_diagrams(panels_manual),
+            parts_heading="Parts — cut sizes in inches",
+            diagrams=diagrams_by_id,
             viewer=viewer,
         ),
         encoding="utf-8",
@@ -121,7 +123,11 @@ def build_cabinetry_consumer_document(
             output_path.read_bytes()).hexdigest(),
         "page_count": len(consumer.pages),
         "frame_count": sum(len(page.frames) for page in consumer.pages),
-        "visible_instructional_words": visible_instructional_words(consumer),
+        "visible_instructional_words": visible_instructional_words(
+            consumer,
+            extra_texts=tuple(
+                diagrams_by_id[d].caption
+                for frame in frames for d in frame.detail_diagram_ids)),
         "hardware_letters": [
             f"{lt.letter}:{lt.quantity_total} {lt.quantity_unit}"
             for lt in consumer.letters
