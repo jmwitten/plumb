@@ -10,19 +10,23 @@ mechanism is exercised in isolation from any shipped spec.
 from __future__ import annotations
 
 import ast
+import os
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
 from detailgen.core import IN
 from detailgen.assemblies import (
     BoltedClamp, Connection, ConnectionType, DetailAssembly, FaceMountHanger,
-    compile_connections, connection_types,
+    RailCapScrewed, compile_connections, connection_types,
 )
 from detailgen.assemblies.connection import Edge, Glued
 from detailgen.assemblies.event_graph import (
     FAMILY_AUTHORED, FAMILY_NECESSITY, FAMILY_STAGING, FAMILY_TECHNIQUE, Event,
-    EventOrderCycleError, ResolvedStage, ResolvedStaging, ResolvedUnit,
+    EventOrderCycleError, ReaderStepProjectionError, ResolvedAfter,
+    ResolvedProcessRef, ResolvedStage, ResolvedStaging, ResolvedUnit,
     build_event_graph,
     derive_reader_steps, linearize, unordered_parts,
 )
@@ -833,6 +837,202 @@ def test_reader_steps_group_by_stage_else_per_connection_unit():
     assert unstaged.stage is None
     assert {g.part_names[p] for p in unstaged.parts_placed} == \
         {"plate two", "member two"}
+
+
+def test_reader_steps_condense_entangled_stool_installs_without_dropping_work():
+    """A cyclic presentation quotient must merge mutually entangled install
+    units; it must never turn an acyclic event graph into an empty manual."""
+    from detailgen.spec.compiler import compile_spec_file
+
+    root = Path(__file__).resolve().parents[1]
+    detail = compile_spec_file(root / "details" / "step_stool.spec.yaml")
+    detail.validate()
+    graph = detail._connection_checks.event_graph
+
+    assert len(linearize(graph)) == len(graph.events) == 11
+    steps = derive_reader_steps(graph)
+
+    assert len(steps) == 3
+    assert steps[0].connections == graph.conn_labels[:2]
+    assert steps[1].connections == (graph.conn_labels[2],)
+    assert steps[2].connections == (graph.conn_labels[3],)
+    emitted = tuple(
+        connection
+        for step in steps
+        for connection in step.connections
+    )
+    assert len(emitted) == len(set(emitted)) == len(graph.conn_labels)
+    assert set(emitted) == set(graph.conn_labels)
+    assert {
+        part_id
+        for step in steps
+        for part_id in step.parts_placed
+    } == {
+        part_id
+        for connection in graph.conn_labels
+        for part_id in graph.members_of[connection]
+    }
+    assert unordered_parts(graph) == ("boulder-0", "deck_board-1")
+
+
+def test_reader_steps_condense_a_three_connection_install_scc():
+    assembly = DetailAssembly("three-way reader entanglement")
+    cap = assembly.add(Lumber("2x4", 12 * IN, name="shared cap"))
+    connections = []
+    for index in range(3):
+        support = assembly.add(
+            Lumber("2x4", 4 * IN, name=f"support {index}"),
+            at=(index * 100, 0, 0))
+        screw = assembly.add(
+            StructuralScrew(0.19 * IN, 2 * IN, name=f"cap screw {index}"),
+            at=(index * 100, 20, 20))
+        connections.append(Connection(
+            kind=RailCapScrewed(n_screws=1),
+            parts=[support, cap], hardware=[screw],
+            label=f"cap joint {index}"))
+    graph = _graph(assembly, connections)
+
+    steps = derive_reader_steps(graph)
+
+    assert len(steps) == 1
+    assert steps[0].connections == tuple(
+        connection.label for connection in connections)
+    assert set(steps[0].parts_placed) == {
+        cap.id,
+        *(connection.parts[0].id for connection in connections),
+    }
+
+
+def test_reader_step_scc_output_is_hash_seed_stable():
+    root = Path(__file__).resolve().parents[1]
+    script = """
+from detailgen.spec.compiler import compile_spec_file
+from detailgen.assemblies.event_graph import derive_reader_steps
+d = compile_spec_file('details/step_stool.spec.yaml')
+d.validate()
+steps = derive_reader_steps(d._connection_checks.event_graph)
+print(repr(tuple((s.title, s.connections, s.parts_placed) for s in steps)))
+"""
+    outputs = []
+    for seed in ("0", "7", "random"):
+        env = os.environ.copy()
+        env["PYTHONHASHSEED"] = seed
+        env["PYTHONPATH"] = str(root / ".shim")
+        result = subprocess.run(
+            [sys.executable, "-c", script], cwd=root, env=env,
+            check=True, capture_output=True, text=True)
+        outputs.append(result.stdout)
+    assert outputs[1:] == outputs[:-1]
+
+
+def test_reader_steps_restore_platform_sequence_with_five_honest_merges():
+    """The shipped platform has five paired-hanger quotient SCCs; its
+    derived Build Sequence must be complete rather than silently empty."""
+    from detailgen.spec.compiler import compile_spec_file
+
+    root = Path(__file__).resolve().parents[1]
+    detail = compile_spec_file(root / "details" / "platform.spec.yaml")
+    detail.validate()
+    graph = detail._connection_checks.event_graph
+    steps = derive_reader_steps(graph)
+
+    assert len(steps) == 18
+    merged = tuple(step.connections for step in steps if " + " in step.title)
+    assert merged == (
+        ("joist 0+Y", "joist 0-Y"),
+        ("joist 1+Y", "joist 1-Y"),
+        ("joist 2+Y", "joist 2-Y"),
+        ("rung 0 hanger +Y", "rung 0 hanger -Y"),
+        ("rung 1 hanger +Y", "rung 1 hanger -Y"),
+    )
+    emitted = tuple(
+        connection
+        for step in steps
+        for connection in step.connections
+    )
+    assert len(emitted) == len(set(emitted)) == len(graph.conn_labels)
+    assert set(emitted) == set(graph.conn_labels)
+
+
+def test_reader_steps_fail_when_a_required_event_was_never_mapped():
+    """The emission invariant must compare against graph truth, not merely
+    against the subset of events that happened to reach a bucket."""
+    assembly, first, _second = _two_screwed_plates()
+    graph = _graph(assembly, [first])
+    orphan = Event("drive", "unmapped install", "orphan role")
+    graph.events = (*graph.events, orphan)
+
+    with pytest.raises(ValueError, match="unmapped.*unmapped install"):
+        derive_reader_steps(graph)
+
+
+def test_reader_steps_evict_an_unclaimed_folded_place_before_erasing_stages(
+    tmp_path,
+):
+    """When only a default-folded placement makes two valid authored stages
+    non-convex, present that placement separately and preserve both stages."""
+    from detailgen.spec.compiler import compile_spec_file
+
+    root = Path(__file__).resolve().parents[1]
+    source = root / "details" / "step_stool.spec.yaml"
+    variant = tmp_path / source.name
+    variant.write_text(source.read_text() + """
+sequence:
+  stages:
+    - name: fasten the first cap
+      connections: ["upper tread -> +X panel top (screwed down)"]
+      why: Drive the first cap connection before the second.
+    - name: fasten the second cap
+      connections: ["upper tread -> -X panel top (screwed down)"]
+      why: Drive the second cap connection after the first.
+""")
+    detail = compile_spec_file(variant)
+    detail.validate()
+    graph = detail._connection_checks.event_graph
+
+    steps = derive_reader_steps(graph)
+
+    staged = tuple(step for step in steps if step.stage is not None)
+    assert tuple(step.stage.name for step in staged) == (
+        "fasten the first cap", "fasten the second cap")
+    assert tuple(step.connections for step in staged) == (
+        (graph.conn_labels[0],), (graph.conn_labels[1],))
+    negative_panel = next(
+        part_id for part_id, name in graph.part_names.items()
+        if name == "side panel -X")
+    placement = next(step for step in steps
+                     if negative_panel in step.parts_placed)
+    assert placement.stage is None
+    assert placement.connections == ()
+    assert placement.title == "place side panel -X"
+
+
+def test_reader_steps_refuse_to_merge_through_a_process_hard_break():
+    assembly = DetailAssembly("process-boundary reader entanglement")
+    shared = assembly.add(Lumber("2x4", 12 * IN, name="shared cap"))
+    mate = assembly.add(
+        Lumber("2x4", 12 * IN, name="glue mate"), at=(0, 20, 0))
+    support = assembly.add(
+        Lumber("2x4", 4 * IN, name="target support"), at=(100, 0, 0))
+    screw = assembly.add(
+        StructuralScrew(0.19 * IN, 2 * IN, name="target screw"),
+        at=(100, 20, 20))
+    glue = Connection(kind=Glued(), parts=[mate, shared], label="glue")
+    target = Connection(
+        kind=RailCapScrewed(n_screws=1), parts=[support, shared],
+        hardware=[screw], label="target")
+    after = ResolvedAfter(
+        connection="target",
+        after=(ResolvedProcessRef(kind="cure", connection="glue"),),
+        why="Wait for the bond before fastening the shared cap.")
+    graph = compile_connections(
+        assembly, [glue, target], after=(after,)).event_graph
+
+    with pytest.raises(
+        ReaderStepProjectionError,
+        match="path-entangled.*process.*cannot erase",
+    ):
+        derive_reader_steps(graph)
 
 
 def test_unordered_parts_are_reported_not_positioned():

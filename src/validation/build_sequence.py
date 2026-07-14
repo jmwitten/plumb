@@ -64,7 +64,12 @@ def derive_build_sequence(detail):
     if graph is None or (not graph.conn_labels and not graph.stages
                          and not graph.units):
         return None, ()
-    return derive_reader_steps(graph), unordered_parts(graph)
+    steps = derive_reader_steps(graph)
+    if not steps:
+        raise ValueError(
+            "construction process graph has order content but produced zero "
+            "reader steps; refusing to render an empty Build Sequence.")
+    return steps, unordered_parts(graph)
 
 
 def build_sequence_model(detail):

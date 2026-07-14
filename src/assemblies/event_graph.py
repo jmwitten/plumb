@@ -280,6 +280,10 @@ class EventOrderCycleError(ValueError):
     message names the conflicting edges and their provenance families."""
 
 
+class ReaderStepProjectionError(ValueError):
+    """The CPG cannot be projected into complete, truthful reader steps."""
+
+
 class EventGraph:
     """The built assembly-slice CPG: events, provenance-stamped edges, the
     part → governing-event map, and memoized reachability. Deterministic by
@@ -1223,9 +1227,13 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
     independent units use declaration order only as a presentation tie-break,
     never as a new graph edge. ``place`` events otherwise fold into the step
     of the first connection that consumes the part (a stage's explicitly
-    listed parts fold into that stage's step). Parts consumed by no connection
-    and governed by neither a stage nor staging are reported as unordered,
-    never given an invented position. Regrouping cannot change a verdict (§2)."""
+    listed parts fold into that stage's step). Path-entangled compatible
+    install buckets condense into one step; an unclaimed default-folded place
+    may split back out only to preserve otherwise-valid authored stages.
+    Process/join/bench/explicit-stage boundaries are never erased. Parts
+    consumed by no connection and governed by neither a stage nor staging are
+    reported as unordered, never given an invented position. Regrouping cannot
+    change a verdict (§2)."""
     order = linearize(graph)
     pos = {ev: i for i, ev in enumerate(order)}
 
@@ -1364,6 +1372,7 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
 
     # fold place events: stage-claimed parts to their stage's step; every
     # other consumed part to its FIRST consuming connection's step.
+    default_folded_places: set[Event] = set()
     for p_id, ev in graph.event_of.items():
         if ev.kind != "place":
             continue
@@ -1405,20 +1414,43 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
         b = connection_bucket(first)
         b["parts"].append(p_id)
         b["events"].append(ev)
+        default_folded_places.add(ev)
 
     # Topologically order presentation buckets by the real graph edges. The
     # preferred key makes independent units read bench-all, then set-all, then
     # root work; dependency edges always win. No edge is added to ``graph``.
-    event_bucket = {
-        ev: key for key, b in buckets.items() for ev in b["events"]}
-    successors: dict[tuple, set[tuple]] = {key: set() for key in buckets}
-    indeg: dict[tuple, int] = {key: 0 for key in buckets}
-    for edge in graph.edges:
-        a, b = event_bucket.get(edge.a), event_bucket.get(edge.b)
-        if a is None or b is None or a == b or b in successors[a]:
-            continue
-        successors[a].add(b)
-        indeg[b] += 1
+    event_bucket = {}
+    for key, bucket in buckets.items():
+        for event in bucket["events"]:
+            prior = event_bucket.get(event)
+            if prior is not None:
+                if prior == key:
+                    raise ReaderStepProjectionError(
+                        "reader-step projection appended event "
+                        f"{event!r} twice to bucket {key!r}; reader work "
+                        "must appear exactly once at its source.")
+                raise ReaderStepProjectionError(
+                    "reader-step projection assigned event "
+                    f"{event!r} to both {prior!r} and {key!r}; reader work "
+                    "must have exactly one presentation owner.")
+            event_bucket[event] = key
+    ordered_part_ids = set(graph.unit_of)
+    ordered_part_ids.update(stage_of_part)
+    for members in graph.members_of.values():
+        ordered_part_ids.update(members)
+    required_events = {event for event in graph.events
+                       if event.kind != "place"}
+    required_events.update(
+        event for part_id in ordered_part_ids
+        if (event := graph.event_of.get(part_id)) is not None
+        and event.kind == "place")
+    unmapped = required_events - set(event_bucket)
+    if unmapped:
+        raise ReaderStepProjectionError(
+            "reader-step projection has unmapped required event(s): "
+            f"{sorted(unmapped, key=repr)!r}; every drive, process, join, "
+            "consumed placement, staged placement, and bench-unit placement "
+            "must have one reader owner.")
 
     root_base = 2
     def presentation_key(key):
@@ -1428,21 +1460,219 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
             return preferred
         return (root_base, b["first"], b["title"])
 
-    heap = [(presentation_key(key), key) for key, degree in indeg.items()
+    def presentation_sort_key(key):
+        return presentation_key(key), repr(key)
+
+    # A part not explicitly claimed by a stage may have been folded into the
+    # first connection that consumes it.  If that default fold alone points
+    # backward across two authored stages, presenting the placement as its
+    # own derived step preserves both valid stages without erasing either.
+    # Drives, processes, joins, explicit stage parts, and bench-unit parts are
+    # never eligible for this fallback.
+    evict = set()
+    for edge in graph.edges:
+        a_key = event_bucket.get(edge.a)
+        b_key = event_bucket.get(edge.b)
+        if (edge.a not in default_folded_places
+                or a_key is None or b_key is None or a_key == b_key):
+            continue
+        a_stage = buckets[a_key]["stage"]
+        b_stage = buckets[b_key]["stage"]
+        if (a_stage is not None and b_stage is not None
+                and a_stage != b_stage
+                and presentation_key(a_key) > presentation_key(b_key)):
+            evict.add(edge.a)
+    for event in sorted(evict, key=lambda value: pos[value]):
+        old_key = event_bucket[event]
+        old_bucket = buckets[old_key]
+        part_id = event.subject
+        old_bucket["events"].remove(event)
+        old_bucket["parts"].remove(part_id)
+        old_bucket["first"] = min(
+            (pos.get(value, len(order)) for value in old_bucket["events"]),
+            default=len(order) + 1)
+        key = ("place", part_id)
+        bucket = bucket_for(
+            key, None, f"place {graph.part_names.get(part_id, part_id)}")
+        bucket["parts"].append(part_id)
+        bucket["events"].append(event)
+        bucket["first"] = pos[event]
+        event_bucket[event] = key
+
+    successors: dict[tuple, set[tuple]] = {key: set() for key in buckets}
+    for edge in graph.edges:
+        a, b = event_bucket.get(edge.a), event_bucket.get(edge.b)
+        if a is None or b is None or a == b or b in successors[a]:
+            continue
+        successors[a].add(b)
+
+    # Folding events into reader units can make a cyclic QUOTIENT of an
+    # acyclic event graph when two install units are path-entangled.  The
+    # strongly-connected components are the smallest honest reader units:
+    # no linearization can present a component's members as separate runs.
+    index = 0
+    indexes: dict[tuple, int] = {}
+    lowlinks: dict[tuple, int] = {}
+    stack: list[tuple] = []
+    on_stack: set[tuple] = set()
+    components: list[tuple[tuple, ...]] = []
+
+    def visit(key: tuple) -> None:
+        nonlocal index
+        indexes[key] = lowlinks[key] = index
+        index += 1
+        stack.append(key)
+        on_stack.add(key)
+        for nxt in sorted(successors[key], key=presentation_sort_key):
+            if nxt not in indexes:
+                visit(nxt)
+                lowlinks[key] = min(lowlinks[key], lowlinks[nxt])
+            elif nxt in on_stack:
+                lowlinks[key] = min(lowlinks[key], indexes[nxt])
+        if lowlinks[key] != indexes[key]:
+            return
+        members = []
+        while True:
+            member = stack.pop()
+            on_stack.remove(member)
+            members.append(member)
+            if member == key:
+                break
+        components.append(tuple(sorted(members, key=presentation_sort_key)))
+
+    for key in sorted(buckets, key=presentation_sort_key):
+        if key not in indexes:
+            visit(key)
+    components.sort(key=lambda members: presentation_sort_key(members[0]))
+
+    component_of = {
+        key: component_index
+        for component_index, members in enumerate(components)
+        for key in members
+    }
+    condensed = {}
+    for component_index, members in enumerate(components):
+        if len(members) == 1:
+            condensed[component_index] = dict(buckets[members[0]])
+            continue
+
+        member_buckets = tuple(buckets[key] for key in members)
+        stages = {bucket["stage"] for bucket in member_buckets}
+        units = {bucket["unit"].name if bucket["unit"] is not None else None
+                 for bucket in member_buckets}
+        crosses_hard_break = (
+            len(stages) != 1
+            or len(units) != 1
+            or any(bucket["process_event"] is not None
+                   or bucket["joins"] for bucket in member_buckets)
+        )
+        if crosses_hard_break:
+            member_set = set(members)
+            straddling = [
+                f"{edge.a!r} -> {edge.b!r} [{edge.family}]"
+                for edge in graph.edges
+                if event_bucket.get(edge.a) in member_set
+                and event_bucket.get(edge.b) in member_set
+                and event_bucket.get(edge.a) != event_bucket.get(edge.b)
+            ]
+            raise ReaderStepProjectionError(
+                "reader-step projection found path-entangled buckets across "
+                "an authored stage, bench unit, process, or join boundary; "
+                f"cannot erase that reader-visible boundary. Buckets: "
+                f"{members!r}. Straddling edges: {straddling!r}")
+
+        connection_set = {
+            label for bucket in member_buckets
+            for label in bucket["connections"]}
+        connections = [label for label in graph.conn_labels
+                       if label in connection_set]
+        stage = member_buckets[0]["stage"]
+        unit = member_buckets[0]["unit"]
+        if unit is not None and stage is not None:
+            title = (f"bench {unit.name}: stage {stage.name!r} "
+                     f"(declared order): install {' + '.join(connections)}")
+        elif unit is not None:
+            title = f"bench {unit.name}: install {' + '.join(connections)}"
+        elif stage is not None:
+            title = (f"stage {stage.name!r} (declared order): install "
+                     f"{' + '.join(connections)}")
+        else:
+            title = f"install {' + '.join(connections)}"
+        events = sorted(
+            {event for bucket in member_buckets for event in bucket["events"]},
+            key=lambda event: pos[event])
+        condensed[component_index] = {
+            "stage": stage,
+            "title": title,
+            "connections": connections,
+            "parts": [part_id for bucket in member_buckets
+                      for part_id in bucket["parts"]],
+            "first": min(bucket["first"] for bucket in member_buckets),
+            "events": events,
+            "unit": unit,
+            "joins": (),
+            "preferred": min(
+                (presentation_key(key) for key in members)),
+            "process_event": None,
+            "process_fact": None,
+        }
+
+    condensed_successors = {index: set() for index in condensed}
+    condensed_indeg = {index: 0 for index in condensed}
+    for key, targets in successors.items():
+        source_component = component_of[key]
+        for target in targets:
+            target_component = component_of[target]
+            if (source_component == target_component
+                    or target_component in condensed_successors[source_component]):
+                continue
+            condensed_successors[source_component].add(target_component)
+            condensed_indeg[target_component] += 1
+
+    def condensed_key(component_index):
+        bucket = condensed[component_index]
+        preferred = bucket["preferred"]
+        if preferred is not None:
+            return preferred
+        return (root_base, bucket["first"], bucket["title"])
+
+    heap = [(condensed_key(component_index), component_index)
+            for component_index, degree in condensed_indeg.items()
             if degree == 0]
     heapq.heapify(heap)
     bucket_order = []
     while heap:
-        _sort, key = heapq.heappop(heap)
-        bucket_order.append(key)
-        for nxt in successors[key]:
-            indeg[nxt] -= 1
-            if indeg[nxt] == 0:
-                heapq.heappush(heap, (presentation_key(nxt), nxt))
+        _sort, component_index = heapq.heappop(heap)
+        bucket_order.append(component_index)
+        for nxt in condensed_successors[component_index]:
+            condensed_indeg[nxt] -= 1
+            if condensed_indeg[nxt] == 0:
+                heapq.heappush(heap, (condensed_key(nxt), nxt))
+
+    if len(bucket_order) != len(condensed):
+        missing = tuple(index for index in condensed if index not in bucket_order)
+        raise ReaderStepProjectionError(
+            "reader-step projection failed to emit every condensed bucket; "
+            f"unemitted components: {missing!r}. Never return a partial or "
+            "empty reader sequence.")
+
+    emitted_events = [
+        event for component_index in bucket_order
+        for event in condensed[component_index]["events"]]
+    if (len(emitted_events) != len(set(emitted_events))
+            or set(emitted_events) != set(event_bucket)):
+        missing = set(event_bucket) - set(emitted_events)
+        duplicates = sorted(
+            {event for event in emitted_events if emitted_events.count(event) > 1},
+            key=repr)
+        raise ReaderStepProjectionError(
+            "reader-step projection event coverage is inconsistent; "
+            f"missing={sorted(missing, key=repr)!r}, "
+            f"duplicates={duplicates!r}.")
 
     steps = []
-    for key in bucket_order:
-        b = buckets[key]
+    for component_index in bucket_order:
+        b = condensed[component_index]
         steps.append(ReaderStep(
             title=b["title"], stage=b["stage"],
             connections=tuple(b["connections"]),

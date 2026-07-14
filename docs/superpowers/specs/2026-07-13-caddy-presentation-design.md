@@ -66,6 +66,19 @@ with the same unit, authored stage, and action family. Process and join runs
 always have a boundary before and after them. A panel never crosses an
 authored-stage, bench-unit, process-kind, or join boundary.
 
+The reader-step projection itself is total and fail-closed. Folding events
+into install buckets can make a cyclic quotient even when the underlying CPG
+is a DAG. Compatible ordinary install buckets in one quotient SCC condense
+into the smallest truthful reader step; this restores the shipped platform's
+18-step sequence (including five paired-hanger merges) and the unstaged
+stool's three-step sequence. A default-folded, otherwise unclaimed placement
+may instead become its own step when that is sufficient to preserve two valid
+authored stages. Drives, process events, joins, explicitly staged parts, and
+bench-unit members are never evicted. An SCC that still crosses one of those
+hard boundaries raises `ReaderStepProjectionError`. Mapping and emission both
+check complete, unique event coverage, and the document consumer refuses a
+non-empty graph that produces zero steps.
+
 The caddy's phase grouping is not invented by presentation. Each side-fastening
 constraint names both cure events in `sequence.after`, adding the two honest
 cross-rail facts needed to represent this declared batch workflow. Deleting
@@ -196,9 +209,12 @@ declared-trust or named not-analyzed exceptions.
   counts, and no `+X/-X`, raw part ids, or raw contract register in human text.
 - CAT-J pins both content-key directions: order/geometry changes re-key affected
   images; unrelated prose/review changes do not.
-- CAT-L uses the binding step-stool lever: add authored stages, build, remove
-  them, and rebuild; reader grouping and affected render keys move while every
-  axis verdict remains byte-identical.
+- CAT-L uses the binding step-stool lever: the unstaged quotient condenses to
+  three steps; two authored stages regroup it to two; removing them restores
+  the three steps and edge set byte-for-byte. The staged form adds exactly four
+  `authored_sequence` edges, affected render keys move through reader/source
+  event fields, assembly geometry is identical, and all 137 validation finding
+  tuples remain byte-identical.
 - CAT-M pins station completeness and a moved-station mutation through model,
   text, and image overlays.
 - Viewer tests pin panel snapping, arrival highlighting, explode composition,

@@ -605,6 +605,24 @@ def test_reader_cure_hard_break_survives_bench_and_stage_grouping():
     assert steps[1].stage is stage and steps[3].stage is stage
 
 
+def test_build_sequence_refuses_a_nonempty_graph_with_zero_reader_steps(
+    monkeypatch,
+):
+    """A projection regression must stop document generation instead of
+    silently rendering an empty derived build sequence."""
+    from types import SimpleNamespace
+
+    from detailgen.validation import build_sequence as sequence_module
+
+    assembly, first, second = _glue_and_target()
+    checks = compile_connections(assembly, [first, second])
+    detail = SimpleNamespace(assembly=assembly, _connection_checks=checks)
+    monkeypatch.setattr(sequence_module, "derive_reader_steps", lambda _graph: ())
+
+    with pytest.raises(ValueError, match="zero reader steps"):
+        sequence_module.derive_build_sequence(detail)
+
+
 def test_build_sequence_model_renders_typed_process_and_both_constraint_ends():
     from types import SimpleNamespace
 

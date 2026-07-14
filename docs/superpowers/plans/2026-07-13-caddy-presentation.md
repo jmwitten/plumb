@@ -181,6 +181,16 @@ Hash a sorted, compact JSON object containing renderer version, per-part world-g
 
 Build a temporary step-stool variant with authored stages, then remove the stages and rebuild. Assert the reader grouping changes (per-stage versus per-connection), affected step/panel keys move, and every validation finding tuple—verdict, check, subject, detail, declared-order, declared-trust—remains byte-identical. First resolve any existing reader-bucket collapse honestly; do not weaken CAT-L into downstream panel regrouping, which would be vacuous because verdicts do not consume panels.
 
+Implementation result: reader projection now condenses compatible SCCs of the
+bucket quotient, preserves valid split stages by evicting only an unclaimed
+default-folded placement when sufficient, and fails closed across remaining
+process/join/stage/unit hard boundaries. Platform is pinned at 18 steps with
+five merges; stool is pinned at three unstaged/two staged steps; mapping and
+emission coverage are loud; the Build Sequence consumer rejects zero steps.
+CAT-L pins four added authored edges, 137 byte-identical finding tuples,
+geometry identity, affected-key movement, comment-only key stability, and
+exact reversion.
+
 - [ ] **Step 9: Write renderer RED tests**
 
 Pin a PNG for every panel, keyed basename, nonzero dimensions, stable bytes on a second call, current-part color pixels, ghost-gray prior pixels, numbered callouts, and station-label pixels. Pin process panels with no arrivals but nonempty focus parts, and final join context visibility.
