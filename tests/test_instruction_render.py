@@ -361,3 +361,51 @@ def test_technical_style_matches_established_rendering():
     assert style.prior_color == (0.72, 0.72, 0.72)
     assert style.prior_opacity == 0.16
     assert style.edge_visibility is False
+
+
+def test_render_frame_images_keys_by_frame_with_frame_focus(
+        caddy, stationed, tmp_path):
+    from detailgen.rendering.action_frames import ActionFrame, FrameIllustration
+    from detailgen.rendering.instruction_render import render_frame_images
+
+    panel = stationed.panels[0]
+    frames = tuple(
+        ActionFrame(
+            frame_id=f"prepare.{part_id}",
+            caption="Prepare the part.",
+            source_step_ids=("prepare",),
+            owned_events=(("place", part_id, ""),),
+            focus_part_ids=(part_id,),
+            illustration=FrameIllustration(
+                intent="assembly_scene", panel_index=panel.index),
+        )
+        for part_id in panel.focus_part_ids[:2]
+    )
+    paths = render_frame_images(
+        caddy, stationed, frames, tmp_path, size=(300, 220),
+        style="high_contrast")
+    assert set(paths) == {frame.frame_id for frame in frames}
+    resolved = {frame_id: str(path) for frame_id, path in paths.items()}
+    assert len(set(resolved.values())) == 2  # distinct focus -> distinct keys
+    for path in paths.values():
+        assert path.is_file() and path.suffix == ".png"
+
+
+def test_render_frame_images_skips_hold_gate_frames(caddy, stationed,
+                                                    tmp_path):
+    from detailgen.rendering.action_frames import ActionFrame, FrameIllustration
+    from detailgen.rendering.instruction_render import render_frame_images
+
+    panel = stationed.panels[0]
+    frames = (ActionFrame(
+        frame_id="hold.gate",
+        caption="Stop until cleared.",
+        source_step_ids=("gate",),
+        owned_events=(),
+        focus_part_ids=(panel.focus_part_ids[0],),
+        is_hold_gate=True,
+        illustration=FrameIllustration(
+            intent="assembly_scene", panel_index=panel.index),
+    ),)
+    assert render_frame_images(
+        caddy, stationed, frames, tmp_path, size=(200, 150)) == {}

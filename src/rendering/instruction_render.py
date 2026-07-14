@@ -463,6 +463,65 @@ def render_instruction_panel(
     return output
 
 
+def render_frame_images(
+    detail,
+    panels_manual,
+    frames,
+    out_dir: str | Path,
+    *,
+    size: tuple[int, int] = DEFAULT_SIZE,
+    style: str = "technical",
+) -> dict[str, "Path"]:
+    """Render one scene per action frame with the frame's own focus set.
+
+    Each frame re-uses its source panel's visibility (what exists at that
+    point in the build) while emphasizing only the frame's parts. Hold-gate
+    frames render nothing — their page is the unavoidable warning.
+    """
+    from dataclasses import replace as _replace
+
+    panels_by_index = {panel.index: panel for panel in panels_manual.panels}
+    result: dict[str, Path] = {}
+    for frame in frames:
+        if frame.is_hold_gate:
+            continue
+        if frame.illustration is None:
+            raise ValueError(
+                f"frame {frame.frame_id!r} has no illustration intent")
+        panel = panels_by_index[frame.illustration.panel_index]
+        pseudo = _replace(
+            panel,
+            focus_part_ids=frame.focus_part_ids,
+            arrival_part_ids=(),
+            stations=(),
+        )
+        result[frame.frame_id] = render_instruction_panel(
+            detail, pseudo, out_dir, size=size, style=style)
+    return result
+
+
+def render_cover_image(
+    detail,
+    panels_manual,
+    out_dir: str | Path,
+    *,
+    size: tuple[int, int] = DEFAULT_SIZE,
+    style: str = "high_contrast",
+) -> "Path":
+    """Finished-product view: the last panel with every built part focused."""
+    from dataclasses import replace as _replace
+
+    last = panels_manual.panels[-1]
+    pseudo = _replace(
+        last,
+        focus_part_ids=last.visible_part_ids,
+        arrival_part_ids=(),
+        stations=(),
+    )
+    return render_instruction_panel(
+        detail, pseudo, out_dir, size=size, style=style)
+
+
 def render_instruction_images(
     detail,
     manual,

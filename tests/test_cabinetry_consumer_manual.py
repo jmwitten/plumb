@@ -303,3 +303,30 @@ class TestRenderedHtml:
         with pytest.raises(Exception, match="image"):
             render_consumer_manual_html(
                 project.detail, consumer, {}, cover_image=tmp_path / "x.png")
+
+
+class TestGeneratorScript:
+    def test_end_to_end_build_writes_a_contained_consumer_manual(
+            self, tmp_path):
+        import sys
+        sys.path.insert(0, str(ROOT / "scripts"))
+        try:
+            from cabinetry_consumer_manual import (
+                build_cabinetry_consumer_document,
+            )
+        finally:
+            sys.path.remove(str(ROOT / "scripts"))
+
+        result = build_cabinetry_consumer_document(
+            tmp_path, image_size=(420, 320))
+        path = Path(result["consumer_path"])
+        assert path.name == "frameless_three_drawer_40_consumer_manual.html"
+        assert path.is_file()
+        assert result["page_count"] <= 12
+        assert result["visible_instructional_words"] <= 1500
+        html_text = path.read_text(encoding="utf-8")
+        assert html_text.count('class="sheet') == result["page_count"]
+        assert "data:image/png;base64," in html_text
+        # the accepted four-document set is not rewritten by this script
+        assert not (tmp_path / "frameless_three_drawer_40_assembly_manual"
+                    ".html").exists()
