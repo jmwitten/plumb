@@ -62,27 +62,26 @@ for `tests/test_cabinetry_project_report.py`.
 
 for the affected cabinetry, drawer, instruction, and viewer suites.
 
-Real four-file regeneration completed in 5.2 seconds. Final scratch metrics:
+Real four-file regeneration completed in 6.7 seconds. Final accepted metrics:
 
 | Surface | Visible words | Tables | Rows |
 |---|---:|---:|---:|
-| Review/install landing | 1,212 | 7 | 35 |
-| Illustrated manual | 7,441 | 0 | 0 |
-| Fabrication packet | 10,101 | 13 | 310 |
-| Review trace | 3,256 | 3 | 133 |
+| Review/install landing | 1,224 | 7 | 35 |
+| Illustrated manual | 7,989 | 1 | 9 |
+| Fabrication packet | 10,535 | 14 | 340 |
+| Review trace | 3,268 | 3 | 133 |
 
 Desktop browser QA at 1440 × 1000 found no horizontal overflow; the cover is
 512 px tall rather than 1,238 px. Mobile QA at 390 × 844 found no page-level
 overflow, while the 900 px installation drawing canvas remains intentionally
 pannable and all three full-resolution links are present.
 
-## Remaining after the final local fix
+## Final completion state
 
-- Fresh adversarial and no-context-builder confirmation of the final fix.
-- One full-suite gate on the frozen final tree, then final regeneration,
-  delivery, commit/push, and ledger update.
-- The 1,900-line report module should be extracted only in a later, separately
-  reviewed refactor.
+Fresh adversarial and no-context-builder confirmations both returned PASS with
+zero remaining Critical and zero Important findings. The 1,900-line report
+module remains a deliberately deferred, separately reviewed refactor rather
+than correctness work mixed into this release.
 
 ## Confirmation and naive-reader closure
 
@@ -127,3 +126,18 @@ for affected cabinetry, drawer, instruction, presentation, and viewer suites.
 Direct browser QA confirmed that an unfragmented manual opens at the cover with
 an empty hash and zero scroll, while direct `#panel-6` navigation reaches the
 stop-first held installation panel.
+
+## Final gate and accepted artifacts
+
+The frozen final tree passed the full suite:
+
+```text
+1742 passed, 3 skipped, 1 xfailed in 888.22s (0:14:48)
+```
+
+Final accepted generation produced these SHA-256 values:
+
+- review/installation: `633a0617f3a90d36a3789a42c7cb7a2f906840fc7ec3c734c722e4acc6ff7288`
+- assembly manual: `8510c4aca6a6ae5608160f853424969e46da09420cbab2d184c08c9f5113bb36`
+- fabrication packet: `bb68cecfbe3575e9fdf776afdf5f77e0a3361d61f55a082b5595a5e2e404c3e0`
+- review trace: `b845254ddc83b149be073113270113a3311f9ebf06f18db789bd705c303f1ebc`

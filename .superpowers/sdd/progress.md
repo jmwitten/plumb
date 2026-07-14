@@ -14,6 +14,55 @@ three-drawer-cabinet branch is the live case): land them on main by
 (unrelated histories; a merge would drag the whole archived ancestry into
 main). Push main after merges.
 
+## ★ SESSION UPDATE 15 (2026-07-14 — CABINET PACK DB40 COMPLETE; four-document release DELIVERED)
+
+The first real cabinet-pack consumer is complete: DB40, a 40-inch-wide
+frameless three-drawer clothing cabinet with pulls, soft-close MOVENTO runners,
+and the selected ZS7M686MU lateral stabilizer. The model now generates four
+linked, self-contained reader surfaces from one compiled source of truth: a
+concise review/installation landing page, an illustrated assembly manual, a
+fabrication packet, and a validation/review trace.
+
+The reader package was rebuilt around actual decisions. The landing page is
+about 1,224 visible words instead of the former 13,825-word omnibus document;
+shop detail and evidence move to their named companion documents. Drawings pin
+the exact toe-member rectangles, floor datum, cabinet/wall-local anchor-strip
+position, surveyed stud geometry, screw parameters, and all label lanes.
+Generated pages reject unsafe image data, avoid invented shim geometry, retain
+full-resolution/print drawings, and remain contained at a 390 px viewport.
+
+Release semantics are now explicit: `MODEL DATA PASS — DO NOT BUY OR CUT`
+until a per-part purchasing/cutting record identifies product/lot, finish face,
+grain, nesting, and approval. Installation remains a hard HOLD until the field
+clearance record is completed. The manual opens at its cover, carries the stop
+notice before Panel 6 imagery, and includes a printable signed installation and
+fit record. Selected drawer hardware is expressed as ten executable MOVENTO
+steps plus a separate nine-operation stabilizer sequence, checked against the
+official Blum installation material while leaving template and handedness
+details under manufacturer control.
+
+Fresh final adversarial and document-only builder confirmations found zero
+Critical and zero Important findings. Focused verification passed 52 tests;
+the affected suite passed 318 tests with 3 skipped. The frozen final tree then
+passed the full gate: **1742 passed / 3 skipped / 1 xfailed** in 888.22s.
+
+Final delivered SHA-256 values: review/installation
+`633a0617f3a90d36a3789a42c7cb7a2f906840fc7ec3c734c722e4acc6ff7288`;
+assembly manual
+`8510c4aca6a6ae5608160f853424969e46da09420cbab2d184c08c9f5113bb36`;
+fabrication packet
+`bb68cecfbe3575e9fdf776afdf5f77e0a3361d61f55a082b5595a5e2e404c3e0`;
+review trace
+`b845254ddc83b149be073113270113a3311f9ebf06f18db789bd705c303f1ebc`.
+The exact four-file set is delivered to vault
+`05_Attachments/Organized/Cabinetry Drawings/2026-07-14/` and
+`~/Downloads/Build Documents/`.
+
+NEXT: use the cabinet pack as the speed/reuse test for the researched
+double-sink, four-drawer vanity. Add selected sink, drain, supply, trap, and
+service envelopes plus floating-wall anchorage without weakening the base
+language; track time-to-first-useful and time-to-reviewed-package explicitly.
+
 ## ★ SESSION UPDATE 14 (2026-07-14 — STEPDOC/CPG +presentation COMPLETE + MERGED; linked caddy pair DELIVERED)
 
 +presentation is COMPLETE and merged to GitHub `main` @`c6a7326`. The caddy
