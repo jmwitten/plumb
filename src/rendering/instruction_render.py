@@ -155,6 +155,10 @@ def panel_content_key(
     # the payload keeps every existing content key (and cached PNG) stable.
     if style != "technical":
         payload["style"] = style
+        # Bumped when a non-default style's scene composition changes
+        # (e.g. feature-edge outlines); the technical register keeps its
+        # pre-style keys and cached renders.
+        payload["style_impl"] = 2
     if not callouts:
         payload["callouts_drawn"] = False
     canonical = json.dumps(
@@ -419,9 +423,27 @@ def render_instruction_panel(
                 actor.GetProperty().SetColor(*palette.prior_color)
                 actor.GetProperty().SetOpacity(palette.prior_opacity)
             if palette.edge_visibility:
-                actor.GetProperty().EdgeVisibilityOn()
-                actor.GetProperty().SetEdgeColor(*palette.edge_color)
-                actor.GetProperty().SetLineWidth(palette.edge_width)
+                # Per-cell edges would draw tessellation triangles that read
+                # as false joints; feature edges outline only real geometry
+                # (boundaries and creases).
+                feature = vtk.vtkFeatureEdges()
+                feature.SetInputConnection(normals.GetOutputPort())
+                feature.BoundaryEdgesOn()
+                feature.FeatureEdgesOn()
+                feature.SetFeatureAngle(35.0)
+                feature.ManifoldEdgesOff()
+                feature.NonManifoldEdgesOff()
+                feature.ColoringOff()
+                edge_mapper = vtk.vtkPolyDataMapper()
+                edge_mapper.SetInputConnection(feature.GetOutputPort())
+                edge_mapper.SetResolveCoincidentTopologyToPolygonOffset()
+                edge_actor = vtk.vtkActor()
+                edge_actor.SetMapper(edge_mapper)
+                edge_actor.GetProperty().SetColor(*palette.edge_color)
+                edge_actor.GetProperty().SetLineWidth(palette.edge_width)
+                edge_actor.GetProperty().SetOpacity(
+                    1.0 if placed.id in emphasized else palette.prior_opacity)
+                renderer.AddActor(edge_actor)
             renderer.AddActor(actor)
     missing = visible - shown
     if missing:
