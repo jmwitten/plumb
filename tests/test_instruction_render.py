@@ -6,7 +6,10 @@ from pathlib import Path
 import pytest
 
 from detailgen.rendering.caddy_stations import attach_caddy_stations
-from detailgen.rendering.instruction_panels import build_instruction_manual
+from detailgen.rendering.instruction_panels import (
+    InstructionPresentationError,
+    build_instruction_manual,
+)
 from detailgen.rendering.instruction_render import (
     panel_content_key,
     render_instruction_images,
@@ -84,12 +87,12 @@ def test_bond_stations_locate_each_rail_from_top_and_flush_datums(stationed):
         assert "+X" not in station.label and "-X" not in station.label
 
 
-def test_fasten_stations_locate_every_screw_from_both_rail_ends_and_top(stationed):
+def test_fasten_stations_locate_symmetric_pairs_from_either_rail_end(stationed):
     fasten = _panel(stationed, "fasten")
 
-    assert len(fasten.stations) == 8
+    assert len(fasten.stations) == 4
     assert {round(station.near_mm, 2) for station in fasten.stations} == {
-        54.61, 85.09}
+        54.61}
     assert all(
         station.near_mm + station.far_mm
         == pytest.approx(station.reference_length_mm)
@@ -100,10 +103,12 @@ def test_fasten_stations_locate_every_screw_from_both_rail_ends_and_top(statione
             for station in fasten.stations} == {19.05, 101.6}
     assert all(station.q0 is not None and station.q1 is not None
                for station in fasten.stations)
+    assert all(station.mirror_p0 is not None and station.mirror_p1 is not None
+               for station in fasten.stations)
     assert '3/4" below the top underside' in labels
     assert '4" below the top underside' in labels
-    assert "from the front rail end" in labels
-    assert "from the back rail end" in labels
+    assert "from each rail end" in labels
+    assert "front rail end" not in labels and "back rail end" not in labels
     assert "+X" not in labels and "-X" not in labels
 
 
@@ -121,7 +126,7 @@ def test_moving_authored_screw_offset_moves_raw_stations_and_rekeys(
     original = _panel(stationed, "fasten")
     moved = _panel(changed_manual, "fasten")
     assert {round(station.near_mm, 2) for station in moved.stations} == {
-        49.53, 90.17}
+        49.53}
     assert tuple(station.near_mm for station in original.stations) != tuple(
         station.near_mm for station in moved.stations)
     assert panel_content_key(caddy, original) != panel_content_key(changed, moved)
@@ -131,6 +136,27 @@ def test_moving_authored_screw_offset_moves_raw_stations_and_rekeys(
     assert panel_content_key(
         caddy, _panel(stationed, "join")) != panel_content_key(
             changed, _panel(changed_manual, "join"))
+
+
+def test_asymmetric_screw_pair_without_a_physical_end_anchor_fails_closed(
+    caddy, tmp_path,
+):
+    changed_spec = tmp_path / SPEC.name
+    changed_spec.write_text(SPEC.read_text().replace(
+        'place: {raw: {at: ["$rail_inner_x", "$screw_dy_h", '
+        '"$sidescrew_z_u"], rotate: [["Y", -90]]}}',
+        'place: {raw: {at: ["$rail_inner_x", "= screw_dy_h + 0.2", '
+        '"$sidescrew_z_u"], rotate: [["Y", -90]]}}',
+        1,
+    ))
+    changed = compile_spec_file(changed_spec)
+    changed.validate()
+
+    with pytest.raises(
+        InstructionPresentationError,
+        match="screw pair.*not end-symmetric.*physical end anchor",
+    ):
+        attach_caddy_stations(changed, build_instruction_manual(changed))
 
 
 def test_content_key_ignores_prose_but_covers_station_inputs(caddy, stationed):

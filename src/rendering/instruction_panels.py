@@ -47,6 +47,8 @@ class PlacementStation:
     secondary_datum: str = ""
     q0: tuple[float, float, float] | None = None
     q1: tuple[float, float, float] | None = None
+    mirror_p0: tuple[float, float, float] | None = None
+    mirror_p1: tuple[float, float, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -181,10 +183,27 @@ def _display(labels, part_id: str) -> str:
     return labels[part_id].display_name
 
 
-def _fab_note(component) -> str:
-    fn = getattr(component, "fabrication_record", None)
-    record = fn() if fn is not None else None
-    return record.fab_note() if record is not None else ""
+def _fabrication_instructions(component, display_name: str) -> tuple[str, ...]:
+    """Translate the component's typed fabrication record into shop language."""
+    record_fn = getattr(component, "fabrication_record", None)
+    record = record_fn() if record_fn is not None else None
+    if record is None:
+        return ()
+
+    instructions = []
+    for step in record.steps:
+        if step.kind == "crosscut":
+            instructions.append(
+                f"Crosscut {display_name} to {component.describe()}.")
+        elif step.kind == "ease":
+            radius = fmt_frac_in(step.param("radius") / 25.4)
+            instructions.append(
+                f"Ease the long edges of {display_name} to a {radius} radius.")
+
+    fab = record.fab_note()
+    if fab:
+        instructions.append(f"Machine {display_name}: {fab}.")
+    return tuple(instructions)
 
 
 def _members_for(graph, connections) -> tuple[str, ...]:
@@ -249,26 +268,30 @@ def _panel_title(detail, action, graph, steps, cohort, labels) -> str:
     return action.title()
 
 
+def _reader_dimensions(component) -> str:
+    """Use construction fractions for headed fasteners on every manual surface."""
+    if (hasattr(component, "diameter") and hasattr(component, "length")
+            and hasattr(component, "head_height")):
+        diameter = fmt_frac_in(component.diameter / 25.4)
+        length = fmt_frac_in(component.length / 25.4)
+        return f"{diameter} dia × {length}"
+    return component.describe()
+
+
 def _hardware_rows(detail, installs) -> tuple[DisplayRow, ...]:
     by_id = {p.id: p for p in detail.assembly.parts}
     ids = [pid for install in installs for pid in install.fasteners]
     if not ids:
         return ()
     first = by_id[ids[0]].component
-    length = getattr(first, "length", None)
-    diameter = getattr(first, "diameter", None)
-    size = []
-    if diameter is not None:
-        size.append(f"{fmt_frac_in(diameter / 25.4)} dia")
-    if length is not None:
-        size.append(fmt_frac_in(length / 25.4))
+    size = _reader_dimensions(first)
     head_key = installs[0].contract.head
     head = _HEAD_TEXT.get(head_key, head_key.replace("_", " "))
     labels = part_labels(detail.assembly.parts)
     reader_name = labels[ids[0]].reader_name
     return (DisplayRow(
         "screw",
-        f"{len(ids)} × {reader_name} — {' × '.join(size)}, {head}",
+        f"{len(ids)} × {reader_name} — {size}, {head}",
         count=len(ids), source_part_ids=tuple(ids)),)
 
 
@@ -300,12 +323,14 @@ def _inventory(detail, labels) -> tuple[DisplayRow, ...]:
     for part in detail.assembly.parts:
         if part.component.bom_label().endswith("(existing)"):
             continue
-        grouped.setdefault(labels[part.id].reader_name, []).append(part)
+        key = (labels[part.id].reader_name, labels[part.id].item,
+               _reader_dimensions(part.component))
+        grouped.setdefault(key, []).append(part)
     return tuple(
-        DisplayRow("part", f"{len(parts)} × {reader_name} — "
-                   f"{labels[parts[0].id].item}", count=len(parts),
+        DisplayRow("part", f"{len(parts)} × {reader_name} — {item}; {dimensions}",
+                   count=len(parts),
                    source_part_ids=tuple(part.id for part in parts))
-        for reader_name, parts in grouped.items())
+        for (reader_name, item, dimensions), parts in grouped.items())
 
 
 def _panel_content(detail, graph, steps, cohort, action, labels,
@@ -326,11 +351,12 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
         prepared_ids = tuple(pid for i in cohort for pid in steps[i].parts_placed)
         for part_id in prepared_ids:
             part = by_id[part_id]
-            fab = _fab_note(part.component)
-            line = f"Prepare {_display(labels, part_id)} — {labels[part_id].item}"
-            if fab:
-                line += f": {fab}."
+            line = (f"Prepare {_display(labels, part_id)} — "
+                    f"{labels[part_id].item}; modeled finished dimensions "
+                    f"{part.component.describe()}.")
             instructions.append(line)
+            instructions.extend(_fabrication_instructions(
+                part.component, _display(labels, part_id)))
         tools = list(_fabrication_tools(by_id[part_id] for part_id in prepared_ids))
 
     elif action == "bond":

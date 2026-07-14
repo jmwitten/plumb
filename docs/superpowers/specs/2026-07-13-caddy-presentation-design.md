@@ -47,8 +47,9 @@ behavior and never emits a broken link.
   indexes, visible/arrival/focus part ids, callouts, placement stations,
   resolved hardware/tool rows, process hold, order rationale, and honesty
   markers.
-- `PlacementStation` — a geometry-derived label with two end distances, the
-  physical reference member/end, second-axis datum, and image anchors.
+- `PlacementStation` — a geometry-derived label with end distances, the
+  physical reference datum, optional end-symmetric paired anchors, a
+  second-axis datum, and the image anchors used by the same instruction.
 - `InstructionManual` — title, ordered panels, unordered-part policy,
   technical-document basename, coverage/honesty summary, and part inventory.
 
@@ -136,15 +137,18 @@ to place its parts without consulting prose elsewhere:
   both-ends form;
 - rail layout derives the distance from each top-board end, front/back flush
   datum, and underside datum from the world geometry;
-- every rail-to-side screw station derives its distance from both rail ends
-  and its drop from the top underside;
+- each rail/drop screw pair derives one invariant offset from each
+  interchangeable rail end and its drop from the top underside;
 - panel images draw the same station anchors and dimension labels that the text
   prints.
 
-For every both-ends station, the two distances plus the positioned feature
-extent must reconcile to the reference length within tolerance. Missing or
-inconsistent station data blocks manual generation. An adversarial spec
-variant moves a screw/landing and must move both printed and image station
+For every both-ends station, the distances must reconcile to the reference
+length within tolerance. The caddy's symmetric two-screw rows print as “one
+center from each rail end,” so no invented front/back orientation is needed.
+If one center moves off that symmetry and the model supplies no distinguishing
+physical end feature, generation fails closed instead of naming an arbitrary
+end. Missing or inconsistent station data likewise blocks generation. A
+symmetry-preserving moved-screw variant moves both printed and image station
 data; hand-typed literals cannot pass.
 
 The caddy-specific station adapter selects meaningful construction datums but

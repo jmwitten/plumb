@@ -57,6 +57,8 @@ def _station_payload(station) -> dict:
         "secondary_datum": station.secondary_datum,
         "q0": station.q0,
         "q1": station.q1,
+        "mirror_p0": station.mirror_p0,
+        "mirror_p1": station.mirror_p1,
     }
 
 
@@ -202,11 +204,14 @@ def _draw_overlay(
             by_drop[drop_key] for drop_key in sorted(by_drop))
 
     for station in station_markers:
-        x, y = _project(renderer, vtk, station.p1, size[1])
-        r = 7
-        draw.ellipse(
-            (x - r, y - r, x + r, y + r),
-            fill=DIMENSION_BLUE, outline=(255, 255, 255), width=2)
+        for point in (station.p1, station.mirror_p1):
+            if point is None:
+                continue
+            x, y = _project(renderer, vtk, point, size[1])
+            r = 7
+            draw.ellipse(
+                (x - r, y - r, x + r, y + r),
+                fill=DIMENSION_BLUE, outline=(255, 255, 255), width=2)
 
     for index, station in enumerate(stations_to_draw):
         p0 = _project(renderer, vtk, station.p0, size[1])
@@ -216,7 +221,21 @@ def _draw_overlay(
         for x, y in (p0, p1):
             draw.line((x - arrow, y - arrow, x, y), fill=DIMENSION_BLUE, width=3)
             draw.line((x - arrow, y + arrow, x, y), fill=DIMENSION_BLUE, width=3)
-        text = f"{_fmt_dimension(station.near_mm)} / {_fmt_dimension(station.far_mm)}"
+        if station.mirror_p0 is not None and station.mirror_p1 is not None:
+            mirror_p0 = _project(renderer, vtk, station.mirror_p0, size[1])
+            mirror_p1 = _project(renderer, vtk, station.mirror_p1, size[1])
+            draw.line((*mirror_p0, *mirror_p1), fill=DIMENSION_BLUE, width=4)
+            for x, y in (mirror_p0, mirror_p1):
+                draw.line(
+                    (x + arrow, y - arrow, x, y),
+                    fill=DIMENSION_BLUE, width=3)
+                draw.line(
+                    (x + arrow, y + arrow, x, y),
+                    fill=DIMENSION_BLUE, width=3)
+            text = f"{_fmt_dimension(station.near_mm)} each end"
+        else:
+            text = (f"{_fmt_dimension(station.near_mm)} / "
+                    f"{_fmt_dimension(station.far_mm)}")
         if station.secondary_mm is not None:
             text += f" · {_fmt_dimension(station.secondary_mm)} down"
         mx = (p0[0] + p1[0]) // 2

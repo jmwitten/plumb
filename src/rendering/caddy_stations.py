@@ -187,31 +187,57 @@ def _fastener_stations(detail, panel, by_id, labels, graph, checks):
                 "entry face is not its registration rail")
         rail_bb = _bbox(by_id[rail_id])
         length = rail_bb.ymax - rail_bb.ymin
+        centers = []
         for fastener_id in install.fasteners:
             if fastener_id not in by_id:
                 raise InstructionPresentationError(
                     f"panel {panel.index} fastener {fastener_id!r} is absent")
             center = by_id[fastener_id].world_frame.origin
-            near = center[1] - rail_bb.ymin
-            far = rail_bb.ymax - center[1]
+            centers.append((fastener_id, center))
+        by_drop = {}
+        for fastener_id, center in centers:
             drop = top_bb.zmin - center[2]
+            by_drop.setdefault(round(drop, 4), []).append(
+                (fastener_id, center))
+        for drop_key in sorted(by_drop):
+            pair = sorted(by_drop[drop_key], key=lambda value: value[1][1])
+            if len(pair) != 2:
+                raise InstructionPresentationError(
+                    f"panel {panel.index} rail {rail_id!r} screw station at "
+                    f"{drop_key:.3f} mm below the top is not a two-center pair")
+            (_first_id, first), (_second_id, second) = pair
+            from_low_end = first[1] - rail_bb.ymin
+            from_high_end = rail_bb.ymax - second[1]
+            if (abs(from_low_end - from_high_end) > _RECONCILE_TOL_MM
+                    or abs(first[0] - second[0]) > _RECONCILE_TOL_MM
+                    or abs(first[2] - second[2]) > _RECONCILE_TOL_MM):
+                raise InstructionPresentationError(
+                    f"panel {panel.index} rail {rail_id!r} screw pair is not "
+                    "end-symmetric and the model supplies no physical end "
+                    "anchor; generation cannot invent front/back orientation")
+            near = (from_low_end + from_high_end) / 2
+            far = length - near
+            drop = top_bb.zmin - first[2]
+            reader_name = labels[pair[0][0]].reader_name
             result.append(PlacementStation(
-                feature="rail-to-side screw center",
-                label=(f"{labels[fastener_id].display_name}: {_fmt_mm(near)} "
-                       "from the front rail end, "
-                       f"{_fmt_mm(far)} from the back rail end, and "
+                feature="symmetric rail-to-side screw pair",
+                label=(f"{reader_name} pair: mark one center "
+                       f"{_fmt_mm(near)} from each rail end and "
                        f"{_fmt_mm(drop)} below the top underside."),
                 reference_part_id=rail_id,
                 near_mm=near,
                 far_mm=far,
                 reference_length_mm=length,
-                datum="registration-rail front/back ends and top underside",
-                p0=(center[0], rail_bb.ymin, center[2]),
-                p1=center,
+                datum=("interchangeable registration-rail end faces and "
+                       "top underside; symmetric pair needs no front/back label"),
+                p0=(first[0], rail_bb.ymin, first[2]),
+                p1=first,
                 secondary_mm=drop,
                 secondary_datum="top underside",
-                q0=(center[0], center[1], top_bb.zmin),
-                q1=center,
+                q0=(first[0], first[1], top_bb.zmin),
+                q1=first,
+                mirror_p0=(second[0], rail_bb.ymax, second[2]),
+                mirror_p1=second,
             ))
     return tuple(result)
 

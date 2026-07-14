@@ -132,6 +132,31 @@ def test_caddy_panel_text_uses_reader_vocabulary_and_typed_facts(caddy):
         assert banned not in rendered
 
 
+def test_prepare_instructions_and_inventory_include_modeled_part_dimensions(caddy):
+    manual = build_instruction_manual(caddy)
+    prepare = next(panel for panel in manual.panels if panel.action == "prepare")
+    instructions = "\n".join(prepare.instructions)
+    inventory = "\n".join(row.label for row in manual.inventory)
+
+    for dimensions in ('1x6 x 7.0"', '5/4x6 decking x 9.5"', '1x6 x 5.5"'):
+        assert dimensions in instructions
+        assert dimensions in inventory
+
+
+def test_prepare_instructions_derive_crosscuts_and_edge_easing(caddy):
+    manual = build_instruction_manual(caddy)
+    prepare = next(panel for panel in manual.panels if panel.action == "prepare")
+    instructions = "\n".join(prepare.instructions)
+
+    assert 'Crosscut Side board (1 of 2) to 1x6 x 7.0".' in instructions
+    assert 'Crosscut Top board to 5/4x6 decking x 9.5".' in instructions
+    assert 'Crosscut Registration rail (2 of 2) to 1x6 x 5.5".' in instructions
+    assert 'Ease the long edges of Side board (1 of 2) to a 1/8" radius.' in instructions
+    assert 'Ease the long edges of Top board to a 1/8" radius.' in instructions
+    assert "Ease the long edges of Registration rail" not in instructions
+    assert "|X" not in instructions
+
+
 def test_titles_compose_from_current_reader_labels(tmp_path):
     variant_path = tmp_path / SPEC.name
     variant_path.write_text(SPEC.read_text().replace(
@@ -152,10 +177,15 @@ def test_hardware_label_uses_typed_geometry_without_inventing_a_gauge(caddy):
     manual = build_instruction_manual(caddy)
     label = next(panel for panel in manual.panels
                  if panel.action == "fasten").hardware[0].label
+    inventory_label = next(
+        row.label for row in manual.inventory
+        if "Rail-to-side screw" in row.label)
 
     assert "3/16\" dia" in label
     assert "1-1/4\"" in label
     assert "#10" not in label
+    assert "3/16\" dia × 1-1/4\"" in inventory_label
+    assert '1.2"' not in inventory_label
 
 
 def test_cure_and_fasten_both_print_each_authored_constraint_why(caddy):

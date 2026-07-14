@@ -142,7 +142,7 @@ git commit -m "feat: derive grouped instruction panels"
 
 - [ ] **Step 1: Write CAT-M RED tests for text-complete stations**
 
-Assert the prepare panel carries the centered bore from both top-board ends; the bond panel carries each rail's top-end/front-back/underside datums; and the fasten panel carries all four per-rail station combinations with both rail-end distances plus top-underside drop.
+Assert the prepare panel carries the centered bore from both top-board ends; the bond panel carries each rail's top-end/front-back/underside datums; and the fasten panel carries four geometry-derived symmetric screw-pair stations (two rails × two drops), each locating one center from either interchangeable rail end plus the top-underside drop. A one-screw asymmetric mutation without a modeled distinguishing end feature must fail closed rather than inventing front/back.
 
 - [ ] **Step 2: Verify CAT-M fails because no station adapter exists**
 
