@@ -1,0 +1,152 @@
+schema: detailgen/design-review/v1
+project_id: example_project
+title: Example precedent-first selection
+status: draft
+brief:
+  use: Support a removable household accessory during ordinary seated use.
+  loads: Carry the accessory and a modest service load without relying on upholstery friction.
+  fit_range: Fit supporting surfaces from five to eight inches wide with visible clearance.
+  appearance: Read as finished indoor furniture with concealed or intentionally detailed joints.
+  builder_skill: Suit an intermediate woodworker who can cut accurate joints and drill repeatably.
+  tools:
+    - table saw
+    - drill
+    - clamps
+  required_features:
+    - id: req_support
+      text: Transfer the service load into both side panels.
+    - id: req_fit
+      text: Register on the supporting surface without permanent attachment.
+  constraints:
+    - id: constraint_simplicity
+      text: Minimize separate structural parts before optimizing decorative details.
+      priority: 1
+    - id: constraint_appearance
+      text: Keep primary fasteners away from the visible top face.
+      priority: 2
+precedents:
+  - id: product_reference
+    kind: commercial_product
+    title: Commercial three-panel saddle
+    publisher: Example Furniture
+    url: https://example.com/products/three-panel-saddle
+    accessed_on: 2026-07-14
+    construction_pattern: A top panel spans two continuous side panels without internal wooden walls.
+    lessons:
+      - The three-panel topology preserves the full interior fit opening.
+  - id: instruction_reference
+    kind: build_instruction
+    title: Reinforced corner build instructions
+    publisher: Example Woodworking
+    url: https://example.com/plans/reinforced-corner
+    accessed_on: 2026-07-14
+    construction_pattern: Three panels are joined directly with concealed reinforcement at both corners.
+    lessons:
+      - Directly reinforcing each corner avoids adding a second side wall.
+concepts:
+  - id: concept_a
+    title: Butt joint with internal cleats
+    summary: Square-ended panels bear on each other while narrow internal cleats carry concealed fasteners.
+    signature:
+      load_path: top_to_side_bearing
+      joint_family: butt_with_cleat
+      part_topology: five_part_saddle
+      fastening_strategy: concealed_screws_and_glue
+      visible_seam_strategy: square_butt_seam
+      fit_strategy: cleat_registered
+    features:
+      - id: cleated_corner
+        description: An internal cleat reinforces each square corner below the top panel.
+        precedent_refs: [instruction_reference]
+    parts:
+      - part_family: structural panels
+        purpose: Form the top and both continuous outside faces required by the use brief.
+        requirement_refs: [req_support, req_fit]
+        feature_refs: []
+        joinery_replacement: The three panels cannot be absorbed, but their corner reinforcement could be direct joinery.
+      - part_family: internal cleats
+        purpose: Provide concealed face-grain fastening surfaces for the square corner joints.
+        requirement_refs: [req_support]
+        feature_refs: [concept_a.cleated_corner]
+        joinery_replacement: Miters, rabbets, dowels, or brackets could replace these separate cleat parts.
+  - id: concept_b
+    title: Reinforced miter shell
+    summary: Three mitered panels form a continuous wrap reinforced by dowels across each concealed corner.
+    signature:
+      load_path: top_through_miter_to_sides
+      joint_family: reinforced_miter
+      part_topology: three_part_saddle
+      fastening_strategy: glue_and_dowels
+      visible_seam_strategy: continuous_wrap
+      fit_strategy: side_panel_registered
+    features:
+      - id: keyed_miters
+        description: Dowels cross both miter joints to reinforce the glued long-grain corner surfaces.
+        precedent_refs: [instruction_reference]
+    parts:
+      - part_family: mitered structural panels
+        purpose: Form the complete saddle and transfer service loads through two reinforced corners.
+        requirement_refs: [req_support, req_fit]
+        feature_refs: [concept_b.keyed_miters]
+        joinery_replacement: No separate reinforcement part is needed because the doweled joinery carries the corner function.
+  - id: concept_c
+    title: Rabbeted shell with pins
+    summary: Side panels seat in top rabbets and receive dowels driven through concealed inside faces.
+    signature:
+      load_path: top_rabbet_bearing_to_sides
+      joint_family: rabbet_and_dowel
+      part_topology: three_part_saddle
+      fastening_strategy: glue_and_cross_dowels
+      visible_seam_strategy: expressed_rabbet_line
+      fit_strategy: side_panel_registered
+    features:
+      - id: shouldered_rabbets
+        description: Shallow rabbets positively locate both side panels before dowels reinforce the shoulders.
+        precedent_refs: [instruction_reference]
+    parts:
+      - part_family: rabbeted structural panels
+        purpose: Form the saddle while the rabbet shoulders locate and support both side panels.
+        requirement_refs: [req_support, req_fit]
+        feature_refs: [concept_c.shouldered_rabbets]
+        joinery_replacement: The locating and reinforcement functions are already integrated into the three structural panels.
+comparison:
+  - {id: concept_a.strength, concept: concept_a, criterion: strength, assessment: neutral, explanation: "Cleats reinforce the butt joints but introduce another glue and fastener interface.", evidence_refs: [instruction_reference, req_support]}
+  - {id: concept_a.part_count, concept: concept_a, criterion: part_count, assessment: disadvantage, explanation: "Two reinforcement cleats increase the structural assembly from three parts to five.", evidence_refs: [constraint_simplicity]}
+  - {id: concept_a.fasteners, concept: concept_a, criterion: fasteners, assessment: disadvantage, explanation: "Each cleat needs multiple concealed screws in addition to adhesive at the corner.", evidence_refs: [constraint_simplicity]}
+  - {id: concept_a.operations, concept: concept_a, criterion: operations, assessment: disadvantage, explanation: "Cutting, locating, bonding, clamping, and fastening two cleats adds repeated shop operations.", evidence_refs: [constraint_simplicity]}
+  - {id: concept_a.tooling, concept: concept_a, criterion: tooling, assessment: advantage, explanation: "Square cuts and straight drilling use only the basic tools named in the brief.", evidence_refs: [constraint_simplicity]}
+  - {id: concept_a.tolerances, concept: concept_a, criterion: tolerances, assessment: disadvantage, explanation: "Cleat thickness directly consumes the fit opening and compounds placement error on both sides.", evidence_refs: [req_fit]}
+  - {id: concept_a.material, concept: concept_a, criterion: material, assessment: disadvantage, explanation: "Two nearly full-length reinforcement members consume stock without adding exterior usable surface.", evidence_refs: [constraint_simplicity]}
+  - {id: concept_a.appearance, concept: concept_a, criterion: appearance, assessment: neutral, explanation: "Fasteners remain concealed but square butt seams still interrupt the furniture wrap.", evidence_refs: [constraint_appearance]}
+  - {id: concept_a.builder_skill, concept: concept_a, criterion: builder_skill, assessment: advantage, explanation: "The approach tolerates an intermediate builder using familiar square layout and drilling.", evidence_refs: [instruction_reference]}
+  - {id: concept_a.instruction_complexity, concept: concept_a, criterion: instruction_complexity, assessment: disadvantage, explanation: "Instructions must separately explain cleat placement, adhesive cure, clamping, and screw installation.", evidence_refs: [constraint_simplicity]}
+  - {id: concept_b.strength, concept: concept_b, criterion: strength, assessment: advantage, explanation: "Long glued miter surfaces and crossing dowels create a direct reinforced corner load path.", evidence_refs: [instruction_reference, req_support]}
+  - {id: concept_b.part_count, concept: concept_b, criterion: part_count, assessment: advantage, explanation: "The complete structural shell uses only the three visible panels required by the form.", evidence_refs: [product_reference, constraint_simplicity]}
+  - {id: concept_b.fasteners, concept: concept_b, criterion: fasteners, assessment: advantage, explanation: "Concealed wooden dowels replace repeated metal screws and remain integrated with the joint.", evidence_refs: [instruction_reference, constraint_appearance]}
+  - {id: concept_b.operations, concept: concept_b, criterion: operations, assessment: neutral, explanation: "Accurate miters and dowel drilling replace the separate cleat fabrication and attachment sequence.", evidence_refs: [instruction_reference]}
+  - {id: concept_b.tooling, concept: concept_b, criterion: tooling, assessment: neutral, explanation: "The table saw and drill suffice but both require accurate angle and dowel setup.", evidence_refs: [instruction_reference]}
+  - {id: concept_b.tolerances, concept: concept_b, criterion: tolerances, assessment: neutral, explanation: "Miter accuracy is demanding while the finished side panels preserve the full fit opening.", evidence_refs: [req_fit]}
+  - {id: concept_b.material, concept: concept_b, criterion: material, assessment: advantage, explanation: "Reinforcement uses small dowels rather than two additional full-depth wooden members.", evidence_refs: [constraint_simplicity]}
+  - {id: concept_b.appearance, concept: concept_b, criterion: appearance, assessment: advantage, explanation: "Mitered corners create the continuous furniture wrap requested by the appearance brief.", evidence_refs: [product_reference, constraint_appearance]}
+  - {id: concept_b.builder_skill, concept: concept_b, criterion: builder_skill, assessment: neutral, explanation: "An intermediate builder can execute the joint with careful setup and clamping practice.", evidence_refs: [instruction_reference]}
+  - {id: concept_b.instruction_complexity, concept: concept_b, criterion: instruction_complexity, assessment: advantage, explanation: "The manual can describe two repeated corner joints without separate reinforcement-part placement stages.", evidence_refs: [constraint_simplicity]}
+  - {id: concept_c.strength, concept: concept_c, criterion: strength, assessment: advantage, explanation: "Rabbet shoulders provide bearing while cross dowels reinforce separation at each corner.", evidence_refs: [instruction_reference, req_support]}
+  - {id: concept_c.part_count, concept: concept_c, criterion: part_count, assessment: advantage, explanation: "Three structural panels provide every permanent wooden part in the finished assembly.", evidence_refs: [constraint_simplicity]}
+  - {id: concept_c.fasteners, concept: concept_c, criterion: fasteners, assessment: neutral, explanation: "Several concealed dowels are required but no metal hardware remains in the finished piece.", evidence_refs: [constraint_appearance]}
+  - {id: concept_c.operations, concept: concept_c, criterion: operations, assessment: neutral, explanation: "Rabbeting and dowel drilling require two controlled machining setups for each corner.", evidence_refs: [instruction_reference]}
+  - {id: concept_c.tooling, concept: concept_c, criterion: tooling, assessment: neutral, explanation: "The named table saw and drill can form the rabbets and dowel bores accurately.", evidence_refs: [instruction_reference]}
+  - {id: concept_c.tolerances, concept: concept_c, criterion: tolerances, assessment: advantage, explanation: "Rabbet shoulders positively locate the sides while preserving the interior fit envelope.", evidence_refs: [req_fit]}
+  - {id: concept_c.material, concept: concept_c, criterion: material, assessment: advantage, explanation: "Integrated shoulders and small dowels avoid additional full-size reinforcement stock.", evidence_refs: [constraint_simplicity]}
+  - {id: concept_c.appearance, concept: concept_c, criterion: appearance, assessment: neutral, explanation: "Concealed dowels preserve clean faces although the rabbet shoulder remains a visible seam.", evidence_refs: [constraint_appearance]}
+  - {id: concept_c.builder_skill, concept: concept_c, criterion: builder_skill, assessment: neutral, explanation: "Consistent rabbet depth and dowel registration demand measured intermediate woodworking skill.", evidence_refs: [instruction_reference]}
+  - {id: concept_c.instruction_complexity, concept: concept_c, criterion: instruction_complexity, assessment: neutral, explanation: "Instructions need machining dimensions but avoid separate reinforcement-part placement and fastening stages.", evidence_refs: [constraint_simplicity]}
+deviations: []
+decision:
+  selected_concept: concept_b
+  rationale: The reinforced miter best balances the prioritized simplicity constraint with a direct load path and finished appearance.
+  decisive_cells: [concept_b.part_count, concept_b.appearance, concept_b.instruction_complexity]
+  tradeoffs:
+    - Accurate miter cutting and clamping require more care than square butt assembly.
+  application: recommendation_only
+modeling_approval: null
+delivery_confirmation: null
