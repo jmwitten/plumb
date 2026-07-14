@@ -132,6 +132,20 @@ def test_caddy_panel_text_uses_reader_vocabulary_and_typed_facts(caddy):
         assert banned not in rendered
 
 
+def test_repeated_connection_actions_name_the_specific_reader_parts(caddy):
+    manual = build_instruction_manual(caddy)
+    instructions = {
+        panel.action: "\n".join(panel.instructions)
+        for panel in manual.panels
+    }
+
+    for index in (1, 2):
+        assert f"Registration rail ({index} of 2)" in instructions["bond"]
+        assert f"Registration rail ({index} of 2)" in instructions["cure"]
+        assert f"Registration rail ({index} of 2)" in instructions["fasten"]
+        assert f"Side board ({index} of 2)" in instructions["fasten"]
+
+
 def test_prepare_instructions_and_inventory_include_modeled_part_dimensions(caddy):
     manual = build_instruction_manual(caddy)
     prepare = next(panel for panel in manual.panels if panel.action == "prepare")

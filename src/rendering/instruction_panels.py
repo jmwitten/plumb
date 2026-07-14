@@ -363,7 +363,9 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
         for connection in connections:
             members = _human_members(graph, labels, connection)
             fact = _process_fact_for_connection(graph, connection, "cure")
-            instructions.extend(f"{line}" for line in fact.instructions)
+            scope = " and ".join(members)
+            instructions.extend(
+                f"For {scope}: {line}" for line in fact.instructions)
             if fact.why not in rationales:
                 rationales.append(fact.why)
         hardware = (DisplayRow(
@@ -380,7 +382,7 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
                 if any(pid == install.contract.entry_face.part
                        for values in installs_by_connection.values()
                        for install in values))
-            subject = (_counted_names(labels, rail_ids)
+            subject = (" and ".join(_display(labels, pid) for pid in rail_ids)
                        if rail_ids else _counted_names(
                            labels, graph.members_of[event.subject]))
             completion = _COMPLETION_TEXT.get(
@@ -407,13 +409,16 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
                              for install in resolved)
             member_ids = graph.members_of[connection]
             side_ids = tuple(pid for pid in member_ids if pid not in rail_ids)
+            side_names = " and ".join(
+                _display(labels, pid) for pid in side_ids)
+            rail_names = " and ".join(
+                _display(labels, pid) for pid in rail_ids)
             count = sum(len(install.fasteners) for install in resolved)
             head = _HEAD_TEXT.get(
                 resolved[0].contract.head,
                 resolved[0].contract.head.replace("_", " "))
             instructions.append(
-                f"Fasten {_counted_names(labels, side_ids)} to "
-                f"{_counted_names(labels, rail_ids)}; drive all {count} modeled "
+                f"Fasten {side_names} to {rail_names}; drive all {count} modeled "
                 f"fasteners through the rail into the other member, with each {head}.")
         rationales.extend(_constraint_whys(graph, connections=connections))
         method_keys = tuple(dict.fromkeys(
