@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from .instruction_panels import RecordField
 
@@ -197,6 +197,150 @@ def validate_caption(caption: str, *, allowed_numbers: frozenset[str],
             raise FrameContractError(
                 f"caption number {number!r} is not backed by a typed fact "
                 f"(allowed: {sorted(allowed_numbers)}): {caption[:80]!r}")
+
+
+@dataclass(frozen=True)
+class FrameSpec:
+    """Authored decomposition of one panel into one builder action.
+
+    Everything quantitative must arrive as typed values: ``allowed_numbers``
+    is the exact set of numeric tokens the caller interpolated into the
+    caption, and ``hardware`` letters must resolve against the assigned
+    letter card. ``owned_event_keys`` are ``"kind:subject"`` strings matched
+    against the panel's source events; the single wildcard ``"*"`` claims
+    the whole panel and is only legal for a panel's sole frame.
+    """
+
+    frame_id: str
+    panel_index: int
+    caption: str
+    source_step_ids: tuple[str, ...]
+    owned_event_keys: tuple[str, ...]
+    focus_part_ids: tuple[str, ...] = ()
+    context_part_ids: tuple[str, ...] | None = None
+    hardware: tuple[FrameHardware, ...] = ()
+    tool: str = ""
+    repeat: int = 1
+    repeat_subject: str = ""
+    hold: str = ""
+    warning: str = ""
+    allowed_numbers: frozenset[str] = frozenset()
+    diagram_id: str = ""
+    inset: str = ""
+    is_hold_gate: bool = False
+    record_title: str = ""
+    record_fields: tuple[RecordField, ...] = ()
+
+
+def _events_for_keys(panel, spec) -> tuple[tuple[str, str, str], ...]:
+    if spec.owned_event_keys == ("*",):
+        return panel.source_events
+    matched = []
+    for key in spec.owned_event_keys:
+        kind, _, subject = key.partition(":")
+        hits = [event for event in panel.source_events
+                if event[0] == kind and event[1] == subject]
+        if not hits:
+            raise FrameContractError(
+                f"frame {spec.frame_id!r} claims event key {key!r} that "
+                f"matches no event of panel {spec.panel_index}")
+        matched.extend(hit for hit in hits if hit not in matched)
+    return tuple(matched)
+
+
+def project_action_frames(
+    manual,
+    specs: tuple[FrameSpec, ...],
+    *,
+    letters: tuple[HardwareLetter, ...],
+    forbidden_tokens: tuple[str, ...],
+) -> tuple[ActionFrame, ...]:
+    """Project instruction panels into validated consumer action frames.
+
+    Every panel must be decomposed by at least one spec; every panel event
+    must be owned exactly once across the panel's frames; captions pass the
+    honesty contract; hardware letters must exist. Frames are returned in
+    panel order, preserving spec order within a panel.
+    """
+    panels_by_index = {panel.index: panel for panel in manual.panels}
+    known_letters = {letter.letter for letter in letters}
+
+    specs_by_panel: dict[int, list[FrameSpec]] = {}
+    for spec in specs:
+        if spec.panel_index not in panels_by_index:
+            raise FrameContractError(
+                f"frame {spec.frame_id!r} references panel "
+                f"{spec.panel_index}, which does not exist")
+        specs_by_panel.setdefault(spec.panel_index, []).append(spec)
+
+    uncovered = sorted(set(panels_by_index) - set(specs_by_panel))
+    if uncovered:
+        raise FrameContractError(
+            f"panel {uncovered[0]} has no action-frame decomposition "
+            f"(uncovered panels: {uncovered!r})")
+
+    frames = []
+    for panel_index in sorted(specs_by_panel):
+        panel = panels_by_index[panel_index]
+        panel_specs = specs_by_panel[panel_index]
+        wildcards = [s for s in panel_specs if s.owned_event_keys == ("*",)]
+        if wildcards and len(panel_specs) > 1:
+            raise FrameContractError(
+                f"panel {panel_index}: wildcard event ownership is only "
+                f"legal for a panel's sole frame; got {len(panel_specs)} "
+                f"frames including wildcard {wildcards[0].frame_id!r}")
+        for spec in panel_specs:
+            for row in spec.hardware:
+                if row.letter not in known_letters:
+                    raise FrameContractError(
+                        f"frame {spec.frame_id!r} references hardware "
+                        f"letter {row.letter!r} that was never assigned")
+            validate_caption(
+                spec.caption,
+                allowed_numbers=spec.allowed_numbers,
+                forbidden_tokens=forbidden_tokens,
+            )
+            for text in (spec.hold, spec.warning, spec.tool):
+                if text:
+                    validate_caption(
+                        text,
+                        allowed_numbers=spec.allowed_numbers,
+                        forbidden_tokens=forbidden_tokens,
+                    )
+            focus = spec.focus_part_ids or panel.focus_part_ids
+            if spec.context_part_ids is not None:
+                context = spec.context_part_ids
+            else:
+                context = tuple(pid for pid in panel.visible_part_ids
+                                if pid not in focus)
+            frames.append(ActionFrame(
+                frame_id=spec.frame_id,
+                caption=spec.caption,
+                source_step_ids=spec.source_step_ids,
+                owned_events=_events_for_keys(panel, spec),
+                focus_part_ids=focus,
+                context_part_ids=context,
+                hardware=spec.hardware,
+                tool=spec.tool,
+                repeat=spec.repeat,
+                repeat_subject=spec.repeat_subject,
+                hold=spec.hold,
+                warning=spec.warning,
+                illustration=FrameIllustration(
+                    intent=("operation_diagram" if spec.diagram_id
+                            else "assembly_scene"),
+                    panel_index=panel_index,
+                    diagram_id=spec.diagram_id,
+                    inset=spec.inset,
+                ),
+                is_hold_gate=spec.is_hold_gate,
+                record_title=spec.record_title,
+                record_fields=spec.record_fields,
+            ))
+
+    frames = tuple(frames)
+    validate_frame_ownership(manual.panels, frames)
+    return frames
 
 
 def validate_frame_ownership(panels, frames) -> None:
