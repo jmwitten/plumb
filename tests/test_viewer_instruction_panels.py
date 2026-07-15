@@ -80,6 +80,28 @@ def test_viewer_source_creates_integer_panel_control_only_for_panel_metadata():
     assert ".v-assembly-current" in css
 
 
+def test_instruction_viewer_opens_on_completed_assembly():
+    js = viewer_js()
+
+    assert (
+        'assembly.value = String(payload.instruction_panels.length);'
+        in js
+    )
+    assert "applyAssemblyPanel(assembly.value);" in js
+    assert "applyAssemblyPanel(1);" not in js
+
+
+def test_explode_temporarily_reveals_future_parts():
+    js = viewer_js()
+
+    assert "var explodeAmount = 0;" in js
+    assert "function applyPartVisibility()" in js
+    assert "var revealAll = explodeAmount > 0;" in js
+    assert "var visible = revealAll || first_panel <= currentPanel;" in js
+    assert "explodeAmount = parseFloat(explode.value) || 0;" in js
+    assert "applyPartVisibility();" in js
+
+
 def test_panel_input_changes_visibility_without_changing_explode_value():
     js = viewer_js()
 
