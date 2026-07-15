@@ -1113,6 +1113,98 @@ git commit -m "perf: verify reusable vocabulary authoring loop"
 
 ---
 
+### Task 7B: Profile and de-duplicate the package-render path
+
+**Files:**
+- Modify: `scripts/family_birdhouse_report.py`
+- Modify: `scripts/single_detail_report.py`
+- Modify: `tests/test_family_birdhouse_report.py`
+- Modify or create focused seam tests only where needed.
+- Extend:
+  `docs/superpowers/specs/2026-07-15-reusable-physical-vocabulary-benchmark.md`
+
+**Observed cold baseline:** 403.22 seconds for the report/component test
+invocation, with nearly all time in the module-scoped package fixture. The
+generated package was 22 MB: 14 MB GLB and 3.9 MB STEP before migration to
+envelope screws.
+
+- [ ] **Step 1: Add phase instrumentation without changing behavior**
+
+Record monotonic durations for compile/validation, documentation export,
+instruction-panel rendering, technical-document assembly, five-view still
+rendering, and package hashing. Return the phase data from the build seam and
+write it into the package manifest. Do not print noisy per-part timings.
+
+- [ ] **Step 2: Write RED single-work tests**
+
+Add focused tests using counters/spies that prove:
+
+- one package build invokes `detail.render_documentation` once;
+- the five still views call the part tessellation seam once per placed part,
+  not five times per part;
+- fast HTML/manifest contract tests can consume a prepared package seam without
+  triggering a second cold render; and
+- the cold end-to-end package test remains present and delivery-gated.
+
+These tests must fail against the integrated birdhouse report implementation.
+
+- [ ] **Step 3: Reuse immutable still-view meshes**
+
+Build one tuple per placed part containing world vertices, triangle faces,
+color, and name. Reuse it for all five cameras. Apply explode translations to
+copied vertex arrays only for the exploded view; never mutate the shared base
+mesh.
+
+- [ ] **Step 4: Reuse the existing documentation export**
+
+Add an optional, explicit prepared-documentation directory seam to
+`single_detail_report.build_document`/`build_single_detail_html`. When supplied,
+read the manifest and GLB from that directory and do not call
+`detail.render_documentation` again. Preserve current behavior for every
+existing caller that omits the seam.
+
+- [ ] **Step 5: Run GREEN and compatibility regressions**
+
+~~~bash
+.venv/bin/python -m pytest \
+  tests/test_family_birdhouse_report.py \
+  tests/test_single_detail_report.py \
+  -q --durations=20
+~~~
+
+Expected: all package contracts pass; existing report callers remain
+compatible; counter tests prove the single-work invariants.
+
+- [ ] **Step 6: Measure one fresh cold package**
+
+~~~bash
+rm -rf /tmp/plumb-family-birdhouse-package
+DETAILGEN_CACHE_DIR="$(mktemp -d)" \
+  /usr/bin/time -p \
+  .venv/bin/python scripts/family_birdhouse_report.py \
+  --preview \
+  --out-dir /tmp/plumb-family-birdhouse-package
+~~~
+
+Record phase durations, total wall time, package size, GLB size, STEP size,
+selection fingerprint, model fingerprint, and assembly hash. Target at least
+2x faster than 403.22 seconds. If missed, profile the dominant remaining phase
+before proposing another optimization; do not add general caching by guess.
+
+- [ ] **Step 7: Commit Task 7B**
+
+~~~bash
+git add \
+  scripts/family_birdhouse_report.py \
+  scripts/single_detail_report.py \
+  tests/test_family_birdhouse_report.py \
+  tests/test_single_detail_report.py \
+  docs/superpowers/specs/2026-07-15-reusable-physical-vocabulary-benchmark.md
+git commit -m "perf: eliminate duplicate birdhouse package rendering"
+~~~
+
+---
+
 ### Task 8: Full regression, artifact review, and handoff
 
 **Files:**
@@ -1265,6 +1357,8 @@ The implementation handoff is complete only with:
 2. three unchanged compatibility geometry hashes;
 3. no-CAD semantic guard tests;
 4. component and gate benchmark reports meeting the go/no-go rules;
-5. reviewed birdhouse manifest/artifact deltas;
-6. a clean pushed branch; and
-7. an explicit pointer to the resumed birdhouse plan step.
+5. package-phase evidence proving one documentation export and one
+   tessellation per placed part across all five stills;
+6. reviewed birdhouse manifest/artifact deltas;
+7. a clean pushed branch; and
+8. an explicit pointer to the resumed birdhouse plan step.

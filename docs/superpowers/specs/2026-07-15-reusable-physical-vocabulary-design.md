@@ -291,6 +291,34 @@ selection plugin. `family_birdhouse` receives a complete detail gate using the
 contract vocabulary that lands on that branch. Shared compiler changes still
 require one full repository gate before integration.
 
+### 7. Measure and remove duplicate package rendering
+
+The first complete birdhouse package contract took 403.22 seconds and produced
+a 22 MB package, including a 14 MB GLB and 3.9 MB STEP file. Envelope screws
+should remove most of the unnecessary fastener mesh complexity, but they do not
+by themselves remove repeated work in the report pipeline.
+
+Keep this increment narrow and project-proven:
+
+- instrument cold package generation by phase before changing the pipeline;
+- tessellate each placed part once for the five matplotlib still views, then
+  reuse the immutable vertices/faces with view-specific camera and explode
+  transforms;
+- let the technical-document seam reuse an already-generated documentation
+  directory instead of exporting the same model into a temporary directory;
+- keep document-contract tests semantic and fast where renderer output is not
+  the behavior under test; and
+- retain one cold end-to-end package gate that proves HTML, images, STEP, GLB,
+  manifests, hashes, and preview governance remain mutually consistent.
+
+The benchmark report records phase timings, output sizes, and model/package
+fingerprints before and after. Do not add a fragile wall-clock assertion to
+ordinary pytest. The structural acceptance rule is that no placed part is
+tessellated more than once for the five stills and the model documentation
+export runs once per package build. A measured target of at least 2x faster
+than the 403.22-second cold package baseline is a go/no-go objective; if it is
+missed, profile the remaining dominant phase before expanding scope.
+
 ## Compatibility Contract
 
 The implementation must preserve:
@@ -334,6 +362,9 @@ from represented-thread exterior screws to generic envelope wood screws.
   ordinary-screw envelope captures the measured pilot need with much less
   platform risk.
 - Persisting test verdicts or weakening the full shared-platform release gate.
+- A general rendering-engine, collision broad-phase, or persistent artifact
+  cache rewrite. The pilot first removes measured duplicate work through
+  explicit reuse seams; broader caching requires its own cross-project design.
 
 ## Acceptance
 
@@ -353,4 +384,8 @@ The increment is accepted when:
 7. the full repository suite passes once after all shared changes; and
 8. the birdhouse package is regenerated, its intentional screw-fingerprint
    delta is reviewed, and implementation returns to the exact blocked design
-   step.
+   step; and
+9. a cold birdhouse package benchmark records phase/output deltas, proves one
+   documentation export and one tessellation per placed part for all five
+   stills, and either meets the 2x objective or identifies the remaining
+   dominant phase without weakening the end-to-end package gate.
