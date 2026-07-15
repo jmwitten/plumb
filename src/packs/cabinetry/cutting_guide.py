@@ -229,6 +229,7 @@ def _machining_plan_diagram(
     outline_label: str,
     notes: tuple[str, ...] = (),
     allowed_numbers: frozenset[str] = frozenset(),
+    dim_kinds: tuple[str, ...] | None = None,
 ) -> OperationDiagram:
     """Plot one blank's machining rows: grooves, bores, and corner notches.
 
@@ -282,8 +283,11 @@ def _machining_plan_diagram(
                 "coordinate system does not match the plan mapping")
 
     origin = _origin_words(rows).upper()
+    datum_line = (f"MEASURE FROM: {origin}"
+                  if "LOWER-LEFT" in origin
+                  else f"MEASURE FROM: {origin} (LOWER-LEFT)")
     notes = _wrap_notes((
-        f"MEASURE FROM: {origin} (LOWER-LEFT)",
+        datum_line,
         "DIMS IN mm: TOP ROW = ACROSS, LEFT = UP",
         *notes))
     # Canvas regions: a rotated ordinate-label strip above the box, a
@@ -322,7 +326,13 @@ def _machining_plan_diagram(
     h_targets: dict[float, float] = {}  # plotted h -> model mm along h axis
     v_targets: dict[float, float] = {}  # plotted v -> model mm along v axis
 
-    def dim_target(x_mm: float, y_mm: float, *, dim_h=True, dim_v=True):
+    def dim_target(row, x_mm: float, y_mm: float, *, dim_h=True,
+                   dim_v=True):
+        # Context features (e.g. a keep-out band on another step's
+        # diagram) draw but do not dimension — extra values invite the
+        # reader to pair a dot with the wrong number.
+        if dim_kinds is not None and row.kind not in dim_kinds:
+            return
         h_mm, v_mm = to_plane(x_mm, y_mm)
         px, py = plot(x_mm, y_mm)
         if dim_h and h_mm > 1e-9:
@@ -344,9 +354,10 @@ def _machining_plan_diagram(
                 model_point_mm=tuple(row.location_mm),
                 fact_ref=row.feature_id,
             ))
-            # Dimension the band's start edge (and its start along the
-            # run when it does not begin at the blank edge).
-            dim_target(x0, y0, dim_h=x0 > _PLAN_BOUNDS_TOLERANCE_MM)
+            # A groove needs exactly one locating dimension: its band
+            # position across the run. Dimensioning the run start too
+            # printed the same value in two directions (round 5).
+            dim_target(row, x0, y0, dim_h=False)
         elif row.width_mm > 0 and row.diameter_mm == 0:
             # Corner notch cut into the blank's bottom edge. The drawn rect
             # assumes the notch starts AT that edge; a row that floats
@@ -366,7 +377,7 @@ def _machining_plan_diagram(
                 model_point_mm=tuple(row.location_mm),
                 fact_ref=row.feature_id,
             ))
-            dim_target(x0 if x0 > _PLAN_BOUNDS_TOLERANCE_MM else x1,
+            dim_target(row, x0 if x0 > _PLAN_BOUNDS_TOLERANCE_MM else x1,
                        y1)
         else:
             # Bore stations: location plus pitched repeats along an axis.
@@ -394,7 +405,7 @@ def _machining_plan_diagram(
                     model_point_mm=point,
                     fact_ref=row.feature_id,
                 ))
-                dim_target(*point)
+                dim_target(row, *point)
 
     def _fmt_dim(value: float) -> str:
         # %g would round 1006.475 to six significant digits ("1006.48");
@@ -408,15 +419,22 @@ def _machining_plan_diagram(
     # the left column.
     if h_targets:
         entries = sorted(h_targets.items())
-        slot = max(6.0, min(box_w / len(entries), 14.0))
+        # Labels may spread wider than the drawn box (leaders carry them
+        # back); clustered stations like 32/37 mm get separated labels
+        # instead of overlapping ones. Alternating tick lengths keep
+        # neighboring leaders visually distinct at print size.
+        slot = max(8.0, min(88.0 / max(len(entries) - 1, 1), 16.0))
         span = slot * (len(entries) - 1)
-        start = min(max(pad, pad + (box_w - span) / 2.0), 96.0 - span)
+        start = min(max(4.0 + span / 2.0,
+                        pad + box_w / 2.0), 96.0 - span / 2.0) - span / 2.0
         for index, (tick_x, value) in enumerate(entries):
             label_x = start + slot * index
+            tick_len = 1.8 if index % 2 == 0 else 3.2
             primitives.append(_mark(
-                "line", tick_x, top, tick_x, top - 1.8, role="dim"))
+                "line", tick_x, top, tick_x, top - tick_len, role="dim"))
             primitives.append(_mark(
-                "line", label_x, 18.2, tick_x, top - 0.4, role="dim"))
+                "line", label_x, 18.2, tick_x, top - tick_len + 1.2,
+                role="dim"))
             # Rotated labels center on their anchor; y=9 keeps even the
             # longest value inside the 0..18 strip above the box.
             primitives.append(_mark(
@@ -438,10 +456,12 @@ def _machining_plan_diagram(
                          for index in range(len(entries))]
         for index, (tick_y, value) in enumerate(entries):
             label_y = tick_y if positions is None else positions[index]
+            tick_len = 1.8 if index % 2 == 0 else 3.2
             primitives.append(_mark(
-                "line", pad, tick_y, pad - 1.8, tick_y, role="dim"))
+                "line", pad, tick_y, pad - tick_len, tick_y, role="dim"))
             primitives.append(_mark(
-                "line", 17.5, label_y, pad - 1.8, tick_y, role="dim"))
+                "line", 17.5, label_y, pad - tick_len + 1.2, tick_y,
+                role="dim"))
             primitives.append(_mark(
                 "text", 9.0, label_y + 1.3, role="dim",
                 label=_fmt_dim(value)))
@@ -561,6 +581,10 @@ def _toe_centers_diagram(project) -> OperationDiagram:
         allowed_numbers=_nums(total),
         part_id=part_id,
         kinds=("toe_attachment_station", "captured_back_groove"),
+        # The groove is drawn as a keep-out band only; its position is
+        # step 3's business, and dimensioning it here put 574.175 one
+        # leader away from the 564.65 rear screw row (round 5).
+        dim_kinds=("toe_attachment_station",),
         outline_label="Cabinet bottom — plan view",
         notes=(
             f"{len(centers)} CENTERS PER ROW, FRONT AND REAR ROWS",
@@ -1135,13 +1159,14 @@ def cutting_kit_groups(project):
         return f" — band {listed} {noun}"
 
     def _size_block(item) -> str:
-        # The whole L × W block is bound with non-breaking spaces: round 3
-        # of the naive-builder read attributed a wrapped "(253 mm)"
-        # continuation line to the neighboring row. A size that cannot
-        # split cannot be orphaned onto an ambiguous line.
+        # The whole L × W block is bound with non-breaking spaces AND
+        # non-breaking hyphens: round 3 attributed a wrapped "(253 mm)"
+        # continuation to the neighboring row, and round 5 exposed
+        # fractions splitting at their hyphen ("36-" / "7/8"). A size
+        # that cannot split cannot be orphaned onto an ambiguous line.
         text = (f"{_reader_len(item.length_mm)} × "
                 f"{_reader_len(item.width_mm)}")
-        return text.replace(" ", " ")
+        return text.replace(" ", " ").replace("-", "‑")
 
     groups: dict[tuple[float, str], list] = {}
     for item in project.artifacts.cut_list:

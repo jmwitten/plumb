@@ -44,6 +44,11 @@ def guide(project):
         project, basename="frameless_three_drawer_40_cutting_guide.html")
 
 
+def _normalize(label: str) -> str:
+    """Undo the non-breaking space/hyphen binding for literal asserts."""
+    return label.replace("\u00a0", " ").replace("\u2011", "-")
+
+
 def _frames(manual):
     return tuple(frame for page in manual.pages for frame in page.frames)
 
@@ -167,7 +172,7 @@ class TestKitGroups:
         rows = [row.label for _heading, rows in cutting_kit_groups(project)
                 for row in rows]
         strip = next(label for label in rows if "anchor strip" in label)
-        assert '38-1/2"' in strip
+        assert '38-1/2"' in _normalize(strip)
         assert "mm" not in strip
 
     def test_off_tape_size_carries_exact_millimeters(self, project):
@@ -197,7 +202,7 @@ class TestKitGroups:
                 cutting_kit_groups(_proxy(project, cut_list=mutated))
                 for row in rows]
         strip = next(label for label in rows if "anchor strip" in label)
-        assert '39-1/2"' in strip
+        assert '39-1/2"' in _normalize(strip)
 
     def test_thickness_mutation_regroups_the_family(self, project):
         mutated = tuple(

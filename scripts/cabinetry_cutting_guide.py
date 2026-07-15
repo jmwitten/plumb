@@ -116,7 +116,12 @@ def build_cabinetry_cutting_document(
                 '.op-diagram[data-diagram-id="cut-drawer-bottom-grooves"]'
                 " svg,"
                 '.op-diagram[data-diagram-id="cut-drawer-side-joinery"]'
-                " svg { max-height: 1.7in; }"),
+                " svg { max-height: 1.7in; }"
+                # The two densest hole clusters share sheets with light
+                # frames; extra display size keeps their leaders apart.
+                '.op-diagram[data-diagram-id="cut-runner-stations"] svg,'
+                '.op-diagram[data-diagram-id="cut-end-panel-joinery"]'
+                " svg { max-height: 2.5in; }"),
         ),
         encoding="utf-8",
     )

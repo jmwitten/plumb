@@ -189,9 +189,12 @@ def _inventory_sheet(consumer, number: int, inventory_rows,
             for row in rows)
 
     if inventory_groups:
+        # A short group split across two columns reads as missing rows (a
+        # round-5 reader counted 2 of 3); small groups stay single-column.
         parts = f"<h2>{_e(parts_heading)}</h2>" + "".join(
             f"<h3>{_e(heading)}</h3>"
-            f'<ul class="parts">{_rows_html(rows)}</ul>'
+            f'<ul class="parts{" single" if len(rows) <= 4 else ""}">'
+            f"{_rows_html(rows)}</ul>"
             for heading, rows in inventory_groups)
     else:
         parts = (f"<h2>{_e(parts_heading)}</h2>"
@@ -265,6 +268,7 @@ ul.parts li, ul.letters li, ul.tools li { display: flex; gap: 0.35rem;
 ul.parts .resource-icon { width: 1rem; height: 1rem; }
 ul.parts li span, ul.letters li span { overflow-wrap: anywhere; }
 ul.parts { columns: 2; column-gap: 1.1rem; }
+ul.parts.single { columns: 1; }
 ul.letters { display: grid; grid-template-columns: 1fr 1fr;
   gap: 0.1rem 1.1rem; }
 ul.tools { columns: 2; column-gap: 1.1rem; }
