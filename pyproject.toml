@@ -39,6 +39,7 @@ packages = [
     "detailgen.rendering",
     "detailgen.rendering.web_viewer",
     "detailgen.design_review",
+    "detailgen.certification",
     "detailgen.packs",
     "detailgen.packs.cabinetry",
 ]
