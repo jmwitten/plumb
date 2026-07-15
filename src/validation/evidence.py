@@ -111,7 +111,7 @@ NODE_KINDS: frozenset[str] = frozenset(
 EDGE_KINDS: frozenset[str] = frozenset(
     {"involves", "derived_from", "concerns", "generated", "proven_by",
      "assumes", "substantiates",
-     "bears_on", "fastened_by", "transfers_load_to", "bonded_to",
+     "bears_on", "fastened_by", "transfers_load_to", "bonded_to", "keyed_by",
      "installed_before"}
 )
 
@@ -154,7 +154,7 @@ NODE_KINDS = NODE_KINDS | FAB_NODE_KINDS
 EDGE_KINDS = EDGE_KINDS | FAB_EDGE_KINDS
 
 _CONSTRUCTION_EDGE_KINDS = frozenset(
-    {"bears_on", "fastened_by", "transfers_load_to", "bonded_to",
+    {"bears_on", "fastened_by", "transfers_load_to", "bonded_to", "keyed_by",
      "installed_before"}
 )
 

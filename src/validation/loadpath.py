@@ -59,7 +59,8 @@ from .checks import Finding
 #: fastener does, gated per class by its connection's transfer claims like
 #: every other edge here.
 LOAD_BEARING_EDGE_KINDS: frozenset[str] = frozenset(
-    {"bears_on", "transfers_load_to", "fastened_by", "bonded_to"})
+    {"bears_on", "transfers_load_to", "fastened_by", "bonded_to",
+     "keyed_by"})
 
 
 @dataclass(frozen=True)
