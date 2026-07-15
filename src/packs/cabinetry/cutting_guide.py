@@ -470,6 +470,15 @@ def _toe_centers_diagram(project) -> OperationDiagram:
         raise ValueError(
             "toe-center diagram expects one front and one rear toe-rail "
             f"row; the machining schedule provides {sorted(row_of)!r}")
+    # The orientation tie ("banded front edge at the drawing bottom")
+    # holds only while the bottom's banding schedule says front.
+    bottom_bands = {band.edge for band in project.artifacts.edge_banding
+                    if band.part_id == part_id}
+    if bottom_bands != {"front"}:
+        raise ValueError(
+            "toe-center diagram anchors orientation to the bottom's "
+            f"banded front edge, but its banding schedule says "
+            f"{sorted(bottom_bands)!r}")
     total = sum(row.count for row in rows)
     return _machining_plan_diagram(
         project,
@@ -492,6 +501,7 @@ def _toe_centers_diagram(project) -> OperationDiagram:
             f"FRONT ROW {row_of['FRONT']:g} mm UP - "
             f"REAR ROW {row_of['REAR']:g} mm UP",
             "BLACK BAND = BACK GROOVE - NO SCREWS",
+            "BANDED FRONT EDGE AT THE DRAWING BOTTOM",
         ),
     )
 
@@ -666,6 +676,7 @@ def _runner_stations_diagram(project) -> OperationDiagram:
             "ROW HEIGHTS FROM BOTTOM EDGE (mm):",
             " / ".join(f"{y:g}" for y in ys),
             f"PILOT {diameter:g} mm DIA - SAME ON BOTH ENDS",
+            "ENDS ARE A MIRROR PAIR: WORK EACH WITH ITS INSIDE FACE UP",
         ),
     )
 
@@ -819,6 +830,8 @@ def _end_panel_joinery_diagram(project) -> OperationDiagram:
         fronts = " / ".join(f"{value:g}" for value in
                             sorted(dict.fromkeys(depths)))
         notes.append(f"{label}: {ups} UP - {fronts} FROM FRONT")
+    notes.append(
+        "ENDS ARE A MIRROR PAIR: WORK EACH WITH ITS OUTSIDE FACE UP")
     return _machining_plan_diagram(
         project,
         diagram_id="cut-end-panel-joinery",
@@ -1234,17 +1247,18 @@ def cutting_action_frames(
             frame_id="cut.breakdown.frame",
             panel_index=panel_of["fab.breakdown"],
             caption=(
-                f"Cut all {part_count} parts to the wood-list page at the "
-                "front of this guide, keeping each marked show face up and "
-                "its grain direction as marked. Label every part with its "
-                "wood-list name as it comes off the saw — left and right "
-                "pieces are not interchangeable."),
+                f"Cut all {part_count} parts to the wood-list page, show "
+                "face up, grain as marked. As each part comes off the "
+                "saw, label it with its wood-list name and mark the "
+                "banded edge named on its row — later steps measure from "
+                "that edge."),
             source_step_ids=("fab.breakdown",),
             owned_event_keys=(),
             tool="Saw suitable for sheet goods, tape measure, and labels",
             warning=(
                 "A size written with ≈ is not on a tape mark: cut to "
-                "the exact millimeter value printed beside it."),
+                "the exact millimeter value printed beside it. Left and "
+                "right pieces are not interchangeable."),
             allowed_numbers=_nums(part_count),
             show_picture_key=False,
         ),
@@ -1255,9 +1269,10 @@ def cutting_action_frames(
             caption=(
                 f"Cut the {back_grooves} captured-back grooves — both "
                 "cabinet ends, the cabinet bottom, and the rear stretcher "
-                "— with the same blade width and depth, at each part's "
-                "printed position. Dry-fit the thin back panel in its "
-                "grooves before anything is glued."),
+                "— same blade and depth, at each part's printed position. "
+                "The ends are a mirror pair: groove each with its inside "
+                "face up. Dry-fit the thin back panel before anything is "
+                "glued."),
             source_step_ids=("fab.shell_back_grooves",),
             owned_event_keys=(),
             tool="Table saw or router with a straight fence",
@@ -1452,6 +1467,9 @@ def cutting_action_frames(
             tool="Iron or edge-band trimmer",
             allowed_numbers=_nums(band_thickness, banded_parts,
                                   front_band_edges),
+            # 19 numbered circles on one scene read as noise; the wood
+            # list names every banded edge and the caption says so.
+            show_picture_key=False,
             record_title="Purchasing and cutting release record",
             record_fields=_release_record_fields(project),
         ),
