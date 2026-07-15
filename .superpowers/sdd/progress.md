@@ -52,10 +52,27 @@ tightening states are words. Full docs:
 `instruction-grammar-v1-plan.md`.
 
 Branch `fable/instruction-grammar-v1` (base cbd6e6f), not merged — the
-new surface ships separately per the task spec. NEXT for this line:
-project the existing typed OperationDiagrams (runner pattern, MOVENTO
-sequence, stabilizer) into frames as `operation_diagram` illustrations,
-per-part kit thumbnails, and a caddy consumer manual as the second
+new surface ships separately per the task spec.
+
+OWNER RULING (2026-07-14 night, BINDING): every reader surface is
+HOMEOWNER-FIRST — tape-fraction register, no sub-mm expectations, builder
+buys hardware and cuts wood himself. The mm-exact shop register survives
+as the alternate copy (the existing fabrication packet / technical sheets
+keep generating unchanged), but the primary path of every document
+targets the homeowner.
+
+NEXT ARC (queued, fresh controller per the standing pattern):
+**homeowner-first CUTTING GUIDE** — project the 13 released `fab.*`
+WorkSteps through the ActionFrame layer into a
+`frameless_three_drawer_40_cutting_guide.html`: per-thickness cut lists
+in the tape register, groove and boring steps with typed diagrams
+(machining-schedule rows are the source; the toe/attachment plan-diagram
+pattern generalizes), labeling steps, ending at the purchasing/cutting
+release record — so the fabrication packet's shop tables stop being the
+only path to a prepared kit. The consumer manual's kit gate already
+points at the fabrication packet; repoint it at the cutting guide once
+that surface passes its own naive-reader loop. Also still queued:
+per-part kit thumbnails and a caddy consumer manual as the second
 consumer of the generic layer.
 
 ## ★ SESSION UPDATE 15 (2026-07-14 — CABINET PACK DB40 COMPLETE; four-document release DELIVERED)
