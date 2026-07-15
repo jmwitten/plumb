@@ -213,6 +213,120 @@ def test_mount_layout_rejects_no_backing_and_keeps_installation_blocked(tmp_path
     assert findings["double_vanity.release.wall_mount"].verdict == "UNKNOWN"
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("adapter_id", "rakks_eh_1818_lv@2099.9.9"),
+        ("manufacturer", "Not Rakks"),
+        ("sku", "EH-FAKE"),
+        ("width_mm", 19 * 25.4),
+        ("depth_mm", 22 * 25.4),
+        ("static_capacity_lb", 451.0),
+        ("capacity_basis", "unpublished_ultimate_load"),
+        ("required_screws_per_bracket", 3),
+        ("maximum_spacing_mm", 49 * 25.4),
+        ("authority", "STRUCTURAL_ENGINEER_APPROVED"),
+        ("specification_url", "https://example.invalid/pinned.pdf"),
+        ("current_specification_url", "https://example.invalid/current.pdf"),
+        ("acceptable_applications", ("drywall",)),
+    ),
+)
+def test_mount_layout_rejects_mutated_rakks_contract(field, value):
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    mutated = replace(
+        model,
+        mount_reference=replace(model.mount_reference, **{field: value}),
+    )
+
+    assert validate_double_vanity_model(mutated).by_rule(
+        "double_vanity.mount.layout"
+    ).verdict == "FAIL"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("quartz_countertop_lb", 0.0),
+        ("plywood_casework_lb", 0.0),
+        ("sinks_lb", 0.0),
+        ("hardware_plumbing_lb", 0.0),
+        ("water_lb", 0.0),
+        ("contents_lb", 0.0),
+        ("service_live_lb", 0.0),
+        ("load_factor", 1.49),
+        ("quartz_density_pcf", 164.0),
+        ("plywood_density_pcf", 44.0),
+    ),
+)
+def test_mount_layout_rejects_mutated_load_case(field, value):
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    mutated = replace(
+        model,
+        load_case=replace(model.load_case, **{field: value}),
+    )
+
+    assert validate_double_vanity_model(mutated).by_rule(
+        "double_vanity.mount.layout"
+    ).verdict == "FAIL"
+
+
+def test_mount_layout_rederives_quartz_and_plywood_dead_loads():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    thicker_slab = replace(
+        model,
+        section=replace(
+            model.section,
+            vanity=replace(
+                model.section.vanity,
+                countertop_thickness_mm=31.0,
+            ),
+        ),
+    )
+    first_panel = next(
+        part for part in model.parts if part.component_type == "plywood_panel"
+    )
+    thicker_plywood = replace(
+        model,
+        parts=tuple(
+            replace(part, thickness_mm=part.thickness_mm + 1.0)
+            if part.part_id == first_panel.part_id else part
+            for part in model.parts
+        ),
+    )
+
+    for mutated in (thicker_slab, thicker_plywood):
+        assert validate_double_vanity_model(mutated).by_rule(
+            "double_vanity.mount.layout"
+        ).verdict == "FAIL"
+
+
+def test_mount_layout_rejects_fake_support_envelope_authority():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    fake_approval = replace(
+        model.support_layout.supports[0],
+        authority="STRUCTURAL_ENGINEER_APPROVED",
+    )
+    mutated = replace(
+        model,
+        support_layout=replace(
+            model.support_layout,
+            supports=(fake_approval,) + model.support_layout.supports[1:],
+        ),
+    )
+
+    assert validate_double_vanity_model(mutated).by_rule(
+        "double_vanity.mount.layout"
+    ).verdict == "FAIL"
+
+
 def test_catalog_asset_reference_is_metadata_only_and_authority_limited():
     from detailgen.packs.cabinetry.double_vanity import CatalogAssetRef
 
