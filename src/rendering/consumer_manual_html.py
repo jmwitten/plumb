@@ -203,7 +203,7 @@ _STYLE = """
    gray parts). */
 :root { --ink: #14161a; --line: #444; --paper: #fff; --acc: #2563eb;
   --sheet: #fff; --muted: #555; --faint: #f2f2f2; --chipbg: #ececec;
-  --acc-soft: #dbeafe; }
+  --acc-soft: #dbeafe; --viewer-part-shade: 0.62; }
 * { box-sizing: border-box; }
 body { margin: 0; background: #d8dbe0; color: var(--ink);
   font: 15px/1.45 -apple-system, "Segoe UI", "Helvetica Neue", sans-serif; }
@@ -339,7 +339,9 @@ text.diagram-mark.role-hold { fill: var(--ink); stroke: none; }
   padding: 0.55in; background: var(--paper); box-shadow: 0 1px 8px #0003; }
 .viewer-section h2 { margin: 0 0 0.4rem; }
 .viewer-section p { font-size: 0.9rem; }
-.viewer-slot { position: relative; aspect-ratio: 4/3; background: #f6f6f4;
+/* Neutral mid-tone stage: white parts and explode separations stay
+   visible (owner: white-on-white was hard to use). */
+.viewer-slot { position: relative; aspect-ratio: 4/3; background: #cfd6dd;
   overflow: hidden; }
 .viewer-slot img { display: block; width: 100%; height: auto; }
 

@@ -244,12 +244,19 @@
     // reflections, and there are none here). Drop metalness to 0 so every part
     // reads as its matte base color under the lights, matching the flat,
     // diagram-legible look of the static PNG. Color and emissive are untouched.
+    // Optional host theme hook: a document may set --viewer-part-shade
+    // (0 < shade <= 1) to darken part base colors so light materials do
+    // not wash out to white under the scene lights. Documents that do not
+    // define the variable are untouched.
+    var partShade = parseFloat(cssVar("--viewer-part-shade", ""));
+    if (!(partShade > 0 && partShade <= 1)) partShade = 1.0;
     model.traverse(function (obj) {
       if (!obj.isMesh || !obj.material) return;
       var mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       mats.forEach(function (m) {
         if ("metalness" in m) m.metalness = 0.0;
         if ("roughness" in m) m.roughness = 0.75;
+        if (partShade < 1 && m.color) m.color.multiplyScalar(partShade);
         m.needsUpdate = true;
       });
     });

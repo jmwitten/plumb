@@ -578,23 +578,35 @@ def _open_carcass_diagram(project) -> OperationDiagram:
         _mark("rect", 8, 8, 60, 84, role="prior",
               label="Left end — outside face / local machining datum",
               fact_ref=left.part_id),
+        _mark("text", 38, 13, role="datum", label="LEFT SIDE — LYING FLAT",
+              fact_ref=left.part_id),
         _mark("rect", 73, 50, 20, 23, role="work", label="Bottom — attach now",
               fact_ref=bottom.part_id),
-        _mark("rect", 73, 80, 20, 8, role="work",
+        _mark("text", 83, 60, role="datum", label="BOTTOM",
+              fact_ref=bottom.part_id),
+        _mark("text", 83, 64.5, role="datum", label="ATTACH NOW",
+              fact_ref="assembly.carcass"),
+        _mark("rect", 73, 82, 20, 7, role="work",
               label="Front stretcher — attach now", fact_ref=stretcher.part_id),
+        _mark("text", 80, 94.5, role="datum", label="FRONT STRETCHER",
+              fact_ref=stretcher.part_id),
         _mark("arrow", 72, 62, 68, 62, role="motion",
               label="Bring bottom to left end", fact_ref="assembly.carcass"),
-        _mark("arrow", 72, 84, 68, 84, role="motion",
+        _mark("arrow", 72, 85, 68, 85, role="motion",
               label="Bring front stretcher to left end", fact_ref="assembly.carcass"),
         _mark("rect", 73, 8, 20, 20, role="hold",
               label="Right end — KEEP OFF", fact_ref=project.model.part("right_end").part_id),
+        _mark("text", 83, 18, role="hold", label="RIGHT SIDE",
+              fact_ref=project.model.part("right_end").part_id),
         _mark("rect", 73, 31, 20, 7, role="hold",
               label="Rear stretcher — KEEP OFF", fact_ref=project.model.part("rear_stretcher").part_id),
-        _mark("text", 83, 44, role="hold", label="BACK PATH OPEN",
+        _mark("text", 83, 35.5, role="hold", label="REAR STRETCHER",
+              fact_ref=project.model.part("rear_stretcher").part_id),
+        _mark("text", 83, 45.5, role="hold", label="LEAVE OFF FOR NOW",
               fact_ref="assembly.carcass"),
         _mark("text", 38, 98, role="datum",
-              label="LEFT-END OUTSIDE FACE / LOWER-LEFT DATUM",
-              fact_ref=left.part_id),
+              label="DOTS = PRE-BORED SCREW HOLES",
+              fact_ref=bottom_row.feature_id),
     ]
     for row in rows:
         for index in range(row.count):
@@ -619,13 +631,15 @@ def _open_carcass_diagram(project) -> OperationDiagram:
         diagram_id="open-carcass-sequence",
         title="Open-carcass glue-up — keep the back path open",
         caption=(
-            "Lay the left end flat. Bring in the bottom and front stretcher; "
-            "the dashed right end and rear stretcher remain off until the "
-            "captured back is inserted. On the left-end outside-face local "
-            f"datum, the bottom centers are X {bottom_row.location_mm[0]:.3f} mm "
-            f"at Y {', '.join(f'{bottom_row.location_mm[1] + i * bottom_row.pitch_mm:.3f}' for i in range(bottom_row.count))} mm; "
-            f"the front-stretcher centers are X {stretcher_row.location_mm[0]:.3f} "
-            f"mm at Y {', '.join(f'{stretcher_row.location_mm[1] + i * stretcher_row.pitch_mm:.3f}' for i in range(stretcher_row.count))} mm."
+            "Lay the left side flat, outside face down. Glue and screw the "
+            "cabinet bottom onto its long edge and the front stretcher at "
+            "the front corner — the solid gray shapes, arrows showing where "
+            f"they land. The dots are the {bottom_row.count + stretcher_row.count} "
+            "screw holes already bored in the left side "
+            f"({bottom_row.count} along the bottom row, {stretcher_row.count} "
+            "at the stretcher); drive a Confirmat through each. The dashed "
+            "right side and rear stretcher stay off for now so the cabinet "
+            "back can slide in later."
         ),
         primitives=tuple(primitives),
         source_refs=(
