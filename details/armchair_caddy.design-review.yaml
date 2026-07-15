@@ -280,6 +280,9 @@ decision:
   tradeoffs:
     - Accurate miter cutting and diagonal dowel layout demand more setup care than square-cut hardware assembly.
     - A future production redesign must prove cross-arm registration without assuming the current rails remain necessary.
-  application: recommendation_only
-modeling_approval: null
+  application: implemented
+modeling_approval:
+  approved_by: Joel Witten
+  approved_on: 2026-07-14
+  selection_fingerprint: 52e7b80496016b14ef09797dae2b783b29b03bbd0cb115eae1e2ecd5571ba40b
 delivery_confirmation: null

@@ -43,12 +43,13 @@ def test_caddy_review_is_complete_and_compares_four_required_architectures():
     }
 
 
-def test_caddy_recommendation_is_reinforced_miter_but_not_implemented():
+def test_caddy_reinforced_miter_is_implemented_and_modeling_approved():
     doc = load_design_review_file(REVIEW)
 
     assert doc.decision.selected_concept == "reinforced_miter"
-    assert doc.decision.application == "recommendation_only"
-    assert doc.modeling_approval is None
+    assert doc.decision.application == "implemented"
+    assert doc.modeling_approval is not None
+    assert doc.modeling_approval.approved_by == "Joel Witten"
     assert doc.delivery_confirmation is None
 
 
@@ -57,14 +58,15 @@ def test_caddy_spec_opts_in_and_delivery_is_blocked():
 
     assert detail.design_governance is not None
     assert detail.design_governance.selected_concept == "reinforced_miter"
-    with pytest.raises(DesignReviewGateError, match="modeling approval"):
+    assert detail.require_modeling_approval() is detail
+    with pytest.raises(DesignReviewGateError, match="delivery confirmation"):
         detail.require_delivery_ready()
 
 
 def test_customer_document_pair_writes_nothing_while_review_is_pending(tmp_path):
     out = tmp_path / "customer-delivery"
 
-    with pytest.raises(DesignReviewGateError, match="modeling approval"):
+    with pytest.raises(DesignReviewGateError, match="delivery confirmation"):
         CD.build_caddy_document_pair(out, image_size=(320, 240))
 
     assert not out.exists()

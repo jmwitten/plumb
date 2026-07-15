@@ -198,7 +198,7 @@ git commit -m "feat: model dowel reinforced miter joints"
 
 **Interfaces:**
 - Produces: caddy with three panels, four dowels, and no rails/screws
-- Preserves selection fingerprint: `24a277ee5e2a67e1022428ca20cb0c09cca8be946a147619528cee160e891b25`
+- Binds approval to implemented selection fingerprint: `52e7b80496016b14ef09797dae2b783b29b03bbd0cb115eae1e2ecd5571ba40b`
 
 - [ ] **Step 1: Rewrite caddy assertions first**
 
@@ -236,7 +236,7 @@ decision:
 modeling_approval:
   approved_by: Joel Witten
   approved_on: 2026-07-14
-  selection_fingerprint: 24a277ee5e2a67e1022428ca20cb0c09cca8be946a147619528cee160e891b25
+  selection_fingerprint: 52e7b80496016b14ef09797dae2b783b29b03bbd0cb115eae1e2ecd5571ba40b
 delivery_confirmation: null
 ~~~
 
