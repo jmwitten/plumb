@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import hashlib
 import re
 import sys
 from pathlib import Path
+
+import pytest
 
 from detailgen.packs import compile_project_file
 
@@ -126,6 +129,119 @@ def test_validation_assigns_owner_and_blocking_phase_to_every_finding():
     assert html.count('data-finding-rule="') == len(project.report.findings)
     assert html.count('data-responsible-party="') == len(project.report.findings)
     assert html.count('data-blocking-phase="') == len(project.report.findings)
+
+
+def test_document_set_rejects_stale_pre_release_contradictions():
+    joined = "\n".join(_documents().values())
+
+    for contradiction in (
+        "Fabrication dimensions remain suppressed",
+        "cut depth and runner SKU remain suppressed",
+        "lower runner family itself remains unselected",
+        "unverified until the runner SKU",
+        "No cut authorization is issued",
+        "dimensions remain coordination targets",
+        "must re-derive the drawer voids before fabrication",
+    ):
+        assert contradiction not in joined
+
+
+def test_product_geometry_hold_never_leaks_visible_fabrication_release():
+    from detailgen.packs.cabinetry.double_vanity_documents import (
+        build_double_vanity_document_set,
+    )
+
+    project = compile_project_file(FIXTURE)
+    held_release = replace(
+        project.model.release,
+        fabrication_status="HOLD_PRODUCT_GEOMETRY",
+    )
+    held_project = replace(
+        project,
+        model=replace(project.model, release=held_release),
+    )
+    docs = build_double_vanity_document_set(held_project)
+    fabrication = docs["dv72_fabrication_coordination.html"]
+    joined = "\n".join(docs.values())
+
+    assert 'data-release-status="HOLD_PRODUCT_GEOMETRY"' in fabrication
+    assert "FABRICATION HOLD — PRODUCT GEOMETRY" in fabrication
+    assert "Released cabinet and drawer inventory" not in joined
+    assert "released parts" not in joined
+    assert "CONDITIONAL FABRICATION RELEASE" not in joined
+    assert 'data-cut-list-row="' not in fabrication
+
+
+def test_fabrication_labels_every_assumption_as_unverified_owner_input():
+    project = compile_project_file(FIXTURE)
+    html = _documents()["dv72_fabrication_coordination.html"]
+    inventory_rows = re.findall(r'<tr data-cut-list-row=".*?</tr>', html)
+
+    assert len(inventory_rows) == len(project.artifacts.cut_list)
+    for row in inventory_rows:
+        assert "owner_assumed" in row
+        assert "not field verified" in row
+    assumptions = html[html.index("Joinery and finish assumptions"):]
+    assert "owner_assumed" in assumptions
+    assert "not field verified" in assumptions
+
+
+def test_validation_gate_language_preserves_conditional_cabinet_cut_authority():
+    html = _documents()["dv72_validation_sources.html"]
+
+    assert "do not revoke the conditionally released cabinet and drawer cuts" in html
+    assert "Close all eight before purchase, fabrication" not in html
+    assert "installation, stone, runner machining, trade work, and use" in html
+
+
+def test_finding_routing_is_exhaustive_and_exact():
+    from detailgen.packs.cabinetry.double_vanity_documents import _finding_routing
+
+    expected = {
+        "double_vanity.code.fixture_spacing": ("Design coordinator", "design validation"),
+        "double_vanity.drawer.runner_applicability": ("Cabinet fabricator", "runner machining and assembly"),
+        "double_vanity.geometry.fixture_plumbing_drawer": ("Design coordinator", "design validation"),
+        "double_vanity.geometry.service_openings": ("Cabinet fabricator", "runner machining and assembly"),
+        "double_vanity.geometry.two_bays": ("Design coordinator", "design validation"),
+        "double_vanity.mount.layout": ("Structural reviewer", "wall drilling and loading"),
+        "double_vanity.mount.representation": ("Structural reviewer", "wall drilling and loading"),
+        "double_vanity.plumbing.independent_traps": ("Licensed Master Plumber", "trade coordination"),
+        "double_vanity.release.commissioning": ("General contractor and responsible trades", "commissioning"),
+        "double_vanity.release.countertop_fabricator": ("Countertop fabricator", "stone fabrication"),
+        "double_vanity.release.drawer_derivation": ("Cabinet fabricator", "runner machining and assembly"),
+        "double_vanity.release.dynamic_access": ("Cabinet fabricator", "runner machining and assembly"),
+        "double_vanity.release.faucet": ("Licensed Master Plumber", "trade coordination"),
+        "double_vanity.release.fixture_template": ("Countertop fabricator", "stone fabrication"),
+        "double_vanity.release.plumbing_approval": ("Licensed Master Plumber", "trade coordination"),
+        "double_vanity.release.site_survey": ("Field surveyor", "field verification"),
+        "double_vanity.release.wall_mount": ("Structural reviewer", "wall drilling and loading"),
+    }
+    project = compile_project_file(FIXTURE)
+
+    assert {finding.rule for finding in project.report.findings} == set(expected)
+    assert {
+        finding.rule: _finding_routing(finding.rule)
+        for finding in project.report.findings
+    } == expected
+    with pytest.raises(ValueError, match="unmapped DV72 finding rule"):
+        _finding_routing("double_vanity.future.unreviewed")
+
+
+def test_visible_collection_counts_derive_from_model_collections():
+    project = compile_project_file(FIXTURE)
+    docs = _documents()
+    review = docs["dv72_review_installation.html"]
+    validation = docs["dv72_validation_sources.html"]
+    rough_ins = project.model.assumed_site.wastes + project.model.assumed_site.supplies
+    preinstall = [
+        finding for finding in project.report.findings
+        if finding.rule.startswith("double_vanity.release.")
+        and finding.rule != "double_vanity.release.commissioning"
+    ]
+
+    assert f"{len(project.model.support_layout.supports)} provisional support envelopes" in review
+    assert f"{len(rough_ins)} owner-assumed coordinates" in review
+    assert f"{len(preinstall)} pre-install release gates" in validation
 
 
 def test_review_owns_the_useful_sink_plumbing_drawer_mount_section():

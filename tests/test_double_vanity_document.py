@@ -74,7 +74,10 @@ def test_study_projects_fixture_plumbing_drawer_and_code_facts_from_model():
     assert "Moving wings and runner travel clear" not in html
     assert "Lift/release path clears" not in html
     assert "Modeled study margin/opening" not in html
-    assert "unverified until the runner SKU" in html
+    assert "unverified until the runner SKU" not in html
+    assert "Fabrication dimensions remain suppressed" not in html
+    assert "cut depth and runner SKU remain suppressed" not in html
+    assert "provisional U topology · cut dimensions held" not in html
     for drawer in project.model.drawers:
         assert f"U void {drawer.u_void_width_mm:.1f} mm" not in html
 

@@ -19,6 +19,60 @@ _LABELS = {
     FILENAMES[3]: "Validation & sources",
 }
 
+_FINDING_ROUTING = {
+    "double_vanity.code.fixture_spacing": (
+        "Design coordinator", "design validation",
+    ),
+    "double_vanity.drawer.runner_applicability": (
+        "Cabinet fabricator", "runner machining and assembly",
+    ),
+    "double_vanity.geometry.fixture_plumbing_drawer": (
+        "Design coordinator", "design validation",
+    ),
+    "double_vanity.geometry.service_openings": (
+        "Cabinet fabricator", "runner machining and assembly",
+    ),
+    "double_vanity.geometry.two_bays": (
+        "Design coordinator", "design validation",
+    ),
+    "double_vanity.mount.layout": (
+        "Structural reviewer", "wall drilling and loading",
+    ),
+    "double_vanity.mount.representation": (
+        "Structural reviewer", "wall drilling and loading",
+    ),
+    "double_vanity.plumbing.independent_traps": (
+        "Licensed Master Plumber", "trade coordination",
+    ),
+    "double_vanity.release.commissioning": (
+        "General contractor and responsible trades", "commissioning",
+    ),
+    "double_vanity.release.countertop_fabricator": (
+        "Countertop fabricator", "stone fabrication",
+    ),
+    "double_vanity.release.drawer_derivation": (
+        "Cabinet fabricator", "runner machining and assembly",
+    ),
+    "double_vanity.release.dynamic_access": (
+        "Cabinet fabricator", "runner machining and assembly",
+    ),
+    "double_vanity.release.faucet": (
+        "Licensed Master Plumber", "trade coordination",
+    ),
+    "double_vanity.release.fixture_template": (
+        "Countertop fabricator", "stone fabrication",
+    ),
+    "double_vanity.release.plumbing_approval": (
+        "Licensed Master Plumber", "trade coordination",
+    ),
+    "double_vanity.release.site_survey": (
+        "Field surveyor", "field verification",
+    ),
+    "double_vanity.release.wall_mount": (
+        "Structural reviewer", "wall drilling and loading",
+    ),
+}
+
 _CSS = """
 :root{--ink:#27332e;--muted:#66716b;--paper:#fcfaf5;--line:#c9c7bb;--wood:#cf9c6a;--stone:#ebe7dd;--warn:#8e2d24;--warnbg:#f9e8e4;--service:#f4c95d;--pipe:#3979a8}
 *{box-sizing:border-box}body{margin:0;background:#e8e5de;color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif}.sheet{width:min(1180px,100%);margin:auto;background:var(--paper);padding:30px 38px 60px}header{display:grid;grid-template-columns:2fr 1fr;gap:20px;border-bottom:3px solid var(--ink);padding-bottom:20px}.eyebrow{font:800 12px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--warn)}h1{font-size:clamp(30px,5vw,54px);line-height:1.05;margin:.2em 0}h2{margin:36px 0 12px;border-bottom:1px solid var(--line);padding-bottom:7px}h3{margin-top:26px}.hold{background:var(--warnbg);border:2px solid var(--warn);padding:14px;color:#6f211b}.nav{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}.nav a{border:1px solid var(--line);padding:6px 9px;background:white;color:#76501e}.nav a[aria-current=page]{border-color:var(--ink);font-weight:800}.diagram-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.diagram{margin:0;border:1px solid var(--line);background:white;min-width:0}.diagram figcaption{padding:11px;color:var(--muted)}svg{display:block;width:100%;height:auto;background:#faf8f2}svg text{font:13px system-ui;fill:var(--ink);text-anchor:middle}.case,.drawer{fill:var(--wood);stroke:#61452f;stroke-width:2}.countertop{fill:var(--stone);stroke:#8d8a82;stroke-width:2}.fixture{fill:#fff;stroke:#638a86;stroke-width:3}.pipe{fill:none;stroke:var(--pipe);stroke-width:8}.service{fill:var(--service);fill-opacity:.35;stroke:#b28c25;stroke-dasharray:7 5}.wall{fill:#dad7ce;stroke:#74716a}.rail{fill:#7d5a3b}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid var(--line);padding:8px;vertical-align:top;text-align:left}th{background:#eeece5}.unknown{font-weight:900;color:var(--warn)}code{font:11px ui-monospace,monospace;overflow-wrap:anywhere}a{color:#76501e}.release-gates{border:2px solid var(--warn);padding:0 16px 16px;background:#fff9f7}.states{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.states article{border:1px solid var(--line);background:white;padding:12px}.state-pictogram{height:56px;background:linear-gradient(90deg,var(--wood) 0 55%,var(--service) 55% 76%,transparent 76%);border:1px solid var(--line)}.metric{font:12px ui-monospace,monospace;color:var(--muted)}footer{margin-top:38px;border-top:2px solid var(--ink);padding-top:12px;color:var(--muted)}
@@ -58,6 +112,15 @@ def _dual(mm: float) -> str:
     return f"{mm:.1f} mm / {mm / 25.4:.2f} in"
 
 
+def _fabrication_status(project) -> tuple[bool, str]:
+    status = project.model.release.fabrication_status
+    if status == "CONDITIONAL_FABRICATION_RELEASE":
+        return True, "CONDITIONAL FABRICATION RELEASE"
+    if status == "HOLD_PRODUCT_GEOMETRY":
+        return False, "FABRICATION HOLD — PRODUCT GEOMETRY"
+    raise ValueError(f"unsupported DV72 fabrication status {status!r}")
+
+
 def _system_section(project) -> str:
     """One model-labelled bay section showing every coordination system."""
 
@@ -67,9 +130,21 @@ def _system_section(project) -> str:
     upper = model.drawer("left", "upper")
     lower = model.drawer("left", "lower")
     counter_top = vanity.bottom_elevation_mm + vanity.body_height_mm + vanity.countertop_thickness_mm
+    fabrication_released, _ = _fabrication_status(project)
+    if fabrication_released:
+        dimension_scope = (
+            "Cabinet and drawer dimensions are conditionally released model "
+            "facts; accepted field rough-ins remain required before runner "
+            "machining, stone work, trade work, or installation."
+        )
+    else:
+        dimension_scope = (
+            "Product geometry is held; displayed coordination geometry does "
+            "not authorize cabinet, drawer, runner, or stone fabrication."
+        )
     return f"""
 <section><h2>Sink, plumbing, drawers, counter, and wall mount</h2>
-<p>Representative section through one of two symmetric bays. Yellow is the removable service envelope, not storage. Dimensions are model facts; the accepted field rough-in must re-derive the drawer voids before fabrication.</p>
+<p>Representative section through one of two symmetric bays. Yellow is the removable service envelope, not storage. {dimension_scope}</p>
 <p><b>Field vertical targets—not release dimensions:</b> cabinet bottom {_dual(vanity.bottom_elevation_mm)} AFF; counter top {_dual(counter_top)} AFF. Release requires a recorded comparison of the site-wall zero datum, floor datum, wall flatness, framing, and every plumbing centerline.</p>
 <figure class="diagram"><figcaption>Bay section · counter top {_dual(counter_top)} AFF · upper box {study._mm(upper.box_depth_mm)} deep · lower box {study._mm(lower.box_depth_mm)} deep · rear service chase {study._mm(model.service_chase_depth_mm)}</figcaption>
 <svg viewBox="0 0 900 520" role="img" aria-label="Section through sink, drain, trap, drawers, counter, rear rail, wall and anchors">
@@ -109,6 +184,7 @@ def _assumption_schedule(project) -> str:
             f'<td>x {_dual(point.x_mm)}; y {_dual(point.y_mm)}; z {_dual(point.z_mm)}</td>'
             f'<td>{study._e(point.kind)}</td><td><code>{study._e(point.provenance)}</code>; not field verified</td></tr>'
         )
+    rough_in_count = len(assumed.wastes) + len(assumed.supplies)
     return (
         '<section><h2>Owner-assumed site and rough-in schedule</h2>'
         '<p>Every value below has <code>owner_assumed</code> provenance and is <b>not field verified</b>. It supports coordination only and confers no drilling, loading, trade, or installation authority.</p>'
@@ -118,7 +194,7 @@ def _assumption_schedule(project) -> str:
         '<p>Required acceptance record before installation release:</p><ul>'
         '<li>Wall and floor datums, vanity span, wall finish, flatness, and front clearance compared with the schedule.</li>'
         '<li>Backing extent and each support axis exposed or otherwise verified by the responsible reviewer.</li>'
-        '<li>Waste, hot, and cold centerlines compared point-by-point with the six owner-assumed coordinates.</li>'
+        f'<li>Waste, hot, and cold centerlines compared point-by-point with the {rough_in_count} owner-assumed coordinates.</li>'
         '<li>Obstructions, shutoffs, fitting envelopes, hand/tool paths, and drawer sweeps recorded for both bays.</li>'
         '</ul><p><b>Do not install, drill, load, or connect trades from the owner-assumed schedule.</b></p></section>'
     )
@@ -133,7 +209,7 @@ def _support_and_load_hold(project) -> str:
     )
     return f"""
 <section><h2>Held support and loading basis</h2>
-<p>Three provisional support envelopes: {supports}. Authority: <code>{study._e(layout.supports[0].authority)}</code>. Backing: <code>{study._e(layout.backing_authority)}</code>; not field verified.</p>
+<p>{len(layout.supports)} provisional support envelopes: {supports}. Authority: <code>{study._e(layout.supports[0].authority)}</code>. Backing: <code>{study._e(layout.backing_authority)}</code>; <code>owner_assumed</code>; not field verified.</p>
 <p>Modeled load case: {load.unfactored_total_lb:.1f} lb unfactored; {load.factored_total_lb:.1f} lb at the model's {load.load_factor:.2f} factor. Rear-rail gravity credit: {layout.rear_rail_gravity_credit_lb:.1f} lb. Fastener connection capacity is unassigned.</p>
 <p><b>Wall drilling, cabinet loading, installation, and use remain held</b> pending field verification, current-product acceptance, fastener/connection design, cabinet-to-support attachment, and structural approval.</p></section>"""
 
@@ -175,6 +251,7 @@ def build_double_vanity_review_html(project) -> str:
 
 
 def build_double_vanity_assembly_html(project) -> str:
+    fabrication_released, _ = _fabrication_status(project)
     drawers = "".join(
         f'<tr data-drawer-study="{study._e(drawer.drawer_id)}"><td>{study._e(drawer.drawer_id)}</td>'
         f'<td>{study._e(drawer.runner.selected_sku)}</td><td>{study._mm(drawer.box_width_mm)} × '
@@ -183,9 +260,30 @@ def build_double_vanity_assembly_html(project) -> str:
         f'<td><code>{study._e(drawer.runner.machining_authority)}</code></td></tr>'
         for drawer in project.model.drawers
     )
+    if fabrication_released:
+        drawer_section = (
+            '<section><h2>Released drawer geometry and held assembly authority</h2><p>The conditional fabrication release covers the modeled cabinet and drawer inventory. Runner mounting and machining, plumbing assembly, field drilling, loading, and installation remain held.</p><div class="table-wrap"><table><thead><tr><th>Drawer</th><th>Runner</th><th>Released box W × D × H</th><th>Released U void W × D</th><th>Machining authority</th></tr></thead><tbody>'
+            + drawers
+            + '</tbody></table></div><p><b>Runner machining remains withheld</b> under the manufacturer-template-controlled authority stored on each drawer.</p></section>'
+        )
+        status_content = (
+            "Cabinet and drawer parts are conditionally released; runner "
+            "machining, plumbing assembly, field drilling, loading, and "
+            "installation remain held."
+        )
+    else:
+        drawer_section = (
+            '<section><h2>Withheld drawer geometry and assembly authority</h2>'
+            '<p>Product geometry is held. Cabinet and drawer cut dimensions, '
+            'runner machining, plumbing assembly, field drilling, loading, '
+            'and installation remain withheld.</p></section>'
+        )
+        status_content = (
+            "Product geometry, runner machining, plumbing assembly, field "
+            "drilling, loading, and installation remain held."
+        )
     body = "".join((
-        '<section><h2>Released drawer geometry and held assembly authority</h2><p>The conditional fabrication release covers the modeled cabinet and drawer inventory. Runner mounting and machining, plumbing assembly, field drilling, loading, and installation remain held.</p><div class="table-wrap"><table><thead><tr><th>Drawer</th><th>Runner</th><th>Released box W × D × H</th><th>Released U void W × D</th><th>Machining authority</th></tr></thead><tbody>',
-        drawers, '</tbody></table></div><p><b>Runner machining remains withheld</b> under the manufacturer-template-controlled authority stored on each drawer.</p></section>',
+        drawer_section,
         _rough_in_section(project),
         '<section><h2>Bay-by-bay plumbing and drawer interaction</h2><div class="diagram-grid">',
         study._bay_interaction(project, "left"),
@@ -198,16 +296,23 @@ def build_double_vanity_assembly_html(project) -> str:
         "Removable-drawer, independent-plumbing, and future-service sequence.",
         project.model.release.installation_status,
         "ASSEMBLY HOLD — MACHINING & INSTALLATION",
-        "Cabinet and drawer parts are conditionally released; runner machining, plumbing assembly, field drilling, loading, and installation remain held.",
+        status_content,
         body,
     )
 
 
-def _released_inventory(project) -> str:
+def _fabrication_inventory(project) -> str:
+    fabrication_released, _ = _fabrication_status(project)
+    if not fabrication_released:
+        return (
+            '<section><h2>Withheld cabinet and drawer inventory</h2>'
+            '<p>Product geometry is held. No cabinet or drawer dimensions are '
+            'published for fabrication use.</p></section>'
+        )
     rows = "".join(
         f'<tr data-cut-list-row="{study._e(item.part_id)}"><td><code>{study._e(item.part_id)}</code></td>'
         f'<td>{study._e(item.description)}</td><td>{study._mm(item.length_mm)} × {study._mm(item.width_mm)} × {study._mm(item.thickness_mm)}</td>'
-        f'<td>{study._e(item.material)}</td></tr>'
+        f'<td>{study._e(item.material)}; <code>owner_assumed</code>; not field verified</td></tr>'
         for item in project.artifacts.cut_list
     )
     return (
@@ -220,6 +325,11 @@ def _released_inventory(project) -> str:
 
 def _fabrication_boundaries(project) -> str:
     model = project.model
+    fabrication_released, _ = _fabrication_status(project)
+    if not fabrication_released:
+        return """
+<section><h2>Held fabrication boundaries</h2>
+<p>Cabinet/drawer product geometry, stone cutting, runner mounting and machining, wall drilling, loading, trade work, and installation remain held. Material, joinery, and finish inputs are <code>owner_assumed</code> and not field verified.</p></section>"""
     upper = model.drawer("left", "upper")
     lower = model.drawer("left", "lower")
     return f"""
@@ -230,51 +340,37 @@ def _fabrication_boundaries(project) -> str:
 <tr><td>Countertop</td><td>{model.countertop.structural_thickness_mm:.1f} mm structural thickness; {model.countertop.visual_edge_height_mm:.1f} mm visual edge; K-20000 template {study._e(model.countertop.cutout_template_id)}</td><td><code>{study._e(model.countertop.stone_cut_authority)}</code></td></tr>
 <tr><td>Tolerances</td><td>Released values are deterministic model dimensions; field-fit and manufacturing tolerances are not supplied by the model.</td><td>Fabricator-controlled acceptance; no silent dimensional adjustment.</td></tr>
 </tbody></table></div>
-<h3>Joinery and finish assumptions</h3><p>Sheet product, face veneer, grain sequence, edge band, exposed-face selection, finish system, adhesives, joint details, hardware fixing, and nesting remain fabricator-controlled coordination items. Their absence does not broaden the conditional part-dimension release.</p>
+<h3>Joinery and finish assumptions</h3><p><code>owner_assumed</code>; not field verified. Sheet product, face veneer, grain sequence, edge band, exposed-face selection, finish system, adhesives, joint details, hardware fixing, and nesting remain fabricator-controlled coordination items. Their absence does not broaden the conditional part-dimension release.</p>
 <p><b>Stone cutting remains fabricator-controlled.</b> Runner mounting and machining remain manufacturer-template-controlled. Wall drilling, loading, trade work, and installation remain held.</p></section>"""
 
 
 def build_double_vanity_fabrication_html(project) -> str:
+    fabrication_released, visible_status = _fabrication_status(project)
+    if fabrication_released:
+        authority = '<section><h2>Fabrication authority</h2><p><b>Conditional cut authorization covers only the listed cabinet and drawer parts at their model dimensions.</b> Stone, runner machining, wall work, loading, trade work, and installation are outside this release.</p></section>'
+        status_content = "Cabinet and drawer part dimensions are released. Stone cutting, runner machining, wall drilling, loading, trade work, and installation remain held."
+    else:
+        authority = '<section><h2>Fabrication authority</h2><p><b>Product geometry is held.</b> No cabinet, drawer, stone, runner-machining, wall-work, loading, trade-work, or installation authority is issued.</p></section>'
+        status_content = "Product geometry is held. Cabinet, drawer, stone, runner machining, wall drilling, loading, trade work, and installation remain withheld."
     body = "".join((
-        '<section><h2>Fabrication authority</h2><p><b>Conditional cut authorization covers only the listed cabinet and drawer parts at their model dimensions.</b> Stone, runner machining, wall work, loading, trade work, and installation are outside this release.</p></section>',
-        _released_inventory(project),
+        authority, _fabrication_inventory(project),
         _fabrication_boundaries(project),
     ))
     return _shell(
         "Fabrication coordination", FILENAMES[2],
-        "Model inventory and the exact evidence required before a shop cut list can be released.",
+        "Scoped cabinet/drawer cut authority, model inventory, and held fabrication boundaries.",
         project.model.release.fabrication_status,
-        "CONDITIONAL FABRICATION RELEASE",
-        "Cabinet and drawer part dimensions are released. Stone cutting, runner machining, wall drilling, loading, trade work, and installation remain held.",
+        visible_status,
+        status_content,
         body,
     )
 
 
 def _finding_routing(rule: str) -> tuple[str, str]:
-    if rule == "double_vanity.release.commissioning":
-        return "General contractor and responsible trades", "commissioning"
-    if rule in {
-        "double_vanity.release.countertop_fabricator",
-        "double_vanity.release.fixture_template",
-    }:
-        return "Countertop fabricator", "stone fabrication"
-    if rule in {
-        "double_vanity.release.plumbing_approval",
-        "double_vanity.release.faucet",
-    }:
-        return "Licensed Master Plumber", "trade coordination"
-    if rule == "double_vanity.release.site_survey":
-        return "Field surveyor", "field verification"
-    if rule == "double_vanity.release.wall_mount" or ".mount." in rule:
-        return "Structural reviewer", "wall drilling and loading"
-    if rule in {
-        "double_vanity.release.drawer_derivation",
-        "double_vanity.release.dynamic_access",
-    } or ".drawer." in rule or ".service_openings" in rule:
-        return "Cabinet fabricator", "runner machining and assembly"
-    if ".plumbing." in rule:
-        return "Licensed Master Plumber", "trade coordination"
-    return "Design coordinator", "design validation"
+    try:
+        return _FINDING_ROUTING[rule]
+    except KeyError:
+        raise ValueError(f"unmapped DV72 finding rule {rule!r}") from None
 
 
 def _all_findings(project) -> str:
@@ -322,18 +418,19 @@ def _phased_release_gates(project) -> str:
             f'<td class="unknown">{study._e(finding.verdict)}</td><td>{study._e(finding.message)}</td></tr>'
         )
     postinstall = ""
+    preinstall_count = len(preinstall)
     if commissioning is not None:
         postinstall = (
             '<section class="release-gates"><h2>Post-install commissioning hold</h2>'
-            '<p>This hold does not block an installation released by the eight pre-install gates; it blocks use and closeout until testing is recorded.</p>'
+            f'<p>This hold does not block an installation released by the {preinstall_count} pre-install gates; it blocks use and closeout until testing is recorded.</p>'
             '<div class="table-wrap"><table><tbody>'
             f'<tr data-commissioning-rule="{study._e(commissioning.rule)}"><td><code>{study._e(commissioning.rule)}</code></td>'
             f'<td class="unknown">{study._e(commissioning.verdict)}</td><td>{study._e(commissioning.message)}</td></tr>'
             '</tbody></table></div></section>'
         )
     return (
-        '<section class="release-gates"><h2>Eight pre-install release gates</h2>'
-        '<p>Every row is required and UNKNOWN. Close all eight before purchase, fabrication, loading, or installation.</p>'
+        f'<section class="release-gates"><h2>{preinstall_count} pre-install release gates</h2>'
+        '<p>These UNKNOWN gates block installation, stone, runner machining, trade work, and use as applicable. They do not revoke the conditionally released cabinet and drawer cuts.</p>'
         '<div class="table-wrap"><table><thead><tr><th>Rule</th><th>Verdict</th><th>Evidence still required</th></tr></thead><tbody>'
         + "".join(preinstall) + '</tbody></table></div></section>' + postinstall
     )
@@ -347,7 +444,7 @@ def build_double_vanity_validation_html(project) -> str:
     ))
     return _shell(
         "Validation & sources", FILENAMES[3],
-        "Complete finding trace, manufacturer evidence, code profile, CAD authority boundary, and release holds.",
+        "Finding trace and evidence for held installation, stone, runner-machining, trade, and use scopes; cabinet/drawer cut authority remains separately stated.",
         project.model.release.trade_status,
         "TRADE HOLD — RESPONSIBLE APPROVAL",
         "Plumbing, countertop, structural, commissioning, and installation authority remains with the named responsible parties and blocking phases.",

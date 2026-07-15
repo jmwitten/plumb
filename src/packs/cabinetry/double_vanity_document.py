@@ -13,6 +13,13 @@ def _mm(value: float, digits: int = 1) -> str:
     return f"{value:.{digits}f} mm"
 
 
+def _cabinet_cut_released(project) -> bool:
+    return (
+        project.model.release.fabrication_status
+        == "CONDITIONAL_FABRICATION_RELEASE"
+    )
+
+
 def _part_group(project, role: str, body: str) -> str:
     part = project.model.part(role)
     return (
@@ -118,7 +125,7 @@ def _bay_section(project) -> str:
 <rect x="90" y="55" width="520" height="30" class="countertop"/><path d="M250 86q100 160 200 0" class="fixture"/>
 <path d="M350 204v38q0 30 42 30h55v-35" class="plumbing"/>
 <rect x="145" y="140" width="150" height="72" class="drawer"/><rect x="405" y="140" width="150" height="72" class="drawer"/>
-<text x="350" y="132">provisional U topology · cut dimensions held</text>
+<text x="350" y="132">product-driven U topology · runner machining held</text>
 <rect x="145" y="280" width="300" height="82" class="drawer"/><rect x="445" y="280" width="110" height="82" class="service"/>
 <text x="295" y="330">lower box stops ahead of services</text><text x="500" y="330">rear chase</text>
 <rect x="610" y="80" width="18" height="282" class="wall"/><path d="M610 150H520" class="load-path"/>
@@ -131,6 +138,29 @@ def _bay_interaction(project, bay_id: str) -> str:
     path = next(item for item in model.plumbing_paths if item.bay_id == bay_id)
     upper = model.drawer(bay_id, "upper")
     lower = model.drawer(bay_id, "lower")
+    if _cabinet_cut_released(project):
+        upper_fact = (
+            f"Conditionally released {upper.box_width_mm:.1f} × "
+            f"{upper.box_depth_mm:.1f} × {upper.box_height_mm:.1f} mm box with "
+            f"{upper.u_void_width_mm:.1f} × {upper.u_void_depth_mm:.1f} mm U "
+            f"void and selected {upper.runner.selected_sku} runner. Runner "
+            "machining and joinery remain held."
+        )
+        lower_fact = (
+            f"Conditionally released {lower.box_width_mm:.1f} × "
+            f"{lower.box_depth_mm:.1f} × {lower.box_height_mm:.1f} mm box with "
+            f"selected {lower.runner.selected_sku} runner. Runner machining "
+            "and joinery remain held."
+        )
+    else:
+        upper_fact = (
+            "Product-geometry hold withholds the upper box dimensions and "
+            "runner identity from fabrication use."
+        )
+        lower_fact = (
+            "Product-geometry hold withholds the lower box dimensions and "
+            "runner identity from fabrication use."
+        )
     return f"""
 <figure class="diagram" data-diagram="{bay_id}-bay-interaction" data-plumbing-path="{_e(path.path_id)}">
 <figcaption><b>{bay_id.title()} service bay.</b> One independently trapped lavatory, one upper U-shaped service drawer, and one shortened lower drawer. Removing both boxes exposes a shell-derived {_mm(bay.clear_opening_width_mm)} × {_mm(bay.clear_opening_height_mm)} opening; fitting/tool access is still unverified.</figcaption>
@@ -139,8 +169,8 @@ def _bay_interaction(project, bay_id: str) -> str:
 <path d="M90 145H190V270H90zM330 145H430V270H330z" class="drawer"/><rect x="90" y="285" width="270" height="50" class="drawer"/><rect x="360" y="285" width="70" height="50" class="service"/>
 <text x="260" y="385">sink center {_mm(bay.sink_center_x_mm)}</text></svg>
 <div class="study-facts">
-<p data-drawer-study="{_e(upper.drawer_id)}"><b>upper U-shaped service drawer</b> — a ten-piece analytic box now expresses the basin/plumbing-derived notch with two floor wings, a front bridge, and two inner returns. Fabrication dimensions remain suppressed until fixture, rough-in, runner, and joinery release.</p>
-<p data-drawer-study="{_e(lower.drawer_id)}"><b>shortened lower drawer</b> — its analytic rear plane derives from the provisional plumbing obstacles and stops ahead of the rear chase. Its cut depth and runner SKU remain suppressed.</p>
+<p data-drawer-study="{_e(upper.drawer_id)}"><b>upper U-shaped service drawer</b> — a ten-piece analytic box expresses the basin/plumbing-derived notch with two floor wings, a front bridge, and two inner returns. {_e(upper_fact)}</p>
+<p data-drawer-study="{_e(lower.drawer_id)}"><b>shortened lower drawer</b> — its rear plane derives from the product-driven plumbing obstacles and stops ahead of the rear chase. {_e(lower_fact)}</p>
 </div></figure>"""
 
 
@@ -175,11 +205,11 @@ def _motion_states(project) -> str:
         (
             "closed", "Closed",
             f"Provisional analytic obstacle margin: {_mm(upper.closed_clearance_mm or 0)}; not release evidence.",
-            "The manufacturer-sized basin and provisional plumbing solids fit inside the analytic U target. Runner, joinery, tolerance, and rough-in remain unresolved.",
+            f"The manufacturer-sized basin and product-driven plumbing solids fit inside the analytic U target for selected runner {upper.runner.selected_sku}. Runner machining, joinery, field tolerance, and rough-in verification remain held.",
         ),
         (
             "full-extension", "Full extension", "UNKNOWN — dynamic gate open.",
-            "Required swept-path check; unverified until the runner SKU, locking devices, box construction, loads, and actual services are selected.",
+            f"Required swept-path check for selected runner {upper.runner.selected_sku}; locking-device access, loads, and actual services remain unverified.",
         ),
         (
             "removal", "Removal", "UNKNOWN — dynamic gate open.",
