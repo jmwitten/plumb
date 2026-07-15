@@ -16,6 +16,7 @@ from detailgen.packs.cabinetry.double_vanity_installation_guide import (
     project_double_vanity_installation_manual,
 )
 from detailgen.rendering.consumer_pages import visible_instructional_words
+from detailgen.rendering.instruction_panels import RelatedDocumentLink
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -134,6 +135,36 @@ def test_held_actions_are_conditional(project):
     )
 
 
+def test_post_hold_record_page_is_conditional(project):
+    html = build_double_vanity_installation_guide(
+        project, related_documents=(),
+    )
+    record = re.search(
+        r'<section class="sheet record".*?</section>', html, re.S,
+    )
+    assert record
+    assert "CONDITIONAL — RELEASE RECORD REQUIRED" in record.group()
+
+
+@pytest.mark.parametrize(
+    "href",
+    (
+        "file://review.html",
+        "javascript:alert(1).html",
+        "https://example.com/review.html",
+        "../review.html",
+        "subdir/review.html",
+        "/tmp/review.html",
+    ),
+)
+def test_related_documents_require_relative_html_basenames(project, href):
+    with pytest.raises(ValueError, match="relative HTML basename"):
+        project_double_vanity_installation_manual(
+            project,
+            related_documents=(RelatedDocumentLink("Review", href),),
+        )
+
+
 def test_guide_is_self_contained_and_hides_machine_identifiers(project):
     html = build_double_vanity_installation_guide(
         project, related_documents=(),
@@ -186,6 +217,33 @@ def test_placement_projects_typed_service_and_drawer_envelopes(project):
         assert f'data-x1-mm="{envelope.x1_mm:.1f}"' in html
     for drawer in project.model.drawers:
         assert f'data-drawer-envelope="{drawer.drawer_id}"' in html
+        assert f'data-closed-clearance-mm="{drawer.closed_clearance_mm:.1f}"' in html
+
+
+def test_drawer_clearance_mutation_moves_service_imagery(project):
+    drawer = project.model.drawers[0]
+    changed_drawer = replace(
+        drawer, closed_clearance_mm=drawer.closed_clearance_mm + 6.0,
+    )
+    changed_project = replace(
+        project,
+        model=replace(
+            project.model,
+            drawers=(changed_drawer,) + project.model.drawers[1:],
+        ),
+    )
+    baseline = build_double_vanity_installation_guide(
+        project, related_documents=(),
+    )
+    changed = build_double_vanity_installation_guide(
+        changed_project, related_documents=(),
+    )
+    pattern = re.compile(
+        rf'<path[^>]+data-drawer-envelope="{re.escape(drawer.drawer_id)}"[^>]+>'
+    )
+    assert pattern.search(baseline)
+    assert pattern.search(changed)
+    assert pattern.search(baseline).group() != pattern.search(changed).group()
 
 
 def test_support_axis_mutation_fails_projection_coherence(project):

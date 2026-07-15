@@ -8,11 +8,16 @@ fixtures, plumbing, drawers, loading, or commissioning.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from html import escape
 
 from ...rendering.action_frames import ActionFrame, FrameIllustration
 from ...rendering.consumer_pages import ConsumerManual, compose_consumer_manual
-from ...rendering.instruction_panels import RecordField, RelatedDocumentLink
+from ...rendering.instruction_panels import (
+    RecordField,
+    RelatedDocumentLink,
+    _relative_html_basename,
+)
 from .double_vanity import RAKKS_EH_1818_LV
 
 
@@ -154,6 +159,13 @@ def _validate_installation_projection(project) -> None:
             ("right", "upper"), ("right", "lower"),
         }
         or any(drawer.dynamic_verified for drawer in model.drawers)
+        or any(
+            drawer.closed_clearance_mm is None
+            or drawer.closed_clearance_mm <= 0.0
+            or drawer.full_extension_clearance_mm is not None
+            or drawer.removal_clearance_mm is not None
+            for drawer in model.drawers
+        )
     ):
         raise ValueError("DV72 guide detected contradictory service-envelope authority")
 
@@ -245,6 +257,15 @@ def project_double_vanity_installation_manual(
     if project.pack_id != "vanity.double_sink":
         raise ValueError("DV72 installation guide requires vanity.double_sink")
     _validate_installation_projection(project)
+    related_documents = tuple(
+        replace(
+            link,
+            href=_relative_html_basename(
+                link.href, f"related_documents[{index}].href",
+            ),
+        )
+        for index, link in enumerate(related_documents)
+    )
     return compose_consumer_manual(
         frames=_installation_frames(project),
         title="DV72 — Cabinet Installation Guide",
@@ -376,12 +397,14 @@ def _placement_svg(project) -> str:
         f'data-x0-mm="{path.service_envelope.x0_mm:.1f}" data-x1-mm="{path.service_envelope.x1_mm:.1f}"/>'
         for path in project.model.plumbing_paths
     )
-    drawer_envelopes = "".join(
-        f'<path d="M{_sx(project, next(bay.bay_left_x_mm for bay in project.model.sink_bays if bay.bay_id == drawer.bay_id)):.1f} '
-        f'{135 if drawer.level == "upper" else 175} H'
-        f'{_sx(project, next(bay.bay_right_x_mm for bay in project.model.sink_bays if bay.bay_id == drawer.bay_id)):.1f}" '
-        f'class="drawer-envelope" data-drawer-envelope="{escape(drawer.drawer_id, quote=True)}"/>'
-        for drawer in project.model.drawers
+    drawer_clearances = "".join(
+        f'<g transform="translate({330 + (index % 2) * 90},{35 + (index // 2) * 45})">'
+        f'<path d="M0 0 h{drawer.closed_clearance_mm * 3.0:.1f}" '
+        f'class="drawer-clearance" data-drawer-envelope="{escape(drawer.drawer_id, quote=True)}" '
+        f'data-closed-clearance-mm="{drawer.closed_clearance_mm:.1f}"/>'
+        f'<text x="0" y="13">{escape(drawer.bay_id)} {escape(drawer.level)} closed clearance</text>'
+        f'</g>'
+        for index, drawer in enumerate(project.model.drawers)
     )
     cabinet = _cabinet_svg(project, action=False).replace(
         '<svg ', '<g transform="translate(0,-10)" '
@@ -389,7 +412,7 @@ def _placement_svg(project) -> str:
     return (
         '<svg viewBox="0 0 520 280" role="img" data-action-illustration="true">'
         '<title>Two-person placement of the empty cabinet</title>'
-        f'{cabinet}{service_envelopes}{drawer_envelopes}'
+        f'{cabinet}{service_envelopes}<g aria-label="Typed closed-clearance facts, not verified travel envelopes">{drawer_clearances}</g>'
         '<circle cx="35" cy="105" r="14"/><path d="M35 120 V185 M35 140 L65 160 M35 185 L20 220 M35 185 L50 220" class="person"/>'
         '<circle cx="485" cy="105" r="14"/><path d="M485 120 V185 M485 140 L455 160 M485 185 L470 220 M485 185 L500 220" class="person"/>'
         '<path d="M80 75 V100 M440 75 V100" class="lift-arrow"/>'
@@ -506,7 +529,10 @@ def _render_installation_manual(project, manual: ConsumerManual) -> str:
                 rows.append(_render_action(project, frame, action_number))
             content = "".join(rows)
         elif page.kind == "record":
-            content = _render_record(page)
+            content = (
+                f'<p class="conditional">{_CONDITIONAL}</p>'
+                f'{_render_record(page)}'
+            )
         sheets.append(
             f'<section class="sheet {page.kind}" data-page-kind="{page.kind}">'
             f'{content}<footer>DV72 cabinet installation guide · {page.number} / {len(manual.pages)}</footer></section>'
@@ -515,7 +541,7 @@ def _render_installation_manual(project, manual: ConsumerManual) -> str:
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{escape(manual.title)}</title><style>
-@page{{size:Letter;margin:0}}*{{box-sizing:border-box}}body{{margin:0;background:#d7d7d7;color:#111;font:14px/1.35 Arial,sans-serif}}.sheet{{position:relative;width:8.5in;min-height:11in;margin:20px auto;padding:.5in;background:white;page-break-after:always;overflow:hidden}}h1{{font-size:34px;margin:.12in 0}}h2{{font-size:25px;margin:.05in 0 .22in}}.eyebrow,.conditional{{font-weight:800;letter-spacing:.04em}}.eyebrow{{color:#a21c13}}.frame{{border:4px solid #111;padding:.18in;margin-bottom:.18in}}.frame header{{display:flex;align-items:center;gap:.14in}}.step-number{{display:inline-grid;place-items:center;width:.42in;height:.42in;border:3px solid;border-radius:50%;font-size:22px;font-weight:bold}}.conditional{{font-size:12px;color:#a21c13}}svg{{display:block;width:100%;max-height:2.1in;margin:.06in 0;border:2px solid #111;background:#faf8f1}}svg text{{font:12px Arial,sans-serif;fill:#111}}.cabinet,.placeholder{{fill:none;stroke:#111;stroke-width:4}}.case-member,.wall,.datum,.axis,.bracket,.person,.rail,.level,.plumb,.diagonal{{fill:none;stroke:#111;stroke-width:4}}.axis{{stroke-dasharray:7 5;stroke:#a21c13}}.datum{{stroke:#23638c}}.bracket{{stroke-width:7}}.load-arrow,.lift-arrow,.lateral-arrow{{fill:none;stroke:#a21c13;stroke-width:5}}.rail{{fill:#ddd}}.placeholder{{stroke-dasharray:8 6}}.service-envelope{{fill:#4ba3c733;stroke:#23638c;stroke-width:2;stroke-dasharray:6 4}}.drawer-envelope{{fill:none;stroke:#8b5a2b;stroke-width:3;stroke-dasharray:8 5}}.caption{{font-size:15px;font-weight:700}}aside{{margin-top:5px;padding:4px 7px;border-left:6px solid #23638c}}aside.stop{{border-color:#a21c13;background:#fff1ef}}.inventory-row{{border:2px solid #111;padding:12px;font-size:16px}}.hold{{margin-top:.35in;border-width:7px}}.hold-fields p{{padding:.08in;border-bottom:1px solid #777}}.record-grid{{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}}.record-row{{display:grid;grid-template-columns:1.35in 1fr;gap:6px;border-bottom:1px solid #777;padding:5px 0;min-height:.55in}}.record-row span{{font-size:10px;color:#444}}.record-row i{{grid-column:1/-1;border-bottom:1px solid #aaa}}.final-stop{{margin-top:.12in;padding:.1in;border:5px solid #a21c13;font-weight:900;font-size:16px}}nav a{{display:inline-block;margin-right:12px;color:#134f72}}footer{{position:absolute;left:.5in;right:.5in;bottom:.25in;border-top:1px solid;padding-top:5px;font-size:11px}}@media(max-width:850px){{.sheet{{width:100%;min-height:auto;margin:0 0 12px;padding:20px}}footer{{position:static;margin-top:20px}}.record-grid{{grid-template-columns:1fr}}}}@media print{{body{{background:white}}.sheet{{margin:0;width:8.5in;height:11in;min-height:11in}}}}
+@page{{size:Letter;margin:0}}*{{box-sizing:border-box}}body{{margin:0;background:#d7d7d7;color:#111;font:14px/1.35 Arial,sans-serif}}.sheet{{position:relative;width:8.5in;min-height:11in;margin:20px auto;padding:.5in;background:white;page-break-after:always;overflow:hidden}}h1{{font-size:34px;margin:.12in 0}}h2{{font-size:25px;margin:.05in 0 .22in}}.eyebrow,.conditional{{font-weight:800;letter-spacing:.04em}}.eyebrow{{color:#a21c13}}.frame{{border:4px solid #111;padding:.18in;margin-bottom:.18in}}.frame header{{display:flex;align-items:center;gap:.14in}}.step-number{{display:inline-grid;place-items:center;width:.42in;height:.42in;border:3px solid;border-radius:50%;font-size:22px;font-weight:bold}}.conditional{{font-size:12px;color:#a21c13}}svg{{display:block;width:100%;max-height:2.1in;margin:.06in 0;border:2px solid #111;background:#faf8f1}}svg text{{font:12px Arial,sans-serif;fill:#111}}.cabinet,.placeholder{{fill:none;stroke:#111;stroke-width:4}}.case-member,.wall,.datum,.axis,.bracket,.person,.rail,.level,.plumb,.diagonal{{fill:none;stroke:#111;stroke-width:4}}.axis{{stroke-dasharray:7 5;stroke:#a21c13}}.datum{{stroke:#23638c}}.bracket{{stroke-width:7}}.load-arrow,.lift-arrow,.lateral-arrow{{fill:none;stroke:#a21c13;stroke-width:5}}.rail{{fill:#ddd}}.placeholder{{stroke-dasharray:8 6}}.service-envelope{{fill:#4ba3c733;stroke:#23638c;stroke-width:2;stroke-dasharray:6 4}}.drawer-clearance{{fill:none;stroke:#8b5a2b;stroke-width:3}}.caption{{font-size:15px;font-weight:700}}aside{{margin-top:5px;padding:4px 7px;border-left:6px solid #23638c}}aside.stop{{border-color:#a21c13;background:#fff1ef}}.inventory-row{{border:2px solid #111;padding:12px;font-size:16px}}.hold{{margin-top:.35in;border-width:7px}}.hold-fields p{{padding:.08in;border-bottom:1px solid #777}}.record-grid{{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}}.record-row{{display:grid;grid-template-columns:1.35in 1fr;gap:6px;border-bottom:1px solid #777;padding:5px 0;min-height:.55in}}.record-row span{{font-size:10px;color:#444}}.record-row i{{grid-column:1/-1;border-bottom:1px solid #aaa}}.final-stop{{margin-top:.12in;padding:.1in;border:5px solid #a21c13;font-weight:900;font-size:16px}}nav a{{display:inline-block;margin-right:12px;color:#134f72}}footer{{position:absolute;left:.5in;right:.5in;bottom:.25in;border-top:1px solid;padding-top:5px;font-size:11px}}@media(max-width:850px){{.sheet{{width:100%;min-height:auto;margin:0 0 12px;padding:20px}}footer{{position:static;margin-top:20px}}.record-grid{{grid-template-columns:1fr}}}}@media print{{body{{background:white}}.sheet{{margin:0;width:8.5in;height:11in;min-height:11in}}}}
 </style></head><body>{''.join(sheets)}</body></html>'''
 
 
