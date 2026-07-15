@@ -103,6 +103,89 @@ class CertificationContract:
 
 
 @dataclass(frozen=True)
+class ValidationFindingEvidence:
+    check: str
+    subject: str
+    verdict: str
+    detail: str
+    passed: bool
+    blocking: bool
+
+
+@dataclass(frozen=True)
+class ValidationEvidence:
+    ok: bool
+    findings: tuple[ValidationFindingEvidence, ...] = ()
+    blocking: tuple[ValidationFindingEvidence, ...] = ()
+
+
+@dataclass(frozen=True)
+class PartEvidence:
+    id: str
+    name: str
+    component: str
+    material: str
+    source: str
+    roles: tuple[str, ...]
+    solid_count: int
+    volume_mm3: float
+    bounds_mm: tuple[float, float, float, float, float, float]
+
+
+@dataclass(frozen=True)
+class ConnectionEvidence:
+    a: str
+    b: str
+    kind: str
+    connection: str
+
+
+@dataclass(frozen=True)
+class FabricationEvidence:
+    part_id: str
+    steps: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class BomEvidence:
+    item: str
+    quantity: int
+    material: str
+    dimensions: str
+    source: str
+    source_ids: tuple[str, ...]
+    length_mm: float | None
+
+
+@dataclass(frozen=True)
+class GovernanceEvidence:
+    present: bool
+    selected_concept: str = ""
+    modeling_ready: bool = False
+    delivery_ready: bool = False
+
+
+@dataclass(frozen=True)
+class EvidenceSnapshot:
+    slug: str
+    subject: SubjectContract
+    source_fingerprint: str
+    compile_error: str = ""
+    collector_error: str = ""
+    fabrication_error: str = ""
+    validation: ValidationEvidence = field(
+        default_factory=lambda: ValidationEvidence(ok=False)
+    )
+    parts: tuple[PartEvidence, ...] = ()
+    connections: tuple[ConnectionEvidence, ...] = ()
+    fabrication: tuple[FabricationEvidence, ...] = ()
+    bom: tuple[BomEvidence, ...] = ()
+    governance: GovernanceEvidence = field(
+        default_factory=lambda: GovernanceEvidence(present=False)
+    )
+
+
+@dataclass(frozen=True)
 class CertificationResult:
     slug: str
     findings: tuple[CertificationFinding, ...]
@@ -121,4 +204,3 @@ class CertificationResult:
     @property
     def releasable(self) -> bool:
         return not self.failed and not self.needs_decision
-

@@ -8,6 +8,7 @@ from .model import (
     CertificationResult,
     CountIntent,
     DecisionRecord,
+    EvidenceSnapshot,
     FabricationIntent,
     FindingState,
     GovernanceIntent,
@@ -25,6 +26,7 @@ __all__ = [
     "ContractError",
     "CountIntent",
     "DecisionRecord",
+    "EvidenceSnapshot",
     "FabricationIntent",
     "FindingState",
     "GovernanceIntent",
@@ -35,4 +37,3 @@ __all__ = [
     "discover_contracts",
     "load_contract",
 ]
-
