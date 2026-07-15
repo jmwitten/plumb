@@ -8,10 +8,11 @@ Issue date: 2026-07-14. Times are EDT wall-clock checkpoints from the isolated-w
 | Geometry/document implementation | 16:17:22–16:25:42 | 8m 20s | Reused compiler/model/report primitives plus bespoke DV72 projections and product coordination |
 | Visual QA and first review remediation | 16:25:42–16:32:00 | 6m 18s | Shared browser/review workflow plus bespoke release, service, and height corrections |
 | Adversarial review, correction, verification preparation | 16:32:00–16:42:00 | 10m 00s | Shared verification workflow plus bespoke plumbing-authority and fixture-datum corrections |
+| Delivery continuation: generation, browser attempt, artifact audit, focused verification | 21:11:54–21:13:38 | 1m 44s | Reused deterministic generator, browser-control, HTML/CSS/link-audit, and focused-test workflows; bespoke work was limited to DV72 banner/section/authority review and this accounting update |
 
 Manufacturer research and reference-image inspection began before the 16:12:19 worktree checkpoint, so they are deliberately excluded from the exact elapsed subtotal rather than assigned invented durations.
 
-Measured worktree subtotal: 29m 41s. Final test runtime, commit, and network push occur after the closed implementation windows above and are reported separately by their command output and commit metadata.
+Measured worktree subtotal: 31m 25s. The delivery continuation generated the four-document inventory in 2.34s and repeated it in 2.32s with identical SHA-256 hashes; its focused 107-test run completed in 5.46s. Browser control connected, but its local-file URL policy blocked viewport rendering and prohibited an alternate browser workaround, so desktop and 390 px visual inspection is excluded rather than claimed. Commit and network push occur after the closed implementation windows above and are reported separately by their command output and commit metadata.
 
 ## Reused platform functionality
 
