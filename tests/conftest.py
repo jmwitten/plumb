@@ -40,6 +40,83 @@ this by setting ``DETAILGEN_CACHE_DIR`` itself, same as any other
 import pytest
 
 
+REQUIRED_DETAIL_CONTRACTS = frozenset({
+    "compile",
+    "geometry",
+    "validation",
+    "fabrication",
+    "governance",
+    "documents",
+})
+
+
+def _detail_gate_selection(items, slug):
+    """Return tests for ``slug`` plus their declared semantic contracts."""
+    selected = []
+    deselected = []
+    contracts = set()
+    for item in items:
+        matched = False
+        for marker in item.iter_markers(name="detail_gate"):
+            if len(marker.args) != 1 or not isinstance(marker.args[0], str):
+                raise pytest.UsageError(
+                    f"{item.nodeid}: detail_gate requires one string slug"
+                )
+            if set(marker.kwargs) != {"contracts"}:
+                raise pytest.UsageError(
+                    f"{item.nodeid}: detail_gate accepts only contracts="
+                )
+            declared = marker.kwargs["contracts"]
+            if not isinstance(declared, (tuple, list)) or not declared:
+                raise pytest.UsageError(
+                    f"{item.nodeid}: detail_gate contracts must be non-empty"
+                )
+            unknown = set(declared) - REQUIRED_DETAIL_CONTRACTS
+            if unknown:
+                raise pytest.UsageError(
+                    f"{item.nodeid}: unknown detail-gate contracts "
+                    f"{sorted(unknown)}"
+                )
+            if marker.args[0] == slug:
+                matched = True
+                contracts.update(declared)
+        (selected if matched else deselected).append(item)
+    return selected, deselected, contracts
+
+
+def _require_complete_detail_gate(slug, selected, contracts):
+    """Fail closed when a requested gate is unknown or semantically thin."""
+    if not selected:
+        raise pytest.UsageError(f"unknown detail gate {slug!r}")
+    missing = REQUIRED_DETAIL_CONTRACTS - contracts
+    if missing:
+        raise pytest.UsageError(
+            f"detail gate {slug!r} is missing contracts: "
+            f"{', '.join(sorted(missing))}"
+        )
+
+
+def pytest_addoption(parser):
+    group = parser.getgroup("detail build gates")
+    group.addoption(
+        "--detail-gate",
+        action="store",
+        default=None,
+        metavar="SLUG",
+        help="run the complete semantic build gate for one detail",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    slug = config.getoption("detail_gate")
+    if not slug:
+        return
+    selected, deselected, contracts = _detail_gate_selection(items, slug)
+    _require_complete_detail_gate(slug, selected, contracts)
+    config.hook.pytest_deselected(items=deselected)
+    items[:] = selected
+
+
 @pytest.fixture(autouse=True)
 def _isolated_detailgen_cache_dir(tmp_path_factory, monkeypatch):
     cache_dir = tmp_path_factory.mktemp("detailgen_cache")
