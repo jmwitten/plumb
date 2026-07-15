@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import re
+
 from ...rendering.instruction_panels import RelatedDocumentLink
 from . import double_vanity_document as study
 from .double_vanity_installation_guide import (
+    _REQUIRED_RELEASE_RULES,
     build_double_vanity_installation_guide,
 )
 
@@ -674,7 +677,87 @@ def _audit_document_set(project, documents: dict[str, str]) -> None:
 
     if tuple(documents) != FILENAMES:
         raise ValueError("DV72 semantic audit requires the ordered five-file package")
+
+    forbidden_authority = (
+        r"\bINSTALLATION\s+(?:PASS|APPROVED)\b",
+        r"\bINSTALLATION\s+RELEASED(?!\s+BY\b)",
+        r"\bUNCONDITIONAL.{0,30}(?:LOAD|INSTALLATION|STRUCTURAL).{0,20}AUTHORITY\b",
+        r"\b(?:LOAD|INSTALLATION|STRUCTURAL).{0,20}AUTHORITY.{0,20}UNCONDITIONAL\b",
+    )
+    for name, html in documents.items():
+        upper = html.upper()
+        if any(re.search(pattern, upper, re.S) for pattern in forbidden_authority):
+            raise ValueError(
+                f"DV72 semantic audit rejected unconditional authority in {name}"
+            )
+
+    fabrication_released, fabrication_banner = _fabrication_status(project)
+    expected_scopes = {
+        FILENAMES[0]: (
+            "<h1>Review & installation</h1>",
+            "INSTALLATION HOLD — FIELD VERIFY",
+            f'data-release-status="{project.model.release.installation_status}"',
+        ),
+        FILENAMES[1]: (
+            "<h1>Assembly & service</h1>",
+            "ASSEMBLY HOLD — MACHINING & INSTALLATION",
+            f'data-release-status="{project.model.release.installation_status}"',
+        ),
+        FILENAMES[2]: (
+            "<h1>Fabrication coordination</h1>",
+            fabrication_banner,
+            f'data-release-status="{project.model.release.fabrication_status}"',
+        ),
+        FILENAMES[3]: (
+            "<h1>Validation & sources</h1>",
+            "TRADE HOLD — RESPONSIBLE APPROVAL",
+            f'data-release-status="{project.model.release.trade_status}"',
+        ),
+        FILENAMES[4]: (
+            "<h1>DV72 — Cabinet Installation Guide</h1>",
+            "INSTALLATION HOLD — FIELD/STRUCTURAL RELEASE REQUIRED",
+            "STOP BEFORE COUNTERTOP",
+        ),
+    }
+    for name, tokens in expected_scopes.items():
+        if any(token not in documents[name] for token in tokens):
+            raise ValueError(
+                f"DV72 semantic audit rejected authority banner/document scope in {name}"
+            )
+
+    assembly = documents[FILENAMES[1]].lower()
+    if not (
+        "installation remain held" in assembly
+        or "installation remain withheld" in assembly
+    ):
+        raise ValueError("DV72 semantic audit rejected assembly installation hold")
+
+    fabrication = documents[FILENAMES[2]]
+    validation = documents[FILENAMES[3]]
     guide = documents[FILENAMES[4]]
+
+    if fabrication_released:
+        agreement_tokens = (
+            (fabrication, "FABRICATOR ACCEPTANCE RECORDED"),
+            (validation, "conditionally released"),
+            (guide, "Recorded fabricator acceptance governs static drawer cuts only"),
+        )
+    else:
+        agreement_tokens = (
+            (fabrication, "Prepared schedule only — non-production"),
+            (validation, "prepared for review only"),
+            (guide, "Static drawer geometry is prepared for review only"),
+        )
+    if any(token not in html for html, token in agreement_tokens):
+        raise ValueError(
+            "DV72 semantic audit rejected fabrication/validation authority agreement"
+        )
+    if (
+        "conditionally released static cuts" in guide.lower()
+        or re.search(r"drawer cuts.{0,40}conditionally released", guide, re.I | re.S)
+    ):
+        raise ValueError("DV72 semantic audit rejected drawer-cut authority contradiction")
+
     for support in project.model.support_layout.supports:
         facts = (
             f'data-support-id="{support.support_id}" '
@@ -686,14 +769,7 @@ def _audit_document_set(project, documents: dict[str, str]) -> None:
         if guide.count(facts) != 2:
             raise ValueError("DV72 semantic audit rejected support bearing/wall facts")
 
-    release_rules = (
-        "double_vanity.release.site_survey",
-        "double_vanity.release.wall_mount",
-        "double_vanity.release.dynamic_access",
-        "double_vanity.release.plumbing_approval",
-        "double_vanity.release.drawer_derivation",
-    )
-    for rule in release_rules:
+    for rule in _REQUIRED_RELEASE_RULES:
         finding = project.report.by_rule(rule)
         token = (
             f'data-release-rule="{rule}" '
@@ -719,20 +795,3 @@ def _audit_document_set(project, documents: dict[str, str]) -> None:
         or "continuously supported at three" in guide
     ):
         raise ValueError("DV72 semantic audit rejected empty-cabinet endpoint scope")
-
-    fabrication_banner = (
-        "FABRICATOR ACCEPTANCE RECORDED"
-        if project.model.fabrication_acceptance.complete_for(
-            project.model.fabrication_basis
-        )
-        else "FABRICATION HOLD — FABRICATOR ACCEPTANCE PENDING"
-    )
-    banners = {
-        FILENAMES[0]: "INSTALLATION HOLD — FIELD VERIFY",
-        FILENAMES[2]: fabrication_banner,
-        FILENAMES[3]: "TRADE HOLD — RESPONSIBLE APPROVAL",
-        FILENAMES[4]: "INSTALLATION HOLD — FIELD/STRUCTURAL RELEASE REQUIRED",
-    }
-    for name, banner in banners.items():
-        if banner not in documents[name]:
-            raise ValueError("DV72 semantic audit rejected required authority banners")

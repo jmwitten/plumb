@@ -118,6 +118,100 @@ def test_package_semantic_audit_rejects_guide_builder_bypass(
         documents.build_double_vanity_document_set(project)
 
 
+@pytest.mark.parametrize(
+    "builder_name",
+    (
+        "build_double_vanity_review_html",
+        "build_double_vanity_assembly_html",
+        "build_double_vanity_fabrication_html",
+        "build_double_vanity_validation_html",
+        "build_double_vanity_installation_guide",
+    ),
+)
+def test_package_semantic_audit_rejects_unconditional_authority_in_every_doc(
+    monkeypatch, builder_name,
+):
+    import detailgen.packs.cabinetry.double_vanity_documents as documents
+
+    project = compile_project_file(FIXTURE)
+    real_builder = getattr(documents, builder_name)
+
+    def corrupted_builder(*args, **kwargs):
+        html = real_builder(*args, **kwargs)
+        return html.replace("</body>", "<p>INSTALLATION PASS</p></body>")
+
+    monkeypatch.setattr(documents, builder_name, corrupted_builder)
+    with pytest.raises(ValueError, match="unconditional authority"):
+        documents.build_double_vanity_document_set(project)
+
+
+@pytest.mark.parametrize(
+    ("builder_name", "banner"),
+    (
+        ("build_double_vanity_review_html", "INSTALLATION HOLD — FIELD VERIFY"),
+        ("build_double_vanity_assembly_html", "ASSEMBLY HOLD — MACHINING & INSTALLATION"),
+        ("build_double_vanity_fabrication_html", "FABRICATION HOLD — FABRICATOR ACCEPTANCE PENDING"),
+        ("build_double_vanity_validation_html", "TRADE HOLD — RESPONSIBLE APPROVAL"),
+        ("build_double_vanity_installation_guide", "INSTALLATION HOLD — FIELD/STRUCTURAL RELEASE REQUIRED"),
+    ),
+)
+def test_package_semantic_audit_rejects_missing_typed_scope_in_every_doc(
+    monkeypatch, builder_name, banner,
+):
+    import detailgen.packs.cabinetry.double_vanity_documents as documents
+
+    project = compile_project_file(FIXTURE)
+    real_builder = getattr(documents, builder_name)
+
+    def corrupted_builder(*args, **kwargs):
+        html = real_builder(*args, **kwargs)
+        assert banner in html
+        return html.replace(banner, "AUTHORITY REMOVED")
+
+    monkeypatch.setattr(documents, builder_name, corrupted_builder)
+    with pytest.raises(ValueError, match="authority banner|document scope"):
+        documents.build_double_vanity_document_set(project)
+
+
+def test_package_semantic_audit_rejects_pending_drawer_release_contradiction(
+    monkeypatch,
+):
+    import detailgen.packs.cabinetry.double_vanity_documents as documents
+
+    project = compile_project_file(FIXTURE)
+    real_builder = documents.build_double_vanity_installation_guide
+
+    def corrupted_builder(*args, **kwargs):
+        html = real_builder(*args, **kwargs)
+        return html.replace(
+            "</body>",
+            "<p>Drawer cuts are conditionally released static cuts.</p></body>",
+        )
+
+    monkeypatch.setattr(
+        documents, "build_double_vanity_installation_guide", corrupted_builder,
+    )
+    with pytest.raises(ValueError, match="drawer-cut authority"):
+        documents.build_double_vanity_document_set(project)
+
+
+def test_runtime_audit_consumes_shared_typed_release_mapping():
+    import detailgen.packs.cabinetry.double_vanity_documents as documents
+    from detailgen.packs.cabinetry.double_vanity_installation_guide import (
+        _REQUIRED_RELEASE_RULES,
+    )
+
+    assert tuple(_REQUIRED_RELEASE_RULES) == (
+        "double_vanity.release.site_survey",
+        "double_vanity.release.wall_mount",
+        "double_vanity.release.dynamic_access",
+        "double_vanity.release.plumbing_approval",
+        "double_vanity.release.drawer_derivation",
+    )
+    audit_source = inspect.getsource(documents._audit_document_set)
+    assert "double_vanity.release.site_survey" not in audit_source
+
+
 def test_documents_distinguish_all_authorities():
     docs = _documents()
 

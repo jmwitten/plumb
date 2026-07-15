@@ -2,13 +2,13 @@
 
 The guide is a typed projection of the compiled double-vanity model.  It
 deliberately stops at an empty, restrained cabinet and carries no authority
-for structural fastener selection, cabinet-to-bracket attachment, stone,
+for structural fastener selection, cabinet case/interface attachment, stone,
 fixtures, plumbing, drawers, loading, or commissioning.
 """
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from html import escape
 from math import gcd
 
@@ -24,13 +24,35 @@ from .double_vanity import RAKKS_EH_1818_LV
 
 _CONDITIONAL = "CONDITIONAL — RELEASE RECORD REQUIRED"
 
-_REQUIRED_RELEASE_RULES = (
-    "double_vanity.release.site_survey",
-    "double_vanity.release.wall_mount",
-    "double_vanity.release.dynamic_access",
-    "double_vanity.release.plumbing_approval",
-    "double_vanity.release.drawer_derivation",
-)
+@dataclass(frozen=True)
+class ReleaseRuleReader:
+    label: str
+    phase: str
+    reader_copy: str
+
+
+_REQUIRED_RELEASE_RULES: dict[str, ReleaseRuleReader] = {
+    "double_vanity.release.site_survey": ReleaseRuleReader(
+        "Site comparison", "PRE-WORK",
+        "Record and accept the field wall, floor, backing, utilities, and rough-in comparison before empty-cabinet mounting.",
+    ),
+    "double_vanity.release.wall_mount": ReleaseRuleReader(
+        "Wall mount", "PRE-WORK",
+        "Record and accept the product revision, wall construction, framing/blocking, structural schedule, and cabinet case/interface detail before empty-cabinet mounting.",
+    ),
+    "double_vanity.release.dynamic_access": ReleaseRuleReader(
+        "Dynamic access", "FOLLOW-ON",
+        "Drawer travel, removal, and service access remain unresolved for later work; this is not service-access approval.",
+    ),
+    "double_vanity.release.plumbing_approval": ReleaseRuleReader(
+        "Plumbing approval", "FOLLOW-ON",
+        "Licensed-plumber fitting, waste, vent, supply, slope, access, and jurisdiction approval remains unresolved for later work.",
+    ),
+    "double_vanity.release.drawer_derivation": ReleaseRuleReader(
+        "Drawer fabrication and access", "FOLLOW-ON",
+        "Static drawer geometry and later runner, travel, removal, and service work remain governed by their separate fabrication and access authority.",
+    ),
+}
 
 _INVENTORY_STATIC_TEXTS = (
     "Crew, equipment, lift, temporary support, and restraint: only as named by the accepted handling plan.",
@@ -49,7 +71,7 @@ _FRAME_NOTES = {
     "install_supports": (
         "WHY The three Rakks envelopes are the modeled primary gravity path; the wall connection and reaction distribution are not proved here.",
         "VERIFY Check accepted product/document revision, count, station, arm datum, projection, wall plane, backing, and schedule-controlled fastener pattern.",
-        "STOP Stop if any product, wall, backing, schedule, or support fact differs. Manufacturer toeing is a concept only unless the accepted revision preserves it.",
+        "STOP Stop if any product, wall, backing, schedule, or support fact differs from the accepted records.",
     ),
     "place_cabinet": (
         "WHY The accepted handling and case/interface records control how the empty case passes below and around the countertop-support arms.",
@@ -57,7 +79,7 @@ _FRAME_NOTES = {
         "STOP Stop if the accepted plan cannot be followed or the owner-assumed rough-in conflict comparison differs; this is not service-access approval.",
     ),
     "restrain_cabinet": (
-        "WHY The accepted cabinet-to-support detail restrains the case; the rear rail provides positioning and lateral restraint only.",
+        "WHY The accepted cabinet case/interface detail restrains the case; the rear rail provides positioning and lateral restraint only.",
         "VERIFY Apply only the signed interface detail, fastener schedule, and tolerance/shim schedule. Confirm the continuous rear rail remains lateral-only with zero gravity credit.",
         "STOP Stop when a detail, location, substrate, tool path, or observed fit differs; connection capacity remains unproved.",
     ),
@@ -69,17 +91,25 @@ _FRAME_NOTES = {
 }
 
 _RECORD_FIELDS = (
+    RecordField("Completion acceptance — ACCEPTED / REJECTED", "Select one; rejected work remains held"),
     RecordField("Level", "Reading and accepted tolerance"),
     RecordField("Plumb", "Reading and accepted tolerance"),
     RecordField("Diagonal / square check", "Both diagonals or accepted check"),
-    RecordField("Interface attachment", "Compared with accepted case/interface detail"),
+    RecordField("Wall gaps", "Record locations and accepted disposition"),
+    RecordField("Accepted interface contact / restraint", "Compared with accepted cabinet case/interface detail"),
     RecordField("Tolerance / shim result", "Compared with accepted schedules"),
+    RecordField("Fastener count vs accepted schedule", "Actual count and accepted schedule count"),
     RecordField("Fastener witness record", "Compared with accepted structural schedule"),
+    RecordField("Cabinet restraint", "Compared with accepted cabinet case/interface detail"),
+    RecordField("Observed rough-in conflict — YES / NO", "Field observation only; not service-access approval"),
+    RecordField("FIELD release attachment ID", "Link to accepted pre-work FIELD record"),
+    RecordField("STRUCTURAL release attachment ID", "Link to accepted pre-work STRUCTURAL record"),
     RecordField("Deviations", "None, or attach accepted disposition"),
     RecordField("Handoff status", "Empty mounted cabinet; follow-on work held"),
     RecordField("Installer", "Printed name and signature"),
-    RecordField("Reviewer", "Printed name and signature"),
-    RecordField("Date", "YYYY-MM-DD"),
+    RecordField("Authorized reviewer role", "Role with acceptance authority"),
+    RecordField("Authorized reviewer signature", "Printed name and signature"),
+    RecordField("Acceptance date", "YYYY-MM-DD"),
 )
 
 
@@ -319,10 +349,9 @@ def _inventory_texts(project) -> tuple[str, ...]:
         f"Product reference: {mount.manufacturer} {mount.sku} vanity support, "
         f"selected record: {selected_revision} "
         f"({mount.specification_url.rsplit('/', 1)[-1]}); current confirmation "
-        f"target: {current_revision} ({current_filename}). Record the accepted "
-        "product revision/document ID before field work; manufacturer toeing "
-        "concept may be considered only if preserved by the accepted product "
-        "revision and structural schedule; it is not an instruction from this guide."
+        f"target: {current_revision} ({current_filename}) — confirmation target "
+        "only—not approved until recorded. Record the accepted product "
+        "revision/document ID before field work."
     )
     load_basis = (
         f"Model load comparison basis only—not allowable cabinet/installation "
@@ -388,6 +417,9 @@ def _layout_svg(project) -> str:
         + vanity.countertop_thickness_mm
     )
     bearing = vanity.bottom_elevation_mm + vanity.body_height_mm
+    front_datum_offset = (
+        model.section.site.wall.plane_origin_mm[1] - vanity.body_depth_mm
+    )
     supports = "".join(
         f'<g data-support-id="{escape(support.support_id, quote=True)}" data-axis-mm="{support.x_axis_mm:.1f}" '
         f'data-bearing-z-mm="{support.bearing_z_mm:.1f}" data-wall-y-mm="{support.wall_y_mm:.1f}" '
@@ -405,7 +437,8 @@ def _layout_svg(project) -> str:
         f'<text x="40" y="68">countertop top datum: {_field_dual(counter_top)} AFF</text>'
         '<line x1="35" y1="88" x2="485" y2="88" class="datum"/>'
         f'<text x="40" y="105">countertop-underside / bracket-arm datum: {_field_dual(bearing)} AFF</text>'
-        f'{supports}<text x="40" y="255">x = 0 at finished left end of assumed wall · wall plane y = {_field_dual(model.section.site.wall.plane_origin_mm[1])}</text>'
+        f'{supports}<text x="40" y="247">x = 0 at finished left end of assumed wall · wall plane y = {_field_dual(model.section.site.wall.plane_origin_mm[1])}</text>'
+        f'<text x="40" y="263">y = 0 at project datum {_field_dual(front_datum_offset)} in front of modeled vanity front · y increases toward wall</text>'
         f'<text x="310" y="118">{_field_dual(vanity.countertop_thickness_mm)} counter thickness</text></svg>'
     )
 
@@ -431,7 +464,6 @@ def _supports_svg(project) -> str:
 
 
 def _placement_svg(project) -> str:
-    vanity = project.model.section.vanity
     rough_ins = project.model.assumed_site.wastes + project.model.assumed_site.supplies
     rough_in_marks = "".join(
         f'<g data-rough-in="{escape(point.point_id, quote=True)}" '
@@ -451,9 +483,12 @@ def _placement_svg(project) -> str:
     return (
         '<svg viewBox="0 0 520 280" role="img" data-action-illustration="true">'
         '<title>Accepted-plan placement below and around countertop-support arms</title>'
+        '<rect x="48" y="35" width="424" height="205" class="placeholder"/>'
         f'{arms}{cabinet}{rough_in_marks}'
+        '<text x="260" y="18" text-anchor="middle">accepted-plan handling/support/restraint placeholder</text>'
+        '<text x="260" y="238" text-anchor="middle">protection / clearance · arm alignment · cabinet case/interface relationship</text>'
         '<text x="260" y="255" text-anchor="middle">owner-assumed rough-in conflict comparison only · not service-access approval</text>'
-        '<text x="260" y="271" text-anchor="middle">dynamic access remains separately held · follow accepted handling plan</text></svg>'
+        '<text x="260" y="271" text-anchor="middle">dynamic access remains separately held · follow accepted handling/support/restraint plan</text></svg>'
     )
 
 
@@ -461,11 +496,11 @@ def _restraint_svg(project) -> str:
     rail = project.model.part("rear_mounting_rail")
     return (
         '<svg viewBox="0 0 520 250" role="img" data-action-illustration="true">'
-        '<title>Accepted-detail placeholder and lateral-only rear rail</title>'
+        '<title>Accepted cabinet case/interface detail placeholder and lateral-only rear rail</title>'
         '<rect x="60" y="45" width="400" height="140" class="cabinet"/>'
         f'<rect x="75" y="75" width="370" height="22" class="rail" data-part-id="{escape(rail.part_id, quote=True)}"/>'
         '<rect x="145" y="115" width="230" height="45" class="placeholder"/>'
-        '<text x="260" y="143" text-anchor="middle">ACCEPTED CABINET-TO-BRACKET DETAIL</text>'
+        '<text x="260" y="143" text-anchor="middle">ACCEPTED CABINET CASE/INTERFACE DETAIL</text>'
         '<path d="M100 86 H420" class="lateral-arrow"/>'
         '<text x="260" y="215" text-anchor="middle">rear rail: positioning / lateral only · zero gravity credit</text></svg>'
     )
@@ -500,6 +535,7 @@ def _render_action(project, frame: ActionFrame, number: int) -> str:
         f'<article class="frame action" data-frame-id="{escape(frame.frame_id, quote=True)}">'
         f'<header><span class="step-number">{number}</span>'
         f'<span class="conditional">{_CONDITIONAL}</span></header>'
+        '<p class="scroll-cue">Swipe/scroll horizontally to inspect the full diagram</p>'
         f'<div class="svg-scroll">{_action_svg(project, frame.frame_id)}</div>'
         f'<p class="caption">{escape(frame.caption)}</p>'
         f'<aside class="why"><b>WHY</b> {escape(why.removeprefix("WHY "))}</aside>'
@@ -519,16 +555,64 @@ def _render_record(page) -> str:
 
 
 def _release_findings_html(project) -> str:
-    rows = "".join(
-        f'<article data-release-rule="{escape(finding.rule, quote=True)}" '
-        f'data-verdict="{escape(finding.verdict, quote=True)}">'
-        f'<b>{escape(finding.rule.rsplit(".", 1)[-1])}: '
-        f'{escape(finding.verdict)}</b> {escape(finding.message)}</article>'
-        for finding in (
-            project.report.by_rule(rule) for rule in _REQUIRED_RELEASE_RULES
+    groups = []
+    for phase, heading in (
+        ("PRE-WORK", "PRE-WORK GATES — required before empty-cabinet mounting"),
+        ("FOLLOW-ON", "FOLLOW-ON HOLDS — unresolved for later work"),
+    ):
+        rows = []
+        for rule, reader in _REQUIRED_RELEASE_RULES.items():
+            if reader.phase != phase:
+                continue
+            finding = project.report.by_rule(rule)
+            if finding.verdict == "FAIL":
+                status = (
+                    "PRE-WORK FAIL — STOP"
+                    if phase == "PRE-WORK"
+                    else "FOLLOW-ON FAIL — STOP BEFORE FOLLOW-ON WORK — not required for empty-cabinet mounting"
+                )
+            else:
+                status = (
+                    "PRE-WORK HOLD — release required before empty-cabinet mounting"
+                    if phase == "PRE-WORK"
+                    else "FOLLOW-ON HOLD — not required for empty-cabinet mounting"
+                )
+            copy = (
+                _drawer_release_reader_copy(project)
+                if rule == "double_vanity.release.drawer_derivation"
+                else reader.reader_copy
+            )
+            rows.append(
+                f'<article data-release-rule="{escape(rule, quote=True)}" '
+                f'data-verdict="{escape(finding.verdict, quote=True)}" '
+                f'data-release-phase="{phase}"><b>{escape(reader.label)} — '
+                f'{escape(status)}</b><span>{escape(copy)}</span></article>'
+            )
+        groups.append(
+            f'<h3>{escape(heading)}</h3><div class="release-group">'
+            f'{"".join(rows)}</div>'
         )
+    return f'<div class="release-findings">{"".join(groups)}</div>'
+
+
+def _drawer_release_reader_copy(project) -> str:
+    status = project.model.release.fabrication_status
+    if status == "HOLD_PRODUCT_GEOMETRY":
+        return (
+            "Drawer product geometry and static cuts are held. Runner machining, "
+            "travel, removal, and service access remain separately held for later work."
+        )
+    if status == "HOLD_FABRICATOR_ACCEPTANCE":
+        return (
+            "Static drawer geometry is prepared for review only; fabricator "
+            "acceptance pending. Runner machining, travel, removal, and service "
+            "access remain separately held for later work."
+        )
+    return (
+        "Recorded fabricator acceptance governs static drawer cuts only. Runner "
+        "machining, travel, removal, and service access remain separately held "
+        "for later work."
     )
-    return f'<div class="release-findings">{rows}</div>'
 
 
 def _prework_release_fields() -> str:
@@ -541,12 +625,15 @@ def _prework_release_fields() -> str:
         "STRUCTURAL Document revision / attachment IDs",
         "Accepted product revision / document ID",
         "Structural fastener schedule ID",
-        "Cabinet interface detail ID",
+        "Cabinet case/interface detail ID",
         "Tolerance / shim schedule ID",
         "Actual empty-case handling weight",
         "Accepted lift / temporary-support / restraint plan",
         "Equipment / crew",
         "Attachment / removal / handoff criteria",
+        "Wall construction",
+        "Framing / blocking verification",
+        "Utilities / rough-in verification",
     )
     rows = "".join(f'<p>{escape(field)}: __________________</p>' for field in fields)
     return f'<div class="hold-fields">{rows}</div>'
@@ -607,7 +694,28 @@ def _render_installation_manual(project, manual: ConsumerManual) -> str:
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{escape(manual.title)}</title><style>
-@page{{size:Letter;margin:0}}*{{box-sizing:border-box}}body{{margin:0;background:#d7d7d7;color:#111;font:14px/1.35 Arial,sans-serif}}.sheet{{position:relative;width:8.5in;min-height:11in;margin:20px auto;padding:.5in;background:white;page-break-after:always;overflow:hidden}}h1{{font-size:34px;margin:.12in 0}}h2{{font-size:25px;margin:.05in 0 .22in}}.eyebrow,.conditional{{font-weight:800;letter-spacing:.04em}}.eyebrow{{color:#a21c13}}.frame{{break-inside:avoid}}.frame{{border:4px solid #111;padding:.18in;margin-bottom:.18in}}.frame header{{display:flex;align-items:center;gap:.14in}}.step-number{{display:inline-grid;place-items:center;width:.42in;height:.42in;border:3px solid;border-radius:50%;font-size:22px;font-weight:bold}}.conditional{{font-size:12px;color:#a21c13}}svg{{display:block;width:100%;max-height:2.1in;margin:.06in 0;border:2px solid #111;background:#faf8f1}}svg text{{font:12px Arial,sans-serif;fill:#111}}.cabinet,.placeholder{{fill:none;stroke:#111;stroke-width:4}}.case-member,.wall,.datum,.axis,.bracket,.person,.rail,.level,.plumb,.diagonal{{fill:none;stroke:#111;stroke-width:4}}.axis{{stroke-dasharray:7 5;stroke:#a21c13}}.datum{{stroke:#23638c}}.bracket{{stroke-width:7}}.load-arrow,.lift-arrow,.lateral-arrow{{fill:none;stroke:#a21c13;stroke-width:5}}.rail{{fill:#ddd}}.placeholder{{stroke-dasharray:8 6}}.service-envelope{{fill:#4ba3c733;stroke:#23638c;stroke-width:2;stroke-dasharray:6 4}}.drawer-clearance{{fill:none;stroke:#8b5a2b;stroke-width:3}}.caption{{font-size:15px;font-weight:700}}aside{{margin-top:5px;padding:4px 7px;border-left:6px solid #23638c}}aside.stop{{border-color:#a21c13;background:#fff1ef}}.inventory-row{{border:2px solid #111;padding:12px;font-size:16px}}.hold{{margin-top:.12in;border-width:7px}}.release-findings{{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;font-size:9px}}.release-findings article{{border:1px solid #777;padding:3px}}.precedence{{font-size:10px;margin:4px 0}}.hold-fields{{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}}.hold-fields p{{padding:3px;border-bottom:1px solid #777;font-size:9px;margin:0;min-height:.28in}}.record-grid{{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}}.record-row{{display:grid;grid-template-columns:1.35in 1fr;gap:6px;border-bottom:1px solid #777;padding:5px 0;min-height:.65in}}.record-row span{{font-size:10px;color:#444}}.record-row i{{grid-column:1/-1;border-bottom:1px solid #aaa}}.final-stop{{margin-top:.12in;padding:.1in;border:5px solid #a21c13;font-weight:900;font-size:16px}}nav a{{display:inline-block;margin-right:12px;color:#134f72}}footer{{position:absolute;left:.5in;right:.5in;bottom:.25in;border-top:1px solid;padding-top:5px;font-size:11px}}@media(max-width:850px){{.sheet{{width:100%;min-height:auto;margin:0 0 12px;padding:20px}}footer{{position:static;margin-top:20px}}.record-grid,.hold-fields,.release-findings{{grid-template-columns:1fr}}.svg-scroll{{overflow-x:auto}}.svg-scroll svg{{min-width:520px}}}}@media print{{body{{background:white}}.sheet{{margin:0;width:8.5in;height:11in;min-height:11in}}.record-grid{{grid-template-columns:1fr 1fr}}.svg-scroll{{overflow:visible}}.svg-scroll svg{{min-width:0}}.frame.action{{padding:.1in;margin-bottom:.1in;font-size:12px;line-height:1.2}}.frame.action svg{{max-height:1.65in}}.frame.action .caption{{font-size:13px;margin:3px 0}}.frame.action aside{{margin-top:2px;padding:2px 5px;font-size:10.5px}}footer{{position:absolute;margin-top:0}}}}
+@page{{size:Letter;margin:0}}
+*{{box-sizing:border-box}}
+body{{margin:0;background:#d7d7d7;color:#111;font:14px/1.35 Arial,sans-serif}}
+.sheet{{position:relative;width:8.5in;min-height:11in;margin:20px auto;padding:.5in;background:white;page-break-after:always;overflow:hidden}}
+h1{{font-size:34px;margin:.12in 0}}h2{{font-size:25px;margin:.05in 0 .22in}}h3{{font-size:13px;margin:4px 0 2px}}
+.eyebrow,.conditional{{font-weight:800;letter-spacing:.04em}}.eyebrow{{color:#a21c13}}
+.frame{{break-inside:avoid;border:4px solid #111;padding:.18in;margin-bottom:.18in}}.frame header{{display:flex;align-items:center;gap:.14in}}
+.step-number{{display:inline-grid;place-items:center;width:.42in;height:.42in;border:3px solid;border-radius:50%;font-size:22px;font-weight:bold}}
+.conditional{{font-size:12px;color:#a21c13}}.scroll-cue{{display:none;margin:3px 0;font-size:11px;font-weight:700;color:#23638c}}
+svg{{display:block;width:100%;max-height:2.1in;margin:.06in 0;border:2px solid #111;background:#faf8f1}}svg text{{font:12px Arial,sans-serif;fill:#111}}
+.cabinet,.placeholder{{fill:none;stroke:#111;stroke-width:4}}.case-member,.wall,.datum,.axis,.bracket,.person,.rail,.level,.plumb,.diagonal{{fill:none;stroke:#111;stroke-width:4}}
+.axis{{stroke-dasharray:7 5;stroke:#a21c13}}.datum{{stroke:#23638c}}.bracket{{stroke-width:7}}.load-arrow,.lift-arrow,.lateral-arrow{{fill:none;stroke:#a21c13;stroke-width:5}}
+.rail{{fill:#ddd}}.placeholder{{stroke-dasharray:8 6}}.service-envelope{{fill:#4ba3c733;stroke:#23638c;stroke-width:2;stroke-dasharray:6 4}}.drawer-clearance{{fill:none;stroke:#8b5a2b;stroke-width:3}}
+.caption{{font-size:15px;font-weight:700}}aside{{margin-top:5px;padding:4px 7px;border-left:6px solid #23638c}}aside.stop{{border-color:#a21c13;background:#fff1ef}}
+.inventory-row{{border:2px solid #111;padding:12px;font-size:16px}}.hold{{margin-top:.12in;border-width:7px}}
+.release-findings{{display:grid;grid-template-columns:1fr;gap:3px;font-size:10px}}.release-group{{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px}}.release-findings article{{display:grid;gap:2px;border:1px solid #777;padding:3px}}
+.precedence{{font-size:10px;margin:4px 0}}.hold-fields{{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}}.hold-fields p{{padding:3px;border-bottom:1px solid #777;font-size:10px;margin:0;min-height:.3in}}
+.record-grid{{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}}.record-row{{display:grid;grid-template-columns:1.55in 1fr;gap:6px;border-bottom:1px solid #777;padding:5px 0;min-height:.7in}}
+.record-row span{{font-size:10px;color:#444}}.record-row i{{grid-column:1/-1;border-bottom:1px solid #aaa}}.final-stop{{margin-top:.12in;padding:.1in;border:5px solid #a21c13;font-weight:900;font-size:16px}}
+nav a{{display:inline-block;margin-right:12px;color:#134f72}}footer{{position:absolute;left:.5in;right:.5in;bottom:.25in;border-top:1px solid;padding-top:5px;font-size:11px}}
+@media(max-width:850px){{.sheet{{width:100%;min-height:auto;margin:0 0 12px;padding:20px}}footer{{position:static;margin-top:20px}}.record-grid,.hold-fields,.release-group{{grid-template-columns:1fr}}.scroll-cue{{display:block}}.svg-scroll{{overflow-x:auto}}.svg-scroll svg{{min-width:520px}}}}
+@media print{{body{{background:white}}.sheet{{margin:0;width:8.5in;height:11in;min-height:11in;overflow:visible}}.record-grid{{grid-template-columns:1fr 1fr}}.hold-fields,.release-group{{grid-template-columns:1fr 1fr}}.scroll-cue{{display:none}}.svg-scroll{{overflow:visible}}.svg-scroll svg{{min-width:0}}.frame.action{{padding:.1in;margin-bottom:.1in;font-size:12px;line-height:1.2}}.frame.action svg{{max-height:1.65in}}.frame.action .caption{{font-size:13px;margin:3px 0}}.frame.action aside{{margin-top:2px;padding:2px 5px;font-size:10.5px}}footer{{position:absolute;margin-top:0}}}}
 </style></head><body>{''.join(sheets)}</body></html>'''
 
 

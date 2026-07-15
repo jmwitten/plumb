@@ -129,11 +129,15 @@ class ActionFrame:
 def _letters_sequence():
     """A, B, ..., Z, AA, AB, ... — deterministic and unbounded."""
     import string
-    for char in string.ascii_uppercase:
-        yield char
-    for first in string.ascii_uppercase:
-        for second in string.ascii_uppercase:
-            yield first + second
+    index = 1
+    while True:
+        value = index
+        letters = []
+        while value:
+            value, remainder = divmod(value - 1, 26)
+            letters.append(string.ascii_uppercase[remainder])
+        yield "".join(reversed(letters))
+        index += 1
 
 
 def assign_hardware_letters(items, *, labeler) -> tuple[HardwareLetter, ...]:

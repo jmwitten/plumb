@@ -6,7 +6,7 @@ Date: 2026-07-15
 
 Add a fifth, standalone document to the DV72 package that guides a field installer from an unverified wall through a securely mounted, empty cabinet. The guide stops before countertop placement, sink installation, plumbing connections, drawer installation, loading, or commissioning.
 
-The guide is conditional coordination information until its named field, structural, product, and trade release gates are closed. It must never imply that the current model proves the wall connection, Rakks reaction distribution, or cabinet-to-bracket attachment.
+The guide is conditional coordination information until its named field, structural, product, and trade release gates are closed. It must never imply that the current model proves the wall connection, Rakks reaction distribution, or cabinet case/interface attachment.
 
 ## Reader and format
 
@@ -28,13 +28,17 @@ The guide remains useful on a phone, but wide technical schedules stay in the li
 The guide is limited to eight composed Letter pages and 1,500 instructional words.
 
 1. **Cover and outcome.** Identify DV72, show the empty mounted-cabinet endpoint, state the installation hold, and link the other four documents.
-2. **People, tools, products, and boundaries.** Identify the minimum crew, wall-verification tools, temporary support, selected Rakks product reference, and excluded work. Unselected structural fasteners and cabinet-to-bracket hardware appear as release fields, never recommendations.
-3. **STOP — release and field record.** Require recorded wall construction, framing/blocking, utilities, bracket revision, structural fastener schedule, cabinet-to-bracket detail, and responsible approvals before proceeding. No action illustration may precede this page.
+2. **People, tools, products, and boundaries.** Identify accepted-plan fields for crew, equipment, handling, support, and restraint; wall-verification tools; the selected Rakks product reference; and excluded work. Unselected structural fasteners and cabinet case/interface hardware appear as release fields, never recommendations.
+3. **STOP — release and field record.** Require recorded wall construction, framing/blocking, utilities, bracket revision, structural fastener schedule, cabinet case/interface detail, and responsible approvals before proceeding. No action illustration may precede this page.
 4. **Lay out the wall.** Establish the model-derived finished-counter datum and the left-end, center-divider, and right-end support axes. Compare field measurements with the owner-assumed model and stop on disagreement.
-5. **Install and verify the three supports.** Show the Rakks wall leg, horizontal arm, diagonal load path, manufacturer pilot-hole/toeing concept, and temporary support. All fastener instructions remain subordinate to the accepted structural schedule. Verify count, spacing, projection, level, wall contact, utilities, and unobstructed service envelopes.
-6. **Stage and place the empty cabinet.** Require drawers, countertop, sinks, and loose components to be absent. Show the lift, three support planes, end/divider alignment, protection, and temporary restraint. Stop if the cabinet rocks, bridges a support, or conflicts with plumbing/drawer envelopes.
-7. **Restrain the cabinet.** Apply only the accepted cabinet-to-Rakks detail. Show the continuous rear rail as positioning/lateral restraint with zero gravity credit. Do not depict or name invented screws, hole patterns, or connection capacity.
-8. **Mounted-cabinet inspection and handoff.** Record level, plumb, diagonal/square check, support contact, wall gaps, fastener witness marks/counts against the approved schedule, cabinet restraint, service access, deviations, installer, reviewer, and date. End with a hard stop before countertop, sinks, plumbing, drawers, loading, or use.
+5. **Install and verify the three supports.** Show the Rakks wall leg, horizontal arm, diagonal load path, and schedule-controlled fastener-location placeholder. All product and fastener instructions remain subordinate to accepted product and structural records. Verify count, spacing, projection, level, wall plane, backing, utilities, and rough-in observations without granting service-access approval.
+6. **Stage and place the empty cabinet.** Require drawers, countertop, sinks, and loose components to be absent. Show an accepted handling/support/restraint-plan placeholder, protection/clearance, arm alignment, and the case relationship below and around the countertop-support arms. Cabinet mounting is governed by the accepted cabinet case/interface detail. Stop if the accepted plan cannot be followed or an observed rough-in conflict differs from its accepted record.
+7. **Restrain the cabinet.** Apply only the accepted cabinet case/interface detail. Show the continuous rear rail as positioning/lateral restraint with zero gravity credit. Do not depict or name invented screws, hole patterns, temporary restraints, or connection capacity.
+8. **Mounted-cabinet inspection and handoff.** Record completion acceptance, level, plumb, diagonal/square check, wall gaps, accepted-interface contact/restraint, fastener witness marks and count against the accepted schedule, cabinet restraint, observed rough-in conflict without service-access approval, deviations, release-attachment links, installer, authorized reviewer role/signature, and date. End with a hard stop before countertop, sinks, plumbing, drawers, loading, or use.
+
+## Safety correction supersession
+
+This design supersedes the earlier two-person-lift, temporary-support, three-support-plane, bottom-bearing, and support-contact wording. The typed Rakks arms are at the countertop underside, not at the cabinet bottom, and the actual empty-case handling method, equipment, crew, temporary support, and restraint remain unselected. Placement therefore follows only the accepted handling/support/restraint plan; the case passes below and around the countertop-support arms; and mounting/restraint follows only the accepted cabinet case/interface detail. The required illustration may show the accepted-plan placeholder, protection/clearance, arm alignment, and case relationship, but it must not invent people, equipment, connections, or cabinet-bearing planes.
 
 ## Model and authority integration
 
@@ -76,7 +80,7 @@ Tests must establish:
 - held authority appears on the cover and every post-gate action is conditional;
 - three model-derived Rakks locations align with left end, center divider, and right end;
 - the rear rail receives zero gravity credit;
-- no cabinet-to-bracket or structural fastener is invented;
+- no cabinet case/interface or structural fastener is invented;
 - dimensions and product facts respond to typed-model mutations;
 - no machine identifiers, `file://` dependencies, missing assets, or external runtime assets;
 - headless-browser PDF page count matches composed sheet count;

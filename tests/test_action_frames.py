@@ -133,6 +133,20 @@ class TestHardwareLettering:
         assert letters[26].letter == "AA"
         assert letters[27].letter == "AB"
 
+    def test_703rd_identity_gets_aaa(self):
+        def labeler(kind, product_id, quantity_unit):
+            return (f"Reader {kind}", "size", "part")
+
+        items = tuple(
+            _Item(f"hw.{i:03d}", f"kind_{i:03d}", f"prod_{i:03d}@1", 1)
+            for i in range(703)
+        )
+
+        letters = assign_hardware_letters(items, labeler=labeler)
+
+        assert letters[701].letter == "ZZ"
+        assert letters[702].letter == "AAA"
+
 
 class TestCaptionValidation:
     def test_accepts_short_imperative_with_allowed_numbers(self):

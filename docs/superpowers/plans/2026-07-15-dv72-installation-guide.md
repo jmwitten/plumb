@@ -12,7 +12,7 @@
 
 - End with an empty cabinet securely mounted; exclude countertop, sinks, plumbing, drawers, loading, and commissioning.
 - Keep `INSTALLATION HOLD`; create no structural, field, product, or trade PASS.
-- Leave wall fasteners and cabinet-to-bracket hardware as blank release fields.
+- Leave wall fasteners and cabinet case/interface hardware as blank release fields.
 - Give the rear rail zero gravity credit; it is positioning/lateral restraint only.
 - Render dimensions, products, support positions, and authority from typed facts.
 - Limit output to eight Letter pages and 1,500 visible instructional words.
@@ -155,7 +155,7 @@ def test_guide_does_not_invent_connection_hardware(project):
         project, related_documents=(),
     )
     assert "Structural fastener schedule: __________________" in html
-    assert "Cabinet-to-bracket detail: __________________" in html
+    assert "Cabinet case/interface detail: __________________" in html
     assert "connection capacity remains unproved" in html
 
 
@@ -211,9 +211,9 @@ def project_double_vanity_installation_manual(
             "INSTALLATION HOLD — FIELD/STRUCTURAL RELEASE REQUIRED"
         ),
         cover_caption=(
-            "Outcome: the empty cabinet is level, plumb, continuously "
-            "supported at three accepted support planes, restrained "
-            "against movement, recorded, and held before follow-on work."
+            "Outcome: the empty cabinet is mounted and restrained through the "
+            "accepted cabinet case/interface detail, recorded, and held before "
+            "countertop, fixtures, plumbing, drawers, loading, or use."
         ),
         related_documents=related_documents,
     )
@@ -251,9 +251,11 @@ Render one `section.sheet` per composed page. Each post-gate frame must use:
 </article>
 ```
 
-Required typed SVGs: empty mounted-cabinet cover; finished-floor/counter datum and three support axes; Rakks horizontal arm/diagonal/wall leg/load path with schedule-controlled fastener locations; two-person empty-cabinet placement; accepted-detail placeholder plus lateral-only rear rail; and final level/plumb/support-contact inspection.
+Required typed SVGs: empty mounted-cabinet cover; finished-floor/countertop-top/countertop-underside, x-origin, y-origin, wall-plane, and three support-axis datums; Rakks horizontal arm/diagonal/wall-leg load path with schedule-controlled fastener-location placeholder; accepted handling/support/restraint-plan placeholder with protection/clearance, arm alignment, and the empty case below/around the countertop-support arms; accepted cabinet case/interface-detail placeholder plus lateral-only rear rail; and final level/plumb/square/interface-restraint inspection.
 
-Do not render a selected structural screw, cabinet-to-bracket screw, countertop, sinks, installed plumbing, or installed drawers.
+Do not render a selected structural screw, cabinet case/interface screw, two-person lift, equipment, temporary restraint, three-plane cabinet bearing, countertop, sinks, installed plumbing, or installed drawers.
+
+**Approved safety correction:** this supersedes the earlier two-person-placement and three-support-plane wording. The typed support arms bear at the countertop underside rather than the cabinet bottom, while actual case handling/support/restraint remains unselected. Placement must follow the accepted handling/support/restraint plan, and cabinet mounting/restraint must follow the accepted cabinet case/interface detail; no people, equipment, connection, temporary-restraint, or bottom-bearing claim may be invented.
 
 - [ ] **Step 5: Verify GREEN and commit**
 
