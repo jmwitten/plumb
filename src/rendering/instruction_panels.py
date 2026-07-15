@@ -83,13 +83,19 @@ class DiagramPrimitive:
 
 @dataclass(frozen=True)
 class OperationDiagram:
-    """Typed, model-derived 2D operation view rendered without raw SVG input."""
+    """Typed, model-derived 2D operation view rendered without raw SVG input.
+
+    ``view_height`` crops the drawing's vertical extent: a wide plan whose
+    marks stop at y=45 declares 45 so renderers scale it to full width
+    instead of letterboxing it inside the default square canvas.
+    """
 
     diagram_id: str
     title: str
     caption: str
     primitives: tuple[DiagramPrimitive, ...]
     source_refs: tuple[str, ...]
+    view_height: float = 100.0
 
 
 @dataclass(frozen=True)

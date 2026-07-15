@@ -103,24 +103,52 @@ def _uniform(values, *, what: str):
 # Generic machining plan diagram (the toe/attachment pattern, generalized)
 
 
-def _plan_frame(item, *, pad: float = 8.0, top: float = 12.0):
-    """True-proportion plot box for one cut-list blank (plan view)."""
-    length = float(item.length_mm)
-    width = float(item.width_mm)
-    box_w = 100.0 - 2.0 * pad
-    box_h = box_w * width / length
-    max_h = 100.0 - top - 26.0  # room for note rows under the box
-    if box_h > max_h:
-        box_w *= max_h / box_h
-        box_h = max_h
+_PLAN_BOUNDS_TOLERANCE_MM = 1.0
 
-    def plot(x_mm: float, y_mm: float) -> tuple[float, float]:
-        return (
-            pad + box_w * x_mm / length,
-            top + box_h * (1.0 - y_mm / width),
-        )
 
-    return plot, box_w, box_h, pad, top
+def _axis_mapping(rows):
+    """Read the rows' typed coordinate system into a plotting plane.
+
+    Every machining row declares its +X/+Y axes against the cut-list blank
+    (``+X=rearward/cut-list width; +Y=up/cut-list length`` and similar).
+    The plan diagram plots the declared "up" axis vertically so the drawn
+    blank matches the caption's physical words, and refuses coordinate
+    systems it cannot read — a new convention must fail loudly, never plot
+    garbage.
+    """
+    systems = {row.coordinate_system for row in rows}
+    if len(systems) != 1:
+        raise ValueError(
+            "one plan diagram cannot mix machining coordinate systems: "
+            f"{sorted(systems)!r}")
+    system = systems.pop()
+    clauses = {}
+    for clause in system.split(";"):
+        clause = clause.strip()
+        if clause.startswith("+X="):
+            clauses["X"] = clause
+        elif clause.startswith("+Y="):
+            clauses["Y"] = clause
+    if "X" not in clauses or "Y" not in clauses:
+        raise ValueError(
+            f"machining coordinate system {system!r} does not declare the "
+            "+X/+Y axes the plan diagram needs")
+
+    def blank_dim(clause: str) -> str:
+        if "cut-list length" in clause:
+            return "length"
+        if "cut-list width" in clause:
+            return "width"
+        raise ValueError(
+            f"axis clause {clause!r} does not name a cut-list dimension")
+
+    x_dim = blank_dim(clauses["X"])
+    y_dim = blank_dim(clauses["Y"])
+    if x_dim == y_dim:
+        raise ValueError(
+            f"coordinate system {system!r} maps both axes to the blank "
+            f"{x_dim}; the plan diagram cannot orient it")
+    return x_dim, y_dim, "up" in clauses["X"]
 
 
 def _machining_plan_diagram(
@@ -139,7 +167,10 @@ def _machining_plan_diagram(
     Everything drawn comes from the machining schedule; every plotted mark
     keeps the compiled coordinate in ``model_point_mm`` and cites its row's
     ``feature_id``, so the illustration cannot become a second source of
-    truth. ``notes`` are caller-typed dimension rows printed under the box.
+    truth. Axis orientation is read from the rows' typed coordinate
+    system, and every mark is bounds-checked against the blank so a
+    convention mismatch fails the build instead of drawing off the part.
+    ``notes`` are caller-typed dimension rows printed under the box.
     """
     item = _cut_items(project)[part_id]
     rows = tuple(row for row in project.model.machining
@@ -148,30 +179,69 @@ def _machining_plan_diagram(
         raise ValueError(
             f"cutting-guide diagram {diagram_id!r} has no machining rows of "
             f"kinds {kinds!r} on part {part_id!r}")
-    plot, box_w, box_h, pad, top = _plan_frame(item)
-    length = float(item.length_mm)
-    width = float(item.width_mm)
+    x_dim, y_dim, x_is_vertical = _axis_mapping(rows)
+    dims = {"length": float(item.length_mm), "width": float(item.width_mm)}
+    x_extent, y_extent = dims[x_dim], dims[y_dim]
+    if x_is_vertical:
+        h_extent, v_extent = y_extent, x_extent
+
+        def to_plane(x_mm: float, y_mm: float) -> tuple[float, float]:
+            return (y_mm, x_mm)
+    else:
+        h_extent, v_extent = x_extent, y_extent
+
+        def to_plane(x_mm: float, y_mm: float) -> tuple[float, float]:
+            return (x_mm, y_mm)
+
+    def check_bounds(x_mm: float, y_mm: float, feature_id: str) -> None:
+        tol = _PLAN_BOUNDS_TOLERANCE_MM
+        if not (-tol <= x_mm <= x_extent + tol
+                and -tol <= y_mm <= y_extent + tol):
+            raise ValueError(
+                f"machining row {feature_id!r} plots ({x_mm:g}, {y_mm:g}) "
+                f"mm outside the {x_extent:g} x {y_extent:g} mm blank; its "
+                "coordinate system does not match the plan mapping")
+
+    pad, top = 8.0, 12.0
+    box_w = 100.0 - 2.0 * pad
+    box_h = box_w * v_extent / h_extent
+    max_h = 100.0 - top - 26.0  # room for note rows under the box
+    if box_h > max_h:
+        box_w *= max_h / box_h
+        box_h = max_h
+
+    def plot(x_mm: float, y_mm: float) -> tuple[float, float]:
+        h_mm, v_mm = to_plane(x_mm, y_mm)
+        h_mm = min(max(h_mm, 0.0), h_extent)
+        v_mm = min(max(v_mm, 0.0), v_extent)
+        return (
+            pad + box_w * h_mm / h_extent,
+            top + box_h * (1.0 - v_mm / v_extent),
+        )
+
+    def plot_rect(x0: float, y0: float, x1: float, y1: float):
+        (ha, va), (hb, vb) = plot(x0, y0), plot(x1, y1)
+        left, right = min(ha, hb), max(ha, hb)
+        upper, lower = min(va, vb), max(va, vb)
+        return left, upper, right - left, lower - upper
 
     primitives = [
         _mark("rect", pad, top, box_w, box_h, role="prior",
               label=outline_label),
-        _mark("text", pad + 2, top + box_h + 4.5, role="datum",
-              label="MEASURE FROM THIS CORNER"),
+        _mark("text", 50.0, top + box_h + 4.5, role="datum",
+              label="MEASURE FROM THE LOWER-LEFT CORNER"),
     ]
     source_refs = []
     for row in rows:
         source_refs.append(row.feature_id)
         if row.width_mm > 0 and row.length_mm > 0 and row.diameter_mm == 0:
-            # Groove band running along the blank's length axis.
-            if row.location_mm[0] + row.length_mm > length + 1e-6:
-                raise ValueError(
-                    f"groove row {row.feature_id!r} does not run along the "
-                    "blank length; the plan diagram cannot draw it honestly")
-            y_far = min(row.location_mm[1] + row.width_mm, width)
-            a = plot(row.location_mm[0], y_far)
-            b = plot(row.location_mm[0] + row.length_mm, row.location_mm[1])
+            # Groove band running along the blank's +X machining axis.
+            x0, y0 = row.location_mm[0], row.location_mm[1]
+            x1, y1 = x0 + row.length_mm, y0 + row.width_mm
+            check_bounds(x0, y0, row.feature_id)
+            check_bounds(x1, y1, row.feature_id)
             primitives.append(_mark(
-                "rect", a[0], a[1], b[0] - a[0], b[1] - a[1], role="groove",
+                "rect", *plot_rect(x0, y0, x1, y1), role="groove",
                 label=(f"Groove {row.width_mm:g} mm wide x "
                        f"{row.depth_mm:g} mm deep"),
                 model_point_mm=tuple(row.location_mm),
@@ -179,10 +249,12 @@ def _machining_plan_diagram(
             ))
         elif row.width_mm > 0 and row.diameter_mm == 0:
             # Corner notch on the bottom edge of the blank.
-            a = plot(row.location_mm[0], row.depth_mm)
-            b = plot(row.location_mm[0] + row.width_mm, 0.0)
+            x0, y0 = row.location_mm[0], 0.0
+            x1, y1 = x0 + row.width_mm, row.depth_mm
+            check_bounds(x0, y0, row.feature_id)
+            check_bounds(x1, y1, row.feature_id)
             primitives.append(_mark(
-                "rect", a[0], a[1], b[0] - a[0], b[1] - a[1], role="hold",
+                "rect", *plot_rect(x0, y0, x1, y1), role="hold",
                 label=(f"Notch {row.width_mm:g} x {row.depth_mm:g} mm"),
                 model_point_mm=tuple(row.location_mm),
                 fact_ref=row.feature_id,
@@ -197,6 +269,7 @@ def _machining_plan_diagram(
                     row.location_mm[1] + (offset if row.pitch_axis == "Y"
                                           else 0.0),
                 )
+                check_bounds(point[0], point[1], row.feature_id)
                 px, py = plot(*point)
                 primitives.append(_mark(
                     "circle", px, py, 1.5, role="station",
@@ -207,14 +280,16 @@ def _machining_plan_diagram(
                 ))
     for index, note in enumerate(notes):
         primitives.append(_mark(
-            "text", pad + 2, top + box_h + 9.0 + 4.5 * index, role="datum",
+            "text", 50.0, top + box_h + 9.0 + 4.5 * index, role="datum",
             label=note))
+    view_height = top + box_h + 9.0 + 4.5 * max(len(notes), 1) + 2.0
     return OperationDiagram(
         diagram_id=diagram_id,
         title=title,
         caption=caption,
         primitives=tuple(primitives),
         source_refs=tuple(dict.fromkeys(source_refs)),
+        view_height=min(view_height, 100.0),
     )
 
 
@@ -565,20 +640,31 @@ def _step_diagrams(project) -> dict[str, tuple[OperationDiagram, ...]]:
         "fab.drawer_box_joinery": (_box_joinery_diagram(project),),
         "fab.drawer_rear_preparation": (_rear_prep_diagram(project),),
         "fab.runner_fixing": (_runner_stations_diagram(project),),
-        "fab.fronts_and_pulls": (_box_front_holes_diagram(project),
-                                 _pull_bore_diagram(project)),
-        "fab.joinery_step_drill": (_end_panel_joinery_diagram(project),
-                                   _toe_rail_joinery_diagram(project)),
+        "fab.fronts_and_pulls#box_fronts": (
+            _box_front_holes_diagram(project),),
+        "fab.fronts_and_pulls#pulls": (_pull_bore_diagram(project),),
+        "fab.joinery_step_drill#ends": (
+            _end_panel_joinery_diagram(project),),
+        "fab.joinery_step_drill#toe_rails": (
+            _toe_rail_joinery_diagram(project),),
     }
 
 
+def _machined_parts(project, *kinds) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(
+        row.part_id for row in project.model.machining if row.kind in kinds))
+
+
 def cutting_panels_manual(project) -> InstructionManual:
-    """One panel per released ``fab.*`` work step, in phase order.
+    """One panel per builder scene over the released ``fab.*`` steps.
 
     Fabrication steps carry no CPG placement events (nothing is placed
     yet), so ``source_events`` is empty and frame ownership holds
     trivially; the honest content is the step text, the typed diagrams,
-    and the affected-part focus that drives each frame's scene.
+    and the affected-part focus that drives each frame's scene. A step
+    that decomposes into two distinct builder actions on different parts
+    (fronts vs. pulls, end panels vs. toe rails) gets one panel per
+    action, so neither scene occludes the parts actually being machined.
     """
     ids = _assembly_ids(project)
     fabricated = tuple(
@@ -586,10 +672,29 @@ def cutting_panels_manual(project) -> InstructionManual:
     related_of = {item.system_id: item.related_parts
                   for item in project.artifacts.hardware_schedule}
     diagrams = _step_diagrams(project)
+    # step-id -> ((panel-suffix, machined model part ids), ...); the parts
+    # come from the machining schedule, never from a hand-kept list.
+    splits = {
+        "fab.fronts_and_pulls": (
+            ("box_fronts",
+             _machined_parts(project, "applied_front_attachment")),
+            ("pulls", _machined_parts(project, "pull_bore")),
+        ),
+        "fab.joinery_step_drill": (
+            ("ends", tuple(
+                part_id for part_id in
+                _machined_parts(project, "confirmat_step_drill")
+                if part_id.rsplit(".", 1)[-1].endswith("_end"))),
+            ("toe_rails", tuple(
+                part_id for part_id in
+                _machined_parts(project, "confirmat_step_drill")
+                if not part_id.rsplit(".", 1)[-1].endswith("_end"))),
+        ),
+    }
     panels = []
     steps = sorted(project.artifacts.fabrication_steps,
                    key=lambda step: step.phase)
-    for index, step in enumerate(steps, start=1):
+    for step in steps:
         title = _STEP_TITLES.get(step.step_id)
         if title is None:
             raise ValueError(
@@ -604,24 +709,46 @@ def cutting_panels_manual(project) -> InstructionManual:
                 # highlights the modeled parts the schedule relates it to.
                 affected.extend(pid for pid in related_of[part_id]
                                 if pid in ids)
-        focus = tuple(dict.fromkeys(ids[part_id] for part_id in affected))
-        if not focus:
-            raise ValueError(
-                f"fabrication step {step.step_id!r} affects no compiled "
-                "parts; the cutting guide cannot illustrate it")
-        panels.append(InstructionPanel(
-            index=index,
-            action="machine",
-            title=title,
-            reader_step_indexes=(index - 1,),
-            source_events=(),
-            visible_part_ids=fabricated,
-            arrival_part_ids=(),
-            focus_part_ids=focus,
-            instructions=(step.instruction,),
-            diagrams=diagrams.get(step.step_id, ()),
-            content_key=step.step_id,
-        ))
+        affected = tuple(dict.fromkeys(affected))
+        if step.step_id in splits:
+            scenes = tuple(
+                (f"{step.step_id}#{suffix}", parts)
+                for suffix, parts in splits[step.step_id])
+            covered = {pid for _key, parts in scenes for pid in parts}
+            if covered != set(affected):
+                raise ValueError(
+                    f"panel split for {step.step_id!r} does not cover the "
+                    "step's affected parts exactly; the machining schedule "
+                    f"and the release disagree: {sorted(covered)!r} vs "
+                    f"{sorted(affected)!r}")
+        else:
+            scenes = ((step.step_id, affected),)
+        for content_key, parts in scenes:
+            focus = tuple(dict.fromkeys(ids[part_id] for part_id in parts))
+            if not focus:
+                raise ValueError(
+                    f"fabrication scene {content_key!r} shows no compiled "
+                    "parts; the cutting guide cannot illustrate it")
+            # Machining scenes show only the parts being worked, at their
+            # compiled positions — inside a closed cabinet the drawer
+            # parts would be occluded and the highlight would point at
+            # hidden faces. The two whole-kit steps keep every part.
+            whole_kit = step.step_id in ("fab.verify_material",
+                                         "fab.breakdown")
+            panels.append(InstructionPanel(
+                index=len(panels) + 1,
+                action="machine",
+                title=title,
+                reader_step_indexes=(len(panels),),
+                source_events=(),
+                visible_part_ids=fabricated if whole_kit else focus,
+                arrival_part_ids=(),
+                focus_part_ids=focus,
+                instructions=(step.instruction,),
+                diagrams=diagrams.get(content_key,
+                                      diagrams.get(step.step_id, ())),
+                content_key=content_key,
+            ))
     return InstructionManual(
         title=f"{project.project_doc.name} — Cutting Guide",
         basename="frameless_three_drawer_40_cutting_guide.html",
@@ -791,6 +918,8 @@ def cutting_action_frames(
             owned_event_keys=(),
             tool="Straightedge and a marking pencil",
             allowed_numbers=_nums(group_count),
+            # The scene shows the whole kit; the wood list is the key.
+            show_picture_key=False,
         ),
         FrameSpec(
             frame_id="cut.breakdown.frame",
@@ -808,6 +937,7 @@ def cutting_action_frames(
                 "A size written with ≈ is not on a tape mark: cut to "
                 "the exact millimeter value printed beside it."),
             allowed_numbers=_nums(part_count),
+            show_picture_key=False,
         ),
         FrameSpec(
             frame_id="cut.back_grooves.frame",
@@ -935,10 +1065,14 @@ def cutting_action_frames(
             tool="Fine-tooth saw and a deburring file",
             allowed_numbers=_nums(drawers, f"{rack_len:.1f}",
                                   f"{rod_len:.1f}"),
+            # The cut pieces are purchased hardware, not modeled wood; the
+            # scene is drawer context only, so a numbered key would only
+            # imply the wrong parts get cut.
+            show_picture_key=False,
         ),
         FrameSpec(
             frame_id="cut.box_front_holes.frame",
-            panel_index=panel_of["fab.fronts_and_pulls"],
+            panel_index=panel_of["fab.fronts_and_pulls#box_fronts"],
             detail_diagram_ids=("cut-box-front-holes",),
             caption=(
                 f"Drill {holes_per_box_front} clearance holes through each "
@@ -953,7 +1087,7 @@ def cutting_action_frames(
         ),
         FrameSpec(
             frame_id="cut.pull_bores.frame",
-            panel_index=panel_of["fab.fronts_and_pulls"],
+            panel_index=panel_of["fab.fronts_and_pulls#pulls"],
             detail_diagram_ids=("cut-pull-bores",),
             caption=(
                 f"Drill {pulls_per_front} pull holes through each of the "
@@ -968,7 +1102,7 @@ def cutting_action_frames(
         ),
         FrameSpec(
             frame_id="cut.end_panel_joinery.frame",
-            panel_index=panel_of["fab.joinery_step_drill"],
+            panel_index=panel_of["fab.joinery_step_drill#ends"],
             detail_diagram_ids=("cut-end-panel-joinery",),
             caption=(
                 f"Step-drill the {end_holes} cabinet screw holes in each "
@@ -983,7 +1117,7 @@ def cutting_action_frames(
         ),
         FrameSpec(
             frame_id="cut.toe_rail_joinery.frame",
-            panel_index=panel_of["fab.joinery_step_drill"],
+            panel_index=panel_of["fab.joinery_step_drill#toe_rails"],
             detail_diagram_ids=("cut-toe-rail-joinery",),
             caption=(
                 f"Step-drill {toe_holes} screw holes in each toe rail at "

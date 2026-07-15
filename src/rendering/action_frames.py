@@ -111,6 +111,7 @@ class ActionFrame:
     is_hold_gate: bool = False
     record_title: str = ""
     record_fields: tuple[RecordField, ...] = ()
+    show_picture_key: bool = True
 
     def __post_init__(self):
         if not self.frame_id:
@@ -232,6 +233,7 @@ class FrameSpec:
     is_hold_gate: bool = False
     record_title: str = ""
     record_fields: tuple[RecordField, ...] = ()
+    show_picture_key: bool = True
 
 
 def _events_for_keys(panel, spec) -> tuple[tuple[str, str, str], ...]:
@@ -350,6 +352,7 @@ def project_action_frames(
                 is_hold_gate=spec.is_hold_gate,
                 record_title=spec.record_title,
                 record_fields=spec.record_fields,
+                show_picture_key=spec.show_picture_key,
             ))
 
     frames = tuple(frames)

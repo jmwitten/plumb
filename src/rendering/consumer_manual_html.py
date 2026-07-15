@@ -63,7 +63,7 @@ def _consumer_diagram_html(diagram) -> str:
         f'<figure class="op-diagram" data-diagram-id="'
         f'{_e(diagram.diagram_id)}">'
         f"<figcaption>{_e(diagram.title)}</figcaption>"
-        f'<svg viewBox="0 0 100 100" role="img" '
+        f'<svg viewBox="0 0 100 {diagram.view_height:g}" role="img" '
         f'aria-label="{_e(diagram.title)}" '
         'preserveAspectRatio="xMidYMid meet">'
         f'<defs><marker id="{_e(marker_id)}" markerWidth="7" '
@@ -104,7 +104,7 @@ def _frame_html(detail, frame, number: int | None, image_path: Path,
     # key numbers locally 1..N.
     key_rows = []
     seen_families = set()
-    for part_id in frame.focus_part_ids:
+    for part_id in (frame.focus_part_ids if frame.show_picture_key else ()):
         name = labels[part_id].reader_name
         if name in seen_families:
             continue
@@ -114,9 +114,11 @@ def _frame_html(detail, frame, number: int | None, image_path: Path,
                                               len(key_rows) + 1), name))
         else:
             key_rows.append((len(key_rows) + 1, name))
-    picture_key = "".join(
-        f'<li><span class="key-num">{num}</span>{_e(name)}</li>'
-        for num, name in key_rows)
+    picture_key = ""
+    if key_rows:
+        picture_key = ('<ul class="picture-key">' + "".join(
+            f'<li><span class="key-num">{num}</span>{_e(name)}</li>'
+            for num, name in key_rows) + "</ul>")
     number_html = (f'<span class="step-number">{number}</span>'
                    if number is not None
                    else '<span class="step-number stop">STOP</span>')
@@ -149,7 +151,7 @@ def _frame_html(detail, frame, number: int | None, image_path: Path,
         f'<div class="figures">{scene}{diagram_html}</div>'
         f'<p class="caption">{_e(frame.caption)}</p>'
         f"{tool}{warning}{hold}"
-        f'<ul class="picture-key">{picture_key}</ul>'
+        f"{picture_key}"
         "</article>")
 
 

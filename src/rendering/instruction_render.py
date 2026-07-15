@@ -534,8 +534,11 @@ def render_frame_images(
             arrival_part_ids=(),
             stations=(),
         )
+        # A frame that suppresses its picture key draws no callout circles
+        # either, so the scene never shows numbers the page cannot explain.
         result[frame.frame_id] = render_instruction_panel(
             detail, pseudo, out_dir, size=size, style=style,
+            callouts=frame.show_picture_key,
             callout_numbers=callout_numbers)
     return result
 
