@@ -8,7 +8,7 @@ nine project facts that a photograph or generic catalog cannot establish.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import re
 
 from ...core.units import IN
@@ -396,6 +396,23 @@ class DoubleVanityDecl:
 
 
 @dataclass(frozen=True)
+class CountertopStudy:
+    material: str
+    structural_thickness_mm: float
+    visual_edge_height_mm: float
+    cutout_template_id: str
+    stone_cut_authority: str
+
+
+@dataclass(frozen=True)
+class ConditionalRelease:
+    fabrication_status: str
+    installation_status: str
+    trade_status: str
+    commissioning_status: str
+
+
+@dataclass(frozen=True)
 class RoughInPoint:
     point_id: str
     kind: str
@@ -517,6 +534,8 @@ class DoubleVanityModel:
     source_map: dict[str, Provenance]
     anchor_stud_ids: tuple[str, ...]
     catalog_assets: tuple[CatalogAssetRef, ...]
+    countertop: CountertopStudy
+    release: ConditionalRelease
 
     def part(self, role: str) -> PartModel:
         matches = [part for part in self.parts if part.role == role]
@@ -808,10 +827,10 @@ def parse_double_vanity_project(doc) -> DoubleVanitySection:
         wall_id=site.wall.wall_id,
         x0_mm=x0,
         width_mm=width,
-        body_height_mm=22 * IN,
+        body_height_mm=34.5 * IN - 11 * IN - 30.0,
         body_depth_mm=21 * IN,
         countertop_depth_mm=22 * IN,
-        countertop_thickness_mm=1.5 * IN,
+        countertop_thickness_mm=30.0,
         bottom_elevation_mm=11 * IN,
     )
     return DoubleVanitySection(
@@ -1339,6 +1358,21 @@ def build_double_vanity_model(
         tuple(bays), tuple(paths), tuple(drawers), service_chase_depth,
         tuple(parts), (), (), (), source_map,
         tuple(stud.stud_id for stud in anchor_studs), _catalog_assets(),
+        CountertopStudy(
+            material="stone selected by countertop fabricator",
+            structural_thickness_mm=30.0,
+            visual_edge_height_mm=38.0,
+            cutout_template_id=K20000.cutout_template_id,
+            stone_cut_authority=(
+                "WITHHELD_UNTIL_FABRICATOR_ACCEPTS_K-20000_TEMPLATE"
+            ),
+        ),
+        ConditionalRelease(
+            fabrication_status="CONDITIONAL_FABRICATION_RELEASE",
+            installation_status="HOLD_FIELD_VERIFY",
+            trade_status="HOLD_RESPONSIBLE_TRADE_APPROVAL",
+            commissioning_status="HOLD_COMMISSIONING",
+        ),
     )
 
 
@@ -2070,10 +2104,21 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
 def build_double_vanity_artifacts(
     model: DoubleVanityModel, report: CabinetReport,
 ) -> CabinetArtifacts:
+    drawer_cut_authority = all(
+        report.by_rule(rule).verdict == "PASS"
+        for rule in (
+            "double_vanity.geometry.fixture_plumbing_drawer",
+            "double_vanity.drawer.runner_applicability",
+        )
+    )
     fabricated = tuple(
         part for part in model.parts
         if part.component_type == "plywood_panel"
-        and not part.role.startswith("drawer_")
+        and part.role != "countertop"
+        and (
+            drawer_cut_authority
+            or not part.role.startswith("drawer_")
+        )
     )
     cut_list = tuple(CutListItem(
         part_id=part.part_id,
@@ -2140,8 +2185,23 @@ class DoubleSinkVanityPack:
     def compile(self, doc):
         section = self.parse(doc)
         model = build_double_vanity_model(section, project_name=doc.name)
-        lowered = lower_double_vanity_model(model)
         report = validate_double_vanity_model(model)
+        drawer_cut_authority = all(
+            report.by_rule(rule).verdict == "PASS"
+            for rule in (
+                "double_vanity.geometry.fixture_plumbing_drawer",
+                "double_vanity.drawer.runner_applicability",
+            )
+        )
+        if not drawer_cut_authority:
+            model = replace(
+                model,
+                release=replace(
+                    model.release,
+                    fabrication_status="HOLD_PRODUCT_GEOMETRY",
+                ),
+            )
+        lowered = lower_double_vanity_model(model)
         artifacts = build_double_vanity_artifacts(model, report)
         detail = compile_spec(lowered)
         return PackedProject(

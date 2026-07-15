@@ -194,7 +194,9 @@ def test_dv72_expands_to_two_independent_service_bays_and_four_drawers():
     model = project.model
 
     assert model.section.vanity.width_mm == pytest.approx(72 * 25.4)
-    assert model.section.vanity.body_height_mm == pytest.approx(22 * 25.4)
+    assert model.section.vanity.body_height_mm == pytest.approx(
+        34.5 * 25.4 - 11 * 25.4 - 30.0
+    )
     assert model.section.vanity.bottom_elevation_mm == pytest.approx(11 * 25.4)
     assert (
         model.section.vanity.bottom_elevation_mm
@@ -846,12 +848,72 @@ def test_dynamic_verification_state_is_orthogonal_to_static_coordination():
     ].verdict == "PASS"
 
 
-def test_unreleased_drawer_parts_are_not_emitted_as_cut_list_dimensions():
-    project = _project()
+def test_30_mm_countertop_keeps_finished_height():
+    model = _project().model
 
-    assert not any(
-        item.role.startswith("drawer_") for item in project.artifacts.cut_list
+    assert model.countertop.structural_thickness_mm == pytest.approx(30.0)
+    assert model.countertop.visual_edge_height_mm == pytest.approx(38.0)
+    total = (
+        model.section.vanity.bottom_elevation_mm
+        + model.section.vanity.body_height_mm
+        + 30.0
     )
+    assert total == pytest.approx(34.5 * 25.4)
+
+
+def test_conditional_release_emits_drawers_but_withholds_stone():
+    project = _project()
+    roles = {item.role for item in project.artifacts.cut_list}
+
+    assert "drawer_left_upper_bottom_bridge" in roles
+    assert "drawer_right_lower_bottom" in roles
+    assert "countertop" not in roles
+    assert project.model.release.fabrication_status == (
+        "CONDITIONAL_FABRICATION_RELEASE"
+    )
+    assert project.model.release.installation_status == "HOLD_FIELD_VERIFY"
+    assert project.model.countertop.stone_cut_authority == (
+        "WITHHELD_UNTIL_FABRICATOR_ACCEPTS_K-20000_TEMPLATE"
+    )
+
+
+def test_trap_beyond_case_depth_withdraws_drawer_dimensions_or_fails_loudly(
+    monkeypatch,
+):
+    import detailgen.packs.cabinetry.double_vanity as dv
+
+    monkeypatch.setattr(
+        dv,
+        "K8998",
+        replace(dv.K8998, overall_length_mm=1000.0),
+    )
+    try:
+        project = _project()
+    except ProjectSchemaError:
+        return
+
+    roles = {item.role for item in project.artifacts.cut_list}
+    assert not any(role.startswith("drawer_") for role in roles)
+    assert project.model.release.fabrication_status == "HOLD_PRODUCT_GEOMETRY"
+
+
+def test_missing_sink_template_withholds_stone_without_invalidating_cabinet(
+    monkeypatch,
+):
+    import detailgen.packs.cabinetry.double_vanity as dv
+
+    monkeypatch.setattr(
+        dv,
+        "K20000",
+        replace(dv.K20000, cutout_template_id=""),
+    )
+    project = _project()
+    roles = {item.role for item in project.artifacts.cut_list}
+
+    assert project.model.countertop.cutout_template_id == ""
+    assert "countertop" not in roles
+    assert "left_end" in roles
+    assert "drawer_left_upper_bottom_bridge" in roles
 
 
 def test_nyc_and_ipc_profiles_pin_deliberate_vertical_trap_difference():
