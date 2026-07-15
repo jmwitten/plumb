@@ -133,9 +133,13 @@ def _diagram_primitive_svg(primitive, marker_id: str) -> str:
             f'{title}</circle>')
     if primitive.kind == "text" and len(coords) == 2 and primitive.label:
         x, y = coords
+        rotate = ""
+        if getattr(primitive, "rotation", 0.0):
+            rotate = (f' transform="rotate({primitive.rotation:g} '
+                      f'{x:g} {y:g})"')
         return (
-            f'<text {common} x="{x:g}" y="{y:g}" text-anchor="middle">'
-            f'{label}</text>')
+            f'<text {common} x="{x:g}" y="{y:g}" text-anchor="middle"'
+            f'{rotate}>{label}</text>')
     raise InstructionPresentationError(
         f"unsupported diagram primitive {primitive.kind!r} with "
         f"{len(coords)} coordinates")

@@ -103,14 +103,20 @@ def build_cabinetry_cutting_document(
             inventory_groups=kit_groups,
             parts_heading="Wood list — pre-band cut sizes",
             diagrams=diagrams_by_id,
-            # Two independent readers misread digits in exactly the three
-            # densest diagrams; enlarge those alone so lighter sheets
-            # keep their composed pagination.
+            # The dimensioned drawing is this document's payload (owner
+            # directive: illustrations); it takes the primary column and
+            # the 3D scene becomes the small orientation thumbnail.
             extra_style=(
-                '.op-diagram[data-diagram-id="cut-runner-stations"] svg,'
-                '.op-diagram[data-diagram-id="cut-end-panel-joinery"] svg,'
-                '.op-diagram[data-diagram-id="cut-toe-centers"] svg'
-                " { max-height: 2in; }"),
+                ".frame .scene-figure { flex: 0 1 30%; }"
+                ".op-diagram { flex: 1 1 66%; }"
+                ".op-diagram svg { max-height: 2.1in; }"
+                ".frame img { max-height: 1.9in; }"
+                # The two drawer-strip diagrams share one crowded sheet;
+                # their content is a short strip and fits a smaller frame.
+                '.op-diagram[data-diagram-id="cut-drawer-bottom-grooves"]'
+                " svg,"
+                '.op-diagram[data-diagram-id="cut-drawer-side-joinery"]'
+                " svg { max-height: 1.7in; }"),
         ),
         encoding="utf-8",
     )

@@ -327,6 +327,9 @@ text.diagram-mark, .diagram-mark.role-datum { fill: var(--ink);
   stroke: none; font-size: 3px; font-weight: 800; }
 text.diagram-mark.role-note { fill: var(--ink); stroke: none;
   font-size: 4.2px; font-weight: 800; }
+.diagram-mark.role-dim { stroke: #777; stroke-width: 0.45; fill: none; }
+text.diagram-mark.role-dim { fill: var(--ink); stroke: none;
+  font-size: 4.2px; font-weight: 700; }
 text.diagram-mark.role-hold { fill: var(--ink); stroke: none; }
 .op-diagram marker path { fill: var(--ink); }
 .inset-note { font-size: 0.8rem; color: var(--line); }

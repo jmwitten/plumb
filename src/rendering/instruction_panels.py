@@ -79,6 +79,7 @@ class DiagramPrimitive:
     label: str = ""
     model_point_mm: tuple[float, ...] = ()
     fact_ref: str = ""
+    rotation: float = 0.0  # text only; degrees about the anchor point
 
 
 @dataclass(frozen=True)

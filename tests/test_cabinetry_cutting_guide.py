@@ -295,9 +295,11 @@ class TestSelfContainment:
                 assert f"{row.location_mm[1]:g}" in notes
 
     def test_end_panel_centers_printed(self, panels_manual):
+        # The nine step-drill centers dimension directly on the drawing.
         notes = self._all_notes(panels_manual)
-        assert "BOTTOM ROW" in notes and "ANCHOR PAIR" in notes
-        assert "290.512" in notes and "565.1" in notes
+        for value in ("9.525", "290.512", "531.025", "565.15", "698.1",
+                      "748.1", "765.175"):
+            assert value in notes
 
     def test_pull_heights_printed_for_every_front(self, project,
                                                   panels_manual):
@@ -308,8 +310,9 @@ class TestSelfContainment:
 
     def test_toe_rail_and_toe_center_values_printed(self, panels_manual):
         notes = self._all_notes(panels_manual)
-        assert "30.48 / 71.12" in notes
-        assert "244.475 / 488.95 / 733.425" in notes
+        for value in ("30.48", "71.12", "9.525", "1006.475",
+                      "244.475", "488.95", "733.425", "85.725", "564.65"):
+            assert value in notes
 
     def test_band_edges_named_on_the_wood_list(self, project):
         labels = [row.label for _heading, rows in cutting_kit_groups(project)

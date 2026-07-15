@@ -282,18 +282,19 @@ def _machining_plan_diagram(
                 "coordinate system does not match the plan mapping")
 
     origin = _origin_words(rows).upper()
-    notes = _wrap_notes((f"MEASURE FROM: {origin} (LOWER-LEFT)", *notes))
-    pad, top = 8.0, 12.0
-    # Reserve real room for every note row so nothing clips below the
-    # canvas: the drawn box shrinks before a note line ever would.
+    notes = _wrap_notes((
+        f"MEASURE FROM: {origin} (LOWER-LEFT)",
+        "DIMS IN mm: TOP ROW = ACROSS, LEFT = UP",
+        *notes))
+    # Canvas regions: a rotated ordinate-label strip above the box, a
+    # value column left of it, qualitative notes below. The measurements
+    # live ON the drawing (owner directive: illustrations, not text
+    # lists); notes keep only what a dimension line cannot say.
+    pad, top = 22.0, 20.0
     notes_h = 4.5 + 5.2 * len(notes) + 2.0
-    box_w = 100.0 - 2.0 * pad
+    box_w = 100.0 - pad - 4.0
     box_h = box_w * v_extent / h_extent
-    # A tall drawn box starves the note text of display size (two
-    # independent readers misread digits under it); the box is a locator,
-    # the numbers are the payload, so cap the box and keep the canvas
-    # short.
-    max_h = min(100.0 - top - notes_h, 24.0)
+    max_h = min(100.0 - top - notes_h, 52.0)
     if box_h > max_h:
         box_w *= max_h / box_h
         box_h = max_h
@@ -318,6 +319,16 @@ def _machining_plan_diagram(
               label=outline_label),
     ]
     source_refs = []
+    h_targets: dict[float, float] = {}  # plotted h -> model mm along h axis
+    v_targets: dict[float, float] = {}  # plotted v -> model mm along v axis
+
+    def dim_target(x_mm: float, y_mm: float, *, dim_h=True, dim_v=True):
+        h_mm, v_mm = to_plane(x_mm, y_mm)
+        px, py = plot(x_mm, y_mm)
+        if dim_h and h_mm > 1e-9:
+            h_targets.setdefault(round(px, 2), round(h_mm, 3))
+        if dim_v and v_mm > 1e-9:
+            v_targets.setdefault(round(py, 2), round(v_mm, 3))
     for row in rows:
         source_refs.append(row.feature_id)
         if row.width_mm > 0 and row.length_mm > 0 and row.diameter_mm == 0:
@@ -333,6 +344,9 @@ def _machining_plan_diagram(
                 model_point_mm=tuple(row.location_mm),
                 fact_ref=row.feature_id,
             ))
+            # Dimension the band's start edge (and its start along the
+            # run when it does not begin at the blank edge).
+            dim_target(x0, y0, dim_h=x0 > _PLAN_BOUNDS_TOLERANCE_MM)
         elif row.width_mm > 0 and row.diameter_mm == 0:
             # Corner notch cut into the blank's bottom edge. The drawn rect
             # assumes the notch starts AT that edge; a row that floats
@@ -352,6 +366,8 @@ def _machining_plan_diagram(
                 model_point_mm=tuple(row.location_mm),
                 fact_ref=row.feature_id,
             ))
+            dim_target(x0 if x0 > _PLAN_BOUNDS_TOLERANCE_MM else x1,
+                       y1)
         else:
             # Bore stations: location plus pitched repeats along an axis.
             # A row is only drawable if the schedule says it has stations;
@@ -378,6 +394,57 @@ def _machining_plan_diagram(
                     model_point_mm=point,
                     fact_ref=row.feature_id,
                 ))
+                dim_target(*point)
+
+    def _fmt_dim(value: float) -> str:
+        # %g would round 1006.475 to six significant digits ("1006.48");
+        # a dimension label never silently loses precision.
+        return f"{value:.3f}".rstrip("0").rstrip(".")
+
+    # Ordinate dimensions: every distinct station line gets a tick on the
+    # box edge and a value label, evenly distributed with leader lines so
+    # clustered stations can never overlap. Horizontal positions label
+    # the top strip (rotated, drawing-style); vertical positions label
+    # the left column.
+    if h_targets:
+        entries = sorted(h_targets.items())
+        slot = max(6.0, min(box_w / len(entries), 14.0))
+        span = slot * (len(entries) - 1)
+        start = min(max(pad, pad + (box_w - span) / 2.0), 96.0 - span)
+        for index, (tick_x, value) in enumerate(entries):
+            label_x = start + slot * index
+            primitives.append(_mark(
+                "line", tick_x, top, tick_x, top - 1.8, role="dim"))
+            primitives.append(_mark(
+                "line", label_x, 18.2, tick_x, top - 0.4, role="dim"))
+            # Rotated labels center on their anchor; y=9 keeps even the
+            # longest value inside the 0..18 strip above the box.
+            primitives.append(_mark(
+                "text", label_x, 9.0, role="dim",
+                label=_fmt_dim(value), rotation=-90.0))
+    if v_targets:
+        entries = sorted(v_targets.items())
+        min_gap = 4.6
+        ticks = [tick for tick, _value in entries]
+        gaps = [b - a for a, b in zip(ticks, ticks[1:])]
+        if not gaps or min(gaps) >= min_gap:
+            positions = None  # labels sit at their own tick heights
+        else:
+            # Clustered stations: spread the labels evenly and let the
+            # leader lines carry each one back to its tick.
+            span = min_gap * (len(entries) - 1)
+            start = max(top - 2.0, top + (box_h - span) / 2.0)
+            positions = [start + min_gap * index
+                         for index in range(len(entries))]
+        for index, (tick_y, value) in enumerate(entries):
+            label_y = tick_y if positions is None else positions[index]
+            primitives.append(_mark(
+                "line", pad, tick_y, pad - 1.8, tick_y, role="dim"))
+            primitives.append(_mark(
+                "line", 17.5, label_y, pad - 1.8, tick_y, role="dim"))
+            primitives.append(_mark(
+                "text", 9.0, label_y + 1.3, role="dim",
+                label=_fmt_dim(value)))
     for index, note in enumerate(notes):
         primitives.append(_mark(
             "text", 50.0, top + box_h + 4.5 + 5.2 * index, role="note",
@@ -496,10 +563,7 @@ def _toe_centers_diagram(project) -> OperationDiagram:
         kinds=("toe_attachment_station", "captured_back_groove"),
         outline_label="Cabinet bottom — plan view",
         notes=(
-            f"{len(centers)} CENTERS PER ROW, FROM LEFT (mm):",
-            " / ".join(f"{center:g}" for center in centers),
-            f"FRONT ROW {row_of['FRONT']:g} mm UP - "
-            f"REAR ROW {row_of['REAR']:g} mm UP",
+            f"{len(centers)} CENTERS PER ROW, FRONT AND REAR ROWS",
             "BLACK BAND = BACK GROOVE - NO SCREWS",
             "BANDED FRONT EDGE AT THE DRAWING BOTTOM",
         ),
@@ -664,17 +728,13 @@ def _runner_stations_diagram(project) -> OperationDiagram:
             "of each end panel, measured from the blank's front lower "
             "corner — the front edge is the banded edge. Both ends use "
             f"exactly the same numbers; drill a {diameter:g} mm pilot at "
-            "every mark. All values print below in millimeters."),
+            "every mark. All drawing dimensions are millimeters."),
         allowed_numbers=_nums(len(stations[left]), len(ys), len(xs),
                               diameter),
         part_id=left,
         kinds=("runner_fixing_station",),
         outline_label="Cabinet end panel — inside face up",
         notes=(
-            "STATIONS FROM FRONT EDGE (mm):",
-            " / ".join(f"{x:g}" for x in xs),
-            "ROW HEIGHTS FROM BOTTOM EDGE (mm):",
-            " / ".join(f"{y:g}" for y in ys),
             f"PILOT {diameter:g} mm DIA - SAME ON BOTH ENDS",
             "ENDS ARE A MIRROR PAIR: WORK EACH WITH ITS INSIDE FACE UP",
         ),
@@ -810,28 +870,18 @@ def _end_panel_joinery_diagram(project) -> OperationDiagram:
         "rear_stretcher": "REAR PAIR",
         "anchor_strip": "ANCHOR PAIR",
     }
-    notes = ["ALL VALUES mm; UP + FROM FRONT EDGE:"]
-    for row in sorted((row for row in rows if row.part_id == left),
-                      key=lambda row: row.location_mm[0]):
+    for row in rows:
+        if row.part_id != left:
+            continue
         suffix = row.receiving_part_id.rsplit(".", 1)[-1]
-        label = labels.get(suffix)
-        if label is None:
+        if labels.get(suffix) is None:
             raise ValueError(
                 f"end-panel step-drill row receives {suffix!r}, which has "
                 "no printed label in the cutting guide")
-        series = [row.location_mm[0] + index * row.pitch_mm
-                  if row.pitch_axis == "X" else row.location_mm[0]
-                  for index in range(row.count)]
-        depths = [row.location_mm[1] + index * row.pitch_mm
-                  if row.pitch_axis == "Y" else row.location_mm[1]
-                  for index in range(row.count)]
-        ups = " / ".join(f"{value:g}" for value in
-                         sorted(dict.fromkeys(series)))
-        fronts = " / ".join(f"{value:g}" for value in
-                            sorted(dict.fromkeys(depths)))
-        notes.append(f"{label}: {ups} UP - {fronts} FROM FRONT")
-    notes.append(
-        "ENDS ARE A MIRROR PAIR: WORK EACH WITH ITS OUTSIDE FACE UP")
+    notes = [
+        "BOTTOM ROW, STRETCHER PAIRS, ANCHOR PAIR",
+        "ENDS ARE A MIRROR PAIR: WORK EACH WITH ITS OUTSIDE FACE UP",
+    ]
     return _machining_plan_diagram(
         project,
         diagram_id="cut-end-panel-joinery",
@@ -897,8 +947,6 @@ def _toe_rail_joinery_diagram(project) -> OperationDiagram:
         outline_label="Toe rail — outside face up",
         notes=(
             f"PAIRS {insets[0]:g} mm IN FROM EACH RAIL END",
-            "HOLE HEIGHTS UP FROM BOTTOM (mm): "
-            + " / ".join(f"{value:g}" for value in heights),
         ),
     )
 

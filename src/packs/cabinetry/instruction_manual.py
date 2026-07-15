@@ -338,6 +338,7 @@ def _mark(
     label: str = "",
     model_point_mm: tuple[float, ...] = (),
     fact_ref: str = "",
+    rotation: float = 0.0,
 ) -> DiagramPrimitive:
     return DiagramPrimitive(
         kind=kind,
@@ -346,6 +347,7 @@ def _mark(
         label=label,
         model_point_mm=tuple(float(value) for value in model_point_mm),
         fact_ref=fact_ref,
+        rotation=rotation,
     )
 
 
