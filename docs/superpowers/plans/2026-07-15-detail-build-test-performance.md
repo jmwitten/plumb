@@ -21,7 +21,8 @@ coverage; the implementation adds metadata and selection, not duplicate mocks.
 - Historical acceptance baseline: 1,290.34 seconds; ceiling: 645.17 seconds.
 - Every measured run starts a new Python process with fresh temporary cache
   directories; no previous-run output/cache may be used.
-- Ordinary pytest collection must retain all 1,833 tests.
+- Ordinary pytest collection must retain all 1,833 pre-existing node IDs; new
+  detail-gate contract tests may increase the total.
 - Universal contracts are exactly `compile`, `geometry`, `validation`,
   `fabrication`, `governance`, and `documents`.
 - Unknown slugs and incomplete gates fail before executing tests.
@@ -175,11 +176,13 @@ Run:
 
 ```bash
 .venv/bin/python -m pytest tests/test_detail_gate_selection.py -q
-.venv/bin/python -m pytest --collect-only -q > /tmp/detailgen-collect.txt
-tail -1 /tmp/detailgen-collect.txt
+.venv/bin/python -m pytest --collect-only -q \
+  | rg '^tests/' | sort > /tmp/detailgen-after-nodeids.txt
+comm -23 /tmp/detailgen-before-nodeids.txt /tmp/detailgen-after-nodeids.txt
 ```
 
-Expected: helper tests pass and ordinary collection reports 1,833 tests.
+Expected: helper tests pass and `comm` prints nothing, proving all 1,833
+pre-existing node IDs remain collected.
 
 - [ ] **Step 6: Commit Task 1**
 
@@ -374,10 +377,12 @@ second passes all synthetic incomplete-gate tests.
 - [ ] **Step 3: Verify ordinary collection is unchanged**
 
 ```bash
-.venv/bin/python -m pytest --collect-only -q | tail -1
+.venv/bin/python -m pytest --collect-only -q \
+  | rg '^tests/' | sort > /tmp/detailgen-final-nodeids.txt
+comm -23 /tmp/detailgen-before-nodeids.txt /tmp/detailgen-final-nodeids.txt
 ```
 
-Expected: 1,833 tests collected.
+Expected: no output; every pre-existing node ID remains present.
 
 - [ ] **Step 4: Run the full repository suite once**
 

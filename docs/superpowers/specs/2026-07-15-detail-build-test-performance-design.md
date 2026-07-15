@@ -120,8 +120,9 @@ The implementation must prove all of the following:
    oversized/interfering corner keys, and blocked document delivery.
 5. The selected tests are real compiler/build/document tests, not mocks of
    pytest marker behavior.
-6. Ordinary `pytest` collection remains byte-for-byte equivalent in node count;
-   markers only filter when `--detail-gate` is supplied.
+6. Ordinary `pytest` collection retains every one of the 1,833 pre-existing
+   node IDs; the only added nodes are the new detail-gate contract tests.
+   Markers filter only when `--detail-gate` is supplied.
 7. Two fresh-process caddy-gate runs both pass and each finish at or below
    645.17 seconds.
 
