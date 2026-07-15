@@ -442,3 +442,64 @@ class TestIteration2:
             self, rendered):
         assert '<div class="viewer-slot"' not in rendered
         assert ".viewer-section { display: none; }" in rendered
+
+
+class TestGlobalPartNumbers:
+    def test_every_buildable_part_gets_exactly_one_card_number(self, project):
+        from detailgen.packs.cabinetry.consumer_manual import (
+            consumer_part_numbers,
+            consumer_part_rows,
+        )
+        numbers = consumer_part_numbers(project)
+        rows = consumer_part_rows(project)
+        assert set(numbers.values()) == set(range(1, len(rows) + 1))
+        for index, row in enumerate(rows, start=1):
+            for part_id in row.source_part_ids:
+                assert numbers[part_id] == index
+
+    def test_scene_callout_numbers_match_the_kit_card(self, project):
+        from detailgen.packs.cabinetry.consumer_manual import (
+            consumer_part_numbers,
+        )
+        from detailgen.rendering.instruction_render import panel_content_key
+
+        numbers = consumer_part_numbers(project)
+        panel = build_cabinetry_instruction_manual(
+            project,
+            technical_href="t.html", basename="m.html").panels[0]
+        keyed = panel_content_key(
+            project.detail, panel, style="high_contrast",
+            callout_numbers=numbers)
+        plain = panel_content_key(
+            project.detail, panel, style="high_contrast")
+        assert keyed != plain  # numbering is part of the image identity
+
+    def test_rendered_key_numbers_are_global(self, project, consumer,
+                                             panels_manual, tmp_path):
+        from PIL import Image
+
+        from detailgen.packs.cabinetry.consumer_manual import (
+            consumer_diagrams,
+            consumer_part_numbers,
+        )
+        from detailgen.rendering.consumer_manual_html import (
+            render_consumer_manual_html,
+        )
+        numbers = consumer_part_numbers(project)
+        image_paths = {}
+        for page in consumer.pages:
+            for frame in page.frames:
+                path = tmp_path / f"{frame.frame_id}.png"
+                Image.new("RGB", (2, 2), "white").save(path)
+                image_paths[frame.frame_id] = path
+        cover = tmp_path / "c.png"
+        Image.new("RGB", (2, 2), "white").save(cover)
+        html_text = render_consumer_manual_html(
+            project.detail, consumer, image_paths, cover_image=cover,
+            diagrams=consumer_diagrams(panels_manual),
+            part_numbers=numbers)
+        # the toe-kick front's kit-card number appears in step 1's key
+        toe_front = next(p.id for p in project.detail.assembly.parts
+                         if p.name.endswith("toe front"))
+        assert (f'<span class="key-num">{numbers[toe_front]}</span>'
+                in html_text)

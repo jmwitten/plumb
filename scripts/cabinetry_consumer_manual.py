@@ -28,6 +28,7 @@ from detailgen.packs.cabinetry.consumer_manual import (  # noqa: E402
     consumer_diagrams,
     consumer_hardware_letters,
     consumer_panels_manual,
+    consumer_part_numbers,
     consumer_part_rows,
 )
 from detailgen.rendering.consumer_manual_html import (  # noqa: E402
@@ -86,10 +87,12 @@ def build_cabinetry_consumer_document(
         ),
     )
 
+    part_numbers = consumer_part_numbers(project)
     image_dir = out_dir / "consumer_panels"
     image_paths = render_frame_images(
         project.detail, panels_manual, frames, image_dir,
-        size=image_size, style="high_contrast")
+        size=image_size, style="high_contrast",
+        callout_numbers=part_numbers)
     cover_image = render_cover_image(
         project.detail, panels_manual, image_dir,
         size=image_size, style="high_contrast")
@@ -98,7 +101,8 @@ def build_cabinetry_consumer_document(
 
     viewer_assets = CPR.render_shared_product_assets(
         project, out_dir / "consumer_viewer",
-        instruction_manual=panels_manual)
+        instruction_manual=panels_manual,
+        include_fastener_proxies=True)
     viewer = {
         "payload": viewer_assets.viewer_payload,
         "glb_b64": CPR._glb_b64(viewer_assets.glb_bytes),
@@ -113,6 +117,7 @@ def build_cabinetry_consumer_document(
             parts_heading="Parts — cut sizes in inches",
             diagrams=diagrams_by_id,
             viewer=viewer,
+            part_numbers=part_numbers,
         ),
         encoding="utf-8",
     )

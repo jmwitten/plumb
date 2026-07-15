@@ -75,7 +75,7 @@ def _consumer_diagram_html(diagram) -> str:
 
 
 def _frame_html(detail, frame, number: int | None, image_path: Path,
-                diagrams=None) -> str:
+                diagrams=None, part_numbers=None) -> str:
     labels = part_labels(detail.assembly.parts)
     chips = "".join(
         _letter_chip(row.letter, row.quantity) for row in frame.hardware)
@@ -99,15 +99,24 @@ def _frame_html(detail, frame, number: int | None, image_path: Path,
         inset = (f'<figcaption class="inset-note">Detail: '
                  f'{_e(frame.illustration.inset)}</figcaption>')
     # Mirrors panel_callout_ids: first part per reader family, in focus
-    # order — so key number N is the same part as circle N in the scene.
-    key_names = []
+    # order. With a global part-number map the key (and the circles drawn
+    # in the scene) cite the kit-card number for each part; otherwise the
+    # key numbers locally 1..N.
+    key_rows = []
+    seen_families = set()
     for part_id in frame.focus_part_ids:
         name = labels[part_id].reader_name
-        if name not in key_names:
-            key_names.append(name)
+        if name in seen_families:
+            continue
+        seen_families.add(name)
+        if part_numbers is not None:
+            key_rows.append((part_numbers.get(part_id,
+                                              len(key_rows) + 1), name))
+        else:
+            key_rows.append((len(key_rows) + 1, name))
     picture_key = "".join(
-        f'<li><span class="key-num">{number}</span>{_e(name)}</li>'
-        for number, name in enumerate(key_names, start=1))
+        f'<li><span class="key-num">{num}</span>{_e(name)}</li>'
+        for num, name in key_rows)
     number_html = (f'<span class="step-number">{number}</span>'
                    if number is not None
                    else '<span class="step-number stop">STOP</span>')
@@ -159,11 +168,20 @@ def _cover_sheet(consumer, cover_image: Path) -> str:
 
 def _inventory_sheet(consumer, number: int, inventory_rows,
                      tools: tuple[str, ...],
-                     parts_heading: str = "Parts") -> str:
+                     parts_heading: str = "Parts",
+                     part_numbers=None) -> str:
     kit = (f'<aside class="kit-gate" role="note"><b>Before you start</b> '
            f'<span>{_e(consumer.kit_gate)}</span></aside>')
+    def _row_number(row) -> str:
+        if part_numbers is None or not row.source_part_ids:
+            return ""
+        num = part_numbers.get(row.source_part_ids[0])
+        return (f'<span class="key-num">{num}</span>'
+                if num is not None else "")
+
     parts = "".join(
-        f'<li>{_icon_svg(row.icon)}<span>{_e(row.label)}</span></li>'
+        f'<li>{_row_number(row)}{_icon_svg(row.icon)}'
+        f"<span>{_e(row.label)}</span></li>"
         for row in inventory_rows)
     letters = "".join(
         f'<li data-letter="{_e(lt.letter)}">'
@@ -358,6 +376,7 @@ def render_consumer_manual_html(
     parts_heading: str = "Parts",
     diagrams=None,
     viewer=None,
+    part_numbers=None,
 ) -> str:
     """Compose the self-contained consumer manual HTML.
 
@@ -389,7 +408,7 @@ def render_consumer_manual_html(
         elif page.kind == "inventory":
             sheets.append(_inventory_sheet(
                 consumer, page.number, inventory_rows, tools,
-                parts_heading=parts_heading))
+                parts_heading=parts_heading, part_numbers=part_numbers))
         elif page.kind == "record":
             sheets.append(_record_sheet(page))
         elif page.kind == "hold":
@@ -403,7 +422,7 @@ def render_consumer_manual_html(
                 number += 1
                 body.append(_frame_html(
                     detail, frame, number, Path(image_paths[frame.frame_id]),
-                    diagrams=diagrams))
+                    diagrams=diagrams, part_numbers=part_numbers))
             sheets.append(
                 f'<section class="sheet frames" data-page="{page.number}">'
                 + "".join(body) + "</section>")

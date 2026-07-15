@@ -623,6 +623,20 @@ def consumer_part_rows(project):
     )
 
 
+def consumer_part_numbers(project) -> dict[str, int]:
+    """One global part number per kit-card row, keyed by part id.
+
+    The number order is the kit card's row order, so scene callouts,
+    picture keys, and the parts list all cite the same number for the
+    same part.
+    """
+    numbers: dict[str, int] = {}
+    for index, row in enumerate(consumer_part_rows(project), start=1):
+        for part_id in row.source_part_ids:
+            numbers[part_id] = index
+    return numbers
+
+
 def consumer_diagrams(panels_manual) -> dict:
     """Typed operation diagrams keyed by id, for frame detail rendering."""
     return {

@@ -125,6 +125,7 @@ def panel_content_key(
     *,
     style: str = "technical",
     callouts: bool = True,
+    callout_numbers=None,
 ) -> str:
     """Hash only image-relevant geometry, order, camera, and station inputs."""
     instruction_style(style)
@@ -162,6 +163,8 @@ def panel_content_key(
         payload["style_impl"] = 3
     if not callouts:
         payload["callouts_drawn"] = False
+    if callout_numbers:
+        payload["callout_numbers"] = tuple(sorted(callout_numbers.items()))
     canonical = json.dumps(
         payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -248,6 +251,7 @@ def _draw_overlay(
     size: tuple[int, int],
     key: str,
     callouts: bool = True,
+    callout_numbers=None,
 ) -> None:
     from PIL import Image, ImageDraw
     from PIL.PngImagePlugin import PngInfo
@@ -263,13 +267,15 @@ def _draw_overlay(
     draw = ImageDraw.Draw(image)
 
     radius = 26
-    for number, part_id in enumerate(callout_ids, start=1):
+    for local_number, part_id in enumerate(callout_ids, start=1):
+        number = (callout_numbers.get(part_id, local_number)
+                  if callout_numbers else local_number)
         anchor_x, anchor_y = _project(
             renderer, vtk, centers[part_id], size[1])
         x, y = anchor_x, anchor_y
         # A small deterministic stagger keeps coincident fastener callouts legible.
-        x += ((number - 1) % 3 - 1) * 12
-        y += ((number - 1) // 3 % 2) * 10
+        x += ((local_number - 1) % 3 - 1) * 12
+        y += ((local_number - 1) // 3 % 2) * 10
         if panel.action == "fasten":
             x += 90
             y += 70
@@ -370,13 +376,15 @@ def render_instruction_panel(
     size: tuple[int, int] = DEFAULT_SIZE,
     style: str = "technical",
     callouts: bool = True,
+    callout_numbers=None,
 ) -> Path:
     """Render one ghost/arrival panel and reuse an exact content-key hit."""
     import vtk
 
     palette = instruction_style(style)
     key = panel_content_key(detail, panel, size=size, style=style,
-                            callouts=callouts)
+                            callouts=callouts,
+                            callout_numbers=callout_numbers)
     output = Path(out_dir) / f"{key}.png"
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists() and _is_valid_cached_panel(output, key=key, size=size):
@@ -478,7 +486,8 @@ def render_instruction_panel(
         writer.Write()
         _draw_overlay(
             temporary, detail=detail, panel=panel, renderer=renderer, vtk=vtk,
-            size=size, key=key, callouts=callouts)
+            size=size, key=key, callouts=callouts,
+            callout_numbers=callout_numbers)
         if not _is_valid_cached_panel(temporary, key=key, size=size):
             raise RuntimeError(
                 f"instruction panel {panel.index} did not produce a complete "
@@ -500,6 +509,7 @@ def render_frame_images(
     *,
     size: tuple[int, int] = DEFAULT_SIZE,
     style: str = "technical",
+    callout_numbers=None,
 ) -> dict[str, "Path"]:
     """Render one scene per action frame with the frame's own focus set.
 
@@ -525,7 +535,8 @@ def render_frame_images(
             stations=(),
         )
         result[frame.frame_id] = render_instruction_panel(
-            detail, pseudo, out_dir, size=size, style=style)
+            detail, pseudo, out_dir, size=size, style=style,
+            callout_numbers=callout_numbers)
     return result
 
 
