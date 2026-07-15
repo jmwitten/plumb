@@ -188,7 +188,7 @@ class ExteriorWoodScrew(_AxialFastener):
         super().__init__(
             diameter,
             length,
-            name or f"{fmt_in(diameter)} x {fmt_in(length, 1)} exterior wood screw",
+            name or f"{fmt_in(diameter)} x {fmt_in(length)} exterior wood screw",
         )
 
     @property
@@ -233,7 +233,7 @@ class ExteriorWoodScrew(_AxialFastener):
 
     def describe(self) -> str:
         return (
-            f"{fmt_in(self.diameter)} dia x {fmt_in(self.length, 1)} "
+            f"{fmt_in(self.diameter)} dia x {fmt_in(self.length)} "
             "exterior wood screw"
         )
 
