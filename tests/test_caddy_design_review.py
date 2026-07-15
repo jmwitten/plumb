@@ -50,26 +50,50 @@ def test_caddy_reinforced_miter_is_implemented_and_modeling_approved():
     assert doc.decision.application == "implemented"
     assert doc.modeling_approval is not None
     assert doc.modeling_approval.approved_by == "Joel Witten"
-    assert doc.delivery_confirmation is None
+    assert doc.delivery_confirmation is not None
+    assert doc.delivery_confirmation.approved_by == "Joel Witten"
+    assert doc.delivery_confirmation.approved_on == "2026-07-15"
 
 
-def test_caddy_spec_opts_in_and_delivery_is_blocked():
+def test_caddy_spec_opts_in_and_delivery_is_confirmed():
     detail = compile_spec_file(SPEC)
 
     assert detail.design_governance is not None
     assert detail.design_governance.selected_concept == "reinforced_miter"
     assert detail.require_modeling_approval() is detail
-    with pytest.raises(DesignReviewGateError, match="delivery confirmation"):
-        detail.require_delivery_ready()
+    assert detail.require_delivery_ready().ok
+    assert detail.design_governance.delivery_ready
+
+
+def _pending_spec(tmp_path: Path) -> Path:
+    raw_review = yaml.safe_load(REVIEW.read_text())
+    raw_review["delivery_confirmation"] = None
+    (tmp_path / REVIEW.name).write_text(
+        yaml.safe_dump(raw_review, sort_keys=False))
+    pending_spec = tmp_path / SPEC.name
+    pending_spec.write_text(SPEC.read_text())
+    return pending_spec
 
 
 def test_customer_document_pair_writes_nothing_while_review_is_pending(tmp_path):
     out = tmp_path / "customer-delivery"
+    pending_spec = _pending_spec(tmp_path)
 
     with pytest.raises(DesignReviewGateError, match="delivery confirmation"):
-        CD.build_caddy_document_pair(out, image_size=(320, 240))
+        CD.build_caddy_document_pair(
+            out, image_size=(320, 240), spec_path=pending_spec)
 
     assert not out.exists()
+
+
+def test_confirmed_customer_document_pair_is_unmarked(tmp_path):
+    result = CD.build_caddy_document_pair(
+        tmp_path / "customer-delivery", image_size=(320, 240))
+
+    assert result["preview"] is False
+    for key in ("technical_path", "manual_path"):
+        text = Path(result[key]).read_text()
+        assert "PREVIEW — NOT APPROVED FOR DELIVERY" not in text
 
 
 def test_explicit_preview_pair_is_reviewable_but_cannot_masquerade_as_delivery(
@@ -103,7 +127,7 @@ def test_generated_caddy_report_is_developer_facing_and_retains_provenance():
     html = REPORT.read_text()
 
     assert "Production promotion: READY" in html
-    assert "Delivery: BLOCKED" in html
+    assert "Delivery: READY" in html
     assert "reinforced_miter" in html
     assert "current_double_wall" in html
     assert "https://learn.kregtool.com/plans/sofa-arm-table/" in html

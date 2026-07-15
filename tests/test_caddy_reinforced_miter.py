@@ -8,7 +8,6 @@ import pytest
 from detailgen.components import HardwoodPanel, WoodDowel
 from detailgen.core.units import IN
 from detailgen.design_review import (
-    DesignReviewGateError,
     load_design_review_file,
     selection_fingerprint,
 )
@@ -133,7 +132,7 @@ def test_bom_contains_three_panels_four_dowels_and_no_legacy_hardware(caddy):
     assert "5/4" not in visible
 
 
-def test_implemented_selection_is_approved_but_delivery_still_requires_owner(caddy):
+def test_implemented_selection_and_model_are_owner_confirmed(caddy):
     detail, _report = caddy
     review = load_design_review_file(REVIEW)
 
@@ -142,7 +141,12 @@ def test_implemented_selection_is_approved_but_delivery_still_requires_owner(cad
     assert review.modeling_approval is not None
     assert review.modeling_approval.approved_by == "Joel Witten"
     assert review.modeling_approval.selection_fingerprint == IMPLEMENTED_SELECTION
-    assert review.delivery_confirmation is None
+    assert review.delivery_confirmation is not None
+    assert review.delivery_confirmation.approved_by == "Joel Witten"
+    assert review.delivery_confirmation.selection_fingerprint == IMPLEMENTED_SELECTION
+    assert (
+        review.delivery_confirmation.model_fingerprint
+        == detail.design_governance.model_digest
+    )
     assert detail.require_modeling_approval() is detail
-    with pytest.raises(DesignReviewGateError, match="delivery confirmation"):
-        detail.require_delivery_ready()
+    assert detail.require_delivery_ready().ok

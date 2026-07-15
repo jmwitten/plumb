@@ -285,4 +285,8 @@ modeling_approval:
   approved_by: Joel Witten
   approved_on: 2026-07-14
   selection_fingerprint: 52e7b80496016b14ef09797dae2b783b29b03bbd0cb115eae1e2ecd5571ba40b
-delivery_confirmation: null
+delivery_confirmation:
+  approved_by: Joel Witten
+  approved_on: 2026-07-15
+  selection_fingerprint: 52e7b80496016b14ef09797dae2b783b29b03bbd0cb115eae1e2ecd5571ba40b
+  model_fingerprint: 35b8793c2792c9513891a335e79aa4036c710c36f5ba7ff79696aa75c7f1e53e
