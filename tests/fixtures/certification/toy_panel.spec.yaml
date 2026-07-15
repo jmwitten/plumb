@@ -1,0 +1,8 @@
+name: toy panel
+type: detail
+units: in
+components:
+  - id: shelf
+    type: lumber
+    name: shelf board
+    params: {nominal: "2x4", length: 12.0}

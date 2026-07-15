@@ -161,6 +161,67 @@ opt-in only when explicitly requested; the homeowner cutting guide takes
 its slot in the delivered set. Also still queued:
 per-part kit thumbnails and a caddy consumer manual as the second
 consumer of the generic layer.
+## ★ GENERIC BUILD CERTIFICATION (2026-07-15 — CADDY GATE 97.34% FASTER)
+
+Branch `codex/caddy-test-performance` now has a generic, filesystem-discovered
+certification engine for standalone construction builds. A future build adds
+its spec plus `<slug>.cert.yaml`; it does not need a new Python test suite or a
+registry change. The shared adapter compiles the real source twice and the
+shared rules check compilation, geometry, validation, connections,
+fabrication, BOM, governance, declared intent, and determinism. Accuracy fails
+closed; explicit non-safety uncertainty remains visible, while unresolved
+high-severity decisions block autonomous release.
+
+The caddy is the migration proof. An equivalence ledger accounts for all 53
+former caddy-gate nodes; 45 bespoke nodes were replaced (84.91%) and eight
+physical negative/invariant probes remain. A migration audit enforces that
+mapping. An unrelated temporary garden-shelf build proves that discovery and
+certification work without caddy knowledge or Python test edits. Documents are
+optional because presentation does not establish construction accuracy.
+
+The final nine-node caddy gate passed in two fresh processes: 33.51 seconds
+pytest / 33.62 seconds wall and 33.36 seconds pytest / 33.53 seconds wall. The
+slower result is **97.39% below** the historical 1,290.34-second workflow and
+**38.38x faster**, with 611.55 seconds of margin below the 50%-reduction target.
+It is also 49.74% faster than the first 53-node semantic gate. Both generic
+certification runs rebuild from source twice with fresh temporary caches; no
+saved result participates.
+
+Use `python -m detailgen.certification details/<slug>.cert.yaml` for a direct
+release decision and `pytest --detail-gate <slug> -q -n 4` for the build-owned
+inner loop. Shared platform or certification changes still require the full
+repository suite before integration.
+
+The frozen final tree collected 1,852 tests and passed the complete unfiltered
+gate: **1,848 passed / 3 skipped / 1 xfailed** in 1,780.68 seconds (1,780.90
+seconds wall). This preserves every unrelated platform regression while the
+caddy-owned inner loop remains 33.62 seconds at its slower fresh run.
+
+## Superseded semantic-gate result (2026-07-15 — CADDY GATE 94.82% FASTER)
+
+The final reinforced-miter caddy session paid 1,290.34 seconds for the full
+1,829-test repository gate. A fresh duration reproduction took 1,351.06 seconds
+and showed that unrelated trebuchet, platform, site, sit-and-reach, and stool
+geometry/document tests dominated the wall clock; no caddy test appeared among
+the 100 slowest durations. The focused design-review tests in the original
+session had taken only 8.69 seconds.
+
+Branch `codex/caddy-test-performance` adds an opt-in semantic pytest gate. Tests
+declare a detail slug plus one or more of six mandatory contracts: compile,
+geometry, validation, fabrication, governance, and documents. Collection fails
+for an unknown slug, malformed marker, or incomplete contract set. Ordinary
+pytest remains unfiltered and retains all 1,833 pre-existing node IDs.
+
+The caddy gate selects 53 existing real tests, including oversized-key
+interference, padded-hardware, missing-delivery-confirmation, and
+geometry-invariance mutations. Two new-process runs passed in 61.68 and 66.64
+seconds (61.85 and 66.89 seconds process wall). The slower wall value is 94.82%
+below the historical gate and 19.29x faster, against the owner's 50% target.
+Every test still receives a fresh temporary cache directory; no previous-run
+result participates.
+
+This 53-node gate was the first optimization step. The generic result above
+supersedes its selection and test-retention policy.
 
 ## ★ SESSION UPDATE 15 (2026-07-14 — CABINET PACK DB40 COMPLETE; four-document release DELIVERED)
 

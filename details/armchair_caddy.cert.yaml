@@ -1,0 +1,53 @@
+schema_version: 1
+subject:
+  kind: standalone_detail
+  source: armchair_caddy.spec.yaml
+intent:
+  counts:
+    - selector: {component: Boulder}
+      exactly: 1
+    - selector: {component: HardwoodPanel}
+      exactly: 3
+    - selector: {component: WoodDowel}
+      exactly: 4
+  forbidden:
+    - selector: {name_contains: screw}
+    - selector: {name_contains: bracket}
+  connections:
+    - selector: {kind: bonded_to}
+      exactly: 2
+    - selector: {kind: keyed_by}
+      exactly: 2
+    - selector: {kind: installed_before}
+      exactly: 8
+  validation:
+    - selector: {check: bearing, verdict: PASS, subject_contains: sofa arm}
+      exactly: 1
+    - selector: {check: support}
+      exactly: 0
+    - selector: {check: capacity}
+      exactly: 0
+    - selector: {check: install_access}
+      exactly: 0
+    - selector: {check: install_termination}
+      exactly: 0
+  fabrication:
+    - selector: {name: top panel}
+      steps: [crosscut, ease, miter_crosscut, miter_crosscut, bore]
+    - selector: {name_contains: side panel}
+      steps: [crosscut, ease, miter_crosscut]
+  bom:
+    - item: Boulder (existing)
+      quantity: 1
+    - item: 3/4 in hardwood panel
+      quantity: 3
+      length_mm: {minimum: 196.0, maximum: 204.0}
+    - item: 3/8 in hardwood dowel
+      quantity: 4
+      length_mm: {minimum: 26.9, maximum: 27.0}
+  governance:
+    selected_concept: reinforced_miter
+    modeling_ready: true
+    delivery_ready: true
+deliverables: []
+decisions: []
