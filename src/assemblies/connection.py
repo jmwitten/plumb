@@ -1603,7 +1603,7 @@ class CleatScrewed(ConnectionType):
 
     def _unpack(self, conn: Connection):
         cleat, member = conn.parts
-        screws = _require_hardware_roles(conn, [_SCREW] * self.n_screws)
+        screws = _require_hardware_roles(conn, [_BOX_SCREW] * self.n_screws)
         return cleat, member, list(screws)
 
     def allowed_intersections(self, conn: Connection):

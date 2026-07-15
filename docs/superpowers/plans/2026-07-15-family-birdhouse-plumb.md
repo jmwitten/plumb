@@ -73,15 +73,15 @@
 
 **Interfaces:**
 - Produces: one compiled birdhouse model whose parts, holes, connections, sequences, BOM, and cut plan match the approved concept
-- Binds: implemented modeling approval to concept fingerprint `8119fc4fa46b962e5653c25c8cdb54130a3bc5b6cfe30646afc104ba8cb8beea`
+- Binds: implemented modeling approval to post-implementation selection fingerprint `b7f91b653c95270ebf35968478b2d3a686cf49e356c35482f3e2c2aed4b8e1ff` (the concept-stage handoff fingerprint remains `8119fc4fa46b962e5653c25c8cdb54130a3bc5b6cfe30646afc104ba8cb8beea`)
 
-- [ ] Write failing end-to-end assertions for six cedar pieces, one 1-1/8-inch entrance, four side vents, four floor drains, recessed floor, oversized sloped roof, extended back, pivot/latch hardware, no perch, no fixed joint across the cleanout side, coherent BOM/cut list, kid/adult boundaries, and unresolved site/pole holds.
-- [ ] Write failing governance assertions that the selected concept is implemented and promotion is model-bound while delivery confirmation remains unclaimed.
-- [ ] Run the two new tests and confirm RED against the missing spec.
-- [ ] Author the DetailSpec with named parameters, raw placements, `butt_screwed` fixed joints, `pivot_screwed` cleanout pivots, `service_latch_screwed` latch, typed stages, assembly sequence, installation holds, and source-backed notes.
-- [ ] Record the autonomous owner modeling approval in the sidecar using the selected concept fingerprint; do not forge a post-review delivery confirmation.
-- [ ] Run spec lint/compile/build plus model, fabrication, construction, installability, load-path/evidence, BOM, and design-review gates; confirm GREEN.
-- [ ] Commit as `design: model family cedar birdhouse`.
+- [x] Write failing end-to-end assertions for six primary cedar enclosure pieces plus the mounting cleat, one 1-1/8-inch entrance, four side vents, four floor drains, recessed floor, oversized sloped roof, extended back, pivot/latch hardware, no perch, no fixed joint across the cleanout side, coherent BOM/cut list, kid/adult boundaries, and unresolved site/pole holds.
+- [x] Write failing governance assertions that the selected concept is implemented and promotion is model-bound while delivery confirmation remains unclaimed.
+- [x] Run the two new tests and confirm RED against the missing spec.
+- [x] Author the DetailSpec with named parameters, raw placements, `butt_screwed` fixed joints, `pivot_screwed` cleanout pivots, `service_latch_screwed` latch, typed stages, assembly sequence, installation holds, and source-backed notes.
+- [x] Record the autonomous owner modeling approval in the sidecar using the selected concept fingerprint; do not forge a post-review delivery confirmation.
+- [x] Run spec lint/compile/build plus model, fabrication, construction, installability, load-path/evidence, BOM, and design-review gates; confirm GREEN.
+- [x] Commit as `design: model family cedar birdhouse`.
 
 ### Task 4: Generate the complete model-backed release package
 

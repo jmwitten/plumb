@@ -84,6 +84,16 @@ def test_butt_screwed_accepts_an_exterior_wood_screw_for_fixed_cedar_joints():
     assert kind._unpack(conn)[2] == [screw]
 
 
+def test_cleat_screwed_accepts_an_exterior_wood_screw_for_mounting_cleats():
+    from detailgen.assemblies import Connection, connection_types
+
+    assembly, cleat, back, screw = _service_joint()
+    kind = connection_types.get("cleat_screwed")(n_screws=1)
+    conn = Connection(kind=kind, parts=[cleat, back], hardware=[screw])
+
+    assert kind._unpack(conn)[2] == [screw]
+
+
 def test_service_edge_kinds_are_traceable_but_never_load_bearing():
     from detailgen.validation.evidence import EDGE_KINDS, _CONSTRUCTION_EDGE_KINDS
     from detailgen.validation.loadpath import LOAD_BEARING_EDGE_KINDS
@@ -92,4 +102,3 @@ def test_service_edge_kinds_are_traceable_but_never_load_bearing():
         assert kind in EDGE_KINDS
         assert kind in _CONSTRUCTION_EDGE_KINDS
         assert kind not in LOAD_BEARING_EDGE_KINDS
-
