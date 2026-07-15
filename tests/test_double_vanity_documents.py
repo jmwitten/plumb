@@ -288,7 +288,7 @@ def test_documents_reject_forged_or_stale_authority_state():
             ),
         ),
     )
-    with pytest.raises(ValueError, match="authority state is inconsistent"):
+    with pytest.raises(ValueError, match="acceptance and release status"):
         build_double_vanity_document_set(forged)
 
     from detailgen.packs.cabinetry.double_vanity import (

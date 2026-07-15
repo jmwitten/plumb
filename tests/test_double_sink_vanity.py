@@ -1433,7 +1433,7 @@ def test_invalid_edge_schedule_cannot_emit_fabrication_authority():
         )
 
 
-def test_manual_acceptance_replace_cannot_cross_the_sole_transition_gate():
+def test_manual_acceptance_replace_without_matching_release_is_rejected():
     from detailgen.packs.cabinetry.double_vanity import (
         FabricationAcceptance,
         build_double_vanity_artifacts,
@@ -1450,22 +1450,41 @@ def test_manual_acceptance_replace_cannot_cross_the_sole_transition_gate():
     forged_model = replace(
         pending.model, fabrication_acceptance=acceptance,
     )
-    assert not forged_model.fabrication_release_contract()[0]
-    with pytest.raises(ProjectSchemaError, match="canonical transition"):
+    with pytest.raises(ProjectSchemaError, match="acceptance and release status"):
+        forged_model.fabrication_release_contract()
+    with pytest.raises(ProjectSchemaError, match="acceptance and release status"):
         build_double_vanity_artifacts(
             forged_model, validate_double_vanity_model(forged_model),
         )
     forged_project = replace(pending, model=forged_model)
-    with pytest.raises(ProjectSchemaError, match="artifact authority disagree"):
+    with pytest.raises(ProjectSchemaError, match="acceptance and release status"):
         forged_project.validate()
-    assert not forged_project.fabrication_ready
-    with pytest.raises(ProjectReleaseError):
+    with pytest.raises(ProjectSchemaError, match="acceptance and release status"):
+        _ = forged_project.fabrication_ready
+    with pytest.raises(ProjectSchemaError, match="acceptance and release status"):
         forged_project.require_fabrication_release()
     from detailgen.packs.cabinetry.double_vanity_documents import (
         build_double_vanity_document_set,
     )
-    with pytest.raises(ValueError, match="authority state is inconsistent"):
+    with pytest.raises(ProjectSchemaError, match="acceptance and release status"):
         build_double_vanity_document_set(forged_project)
+
+
+def test_pending_acceptance_cannot_claim_conditional_fabrication_release():
+    pending = _project()
+    forged_project = replace(
+        pending,
+        model=replace(
+            pending.model,
+            release=replace(
+                pending.model.release,
+                fabrication_status="CONDITIONAL_FABRICATION_RELEASE",
+            ),
+        ),
+    )
+
+    with pytest.raises(ProjectSchemaError, match="acceptance and release status"):
+        forged_project.validate()
 
 
 def test_co_mutated_40mm_granite_basis_requires_full_regeneration():

@@ -802,11 +802,24 @@ class DoubleVanityModel:
         }
 
     def fabrication_release_contract(self) -> tuple[bool, str]:
+        acceptance_complete = self.fabrication_acceptance.complete_for(
+            self.fabrication_basis
+        )
+        status = self.release.fabrication_status
+        pending_hold = (
+            self.fabrication_acceptance.status == "PENDING"
+            and status in {"HOLD_FABRICATOR_ACCEPTANCE", "HOLD_PRODUCT_GEOMETRY"}
+        )
+        accepted_release = (
+            acceptance_complete
+            and status == "CONDITIONAL_FABRICATION_RELEASE"
+        )
+        if not (pending_hold or accepted_release):
+            raise ProjectSchemaError(
+                "fabrication acceptance and release status are inconsistent"
+            )
         return (
-            self.fabrication_acceptance.complete_for(self.fabrication_basis)
-            and self.release.fabrication_status
-            == "CONDITIONAL_FABRICATION_RELEASE"
-            and self.fabrication_basis_is_coherent(),
+            accepted_release and self.fabrication_basis_is_coherent(),
             "typed_fabrication_acceptance/v1",
         )
 
@@ -904,7 +917,7 @@ def apply_fabrication_acceptance(
     model: DoubleVanityModel,
     acceptance: FabricationAcceptance,
 ) -> DoubleVanityModel:
-    """Return the only model variant allowed to activate production cuts."""
+    """Canonical convenience API for constructing an accepted model state."""
 
     if acceptance.status == "ACCEPTED":
         try:
@@ -2802,11 +2815,6 @@ def build_double_vanity_artifacts(
         )
     fabrication_authorized = model.fabrication_release_contract()[0]
     if acceptance.status == "ACCEPTED" and not fabrication_authorized:
-        if model.release.fabrication_status != "CONDITIONAL_FABRICATION_RELEASE":
-            raise ProjectSchemaError(
-                "accepted evidence did not pass the canonical transition; use "
-                "apply_fabrication_acceptance()"
-            )
         raise ProjectSchemaError(
             "accepted fabrication evidence is incomplete, incoherent, or does "
             "not match the fabrication-basis digest"
