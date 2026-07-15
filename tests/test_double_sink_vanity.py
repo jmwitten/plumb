@@ -1336,6 +1336,103 @@ def test_typed_fabrication_basis_and_acceptance_gate_production():
         ))
 
 
+def test_every_dv72_edge_band_uses_the_shared_physical_edge_length():
+    from detailgen.packs.cabinetry.artifacts import edge_band_length
+
+    project = _project()
+    for item in project.artifacts.edge_banding:
+        part = next(
+            part for part in project.model.parts if part.part_id == item.part_id
+        )
+        assert item.length_mm == pytest.approx(edge_band_length(part, item.edge))
+
+
+def test_impossible_acceptance_date_and_incoherent_basis_are_rejected():
+    from detailgen.packs.cabinetry.double_vanity import (
+        FabricationAcceptance,
+        apply_fabrication_acceptance,
+    )
+
+    model = _project().model
+    with pytest.raises(ProjectSchemaError, match="valid normalized ISO date"):
+        apply_fabrication_acceptance(model, FabricationAcceptance(
+            status="ACCEPTED", accepted_by="Example Cabinet Fabricator",
+            accepted_on="2026-99-99", basis_digest=model.fabrication_basis.digest(),
+            evidence_revision="signed-shop-basis-r1",
+        ))
+    changed = replace(
+        model,
+        fabrication_basis=replace(
+            model.fabrication_basis,
+            countertop_structural_thickness_mm=40.0,
+        ),
+    )
+    with pytest.raises(ProjectSchemaError, match="fabrication basis contradicts"):
+        apply_fabrication_acceptance(changed, FabricationAcceptance(
+            status="ACCEPTED", accepted_by="Example Cabinet Fabricator",
+            accepted_on="2026-07-15",
+            basis_digest=changed.fabrication_basis.digest(),
+            evidence_revision="signed-shop-basis-r1",
+        ))
+
+
+def test_coherent_accepted_project_validates_and_serializes_typed_authority():
+    from detailgen.packs.cabinetry.double_vanity import (
+        FabricationAcceptance,
+        accept_double_vanity_project,
+    )
+
+    pending = _project()
+    acceptance = FabricationAcceptance(
+        status="ACCEPTED", accepted_by="Example Cabinet Fabricator",
+        accepted_on="2026-07-15",
+        basis_digest=pending.model.fabrication_basis.digest(),
+        evidence_revision="signed-shop-basis-r1",
+    )
+    accepted = accept_double_vanity_project(pending, acceptance)
+    assert len(accepted.build().parts) == len(accepted.model.parts)
+    assert accepted.validate().ok
+    assert accepted.fabrication_ready
+    assert accepted.require_fabrication_release() is accepted
+    payload = accepted.manifest()
+    assert payload["artifacts"]["fabrication_ready"] is True
+    assert payload["artifacts"]["release_contract"] == (
+        "typed_fabrication_acceptance/v1"
+    )
+    audit = payload["artifacts"]["fabrication_audit"]
+    assert audit["basis_digest"] == acceptance.basis_digest
+    assert audit["accepted_by"] == acceptance.accepted_by
+    assert accepted.artifacts.hardware_schedule[0].quantity == 0
+    assert "quantity and procurement are not authorized" in (
+        accepted.artifacts.hardware_schedule[0].procurement_note
+    )
+    assert not pending.fabrication_ready
+    pending.validate()
+    assert not pending.fabrication_ready
+    assert pending.artifacts.release_contract == "typed_fabrication_acceptance/v1"
+
+
+def test_invalid_edge_schedule_cannot_emit_fabrication_authority():
+    from detailgen.packs.cabinetry.double_vanity import (
+        build_double_vanity_artifacts,
+        validate_double_vanity_model,
+    )
+
+    model = _project().model
+    invalid = replace(
+        model,
+        parts=tuple(
+            replace(part, edge_bands=("diagonal",))
+            if part.role == "left_end" else part
+            for part in model.parts
+        ),
+    )
+    with pytest.raises(ValueError, match="unknown edge-band edge"):
+        build_double_vanity_artifacts(
+            invalid, validate_double_vanity_model(invalid),
+        )
+
+
 def test_nyc_and_ipc_profiles_pin_deliberate_vertical_trap_difference():
     from detailgen.packs.cabinetry.double_vanity import plumbing_code_profile
 

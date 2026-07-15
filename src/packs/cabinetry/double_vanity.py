@@ -9,6 +9,7 @@ nine project facts that a photograph or generic catalog cannot establish.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
+from datetime import date
 import hashlib
 import json
 import re
@@ -27,7 +28,10 @@ from ...spec.schema import (
     ValidationSpec,
 )
 from ..project import PackedProject, ProjectSchemaError
-from .artifacts import CabinetArtifacts, CutListItem, EdgeBandItem, WorkStep
+from .artifacts import (
+    CabinetArtifacts, CutListItem, EdgeBandItem, HardwareItem, WorkStep,
+    edge_band_length,
+)
 from .catalogs import get_wall_anchor_product
 from .evidence import EvidenceRecord
 from .profiles import get_profile
@@ -597,6 +601,9 @@ class FabricationBasis:
             f"±{self.part_tolerance_mm:.1f} mm part-size tolerance; "
             f"±{self.case_tolerance_mm:.1f} mm assembled-case size; "
             f"diagonals within {self.diagonal_tolerance_mm:.1f} mm",
+            f"{self.countertop_structural_thickness_mm:.1f} mm "
+            f"{self.countertop_material}; {self.countertop_visual_edge_mm:.1f} "
+            "mm visual edge",
             "gross sink support zones left/inter-sink/right/front/rear: "
             + "/".join(f"{value:.1f} mm" for value in zones)
             + f"; {self.sink_support_basis}",
@@ -612,10 +619,14 @@ class FabricationAcceptance:
     evidence_revision: str = ""
 
     def complete_for(self, basis: FabricationBasis) -> bool:
+        try:
+            normalized_date = date.fromisoformat(self.accepted_on).isoformat()
+        except ValueError:
+            normalized_date = ""
         return (
             self.status == "ACCEPTED"
             and bool(self.accepted_by.strip())
-            and bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", self.accepted_on))
+            and normalized_date == self.accepted_on
             and self.basis_digest == basis.digest()
             and bool(self.evidence_revision.strip())
         )
@@ -789,6 +800,15 @@ class DoubleVanityModel:
             "comparative_mount": self.mount_reference.adapter_id,
         }
 
+    def fabrication_release_contract(self) -> tuple[bool, str]:
+        return (
+            self.fabrication_acceptance.complete_for(self.fabrication_basis),
+            "typed_fabrication_acceptance/v1",
+        )
+
+    def fabrication_basis_is_coherent(self) -> bool:
+        return _fabrication_basis_coherent(self)
+
 
     def catalog_source_manifest(self) -> dict[str, str]:
         return {
@@ -880,6 +900,19 @@ def apply_fabrication_acceptance(
 ) -> DoubleVanityModel:
     """Return the only model variant allowed to activate production cuts."""
 
+    if acceptance.status == "ACCEPTED":
+        try:
+            normalized = date.fromisoformat(acceptance.accepted_on).isoformat()
+        except ValueError:
+            normalized = ""
+        if normalized != acceptance.accepted_on:
+            raise ProjectSchemaError(
+                "fabrication acceptance requires a valid normalized ISO date"
+            )
+    if not _fabrication_basis_coherent(model):
+        raise ProjectSchemaError(
+            "fabrication basis contradicts countertop, case, or sink-zone geometry"
+        )
     if acceptance.status != "ACCEPTED" or not acceptance.complete_for(
         model.fabrication_basis
     ):
@@ -895,6 +928,43 @@ def apply_fabrication_acceptance(
             fabrication_status="CONDITIONAL_FABRICATION_RELEASE",
         ),
     )
+
+
+def _fabrication_basis_coherent(model: DoubleVanityModel) -> bool:
+    basis = model.fabrication_basis
+    vanity = model.section.vanity
+    left_fixture = model.plumbing_paths[0].fixture_envelope
+    right_fixture = model.plumbing_paths[1].fixture_envelope
+    wall_y = model.section.site.wall.plane_origin_mm[1]
+    front_y = wall_y - vanity.body_depth_mm
+    zones = (
+        left_fixture.x0_mm - vanity.x0_mm,
+        right_fixture.x0_mm - left_fixture.x1_mm,
+        vanity.x0_mm + vanity.width_mm - right_fixture.x1_mm,
+        left_fixture.y0_mm - front_y,
+        wall_y - left_fixture.y1_mm,
+    )
+    return (
+        basis.case_thickness_mm == model.profile.carcass_thickness_mm
+        and basis.countertop_material == model.countertop.material
+        and basis.countertop_structural_thickness_mm
+        == model.countertop.structural_thickness_mm
+        == vanity.countertop_thickness_mm
+        and basis.countertop_visual_edge_mm
+        == model.countertop.visual_edge_height_mm
+        and all(abs(a - b) <= 1e-6 for a, b in zip(
+            basis.sink_support_zones_mm, zones,
+        ))
+    )
+
+
+def accept_double_vanity_project(project, acceptance: FabricationAcceptance):
+    """Build a coherent accepted project through the pack-owned typed contract."""
+
+    model = apply_fabrication_acceptance(project.model, acceptance)
+    report = validate_double_vanity_model(model)
+    artifacts = build_double_vanity_artifacts(model, report)
+    return replace(project, model=model, report=report, artifacts=artifacts)
 
 
 def _vertical_panel_x_bounds(part: PartModel) -> tuple[float, float]:
@@ -2656,16 +2726,23 @@ def build_double_vanity_artifacts(
             "double_vanity.drawer.runner_applicability",
         )
     )
+    if not _fabrication_basis_coherent(model):
+        raise ProjectSchemaError(
+            "fabrication basis contradicts countertop, case, or sink-zone geometry"
+        )
     acceptance = model.fabrication_acceptance
     if acceptance.status not in {"PENDING", "ACCEPTED"}:
         raise ProjectSchemaError(
             f"unsupported fabrication acceptance status {acceptance.status!r}"
         )
-    fabrication_authorized = acceptance.complete_for(model.fabrication_basis)
+    acceptance_complete = acceptance.complete_for(model.fabrication_basis)
+    fabrication_authorized = (
+        acceptance_complete and _fabrication_basis_coherent(model)
+    )
     if acceptance.status == "ACCEPTED" and not fabrication_authorized:
         raise ProjectSchemaError(
-            "accepted fabrication evidence is incomplete or does not match "
-            "the fabrication-basis digest"
+            "accepted fabrication evidence is incomplete, incoherent, or does "
+            "not match the fabrication-basis digest"
         )
     fabricated = tuple(
         part for part in model.parts
@@ -2696,10 +2773,7 @@ def build_double_vanity_artifacts(
             part_id=part.part_id,
             edge=edge,
             operation="apply selected veneer edge band",
-            length_mm=(
-                part.width_mm if edge in {"left", "right", "front"}
-                else part.length_mm
-            ),
+            length_mm=edge_band_length(part, edge),
             material=model.fabrication_basis.edge_band_material,
             source_rule=model.source_map[part.part_id].rule,
             thickness_mm=model.fabrication_basis.edge_band_thickness_mm,
@@ -2737,9 +2811,42 @@ def build_double_vanity_artifacts(
         installation_use_ready=False,
         release_scope="split",
         release_contract="typed_fabrication_acceptance/v1",
+        fabrication_audit={
+            "basis_id": model.fabrication_basis.basis_id,
+            "basis_version": model.fabrication_basis.version,
+            "basis_digest": model.fabrication_basis.digest(),
+            "acceptance_status": acceptance.status,
+            "accepted_by": acceptance.accepted_by,
+            "accepted_on": acceptance.accepted_on,
+            "evidence_revision": acceptance.evidence_revision,
+            "joinery": model.fabrication_basis.joinery,
+            "cabinet_fastener": model.fabrication_basis.cabinet_fastener,
+            "finish": model.fabrication_basis.finish,
+            "part_tolerance_mm": model.fabrication_basis.part_tolerance_mm,
+            "case_tolerance_mm": model.fabrication_basis.case_tolerance_mm,
+            "diagonal_tolerance_mm": (
+                model.fabrication_basis.diagonal_tolerance_mm
+            ),
+        },
         cut_list=cut_list,
         edge_banding=edge_banding,
-        hardware_schedule=(),
+        hardware_schedule=(HardwareItem(
+            system_id="double_vanity.cabinet_joinery",
+            kind="selected_cabinet_screw_basis",
+            product_id="",
+            quantity=0,
+            source_url="",
+            evidence="owner_assumed",
+            related_parts=tuple(
+                item.part_id for item in fabricated
+                if not item.role.startswith("drawer_")
+            ),
+            quantity_unit="selection_only_quantity_not_modeled",
+            procurement_note=(
+                f"{model.fabrication_basis.cabinet_fastener}; selected basis "
+                "only; quantity and procurement are not authorized"
+            ),
+        ),),
         machining_schedule=(),
         fabrication_steps=(WorkStep(
             10, "fabrication.conditional_scope",

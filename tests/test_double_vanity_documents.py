@@ -270,6 +270,76 @@ def test_renderer_projects_typed_fabrication_basis_without_shop_literals():
         assert row in html
 
 
+def test_documents_reject_forged_or_stale_authority_state():
+    from dataclasses import replace
+    from detailgen.packs.cabinetry.double_vanity_documents import (
+        build_double_vanity_document_set,
+    )
+
+    pending = compile_project_file(FIXTURE)
+    forged = replace(
+        pending,
+        model=replace(
+            pending.model,
+            release=replace(
+                pending.model.release,
+                fabrication_status="CONDITIONAL_FABRICATION_RELEASE",
+            ),
+        ),
+    )
+    with pytest.raises(ValueError, match="authority state is inconsistent"):
+        build_double_vanity_document_set(forged)
+
+    from detailgen.packs.cabinetry.double_vanity import (
+        FabricationAcceptance,
+        accept_double_vanity_project,
+    )
+    acceptance = FabricationAcceptance(
+        status="ACCEPTED", accepted_by="Example Cabinet Fabricator",
+        accepted_on="2026-07-15",
+        basis_digest=pending.model.fabrication_basis.digest(),
+        evidence_revision="signed-shop-basis-r1",
+    )
+    accepted = accept_double_vanity_project(pending, acceptance)
+    stale = replace(
+        accepted,
+        artifacts=replace(accepted.artifacts, fabrication_ready=False),
+    )
+    with pytest.raises(ValueError, match="authority state is inconsistent"):
+        build_double_vanity_document_set(stale)
+
+
+def test_accepted_documents_record_exact_acceptance_evidence_without_hold_leakage():
+    from detailgen.packs.cabinetry.double_vanity import (
+        FabricationAcceptance,
+        accept_double_vanity_project,
+    )
+    from detailgen.packs.cabinetry.double_vanity_documents import (
+        build_double_vanity_document_set,
+    )
+
+    pending = compile_project_file(FIXTURE)
+    acceptance = FabricationAcceptance(
+        status="ACCEPTED", accepted_by="Example Cabinet Fabricator",
+        accepted_on="2026-07-15",
+        basis_digest=pending.model.fabrication_basis.digest(),
+        evidence_revision="signed-shop-basis-r1",
+    )
+    accepted = accept_double_vanity_project(pending, acceptance)
+    accepted.validate()
+    docs = build_double_vanity_document_set(accepted)
+    fabrication = docs["dv72_fabrication_coordination.html"]
+    assert "FABRICATOR ACCEPTANCE RECORDED" in fabrication
+    for value in (
+        acceptance.accepted_by, acceptance.accepted_on,
+        acceptance.evidence_revision, acceptance.basis_digest,
+    ):
+        assert value in fabrication
+    assert "FABRICATOR ACCEPTANCE PENDING" not in fabrication
+    assert "Prepared schedule only — non-production" not in fabrication
+    assert "production inventory" in fabrication
+
+
 def test_validation_assigns_owner_and_blocking_phase_to_every_finding():
     project = compile_project_file(FIXTURE)
     html = _documents()["dv72_validation_sources.html"]
@@ -294,7 +364,7 @@ def test_document_set_rejects_stale_pre_release_contradictions():
         assert contradiction not in joined
 
 
-def test_product_geometry_hold_never_leaks_visible_fabrication_release():
+def test_forged_product_geometry_hold_fails_authority_coherence():
     from detailgen.packs.cabinetry.double_vanity_documents import (
         build_double_vanity_document_set,
     )
@@ -308,27 +378,8 @@ def test_product_geometry_hold_never_leaks_visible_fabrication_release():
         project,
         model=replace(project.model, release=held_release),
     )
-    docs = build_double_vanity_document_set(held_project)
-    fabrication = docs["dv72_fabrication_coordination.html"]
-    joined = "\n".join(docs.values())
-
-    assert 'data-release-status="HOLD_PRODUCT_GEOMETRY"' in fabrication
-    assert "FABRICATION HOLD — PRODUCT GEOMETRY" in fabrication
-    assert "Released cabinet and drawer inventory" not in joined
-    assert "released parts" not in joined
-    assert "CONDITIONAL FABRICATION RELEASE" not in joined
-    assert 'data-cut-list-row="' not in fabrication
-    joined_lower = joined.lower()
-    for leak in (
-        "conditional fabrication release",
-        "conditionally released",
-        "released cabinet and drawer cuts",
-        "released cabinet and drawer inventory",
-        "released box",
-        "released u void",
-        "released parts",
-    ):
-        assert leak not in joined_lower
+    with pytest.raises(ValueError, match="authority state is inconsistent"):
+        build_double_vanity_document_set(held_project)
 
 
 def test_fabrication_labels_every_assumption_as_unverified_owner_input():

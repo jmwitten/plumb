@@ -72,7 +72,21 @@ class PackedProject:
     def build(self):
         return self.detail.build()
 
+    def _typed_fabrication_contract(self):
+        contract = getattr(self.model, "fabrication_release_contract", None)
+        return contract() if callable(contract) else None
+
     def validate(self):
+        typed_contract = self._typed_fabrication_contract()
+        if typed_contract is not None:
+            model_ready, contract_name = typed_contract
+            if (
+                self.artifacts.fabrication_ready != model_ready
+                or self.artifacts.release_contract != contract_name
+            ):
+                raise ProjectSchemaError(
+                    "typed fabrication model and artifact authority disagree"
+                )
         self._base_report = self.detail.validate()
         # Domain packs can activate an existing base coverage family when they
         # have run a real, named check that the generic compiler cannot infer
@@ -92,9 +106,10 @@ class PackedProject:
                 detail=finding.message,
                 verdict=verdict,
             ))
-        split_release = bool(getattr(
-            self.report, "installation_use_blocking_rules", ()
-        ))
+        split_release = bool(
+            typed_contract is not None
+            or getattr(self.report, "installation_use_blocking_rules", ())
+        )
         installation_use_ready = self.installation_use_ready
         fabrication_ready = self.fabrication_ready
         installation_steps = self.artifacts.installation_steps
@@ -120,7 +135,10 @@ class PackedProject:
                 else "none" if split_release
                 else "unified"
             ),
-            release_contract="split" if split_release else "unified",
+            release_contract=(
+                typed_contract[1] if typed_contract is not None
+                else "split" if split_release else "unified"
+            ),
             installation_steps=installation_steps,
         )
         return self._base_report
@@ -143,8 +161,13 @@ class PackedProject:
         # Pack checks alone are not the release gate: until the unchanged base
         # geometry sweep has actually run, readiness is unknown and therefore
         # false. ``require_fabrication_release``/``validate`` supplies evidence.
+        typed_contract = self._typed_fabrication_contract()
+        report_ready = (
+            typed_contract[0] if typed_contract is not None
+            else getattr(self.report, "fabrication_ready", self.report.release_ready)
+        )
         return bool(
-            getattr(self.report, "fabrication_ready", self.report.release_ready)
+            report_ready
             and self._base_report is not None
             and self._base_report.ok
             and self._required_coverage_ok()
@@ -166,8 +189,12 @@ class PackedProject:
         return self.installation_use_ready
 
     def require_fabrication_release(self):
-        report_ready = getattr(
-            self.report, "fabrication_ready", self.report.release_ready
+        typed_contract = self._typed_fabrication_contract()
+        report_ready = (
+            typed_contract[0] if typed_contract is not None
+            else getattr(
+                self.report, "fabrication_ready", self.report.release_ready
+            )
         )
         if not report_ready:
             lines = "\n".join(
@@ -268,11 +295,17 @@ class PackedProject:
             "evidence": [asdict(item) for item in self.report.evidence],
             "artifacts": self.artifacts.to_dict(),
         }
-        if getattr(self.report, "installation_use_blocking_rules", ()):
+        if (
+            self._typed_fabrication_contract() is not None
+            or getattr(self.report, "installation_use_blocking_rules", ())
+        ):
+            typed_contract = self._typed_fabrication_contract()
             payload.update({
                 "fabrication_ready": self.fabrication_ready,
                 "installation_use_ready": self.installation_use_ready,
-                "release_contract": "split",
+                "release_contract": (
+                    typed_contract[1] if typed_contract is not None else "split"
+                ),
                 "release_scope": (
                     "full" if self.installation_use_ready else
                     "fabrication_only" if self.fabrication_ready else

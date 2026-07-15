@@ -93,9 +93,12 @@ class CabinetArtifacts:
     installation_use_ready: bool = False
     release_scope: str = "unified"
     release_contract: str = "unified"
+    fabrication_audit: dict | None = None
 
     def to_dict(self) -> dict:
         payload = dataclasses.asdict(self)
+        if payload["fabrication_audit"] is None:
+            payload.pop("fabrication_audit")
         # Procedure metadata is additive v2 detail. Preserve the established
         # artifact bytes for product lines that have no typed procedure link.
         for item in payload["hardware_schedule"]:
@@ -147,7 +150,8 @@ def _toe_attachment_schedule_instruction(model) -> str:
     )
 
 
-def _edge_length(part, edge: str) -> float:
+def edge_band_length(part, edge: str) -> float:
+    """Return the canonical physical run for a named modeled panel edge."""
     if edge in {"left", "right", "front"}:
         # On door slabs left/right are vertical (panel width); on carcass/shelf
         # front edges the run is the panel length.
@@ -159,6 +163,9 @@ def _edge_length(part, edge: str) -> float:
     if edge in {"top", "bottom"}:
         return part.length_mm
     raise ValueError(f"unknown edge-band edge {edge!r} on {part.part_id}")
+
+
+_edge_length = edge_band_length
 
 
 def _preband_cut_dimensions(part, thickness_mm: float) -> tuple[float, float]:

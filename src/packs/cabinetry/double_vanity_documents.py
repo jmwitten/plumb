@@ -113,11 +113,45 @@ def _dual(mm: float) -> str:
 
 
 def _fabrication_status(project) -> tuple[bool, str]:
-    status = project.model.release.fabrication_status
-    if status == "CONDITIONAL_FABRICATION_RELEASE":
-        return True, (
-            "CONDITIONAL FABRICATION RELEASE — FABRICATOR ACCEPTANCE REQUIRED"
+    model = project.model
+    if not model.fabrication_basis_is_coherent():
+        raise ValueError("DV72 fabrication basis contradicts model geometry")
+    complete = model.fabrication_acceptance.complete_for(
+        model.fabrication_basis
+    )
+    drawer_geometry_ready = all(
+        project.report.by_rule(rule).verdict == "PASS"
+        for rule in (
+            "double_vanity.geometry.fixture_plumbing_drawer",
+            "double_vanity.drawer.runner_applicability",
         )
+    )
+    expected_status = (
+        "CONDITIONAL_FABRICATION_RELEASE" if complete
+        else "HOLD_PRODUCT_GEOMETRY" if not drawer_geometry_ready
+        else "HOLD_FABRICATOR_ACCEPTANCE"
+    )
+    audit = project.artifacts.fabrication_audit or {}
+    expected_audit = {
+        "basis_id": model.fabrication_basis.basis_id,
+        "basis_version": model.fabrication_basis.version,
+        "basis_digest": model.fabrication_basis.digest(),
+        "acceptance_status": model.fabrication_acceptance.status,
+        "accepted_by": model.fabrication_acceptance.accepted_by,
+        "accepted_on": model.fabrication_acceptance.accepted_on,
+        "evidence_revision": model.fabrication_acceptance.evidence_revision,
+    }
+    if (
+        model.release.fabrication_status != expected_status
+        or project.artifacts.fabrication_ready != complete
+        or project.artifacts.release_contract
+        != "typed_fabrication_acceptance/v1"
+        or any(audit.get(key) != value for key, value in expected_audit.items())
+    ):
+        raise ValueError("DV72 fabrication authority state is inconsistent")
+    status = project.model.release.fabrication_status
+    if complete:
+        return True, "FABRICATOR ACCEPTANCE RECORDED"
     if status == "HOLD_PRODUCT_GEOMETRY":
         return False, "FABRICATION HOLD — PRODUCT GEOMETRY"
     if status == "HOLD_FABRICATOR_ACCEPTANCE":
@@ -416,8 +450,15 @@ def _fabrication_boundaries(project) -> str:
 def build_double_vanity_fabrication_html(project) -> str:
     fabrication_released, visible_status = _fabrication_status(project)
     if fabrication_released:
-        authority = '<section><h2>Fabrication authority</h2><p><b>Cabinet and drawer finished-cut extents are released only after written cabinet-fabricator acceptance of the complete owner_assumed shop basis.</b> Before that written acceptance, no production cut is authorized. Stone, runner machining, wall work, loading, trade work, and installation are outside this release.</p></section>'
-        status_content = "Finished-cut extents become usable only after written cabinet-fabricator acceptance of the complete owner_assumed shop basis. Before acceptance, no production cut is authorized. Stone cutting, runner machining, wall drilling, loading, trade work, and installation remain held."
+        acceptance = project.model.fabrication_acceptance
+        evidence = (
+            f"Accepted by {study._e(acceptance.accepted_by)} on "
+            f"{study._e(acceptance.accepted_on)}; evidence revision "
+            f"{study._e(acceptance.evidence_revision)}; exact basis digest "
+            f"<code>{study._e(acceptance.basis_digest)}</code>."
+        )
+        authority = '<section><h2>Fabrication authority</h2><p><b>Cabinet and drawer production inventory is authorized under the recorded typed acceptance.</b> ' + evidence + ' Stone, runner machining, wall work, loading, trade work, and installation remain outside this release.</p></section>'
+        status_content = evidence + " Cabinet and drawer production inventory is authorized; stone cutting, runner machining, wall drilling, loading, trade work, and installation remain held."
     elif project.model.release.fabrication_status == "HOLD_PRODUCT_GEOMETRY":
         authority = '<section><h2>Fabrication authority</h2><p><b>Product geometry is held.</b> No cabinet, drawer, stone, runner-machining, wall-work, loading, trade-work, or installation authority is issued.</p></section>'
         status_content = "Product geometry is held. Cabinet, drawer, stone, runner machining, wall drilling, loading, trade work, and installation remain withheld."
