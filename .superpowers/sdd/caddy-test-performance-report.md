@@ -77,10 +77,10 @@ Representative negative probes remain in the gate:
 - a review with delivery confirmation removed must write no customer package;
 - governance binding must not change geometry.
 
-Eight plugin tests prove slug selection, complete-contract enforcement, and
+Nine plugin tests prove slug selection, complete-contract enforcement, and
 malformed marker rejection. `--detail-gate missing` exits 4 with `unknown detail
 gate`. Ordinary collection retains all 1,833 pre-existing node IDs; the final
-collection has 1,842 nodes, consisting of those 1,833 plus eight new plugin
+collection has 1,843 nodes, consisting of those 1,833 plus nine new plugin
 tests and the repository's automatic audit node for the new test file.
 
 ## Test policy
