@@ -51,6 +51,7 @@ DEFAULT_PROJECT = (
 )
 DEFAULT_OUT_DIR = _REPO / "outputs" / "frameless_three_drawer_40"
 CONSUMER_BASENAME = "frameless_three_drawer_40_consumer_manual.html"
+CUTTING_BASENAME = "frameless_three_drawer_40_cutting_guide.html"
 TECHNICAL_BASENAME = "frameless_three_drawer_40_build_document.html"
 MANUAL_BASENAME = "frameless_three_drawer_40_assembly_manual.html"
 FABRICATION_BASENAME = "frameless_three_drawer_40_fabrication_packet.html"
@@ -78,11 +79,14 @@ def build_cabinetry_consumer_document(
         project,
         basename=CONSUMER_BASENAME,
         related_documents=(
+            RelatedDocumentLink("Cutting guide (do this first)",
+                                CUTTING_BASENAME),
             RelatedDocumentLink("Review & installation sheet",
                                 TECHNICAL_BASENAME),
             RelatedDocumentLink("Illustrated assembly manual",
                                 MANUAL_BASENAME),
-            RelatedDocumentLink("Fabrication packet", FABRICATION_BASENAME),
+            RelatedDocumentLink("Fabrication packet (exact mm, shop copy)",
+                                FABRICATION_BASENAME),
             RelatedDocumentLink("Review trace", AUDIT_BASENAME),
         ),
     )
