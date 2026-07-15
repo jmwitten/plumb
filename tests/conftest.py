@@ -44,9 +44,12 @@ REQUIRED_DETAIL_CONTRACTS = frozenset({
     "compile",
     "geometry",
     "validation",
+    "connections",
     "fabrication",
+    "bom",
     "governance",
-    "documents",
+    "intent",
+    "determinism",
 })
 
 

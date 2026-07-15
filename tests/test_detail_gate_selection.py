@@ -67,7 +67,7 @@ def test_missing_contract_fails_collection():
 
     with pytest.raises(
         pytest.UsageError,
-        match=r"missing contracts:.*documents",
+        match=r"missing contracts:.*determinism",
     ):
         _require_complete_detail_gate(
             "armchair_caddy", selected, {"compile"}
