@@ -184,6 +184,12 @@ are stored with a rule ID, outcome, rationale, and dependency fingerprint.
 Only changes to that rule's relevant evidence invalidate the answer. Test runs
 are always non-interactive.
 
+A recorded decision may classify applicability or explicitly accept that a
+claim remains unknown. It cannot override contradictory evidence, suppress an
+observed validation/geometry/fabrication failure, or convert a failed declared
+intent fact into a pass. Certification results always disclose applied
+decisions and retain `UNKNOWN` wording even when policy permits release.
+
 The first increment provides the structured decision model and deterministic
 CLI output. It does not build a product-specific UI. An agent or later CLI
 wizard can write recorded decisions without changing engine semantics.
