@@ -296,6 +296,11 @@ class IntentRule:
         snapshot = context.primary
         intent = context.contract.intent
         problems = []
+        if context.contract.deliverables:
+            problems.append(
+                "requested deliverables have no deliverable evidence: "
+                f"{list(context.contract.deliverables)}"
+            )
         for index, row in enumerate(intent.counts):
             error = _count_error(snapshot.parts, row, f"counts[{index}]")
             if error:

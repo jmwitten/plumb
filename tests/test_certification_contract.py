@@ -75,6 +75,17 @@ def test_missing_required_field_fails_with_yaml_path(tmp_path):
         load_contract(path, repo_root=tmp_path)
 
 
+@pytest.mark.parametrize("schema_version", [True, 1.0, "1"])
+def test_schema_version_requires_literal_integer_one(tmp_path, schema_version):
+    path = _minimal_contract(tmp_path)
+    raw = yaml.safe_load(path.read_text())
+    raw["schema_version"] = schema_version
+    path.write_text(yaml.safe_dump(raw, sort_keys=False))
+
+    with pytest.raises(ContractError, match=r"schema_version.*expected integer 1"):
+        load_contract(path, repo_root=tmp_path)
+
+
 def test_source_cannot_escape_repository_root(tmp_path):
     repo = tmp_path / "repo"
     outside = tmp_path / "outside.spec.yaml"
@@ -176,4 +187,59 @@ def test_unknown_selector_field_fails_closed(tmp_path):
     path.write_text(yaml.safe_dump(raw, sort_keys=False))
 
     with pytest.raises(ContractError, match=r"selector.*unknown field.*regex"):
+        load_contract(path, repo_root=tmp_path)
+
+
+@pytest.mark.parametrize("bound", [float("nan"), float("inf"), float("-inf")])
+def test_non_finite_numeric_range_fails_closed(tmp_path, bound):
+    path = _minimal_contract(tmp_path)
+    raw = yaml.safe_load(path.read_text())
+    raw["intent"] = {
+        "bom": [
+            {
+                "item": "panel",
+                "quantity": 1,
+                "length_mm": {"minimum": bound},
+            }
+        ]
+    }
+    path.write_text(yaml.safe_dump(raw, sort_keys=False))
+
+    with pytest.raises(ContractError, match=r"length_mm.minimum.*finite"):
+        load_contract(path, repo_root=tmp_path)
+
+
+def test_unknown_decision_outcome_fails_closed(tmp_path):
+    path = _minimal_contract(tmp_path)
+    raw = yaml.safe_load(path.read_text())
+    raw["decisions"] = [
+        {
+            "rule": "capacity.known",
+            "outcome": "ignore_failure",
+            "rationale": "typo must not be silently ignored",
+            "evidence_fingerprint": "abc123",
+        }
+    ]
+    path.write_text(yaml.safe_dump(raw, sort_keys=False))
+
+    with pytest.raises(
+        ContractError,
+        match=r"decisions\[0\]\.outcome.*unknown_allowed",
+    ):
+        load_contract(path, repo_root=tmp_path)
+
+
+def test_duplicate_decision_key_fails_closed(tmp_path):
+    path = _minimal_contract(tmp_path)
+    raw = yaml.safe_load(path.read_text())
+    decision = {
+        "rule": "capacity.known",
+        "outcome": "unknown_allowed",
+        "rationale": "one owner decision",
+        "evidence_fingerprint": "abc123",
+    }
+    raw["decisions"] = [decision, decision]
+    path.write_text(yaml.safe_dump(raw, sort_keys=False))
+
+    with pytest.raises(ContractError, match=r"decisions.*duplicate.*capacity.known"):
         load_contract(path, repo_root=tmp_path)

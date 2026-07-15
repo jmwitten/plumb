@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,7 @@ _SELECTOR_FIELDS = {
     "component", "material", "role", "name", "name_contains", "kind",
     "check", "verdict", "subject_contains",
 }
+_DECISION_OUTCOMES = {"unknown_allowed"}
 
 
 class ContractError(ValueError):
@@ -81,7 +83,10 @@ def _integer(value: Any, path: str) -> int:
 def _number(value: Any, path: str) -> float:
     if not isinstance(value, (int, float)) or isinstance(value, bool):
         raise ContractError(f"{path}: expected a number")
-    return float(value)
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise ContractError(f"{path}: expected a finite number")
+    return parsed
 
 
 def _selector(value: Any, path: str) -> IntentSelector:
@@ -246,19 +251,34 @@ def _governance_intent(value: Any, path: str) -> GovernanceIntent:
 
 def _decisions(value: Any, path: str) -> tuple[DecisionRecord, ...]:
     records = []
+    keys: set[tuple[str, str]] = set()
     for index, item in enumerate(_list(value, path)):
         item_path = f"{path}[{index}]"
         raw = _mapping(item, item_path)
         required = {"rule", "outcome", "rationale", "evidence_fingerprint"}
         _keys(raw, required=required, path=item_path)
+        outcome = _string(raw["outcome"], f"{item_path}.outcome")
+        if outcome not in _DECISION_OUTCOMES:
+            raise ContractError(
+                f"{item_path}.outcome: expected 'unknown_allowed', got {outcome!r}"
+            )
+        rule_id = _string(raw["rule"], f"{item_path}.rule")
+        evidence_fingerprint = _string(
+            raw["evidence_fingerprint"],
+            f"{item_path}.evidence_fingerprint",
+        )
+        key = (rule_id, evidence_fingerprint)
+        if key in keys:
+            raise ContractError(
+                f"{path}: duplicate decision for rule {rule_id!r} "
+                f"and evidence fingerprint {evidence_fingerprint!r}"
+            )
+        keys.add(key)
         records.append(DecisionRecord(
-            rule_id=_string(raw["rule"], f"{item_path}.rule"),
-            outcome=_string(raw["outcome"], f"{item_path}.outcome"),
+            rule_id=rule_id,
+            outcome=outcome,
             rationale=_string(raw["rationale"], f"{item_path}.rationale"),
-            evidence_fingerprint=_string(
-                raw["evidence_fingerprint"],
-                f"{item_path}.evidence_fingerprint",
-            ),
+            evidence_fingerprint=evidence_fingerprint,
         ))
     return tuple(records)
 
@@ -276,9 +296,10 @@ def load_contract(path: Path, *, repo_root: Path) -> CertificationContract:
         optional={"intent", "deliverables", "decisions"},
         path=str(source_path),
     )
-    if root["schema_version"] != 1:
+    if type(root["schema_version"]) is not int or root["schema_version"] != 1:
         raise ContractError(
-            f"{source_path}.schema_version: expected 1, got {root['schema_version']!r}"
+            f"{source_path}.schema_version: expected integer 1, "
+            f"got {root['schema_version']!r}"
         )
 
     suffix = ".cert.yaml"

@@ -339,7 +339,8 @@ a different string — display only, geometry untouched).
 ```bash
 pytest              # full platform + every detail regression
 pytest -n auto      # same suite, parallel across CPU cores (pytest-xdist)
-pytest --detail-gate armchair_caddy -q -n 4  # one detail's semantic build gate
+python -m detailgen.certification details/my_build.cert.yaml
+pytest --detail-gate my_build -q -n 4  # one detail's generic build gate
 ```
 
 The suite spans the geometry primitives, the Connection library, the DetailSpec
@@ -355,12 +356,26 @@ invocation — `pytest --pdb tests/test_foo.py::test_x` or `-s` for prints —
 stays simple; xdist doesn't support interactive `--pdb`/live `-s` output
 under `-n`.
 
-Use a semantic detail gate as the inner loop when a change is owned entirely by
-one detail: its spec, governed design review, detail-specific source, reader
-projection, or acceptance facts. The gate must cover compilation, defining
-geometry, physical/construction validation, fabrication, governance, and
-documents; collection fails if any contract is absent. It starts with fresh
-temporary caches and never reads results from an earlier run.
+Every standalone build can opt into the generic certification engine by adding
+`details/<slug>.cert.yaml` beside its spec. Contracts are discovered from the
+filesystem, so a new build needs no Python test module or central registry edit.
+The YAML records the build's declarative intent: expected parts and
+connections, validation findings, fabrication folds, BOM bounds, governance,
+and any explicit decisions. The shared engine supplies the tests. V1 standalone
+contracts leave `deliverables: []`; a requested deliverable fails closed until
+an adapter supplies typed evidence for it.
+
+Use the detail gate as the inner loop when a change is owned entirely by one
+build. Collection requires all nine accuracy contracts: compile, geometry,
+validation, connections, fabrication, BOM, governance, intent, and
+determinism. Documents are optional because their presentation is not build
+accuracy. Each gate starts with fresh temporary caches, compiles twice, and
+never reads a result from an earlier run.
+
+Certification fails closed on inaccurate evidence. A declared, non-safety
+uncertainty can produce a visible warning; unresolved high-severity decisions
+produce exit code 2 and block release without prompting, which keeps automated
+runs autonomous and auditable.
 
 Run the full suite before integrating any change to shared compiler,
 validation, geometry, rendering, pack, or cache code. A detail gate answers

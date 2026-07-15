@@ -21,6 +21,7 @@ from detailgen.certification import (
     PartEvidence,
     ValidationEvidence,
     ValidationFindingEvidence,
+    discover_contracts,
     load_contract,
 )
 from detailgen.certification.engine import (
@@ -375,6 +376,19 @@ def test_optional_documents_are_not_in_default_rule_catalog():
     assert not any(rule.id.startswith("documents.") for rule in DEFAULT_RULES)
 
 
+def test_requested_deliverable_fails_closed_without_adapter_evidence(
+    contract, clean_snapshot
+):
+    requested = replace(contract, deliverables=("assembly_manual",))
+
+    result = _certify(requested, clean_snapshot)
+
+    finding = next(row for row in result.findings if row.rule_id == "intent.matches")
+    assert finding.state is FindingState.FAIL
+    assert "assembly_manual" in finding.detail
+    assert "no deliverable evidence" in finding.detail
+
+
 def test_unsupported_adapter_is_a_usage_error(contract):
     unsupported = replace(
         contract,
@@ -383,3 +397,49 @@ def test_unsupported_adapter_is_a_usage_error(contract):
 
     with pytest.raises(CertificationUsageError, match="unsupported.*site"):
         certify_contract(unsupported, adapters={})
+
+
+def test_unrelated_future_build_certifies_without_registry_or_python_test_edit(
+    tmp_path,
+):
+    details = tmp_path / "details"
+    details.mkdir()
+    (details / "garden_shelf.spec.yaml").write_text(
+        "name: garden shelf\n"
+        "type: detail\n"
+        "units: in\n"
+        "components:\n"
+        "  - id: shelf\n"
+        "    type: lumber\n"
+        "    name: shelf board\n"
+        "    params: {nominal: \"2x6\", length: 24.0}\n"
+    )
+    (details / "garden_shelf.cert.yaml").write_text(
+        "schema_version: 1\n"
+        "subject:\n"
+        "  kind: standalone_detail\n"
+        "  source: garden_shelf.spec.yaml\n"
+        "intent:\n"
+        "  counts:\n"
+        "    - selector: {component: Lumber}\n"
+        "      exactly: 1\n"
+        "deliverables: []\n"
+        "decisions: []\n"
+    )
+
+    contracts = discover_contracts(details, repo_root=tmp_path)
+    result = certify_contract(contracts[0])
+
+    assert [row.slug for row in contracts] == ["garden_shelf"]
+    assert result.releasable
+    assert {row.state for row in result.findings} == {FindingState.PASS}
+
+
+def test_generic_certification_source_contains_no_caddy_special_case():
+    text = "\n".join(
+        path.read_text()
+        for path in sorted((ROOT / "src/certification").glob("*.py"))
+    ).casefold()
+
+    assert "armchair_caddy" not in text
+    assert "corner key" not in text
