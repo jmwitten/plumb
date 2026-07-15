@@ -86,4 +86,3 @@ def test_human_output_names_every_rule(monkeypatch, capsys):
         "[PASS] toy.rule: toy — evidence result\n"
         "Certification: RELEASABLE\n"
     )
-
