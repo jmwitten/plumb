@@ -267,52 +267,45 @@ class TestActionFrameModel:
 
 
 def _caddy_specs():
-    """One honest frame decomposition of the five caddy panels."""
+    """One honest frame decomposition of the current four caddy panels."""
     return (
         FrameSpec(
             frame_id="prepare.top",
             panel_index=1,
-            caption="Prepare the top board and both side boards.",
-            source_step_ids=("prepare.boards",),
-            owned_event_keys=(
-                "place:deck_board-0", "place:lumber-0", "place:lumber-1"),
-            focus_part_ids=("deck_board-0", "lumber-0", "lumber-1"),
+            caption="Prepare the top panel.",
+            source_step_ids=("prepare.top",),
+            owned_event_keys=("place:hardwood_panel-0",),
+            focus_part_ids=("hardwood_panel-0",),
         ),
         FrameSpec(
-            frame_id="prepare.rails",
+            frame_id="prepare.sides",
             panel_index=1,
-            caption="Prepare both registration rails.",
-            source_step_ids=("prepare.rails",),
-            owned_event_keys=("place:lumber-2", "place:lumber-3"),
-            focus_part_ids=("lumber-2", "lumber-3"),
+            caption="Prepare both side panels.",
+            source_step_ids=("prepare.sides",),
+            owned_event_keys=(
+                "place:hardwood_panel-1", "place:hardwood_panel-2"),
+            focus_part_ids=("hardwood_panel-1", "hardwood_panel-2"),
         ),
         FrameSpec(
-            frame_id="bond.rails",
+            frame_id="bond.miters",
             panel_index=2,
-            caption="Bond both rails to the top underside.",
+            caption="Glue both miters and insert 4 dowels (A).",
             source_step_ids=("assembly.bond",),
             owned_event_keys=("*",),
+            hardware=(FrameHardware(letter="A", quantity=4),),
+            allowed_numbers=frozenset({"4"}),
         ),
         FrameSpec(
-            frame_id="cure.rails",
+            frame_id="cure.miters",
             panel_index=3,
-            caption="Keep both bonds clamped to full cure.",
+            caption="Keep both miter bonds clamped to full cure.",
             source_step_ids=("assembly.cure",),
             owned_event_keys=("*",),
             hold="Keep clamped until the selected label's full-cure state.",
         ),
         FrameSpec(
-            frame_id="fasten.sides",
-            panel_index=4,
-            caption="Drive 8 screws (A) through the rails into the sides.",
-            source_step_ids=("assembly.fasten",),
-            owned_event_keys=("*",),
-            hardware=(FrameHardware(letter="A", quantity=8),),
-            allowed_numbers=frozenset({"8"}),
-        ),
-        FrameSpec(
             frame_id="join.place",
-            panel_index=5,
+            panel_index=4,
             caption="Set the completed caddy over the sofa arm.",
             source_step_ids=("assembly.join",),
             owned_event_keys=("*",),
@@ -322,10 +315,10 @@ def _caddy_specs():
 
 def _caddy_letters():
     return (HardwareLetter(
-        letter="A", kind="cleat_screws", product_id="builder_selected",
-        reader_label="Wood screw", size_text='1/4 dia × 2-1/2',
-        quantity_total=8, quantity_unit="screw", icon="screw",
-        source_system_ids=("cleat_screws",),
+        letter="A", kind="wood_dowel", product_id="builder_selected",
+        reader_label="Wood dowel", size_text="builder-selected",
+        quantity_total=4, quantity_unit="dowel", icon="dowel",
+        source_system_ids=("miter_dowels",),
     ),)
 
 
@@ -333,17 +326,17 @@ class TestProjection:
     def test_projects_panels_into_frames_in_panel_order(self, caddy_manual):
         frames = project_action_frames(
             caddy_manual, _caddy_specs(), letters=_caddy_letters(),
-            forbidden_tokens=("lumber-0", "deck_board-0"))
+            forbidden_tokens=("hardwood_panel-0", "hardwood_panel-1"))
         assert [frame.frame_id for frame in frames] == [
-            "prepare.top", "prepare.rails", "bond.rails", "cure.rails",
-            "fasten.sides", "join.place"]
+            "prepare.top", "prepare.sides", "bond.miters", "cure.miters",
+            "join.place"]
         validate_frame_ownership(caddy_manual.panels, frames)
 
     def test_wildcard_frame_owns_all_panel_events(self, caddy_manual):
         frames = project_action_frames(
             caddy_manual, _caddy_specs(), letters=_caddy_letters(),
             forbidden_tokens=())
-        bond = next(f for f in frames if f.frame_id == "bond.rails")
+        bond = next(f for f in frames if f.frame_id == "bond.miters")
         panel2 = caddy_manual.panels[1]
         assert bond.owned_events == panel2.source_events
 
@@ -351,18 +344,18 @@ class TestProjection:
         frames = project_action_frames(
             caddy_manual, _caddy_specs(), letters=_caddy_letters(),
             forbidden_tokens=())
-        fasten = next(f for f in frames if f.frame_id == "fasten.sides")
-        panel4 = caddy_manual.panels[3]
-        assert fasten.focus_part_ids == panel4.focus_part_ids
-        assert fasten.illustration.intent == "assembly_scene"
-        assert fasten.illustration.panel_index == 4
+        bond = next(f for f in frames if f.frame_id == "bond.miters")
+        panel2 = caddy_manual.panels[1]
+        assert bond.focus_part_ids == panel2.focus_part_ids
+        assert bond.illustration.intent == "assembly_scene"
+        assert bond.illustration.panel_index == 2
 
     def test_focus_override_and_context_defaults(self, caddy_manual):
         frames = project_action_frames(
             caddy_manual, _caddy_specs(), letters=_caddy_letters(),
             forbidden_tokens=())
         top = next(f for f in frames if f.frame_id == "prepare.top")
-        assert top.focus_part_ids == ("deck_board-0", "lumber-0", "lumber-1")
+        assert top.focus_part_ids == ("hardwood_panel-0",)
         # context = parts already visible in the panel that are not in focus
         panel1 = caddy_manual.panels[0]
         expected = tuple(pid for pid in panel1.visible_part_ids
@@ -387,7 +380,7 @@ class TestProjection:
 
     def test_wildcard_must_be_sole_frame_of_its_panel(self, caddy_manual):
         specs = _caddy_specs() + (FrameSpec(
-            frame_id="bond.extra", panel_index=2, caption="Bond again.",
+            frame_id="bond.extra", panel_index=2, caption="Glue again.",
             source_step_ids=("assembly.bond",),
             owned_event_keys=("*",)),)
         with pytest.raises(FrameContractError, match="wildcard"):
@@ -398,12 +391,13 @@ class TestProjection:
     def test_unmatched_event_key_fails(self, caddy_manual):
         specs = list(_caddy_specs())
         specs[1] = FrameSpec(
-            frame_id="prepare.rails", panel_index=1,
-            caption="Prepare both registration rails.",
-            source_step_ids=("prepare.rails",),
-            owned_event_keys=("place:lumber-2", "place:lumber-9"),
+            frame_id="prepare.sides", panel_index=1,
+            caption="Prepare both side panels.",
+            source_step_ids=("prepare.sides",),
+            owned_event_keys=(
+                "place:hardwood_panel-1", "place:hardwood_panel-9"),
         )
-        with pytest.raises(FrameContractError, match="lumber-9"):
+        with pytest.raises(FrameContractError, match="hardwood_panel-9"):
             project_action_frames(caddy_manual, tuple(specs),
                                   letters=_caddy_letters(),
                                   forbidden_tokens=())
@@ -411,10 +405,10 @@ class TestProjection:
     def test_dropped_event_within_panel_fails(self, caddy_manual):
         specs = list(_caddy_specs())
         specs[1] = FrameSpec(
-            frame_id="prepare.rails", panel_index=1,
-            caption="Prepare one registration rail.",
-            source_step_ids=("prepare.rails",),
-            owned_event_keys=("place:lumber-2",),
+            frame_id="prepare.sides", panel_index=1,
+            caption="Prepare one side panel.",
+            source_step_ids=("prepare.sides",),
+            owned_event_keys=("place:hardwood_panel-1",),
         )
         with pytest.raises(FrameContractError, match="unowned"):
             project_action_frames(caddy_manual, tuple(specs),
@@ -423,13 +417,13 @@ class TestProjection:
 
     def test_unknown_hardware_letter_fails(self, caddy_manual):
         specs = list(_caddy_specs())
-        specs[4] = FrameSpec(
-            frame_id="fasten.sides", panel_index=4,
-            caption="Drive 8 screws (Z) through the rails into the sides.",
-            source_step_ids=("assembly.fasten",),
+        specs[2] = FrameSpec(
+            frame_id="bond.miters", panel_index=2,
+            caption="Glue both miters and insert 4 dowels (Z).",
+            source_step_ids=("assembly.bond",),
             owned_event_keys=("*",),
-            hardware=(FrameHardware(letter="Z", quantity=8),),
-            allowed_numbers=frozenset({"8"}),
+            hardware=(FrameHardware(letter="Z", quantity=4),),
+            allowed_numbers=frozenset({"4"}),
         )
         with pytest.raises(FrameContractError, match="letter"):
             project_action_frames(caddy_manual, tuple(specs),
@@ -438,15 +432,15 @@ class TestProjection:
 
     def test_caption_contract_is_enforced_during_projection(self, caddy_manual):
         specs = list(_caddy_specs())
-        specs[4] = FrameSpec(
-            frame_id="fasten.sides", panel_index=4,
-            caption="Drive 9 screws (A) through the rails into the sides.",
-            source_step_ids=("assembly.fasten",),
+        specs[2] = FrameSpec(
+            frame_id="bond.miters", panel_index=2,
+            caption="Glue both miters and insert 5 dowels (A).",
+            source_step_ids=("assembly.bond",),
             owned_event_keys=("*",),
-            hardware=(FrameHardware(letter="A", quantity=8),),
-            allowed_numbers=frozenset({"8"}),
+            hardware=(FrameHardware(letter="A", quantity=4),),
+            allowed_numbers=frozenset({"4"}),
         )
-        with pytest.raises(FrameContractError, match="9"):
+        with pytest.raises(FrameContractError, match="5"):
             project_action_frames(caddy_manual, tuple(specs),
                                   letters=_caddy_letters(),
                                   forbidden_tokens=())
@@ -455,15 +449,14 @@ class TestProjection:
         specs = list(_caddy_specs())
         specs[0] = FrameSpec(
             frame_id="prepare.top", panel_index=1,
-            caption="Prepare deck_board-0 and both side boards.",
-            source_step_ids=("prepare.boards",),
-            owned_event_keys=(
-                "place:deck_board-0", "place:lumber-0", "place:lumber-1"),
+            caption="Prepare hardwood_panel-0.",
+            source_step_ids=("prepare.top",),
+            owned_event_keys=("place:hardwood_panel-0",),
         )
-        with pytest.raises(FrameContractError, match="deck_board-0"):
+        with pytest.raises(FrameContractError, match="hardwood_panel-0"):
             project_action_frames(caddy_manual, tuple(specs),
                                   letters=_caddy_letters(),
-                                  forbidden_tokens=("deck_board-0",))
+                                  forbidden_tokens=("hardwood_panel-0",))
 
 
 class TestOwnershipMultiset:
