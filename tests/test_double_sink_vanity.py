@@ -1433,6 +1433,104 @@ def test_invalid_edge_schedule_cannot_emit_fabrication_authority():
         )
 
 
+def test_manual_acceptance_replace_cannot_cross_the_sole_transition_gate():
+    from detailgen.packs.cabinetry.double_vanity import (
+        FabricationAcceptance,
+        build_double_vanity_artifacts,
+        validate_double_vanity_model,
+    )
+
+    pending = _project()
+    acceptance = FabricationAcceptance(
+        status="ACCEPTED", accepted_by="Example Cabinet Fabricator",
+        accepted_on="2026-07-15",
+        basis_digest=pending.model.fabrication_basis.digest(),
+        evidence_revision="signed-shop-basis-r1",
+    )
+    forged_model = replace(
+        pending.model, fabrication_acceptance=acceptance,
+    )
+    assert not forged_model.fabrication_release_contract()[0]
+    with pytest.raises(ProjectSchemaError, match="canonical transition"):
+        build_double_vanity_artifacts(
+            forged_model, validate_double_vanity_model(forged_model),
+        )
+    forged_project = replace(pending, model=forged_model)
+    with pytest.raises(ProjectSchemaError, match="artifact authority disagree"):
+        forged_project.validate()
+    assert not forged_project.fabrication_ready
+    with pytest.raises(ProjectReleaseError):
+        forged_project.require_fabrication_release()
+    from detailgen.packs.cabinetry.double_vanity_documents import (
+        build_double_vanity_document_set,
+    )
+    with pytest.raises(ValueError, match="authority state is inconsistent"):
+        build_double_vanity_document_set(forged_project)
+
+
+def test_co_mutated_40mm_granite_basis_requires_full_regeneration():
+    from detailgen.packs.cabinetry.double_vanity import (
+        FabricationAcceptance,
+        apply_fabrication_acceptance,
+    )
+
+    model = _project().model
+    basis = replace(
+        model.fabrication_basis,
+        countertop_material="granite",
+        countertop_structural_thickness_mm=40.0,
+    )
+    mutated = replace(
+        model,
+        fabrication_basis=basis,
+        countertop=replace(
+            model.countertop, material="granite", structural_thickness_mm=40.0,
+        ),
+        section=replace(
+            model.section,
+            vanity=replace(
+                model.section.vanity, countertop_thickness_mm=40.0,
+            ),
+        ),
+    )
+    with pytest.raises(ProjectSchemaError, match="substitutions require regeneration"):
+        apply_fabrication_acceptance(mutated, FabricationAcceptance(
+            status="ACCEPTED", accepted_by="Example Cabinet Fabricator",
+            accepted_on="2026-07-15", basis_digest=basis.digest(),
+            evidence_revision="signed-shop-basis-r1",
+        ))
+
+
+def test_fabrication_audit_is_frozen_typed_evidence():
+    from detailgen.packs.cabinetry.artifacts import FabricationAudit
+
+    audit = _project().artifacts.fabrication_audit
+    assert isinstance(audit, FabricationAudit)
+    with pytest.raises(FrozenInstanceError):
+        audit.accepted_by = "forged"  # type: ignore[misc]
+
+
+def test_countertop_load_and_model_project_the_canonical_basis():
+    model = _project().model
+    basis = model.fabrication_basis
+    vanity = model.section.vanity
+    expected_volume_ft3 = (
+        vanity.width_mm * vanity.countertop_depth_mm
+        * basis.countertop_structural_thickness_mm
+        / (12 * 25.4) ** 3
+    )
+    assert vanity.countertop_thickness_mm == (
+        basis.countertop_structural_thickness_mm
+    )
+    assert model.countertop.structural_thickness_mm == (
+        basis.countertop_structural_thickness_mm
+    )
+    assert model.countertop.material == basis.countertop_material
+    assert model.load_case.quartz_countertop_lb == pytest.approx(
+        expected_volume_ft3 * model.load_case.quartz_density_pcf
+    )
+
+
 def test_nyc_and_ipc_profiles_pin_deliberate_vertical_trap_difference():
     from detailgen.packs.cabinetry.double_vanity import plumbing_code_profile
 

@@ -59,6 +59,23 @@ class HardwareItem:
 
 
 @dataclass(frozen=True)
+class FabricationAudit:
+    basis_id: str
+    basis_version: str
+    basis_digest: str
+    acceptance_status: str
+    accepted_by: str
+    accepted_on: str
+    evidence_revision: str
+    joinery: str
+    cabinet_fastener: str
+    finish: str
+    part_tolerance_mm: float
+    case_tolerance_mm: float
+    diagonal_tolerance_mm: float
+
+
+@dataclass(frozen=True)
 class WorkStep:
     phase: int
     step_id: str
@@ -93,7 +110,7 @@ class CabinetArtifacts:
     installation_use_ready: bool = False
     release_scope: str = "unified"
     release_contract: str = "unified"
-    fabrication_audit: dict | None = None
+    fabrication_audit: FabricationAudit | None = None
 
     def to_dict(self) -> dict:
         payload = dataclasses.asdict(self)

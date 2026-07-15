@@ -29,7 +29,8 @@ from ...spec.schema import (
 )
 from ..project import PackedProject, ProjectSchemaError
 from .artifacts import (
-    CabinetArtifacts, CutListItem, EdgeBandItem, HardwareItem, WorkStep,
+    CabinetArtifacts, CutListItem, EdgeBandItem, FabricationAudit,
+    HardwareItem, WorkStep,
     edge_band_length,
 )
 from .catalogs import get_wall_anchor_product
@@ -802,13 +803,18 @@ class DoubleVanityModel:
 
     def fabrication_release_contract(self) -> tuple[bool, str]:
         return (
-            self.fabrication_acceptance.complete_for(self.fabrication_basis),
+            self.fabrication_acceptance.complete_for(self.fabrication_basis)
+            and self.release.fabrication_status
+            == "CONDITIONAL_FABRICATION_RELEASE"
+            and self.fabrication_basis_is_coherent(),
             "typed_fabrication_acceptance/v1",
         )
 
     def fabrication_basis_is_coherent(self) -> bool:
         return _fabrication_basis_coherent(self)
 
+    def fabrication_audit_matches(self, audit: FabricationAudit | None) -> bool:
+        return audit == _fabrication_audit(self)
 
     def catalog_source_manifest(self) -> dict[str, str]:
         return {
@@ -911,7 +917,8 @@ def apply_fabrication_acceptance(
             )
     if not _fabrication_basis_coherent(model):
         raise ProjectSchemaError(
-            "fabrication basis contradicts countertop, case, or sink-zone geometry"
+            "fabrication basis contradicts canonical DV72 basis or model geometry; "
+            "substitutions require regeneration"
         )
     if acceptance.status != "ACCEPTED" or not acceptance.complete_for(
         model.fabrication_basis
@@ -945,7 +952,42 @@ def _fabrication_basis_coherent(model: DoubleVanityModel) -> bool:
         wall_y - left_fixture.y1_mm,
     )
     return (
-        basis.case_thickness_mm == model.profile.carcass_thickness_mm
+        basis.basis_id == "dv72.fabrication-basis"
+        and basis.version == "1.0.0"
+        and basis.provenance == "owner_assumed"
+        and basis.case_material == "veneer-core plywood"
+        and basis.drawer_material == "veneer-core plywood"
+        and basis.drawer_thickness_mm == 15.0
+        and basis.bottom_material == "plywood"
+        and basis.bottom_thickness_mm == 9.0
+        and basis.veneer == "matching figured-walnut veneer"
+        and basis.grain_sequence
+        == "continuous grain sequence across four slab fronts"
+        and basis.edge_band_material == "matching walnut veneer edge band"
+        and basis.edge_band_thickness_mm == 1.0
+        and basis.finish
+        == "clear low-sheen conversion-varnish finish over approved samples"
+        and basis.joinery == "glued doweled butt joints at finished extents"
+        and basis.cabinet_fastener
+        == "#8 x 38 mm flat-head cabinet screws, predrilled and concealed"
+        and basis.net_blank_convention
+        == (
+            "finished net part sizes after trimming and edge banding; shop-cut "
+            "blank process allowances are fabricator-selected and not released"
+        )
+        and basis.part_tolerance_mm == 0.5
+        and basis.case_tolerance_mm == 1.0
+        and basis.diagonal_tolerance_mm == 1.5
+        and basis.countertop_material
+        == "engineered quartz selected by countertop fabricator"
+        and basis.countertop_structural_thickness_mm == 30.0
+        and basis.countertop_visual_edge_mm == 38.0
+        and basis.sink_support_basis
+        == (
+            "gross fixture-envelope coordination only; not cutout, clamp, "
+            "reinforcement, or structural authority"
+        )
+        and basis.case_thickness_mm == model.profile.carcass_thickness_mm
         and basis.countertop_material == model.countertop.material
         and basis.countertop_structural_thickness_mm
         == model.countertop.structural_thickness_mm
@@ -955,6 +997,26 @@ def _fabrication_basis_coherent(model: DoubleVanityModel) -> bool:
         and all(abs(a - b) <= 1e-6 for a, b in zip(
             basis.sink_support_zones_mm, zones,
         ))
+    )
+
+
+def _fabrication_audit(model: DoubleVanityModel) -> FabricationAudit:
+    acceptance = model.fabrication_acceptance
+    basis = model.fabrication_basis
+    return FabricationAudit(
+        basis_id=basis.basis_id,
+        basis_version=basis.version,
+        basis_digest=basis.digest(),
+        acceptance_status=acceptance.status,
+        accepted_by=acceptance.accepted_by,
+        accepted_on=acceptance.accepted_on,
+        evidence_revision=acceptance.evidence_revision,
+        joinery=basis.joinery,
+        cabinet_fastener=basis.cabinet_fastener,
+        finish=basis.finish,
+        part_tolerance_mm=basis.part_tolerance_mm,
+        case_tolerance_mm=basis.case_tolerance_mm,
+        diagonal_tolerance_mm=basis.diagonal_tolerance_mm,
     )
 
 
@@ -1795,7 +1857,9 @@ def build_double_vanity_model(
         ),
         part_tolerance_mm=0.5, case_tolerance_mm=1.0,
         diagonal_tolerance_mm=1.5,
-        countertop_material="quartz selected by countertop fabricator",
+        countertop_material=(
+            "engineered quartz selected by countertop fabricator"
+        ),
         countertop_structural_thickness_mm=30.0,
         countertop_visual_edge_mm=38.0,
         sink_support_zones_mm=(
@@ -2728,18 +2792,21 @@ def build_double_vanity_artifacts(
     )
     if not _fabrication_basis_coherent(model):
         raise ProjectSchemaError(
-            "fabrication basis contradicts countertop, case, or sink-zone geometry"
+            "fabrication basis contradicts canonical DV72 basis or model geometry; "
+            "substitutions require regeneration"
         )
     acceptance = model.fabrication_acceptance
     if acceptance.status not in {"PENDING", "ACCEPTED"}:
         raise ProjectSchemaError(
             f"unsupported fabrication acceptance status {acceptance.status!r}"
         )
-    acceptance_complete = acceptance.complete_for(model.fabrication_basis)
-    fabrication_authorized = (
-        acceptance_complete and _fabrication_basis_coherent(model)
-    )
+    fabrication_authorized = model.fabrication_release_contract()[0]
     if acceptance.status == "ACCEPTED" and not fabrication_authorized:
+        if model.release.fabrication_status != "CONDITIONAL_FABRICATION_RELEASE":
+            raise ProjectSchemaError(
+                "accepted evidence did not pass the canonical transition; use "
+                "apply_fabrication_acceptance()"
+            )
         raise ProjectSchemaError(
             "accepted fabrication evidence is incomplete, incoherent, or does "
             "not match the fabrication-basis digest"
@@ -2811,23 +2878,7 @@ def build_double_vanity_artifacts(
         installation_use_ready=False,
         release_scope="split",
         release_contract="typed_fabrication_acceptance/v1",
-        fabrication_audit={
-            "basis_id": model.fabrication_basis.basis_id,
-            "basis_version": model.fabrication_basis.version,
-            "basis_digest": model.fabrication_basis.digest(),
-            "acceptance_status": acceptance.status,
-            "accepted_by": acceptance.accepted_by,
-            "accepted_on": acceptance.accepted_on,
-            "evidence_revision": acceptance.evidence_revision,
-            "joinery": model.fabrication_basis.joinery,
-            "cabinet_fastener": model.fabrication_basis.cabinet_fastener,
-            "finish": model.fabrication_basis.finish,
-            "part_tolerance_mm": model.fabrication_basis.part_tolerance_mm,
-            "case_tolerance_mm": model.fabrication_basis.case_tolerance_mm,
-            "diagonal_tolerance_mm": (
-                model.fabrication_basis.diagonal_tolerance_mm
-            ),
-        },
+        fabrication_audit=_fabrication_audit(model),
         cut_list=cut_list,
         edge_banding=edge_banding,
         hardware_schedule=(HardwareItem(

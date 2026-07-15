@@ -119,6 +119,7 @@ def _fabrication_status(project) -> tuple[bool, str]:
     complete = model.fabrication_acceptance.complete_for(
         model.fabrication_basis
     )
+    contract_ready = model.fabrication_release_contract()[0]
     drawer_geometry_ready = all(
         project.report.by_rule(rule).verdict == "PASS"
         for rule in (
@@ -131,7 +132,7 @@ def _fabrication_status(project) -> tuple[bool, str]:
         else "HOLD_PRODUCT_GEOMETRY" if not drawer_geometry_ready
         else "HOLD_FABRICATOR_ACCEPTANCE"
     )
-    audit = project.artifacts.fabrication_audit or {}
+    audit = project.artifacts.fabrication_audit
     expected_audit = {
         "basis_id": model.fabrication_basis.basis_id,
         "basis_version": model.fabrication_basis.version,
@@ -143,10 +144,14 @@ def _fabrication_status(project) -> tuple[bool, str]:
     }
     if (
         model.release.fabrication_status != expected_status
-        or project.artifacts.fabrication_ready != complete
+        or project.artifacts.fabrication_ready != contract_ready
         or project.artifacts.release_contract
         != "typed_fabrication_acceptance/v1"
-        or any(audit.get(key) != value for key, value in expected_audit.items())
+        or audit is None
+        or any(
+            getattr(audit, key, None) != value
+            for key, value in expected_audit.items()
+        )
     ):
         raise ValueError("DV72 fabrication authority state is inconsistent")
     status = project.model.release.fabrication_status
@@ -440,7 +445,7 @@ def _fabrication_boundaries(project) -> str:
 <div class="table-wrap"><table><thead><tr><th>Scope</th><th>Model fact</th><th>Authority</th></tr></thead><tbody>
 <tr><td>Upper runner</td><td>{study._e(upper.runner.selected_sku)}; prepared {study._mm(upper.box_depth_mm)} box depth</td><td><code>{study._e(upper.runner.machining_authority)}</code></td></tr>
 <tr><td>Lower runner</td><td>{study._e(lower.runner.selected_sku)}; prepared {study._mm(lower.box_depth_mm)} box depth</td><td><code>{study._e(lower.runner.machining_authority)}</code></td></tr>
-<tr><td>Countertop</td><td>{model.countertop.structural_thickness_mm:.1f} mm quartz structural slab and {model.countertop.visual_edge_height_mm:.1f} mm visual edge are controlling owner_assumed case-height and load inputs; the fabricator must accept or replace them before stone cut. K-20000 template {study._e(model.countertop.cutout_template_id)} remains controlling for future cutout work.</td><td><code>{study._e(model.countertop.stone_cut_authority)}</code>; not field verified</td></tr>
+<tr><td>Countertop</td><td>{model.fabrication_basis.countertop_structural_thickness_mm:.1f} mm {study._e(model.fabrication_basis.countertop_material)} structural slab and {model.fabrication_basis.countertop_visual_edge_mm:.1f} mm visual edge are controlling owner_assumed case-height and load inputs; substitutions require full model regeneration before stone cut. K-20000 template {study._e(model.countertop.cutout_template_id)} remains controlling for future cutout work.</td><td><code>{study._e(model.countertop.stone_cut_authority)}</code>; not field verified</td></tr>
 </tbody></table></div>
 <h3>Selected material, joinery, finish, and tolerance schedule</h3><p>Every row is an explicit shop-basis selection, not a product record. The fabricator must accept or replace the complete basis before use; accepted replacements require regeneration of affected cut authority.</p><div class="table-wrap"><table><thead><tr><th>Selected shop basis</th><th>Provenance</th></tr></thead><tbody>{shop_schedule}</tbody></table></div>
 <h3>Model-derived sink web and support-zone coordination</h3><p>{study._e(model.fabrication_basis.shop_schedule()[-1])}. The current template and final stone authority remains with the countertop fabricator.</p>

@@ -80,9 +80,16 @@ class PackedProject:
         typed_contract = self._typed_fabrication_contract()
         if typed_contract is not None:
             model_ready, contract_name = typed_contract
+            audit_matches = getattr(
+                self.model, "fabrication_audit_matches", None,
+            )
             if (
                 self.artifacts.fabrication_ready != model_ready
                 or self.artifacts.release_contract != contract_name
+                or (
+                    callable(audit_matches)
+                    and not audit_matches(self.artifacts.fabrication_audit)
+                )
             ):
                 raise ProjectSchemaError(
                     "typed fabrication model and artifact authority disagree"

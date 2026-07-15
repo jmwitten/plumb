@@ -115,7 +115,7 @@ def test_fabrication_scopes_release_and_held_work():
 
     assert 'data-cut-list-row="' in html
     assert "42 prepared parts" in html
-    assert "30.0 mm quartz structural slab" in html
+    assert "30.0 mm engineered quartz selected by countertop fabricator structural slab" in html
     assert "38.0 mm visual edge" in html
     assert "Selected material, joinery, finish, and tolerance schedule" in html
     assert "Wall drilling" in html
@@ -146,7 +146,7 @@ def test_fabrication_publishes_complete_owner_assumed_shop_basis():
 def test_fabrication_publishes_controlling_top_and_model_derived_sink_zones():
     html = _documents()["dv72_fabrication_coordination.html"]
 
-    assert "30.0 mm quartz structural slab" in html
+    assert "30.0 mm engineered quartz selected by countertop fabricator structural slab" in html
     assert "38.0 mm visual edge" in html
     assert "controlling owner_assumed case-height and load inputs" in html
     assert "200.2 mm/400.4 mm/200.2 mm/105.4 mm/30.0 mm" in html
@@ -261,6 +261,7 @@ def test_renderer_projects_typed_fabrication_basis_without_shop_literals():
         "glued doweled butt joints at the released finished extents",
         "#8 × 38 mm",
         "±0.5 mm part-size tolerance",
+        "quartz structural slab",
     ):
         assert literal not in source
 
