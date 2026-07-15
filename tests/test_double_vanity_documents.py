@@ -232,9 +232,14 @@ def test_production_cut_authority_requires_written_fabricator_acceptance():
 def test_review_distinguishes_selected_veneer_from_unresolved_pulls():
     review = _documents()["dv72_review_installation.html"]
 
+    assert "Half-moon pulls and veneer sequencing remain unresolved" not in review
     assert (
         "Veneer sequence is conditionally selected owner_assumed pending written "
         "cabinet-fabricator acceptance"
+    ) in review
+    assert (
+        "Veneer sequencing is conditionally selected owner_assumed pending written "
+        "cabinet-fabricator acceptance; half-moon pulls remain unresolved"
     ) in review
     assert "Half-moon brass pulls remain unresolved" in review
 

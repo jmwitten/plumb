@@ -46,7 +46,7 @@ def _overall_elevation(project) -> str:
     ))
     return f"""
 <figure class="diagram" data-diagram="overall-elevation">
-<figcaption><b>Overall elevation.</b> Four slab fronts, equal sink bays, and a continuous floating body. Sink dimensions name both the vanity-left datum and site-wall x so rough-ins cannot inherit the wrong coordinate system. Half-moon pulls and veneer sequencing remain unresolved.</figcaption>
+<figcaption><b>Overall elevation.</b> Four slab fronts, equal sink bays, and a continuous floating body. Sink dimensions name both the vanity-left datum and site-wall x so rough-ins cannot inherit the wrong coordinate system. Veneer sequencing is conditionally selected owner_assumed pending written cabinet-fabricator acceptance; half-moon pulls remain unresolved.</figcaption>
 <svg viewBox="0 0 860 380" role="img" aria-label="DV72 overall elevation">
 <rect x="55" y="90" width="750" height="28" class="countertop"/>{shell}
 <path d="M210 89q40-42 80 0M567 89q40-42 80 0" class="sink"/>
