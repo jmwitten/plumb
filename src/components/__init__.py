@@ -6,6 +6,7 @@ from .fasteners import (
 from .connectors import JoistHanger, PostBase, AngleBracket
 from .railing import WireMesh, DeckBoard
 from .sheet import PlywoodPanel
+from .hardwood import HardwoodPanel, WoodDowel
 from .tree import TreeTrunk, SlottedBeamEnd
 from .zipline_hardware import (
     Cable, TrolleyWheel, Hanger, GrabBar, StrapGate, GrabHandle,
@@ -16,6 +17,7 @@ __all__ = [
     "ConcretePier", "Footing", "Slab", "Boulder", "Epoxy", "PierBlock",
     "LagScrew", "HexBolt", "Washer", "StructuralScrew", "HexNut", "ThreadedRod",
     "JoistHanger", "PostBase", "AngleBracket",
-    "WireMesh", "DeckBoard", "PlywoodPanel", "TreeTrunk", "SlottedBeamEnd",
+    "WireMesh", "DeckBoard", "PlywoodPanel", "HardwoodPanel", "WoodDowel",
+    "TreeTrunk", "SlottedBeamEnd",
     "Cable", "TrolleyWheel", "Hanger", "GrabBar", "StrapGate", "GrabHandle",
 ]

@@ -129,7 +129,7 @@ Compile a temporary spec with a `hardwood_panel` and `bore` feature. Assert the 
 
 - [ ] **Step 6: Run focused tests**
 
-Run: `.venv/bin/python -m pytest tests/test_hardwood_components.py tests/test_components.py tests/test_cl2_feature.py -q`  
+Run: `.venv/bin/python -m pytest tests/test_hardwood_components.py tests/test_registry.py tests/test_blender_materials.py tests/test_cl2_feature.py -q`
 Expected: PASS.
 
 - [ ] **Step 7: Commit**
