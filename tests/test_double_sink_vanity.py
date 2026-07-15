@@ -121,6 +121,98 @@ def test_real_drain_trap_runner_and_mount_references_are_pinned_without_capacity
     assert project.report.by_rule("double_vanity.release.wall_mount").verdict == "UNKNOWN"
 
 
+def test_three_supports_carry_gravity_without_rail_credit():
+    model = _project().model
+
+    assert len(model.support_layout.supports) == 3
+    assert model.support_layout.max_spacing_mm <= 36 * 25.4
+    assert model.support_layout.gravity_path == "rakks_eh_primary"
+    assert model.support_layout.rear_rail_role == "positioning_and_lateral_only"
+    assert model.support_layout.rear_rail_gravity_credit_lb == 0.0
+    assert model.support_layout.backing_verification == "UNKNOWN"
+    assert model.support_layout.product_revision_approval == "UNKNOWN"
+    assert model.support_layout.fastener_installation == "UNKNOWN"
+    assert model.support_layout.structural_approval == "UNKNOWN"
+    assert model.support_layout.fastener_connection_capacity_lb is None
+    assert model.load_case.load_factor == pytest.approx(1.5)
+    assert model.load_case.factored_total_lb / 3 <= (
+        model.mount_reference.static_capacity_lb
+    )
+
+
+def test_mount_layout_passes_but_installation_waits_for_real_backing():
+    project = _project()
+    findings = {finding.rule: finding for finding in project.report.findings}
+
+    assert findings["double_vanity.mount.layout"].verdict == "PASS"
+    assert findings["double_vanity.release.wall_mount"].verdict == "UNKNOWN"
+    assert not project.model.assumed_site.field_verified
+
+
+def test_mount_layout_fails_when_factored_load_exceeds_three_ratings():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    overloaded = replace(
+        model,
+        load_case=replace(model.load_case, service_live_lb=1000.0),
+    )
+
+    assert validate_double_vanity_model(overloaded).by_rule(
+        "double_vanity.mount.layout"
+    ).verdict == "FAIL"
+
+
+def test_mount_layout_fails_when_a_primary_support_is_removed():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    two_supports = replace(
+        model,
+        support_layout=replace(
+            model.support_layout,
+            supports=(
+                model.support_layout.supports[0],
+                model.support_layout.supports[2],
+            ),
+        ),
+    )
+
+    assert two_supports.support_layout.max_spacing_mm > 36 * 25.4
+    assert validate_double_vanity_model(two_supports).by_rule(
+        "double_vanity.mount.layout"
+    ).verdict == "FAIL"
+
+
+def test_mount_layout_fails_when_support_misses_case_top_bearing():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    moved = replace(
+        model.support_layout.supports[0],
+        bearing_z_mm=model.support_layout.supports[0].bearing_z_mm - 25.4,
+    )
+    no_bearing = replace(
+        model,
+        support_layout=replace(
+            model.support_layout,
+            supports=(moved,) + model.support_layout.supports[1:],
+        ),
+    )
+
+    assert validate_double_vanity_model(no_bearing).by_rule(
+        "double_vanity.mount.layout"
+    ).verdict == "FAIL"
+
+
+def test_mount_layout_rejects_no_backing_and_keeps_installation_blocked(tmp_path):
+    project = _project_with_assumption(tmp_path, "backing", "none")
+    findings = {finding.rule: finding for finding in project.report.findings}
+
+    assert findings["double_vanity.mount.layout"].verdict == "FAIL"
+    assert findings["double_vanity.release.wall_mount"].verdict == "UNKNOWN"
+
+
 def test_catalog_asset_reference_is_metadata_only_and_authority_limited():
     from detailgen.packs.cabinetry.double_vanity import CatalogAssetRef
 

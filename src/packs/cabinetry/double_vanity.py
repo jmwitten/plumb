@@ -257,6 +257,89 @@ class MountReference:
     maximum_spacing_mm: float
     authority: str
     specification_url: str
+    current_specification_url: str
+    acceptable_applications: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SupportEnvelope:
+    """Nominal manufacturer support envelope; not connection geometry."""
+
+    support_id: str
+    alignment_role: str
+    x_axis_mm: float
+    wall_y_mm: float
+    bearing_z_mm: float
+    vertical_leg_mm: float
+    horizontal_leg_mm: float
+    required_screws: int
+    authority: str = "manufacturer_nominal_envelope_provisional_placement"
+
+
+@dataclass(frozen=True)
+class SupportLayout:
+    supports: tuple[SupportEnvelope, ...]
+    gravity_path: str
+    rear_rail_role: str
+    rear_rail_gravity_credit_lb: float
+    design_max_spacing_mm: float
+    backing_basis: str
+    backing_authority: str
+    backing_verification: str
+    product_revision_approval: str
+    fastener_installation: str
+    fastener_connection_capacity_lb: float | None
+    structural_approval: str
+
+    @property
+    def max_spacing_mm(self) -> float:
+        axes = sorted(support.x_axis_mm for support in self.supports)
+        if len(axes) < 2:
+            return float("inf")
+        return max(right - left for left, right in zip(axes, axes[1:]))
+
+
+@dataclass(frozen=True)
+class LoadCase:
+    """Explicit gravity allowances; manufacturer connection capacity excluded."""
+
+    quartz_countertop_lb: float
+    plywood_casework_lb: float
+    sinks_lb: float
+    hardware_plumbing_lb: float
+    water_lb: float
+    contents_lb: float
+    service_live_lb: float
+    load_factor: float
+    quartz_density_pcf: float
+    plywood_density_pcf: float
+
+    @property
+    def unfactored_total_lb(self) -> float:
+        return sum((
+            self.quartz_countertop_lb,
+            self.plywood_casework_lb,
+            self.sinks_lb,
+            self.hardware_plumbing_lb,
+            self.water_lb,
+            self.contents_lb,
+            self.service_live_lb,
+        ))
+
+    @property
+    def factored_total_lb(self) -> float:
+        return self.unfactored_total_lb * self.load_factor
+
+    def component_weights_lb(self) -> dict[str, float]:
+        return {
+            "quartz_countertop": self.quartz_countertop_lb,
+            "plywood_casework": self.plywood_casework_lb,
+            "sinks": self.sinks_lb,
+            "hardware_plumbing": self.hardware_plumbing_lb,
+            "water": self.water_lb,
+            "contents": self.contents_lb,
+            "service_live": self.service_live_lb,
+        }
 
 
 @dataclass(frozen=True)
@@ -360,9 +443,12 @@ _REQUIRED_RUNNERS = {
 RAKKS_EH_1818_LV = MountReference(
     "rakks_eh_1818_lv@2022.1.0", "Rakks", "EH-1818-LV",
     18 * IN, 21.5 * IN, 450.0, "evenly_distributed_static_load",
-    4, 48 * IN, "comparative_reference_only",
+    4, 48 * IN, "manufacturer_capacity_conditional_not_connection_capacity",
     "https://www.rakks.com/install/support-hardware/"
     "Rakks_EH_Vanity_Support_Bracket_2022.1.0.pdf",
+    "https://www.rakks.com/install/support-hardware/"
+    "Rakks_EH_Vanity_Support_Bracket_2024.1.1.pdf",
+    ("studs", "blocking", "double_studs", "metal_studs"),
 )
 
 PURIST_WALL = WallFaucetAdapter(
@@ -550,6 +636,8 @@ class DoubleVanityModel:
     catalog_assets: tuple[CatalogAssetRef, ...]
     countertop: CountertopStudy
     release: ConditionalRelease
+    support_layout: SupportLayout
+    load_case: LoadCase
 
     def part(self, role: str) -> PartModel:
         matches = [part for part in self.parts if part.role == role]
@@ -1388,6 +1476,57 @@ def build_double_vanity_model(
             archetype_id=vanity.archetype_id,
         )
 
+    support_axes = (
+        ("support_left", "left_end", vanity.x0_mm + t / 2),
+        ("support_center", "center_divider", vanity.x0_mm + bay_width),
+        ("support_right", "right_end", vanity.x0_mm + vanity.width_mm - t / 2),
+    )
+    support_layout = SupportLayout(
+        supports=tuple(
+            SupportEnvelope(
+                support_id, alignment_role, x_axis_mm, wall_y,
+                countertop_underside_z, RAKKS_EH_1818_LV.width_mm,
+                RAKKS_EH_1818_LV.depth_mm,
+                RAKKS_EH_1818_LV.required_screws_per_bracket,
+            )
+            for support_id, alignment_role, x_axis_mm in support_axes
+        ),
+        gravity_path="rakks_eh_primary",
+        rear_rail_role="positioning_and_lateral_only",
+        rear_rail_gravity_credit_lb=0.0,
+        design_max_spacing_mm=36 * IN,
+        backing_basis=section.assumed_site.backing,
+        backing_authority="owner_assumed_unverified",
+        backing_verification="UNKNOWN",
+        product_revision_approval="UNKNOWN",
+        fastener_installation="UNKNOWN",
+        fastener_connection_capacity_lb=None,
+        structural_approval="UNKNOWN",
+    )
+    mm3_per_ft3 = (12 * IN) ** 3
+    plywood_volume_ft3 = sum(
+        part.length_mm * part.width_mm * part.thickness_mm
+        for part in parts if part.component_type == "plywood_panel"
+    ) / mm3_per_ft3
+    quartz_volume_ft3 = (
+        vanity.width_mm
+        * vanity.countertop_depth_mm
+        * vanity.countertop_thickness_mm
+        / mm3_per_ft3
+    )
+    load_case = LoadCase(
+        quartz_countertop_lb=quartz_volume_ft3 * 165.0,
+        plywood_casework_lb=plywood_volume_ft3 * 45.0,
+        sinks_lb=50.0,
+        hardware_plumbing_lb=75.0,
+        water_lb=20.0,
+        contents_lb=120.0,
+        service_live_lb=250.0,
+        load_factor=1.5,
+        quartz_density_pcf=165.0,
+        plywood_density_pcf=45.0,
+    )
+
     return DoubleVanityModel(
         project_name, section.mode, profile, section, section.assumed_site,
         K20000, K7124_A, K8998,
@@ -1410,6 +1549,8 @@ def build_double_vanity_model(
             trade_status="HOLD_RESPONSIBLE_TRADE_APPROVAL",
             commissioning_status="HOLD_COMMISSIONING",
         ),
+        support_layout,
+        load_case,
     )
 
 
@@ -1551,7 +1692,7 @@ _RELEASE_GATES = (
     ("double_vanity.release.dynamic_access",
      "Prove drawer travel/removal and plumbing assembly, inspection, tool, and service sweeps in both bays."),
     ("double_vanity.release.wall_mount",
-     "Provide a project-specific wall-mount/load-path calculation for substrate, rail, joinery, anchors, loads, and tolerances."),
+     "Field-verify acceptable backing and the current support revision; then obtain project-specific fastener installation, cabinet-to-support attachment, and required structural review. No fastener connection capacity is assigned."),
     ("double_vanity.release.commissioning",
      "Record leak, fixture, drawer, anchor, loading, and service-access commissioning after installation."),
 )
@@ -2162,6 +2303,93 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
         "complete represented load path.",
         "derived",
     )
+    supports = model.support_layout.supports
+    support_count = len(supports)
+    per_support_demand_lb = (
+        model.load_case.factored_total_lb / support_count
+        if support_count else float("inf")
+    )
+    expected_support_axes = {
+        role: model.part(role).at_mm[0] + model.part(role).thickness_mm / 2
+        for role in ("left_end", "center_divider", "right_end")
+    }
+    declared_backing = model.support_layout.backing_basis
+    accepted_backing_declarations = set(
+        model.mount_reference.acceptable_applications
+    ) | {"continuous_solid_2x6_with_support_blocking"}
+    load_values = model.load_case.component_weights_lb().values()
+    layout_ok = (
+        support_count == 3
+        and len({support.support_id for support in supports}) == 3
+        and {support.alignment_role for support in supports}
+        == set(expected_support_axes)
+        and all(
+            abs(support.x_axis_mm
+                - expected_support_axes[support.alignment_role]) <= 1e-6
+            and abs(support.wall_y_mm - wall_y) <= 1e-6
+            and abs(
+                support.bearing_z_mm
+                - (
+                    vanity.bottom_elevation_mm
+                    + vanity.body_height_mm
+                )
+            ) <= 1e-6
+            and abs(support.vertical_leg_mm
+                    - model.mount_reference.width_mm) <= 1e-6
+            and abs(support.horizontal_leg_mm
+                    - model.mount_reference.depth_mm) <= 1e-6
+            and support.required_screws
+            == model.mount_reference.required_screws_per_bracket == 4
+            for support in supports
+        )
+        and model.section.vanity.countertop_depth_mm <= 24 * IN
+        and model.support_layout.max_spacing_mm
+        <= model.support_layout.design_max_spacing_mm <= 36 * IN
+        and model.support_layout.design_max_spacing_mm
+        <= model.mount_reference.maximum_spacing_mm
+        and model.support_layout.gravity_path == "rakks_eh_primary"
+        and model.support_layout.rear_rail_role
+        == "positioning_and_lateral_only"
+        and model.support_layout.rear_rail_gravity_credit_lb == 0.0
+        and model.support_layout.fastener_connection_capacity_lb is None
+        and model.support_layout.backing_verification == "UNKNOWN"
+        and model.support_layout.product_revision_approval == "UNKNOWN"
+        and model.support_layout.fastener_installation == "UNKNOWN"
+        and model.support_layout.structural_approval == "UNKNOWN"
+        and model.load_case.load_factor == 1.5
+        and all(value >= 0 for value in load_values)
+        and per_support_demand_lb <= model.mount_reference.static_capacity_lb
+        and model.mount_reference.capacity_basis
+        == "evenly_distributed_static_load"
+        and model.mount_reference.authority
+        == "manufacturer_capacity_conditional_not_connection_capacity"
+        and declared_backing == model.assumed_site.backing
+        and declared_backing in accepted_backing_declarations
+        and model.support_layout.backing_authority == "owner_assumed_unverified"
+        and not model.assumed_site.field_verified
+    )
+    add(
+        "double_vanity.mount.layout", "PASS" if layout_ok else "FAIL", "required",
+        f"Three EH-1818-LV support envelopes at end/divider axes have "
+        f"{model.support_layout.max_spacing_mm:.1f} mm maximum spacing and "
+        f"{per_support_demand_lb:.1f} lb factored equal-share demand per "
+        f"support versus the published {model.mount_reference.static_capacity_lb:.0f} "
+        "lb evenly distributed static rating. This scoped layout result assumes "
+        "an acceptable manufacturer application and four secured screws per "
+        "support; it grants the rear rail zero gravity credit and establishes "
+        "no fastener or wall connection capacity."
+        if layout_ok else
+        f"The proposed EH primary gravity path is outside its scoped envelope: "
+        f"{support_count} supports, {model.support_layout.max_spacing_mm:.1f} mm "
+        f"maximum spacing, {per_support_demand_lb:.1f} lb equal-share factored "
+        f"demand, and backing declaration {declared_backing!r}. No capacity is "
+        "credited to the rear rail or to an uncalculated fastener connection.",
+        "calculated",
+        source=(
+            f"{model.mount_reference.current_specification_url} | "
+            f"{model.mount_reference.specification_url}"
+        ),
+    )
     for rule, message in _RELEASE_GATES:
         sources = {
             "double_vanity.release.fixture_template": model.sink.specification_url,
@@ -2171,6 +2399,10 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
                 f"{model.code_profile.trap_source_url}"
             ),
             "double_vanity.release.drawer_derivation": model.drawers[0].runner.source_url,
+            "double_vanity.release.wall_mount": (
+                f"{model.mount_reference.current_specification_url} | "
+                f"{model.mount_reference.specification_url}"
+            ),
         }
         add(rule, "UNKNOWN", "required", message, "unknown",
             source=sources.get(rule, ""))
