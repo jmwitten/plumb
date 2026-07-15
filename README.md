@@ -337,8 +337,9 @@ a different string — display only, geometry untouched).
 ## Tests
 
 ```bash
-pytest              # ~400 tests: smoke + framework + spec + per-detail
+pytest              # full platform + every detail regression
 pytest -n auto      # same suite, parallel across CPU cores (pytest-xdist)
+pytest --detail-gate armchair_caddy -q -n 4  # one detail's semantic build gate
 ```
 
 The suite spans the geometry primitives, the Connection library, the DetailSpec
@@ -353,3 +354,15 @@ tautology.
 invocation — `pytest --pdb tests/test_foo.py::test_x` or `-s` for prints —
 stays simple; xdist doesn't support interactive `--pdb`/live `-s` output
 under `-n`.
+
+Use a semantic detail gate as the inner loop when a change is owned entirely by
+one detail: its spec, governed design review, detail-specific source, reader
+projection, or acceptance facts. The gate must cover compilation, defining
+geometry, physical/construction validation, fabrication, governance, and
+documents; collection fails if any contract is absent. It starts with fresh
+temporary caches and never reads results from an earlier run.
+
+Run the full suite before integrating any change to shared compiler,
+validation, geometry, rendering, pack, or cache code. A detail gate answers
+whether one product still builds correctly; it does not claim the platform is
+unchanged.

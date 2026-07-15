@@ -14,6 +14,34 @@ three-drawer-cabinet branch is the live case): land them on main by
 (unrelated histories; a merge would drag the whole archived ancestry into
 main). Push main after merges.
 
+## ★ DETAIL-GATE PERFORMANCE UPDATE (2026-07-15 — CADDY GATE 94.82% FASTER)
+
+The final reinforced-miter caddy session paid 1,290.34 seconds for the full
+1,829-test repository gate. A fresh duration reproduction took 1,351.06 seconds
+and showed that unrelated trebuchet, platform, site, sit-and-reach, and stool
+geometry/document tests dominated the wall clock; no caddy test appeared among
+the 100 slowest durations. The focused design-review tests in the original
+session had taken only 8.69 seconds.
+
+Branch `codex/caddy-test-performance` adds an opt-in semantic pytest gate. Tests
+declare a detail slug plus one or more of six mandatory contracts: compile,
+geometry, validation, fabrication, governance, and documents. Collection fails
+for an unknown slug, malformed marker, or incomplete contract set. Ordinary
+pytest remains unfiltered and retains all 1,833 pre-existing node IDs.
+
+The caddy gate selects 53 existing real tests, including oversized-key
+interference, padded-hardware, missing-delivery-confirmation, and
+geometry-invariance mutations. Two new-process runs passed in 61.68 and 66.64
+seconds (61.85 and 66.89 seconds process wall). The slower wall value is 94.82%
+below the historical gate and 19.29x faster, against the owner's 50% target.
+Every test still receives a fresh temporary cache directory; no previous-run
+result participates.
+
+Use `pytest --detail-gate armchair_caddy -q -n 4` for detail-owned iteration.
+Shared compiler, validation, geometry, rendering, pack, or cache changes still
+require the full repository suite before integration. No test was deleted and
+no production/cache behavior changed.
+
 ## ★ SESSION UPDATE 15 (2026-07-14 — CABINET PACK DB40 COMPLETE; four-document release DELIVERED)
 
 The first real cabinet-pack consumer is complete: DB40, a 40-inch-wide
