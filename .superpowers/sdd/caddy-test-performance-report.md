@@ -41,6 +41,7 @@ the recorded times are conservative rather than idle-machine best cases.
 | Scheduler hypothesis | same 12 modules, `--dist loadscope` | 85.06 s | 85.25 s | 179 passed; rejected as slower |
 | Semantic gate 1 | `--detail-gate armchair_caddy` | 61.68 s | 61.85 s | 53 passed |
 | Semantic gate 2 | same, fresh process | 66.64 s | 66.89 s | 53 passed |
+| Final committed full regression | `pytest -q -n 4` | 1,027.31 s | 1,027.54 s | 1,839 passed, 3 skipped, 1 xfailed |
 
 The full-suite duration table showed that unrelated products dominated the
 cost: trebuchet prose truthfulness took 218 seconds; blocked-platform document
@@ -94,3 +95,8 @@ The remaining caddy-gate cost is primarily the mixed install-sweep module's
 whole-corpus module fixture, rebuilt on multiple xdist workers. Refactoring it
 could save roughly 15–18 seconds, but the goal is already exceeded by a wide
 margin. That extra change was declined to keep this performance fix minimal.
+
+The final full-platform regression ran after the competing pytest process had
+exited and passed all 1,843 collected tests (including the expected skips and
+xfail) in 1,027.31 seconds. This confirms that ordinary, unfiltered pytest
+behavior remains intact on the committed branch.
