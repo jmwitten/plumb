@@ -226,3 +226,37 @@ Print re-verified after the caption additions forced a layout rebalance:
   default gate.
 - **Word/page budgets have head-room** (623/1500 words, 11/12 pages), so the
   DB40 numbers are not tuned-to-fit.
+
+## Iteration 4 — owner rounds three and four (2026-07-14 night)
+
+- **Naive-reader loop on the glue-up diagram** (owner directive: iterate
+  with fresh no-context readers until correct). Round 1: reader could not
+  identify the unlabeled shapes or tie the dots to anything. Fixes:
+  every shape labeled in-picture, dots explained as the 5 pre-bored screw
+  holes, mm coordinates dropped from the caption (the kit gate guarantees
+  pre-bored holes; exact data stays in the fabrication packet). Round 2:
+  a fresh reader identified every element correctly. Loop converged.
+- **Explode legibility**: parts washed out to white under the viewer
+  lights — new optional `--viewer-part-shade` host-theme hook in
+  viewer.js (documents that don't set it are untouched); consumer page
+  sets 0.62 plus a neutral stage background. The off-screen Explore
+  button was a CSS collision with viewer.css's bottom-left anchor —
+  consumer overrides removed, viewer theme variables supplied.
+- **Option A shipped** (`3d940ed`, subagent): 98 schematic fastener
+  proxies in the interactive scene at exact machining stations —
+  Confirmat 50, runner 30, front-attachment 12, toe 6 — counts
+  cross-checked against the hardware schedule; locking-device bores, pull
+  bores, and stabilizer cuts skipped and disclosed (no derivable
+  position+axis). Opt-in flag keeps the technical pipeline byte-identical
+  when off. 9 new tests; a guard asserts every machining kind is either
+  covered or explicitly skipped.
+- **Global part numbers in build order**: kit-card rows are numbered by
+  first use in the build sequence (toe rails = 1–4), and scene callout
+  circles and picture keys cite the same numbers (numbering is part of
+  each image's content key).
+- Toe front vs rear card sizes explained to the owner: front rail's top
+  edge carries the 0.5 mm band (blank ≈4" / 101.1 mm); hidden rear rail
+  cuts a clean 4".
+
+Final artifact of the night: 11 = 11 printed pages, sha256
+`92d7c59ac80d19a6…`; consolidated suites 108 passed at HEAD `4ed0e4e`.
