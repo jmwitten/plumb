@@ -186,6 +186,13 @@ class EvidenceSnapshot:
 
 
 @dataclass(frozen=True)
+class CertificationContext:
+    primary: EvidenceSnapshot
+    repeat: EvidenceSnapshot
+    contract: CertificationContract
+
+
+@dataclass(frozen=True)
 class CertificationResult:
     slug: str
     findings: tuple[CertificationFinding, ...]
