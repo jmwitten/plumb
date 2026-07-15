@@ -1,6 +1,6 @@
 # Plumb Personal Codex Plugin
 
-**Status:** implemented and forward-tested on 2026-07-15
+**Status:** approved architecture; written specification awaiting owner review
 
 **Date:** 2026-07-15
 
