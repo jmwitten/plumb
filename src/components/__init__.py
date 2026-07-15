@@ -1,7 +1,8 @@
 from .lumber import Lumber, NOMINAL_SIZES
 from .concrete import ConcretePier, Footing, Slab, Boulder, Epoxy, PierBlock
 from .fasteners import (
-    LagScrew, HexBolt, Washer, StructuralScrew, HexNut, ThreadedRod,
+    LagScrew, HexBolt, Washer, StructuralScrew, ExteriorWoodScrew, HexNut,
+    ThreadedRod,
 )
 from .connectors import JoistHanger, PostBase, AngleBracket
 from .railing import WireMesh, DeckBoard
@@ -16,7 +17,8 @@ from .zipline_hardware import (
 __all__ = [
     "Lumber", "NOMINAL_SIZES",
     "ConcretePier", "Footing", "Slab", "Boulder", "Epoxy", "PierBlock",
-    "LagScrew", "HexBolt", "Washer", "StructuralScrew", "HexNut", "ThreadedRod",
+    "LagScrew", "HexBolt", "Washer", "StructuralScrew", "ExteriorWoodScrew",
+    "HexNut", "ThreadedRod",
     "JoistHanger", "PostBase", "AngleBracket",
     "WireMesh", "DeckBoard", "PlywoodPanel", "HardwoodPanel", "WoodDowel",
     "CedarPanel",

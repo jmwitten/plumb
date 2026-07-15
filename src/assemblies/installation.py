@@ -124,8 +124,10 @@ PROVENANCE_SOURCES = (PROVENANCE_TYPE_DEFAULT, PROVENANCE_MANUFACTURER,
 #: own BOM line, never a contract of their own. Class-name matching keeps this
 #: module free of a components import, exactly like connection.py's
 #: positional-unpack role guards.
-FASTENER_COMPONENT_CLASSES = ("LagScrew", "StructuralScrew", "HexBolt",
-                              "ThreadedRod")
+FASTENER_COMPONENT_CLASSES = (
+    "LagScrew", "StructuralScrew", "ExteriorWoodScrew", "HexBolt",
+    "ThreadedRod",
+)
 
 #: The toe-screw tool-axis angle off the entry face this vocabulary DECLARES
 #: when nothing better is known — typical toe-screw/toenail technique, an

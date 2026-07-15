@@ -56,12 +56,12 @@
 - Produces: registered `pivot_screwed` and `service_latch_screwed` connection types
 - Consumes: exactly two wood members and one exterior screw per service connection
 
-- [ ] Write failing tests for component registration/BOM/material, fastener classification, strict role guards, allowed intersections, screw/member bonds, install contracts, and `pivoted_by` versus `latched_by` construction edges.
-- [ ] Run the two new test modules and confirm RED because the registry entries/edge kinds do not exist.
-- [ ] Implement the exterior screw as a pointed galvanized axial fastener without structural-screw naming or capacity claims.
-- [ ] Implement the two service connection types with no gravity seat and no member-to-member fixed-joint claim; register the new semantic edge kinds in all graph/evidence consumers required by failing tests.
-- [ ] Run connection, installation-contract/sweep, evidence/load-path, registry, and new focused suites; confirm GREEN.
-- [ ] Commit as `feat: model birdhouse service panel hardware`.
+- [x] Write failing tests for component registration/BOM/material, fastener classification, strict role guards, allowed intersections, screw/member bonds, install contracts, and `pivoted_by` versus `latched_by` construction edges.
+- [x] Run the two new test modules and confirm RED because the registry entries/edge kinds do not exist.
+- [x] Implement the exterior screw as a pointed galvanized axial fastener without structural-screw naming or capacity claims.
+- [x] Implement the two service connection types with no gravity seat and no member-to-member fixed-joint claim; register the new semantic edge kinds in all graph/evidence consumers required by failing tests.
+- [x] Run connection, installation-contract/sweep, evidence/load-path, registry, and new focused suites; confirm GREEN.
+- [x] Commit as `feat: model birdhouse service panel hardware`.
 
 ### Task 3: Author and validate the governed birdhouse DetailSpec
 

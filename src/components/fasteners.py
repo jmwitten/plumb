@@ -171,6 +171,83 @@ class StructuralScrew(LagScrew):
     material_key = "steel_galv"
 
 
+@register_component("exterior_wood_screw")
+class ExteriorWoodScrew(_AxialFastener):
+    """Pointed, corrosion-resistant exterior wood screw with a round head.
+
+    This ordinary assembly/service fastener is deliberately distinct from the
+    GRK/LedgerLOK-class :class:`StructuralScrew`: its presence carries no
+    structural capacity implication. The local datum contract is the common
+    headed-fastener frame (head underside at Z=0, shank along -Z).
+    """
+
+    material_key = "steel_galv"
+    thread_fraction = 0.72
+
+    def __init__(self, diameter: float, length: float, name: str | None = None):
+        super().__init__(
+            diameter,
+            length,
+            name or f"{fmt_in(diameter)} x {fmt_in(length, 1)} exterior wood screw",
+        )
+
+    @property
+    def head_diameter(self) -> float:
+        return 2.3 * self.diameter
+
+    @property
+    def head_height(self) -> float:
+        return 0.45 * self.diameter
+
+    def _tip_length(self) -> float:
+        return 1.2 * self.diameter
+
+    def _tip(self) -> cq.Workplane:
+        cyl_end = -(self.length - self._tip_length())
+        return (
+            cq.Workplane("XY")
+            .workplane(offset=cyl_end)
+            .circle(self.diameter / 2)
+            .workplane(offset=-self._tip_length())
+            .circle(0.02 * IN)
+            .loft()
+        )
+
+    def _build(self) -> cq.Workplane:
+        head = axis_cylinder(
+            self.head_diameter / 2,
+            self.head_height,
+            (0, 0, 0),
+            (0, 0, 1),
+        )
+        tip_len = self._tip_length()
+        shank_len = self.length - tip_len
+        pitch = self.thread_pitch_ratio * self.diameter
+        shaft = threaded_shaft(
+            self.diameter,
+            shank_len,
+            pitch,
+            zones=[(0.0, shank_len * self.thread_fraction)],
+        ).rotate((0, 0, 0), (1, 0, 0), 180)
+        return head.union(shaft).union(self._tip())
+
+    def describe(self) -> str:
+        return (
+            f"{fmt_in(self.diameter)} dia x {fmt_in(self.length, 1)} "
+            "exterior wood screw"
+        )
+
+    def assumptions(self) -> str:
+        return (
+            "Corrosion-resistant exterior wood screw with a simplified round "
+            "head and represented threads; manufacturer, coating system, drive, "
+            "and capacity are not selected or analyzed."
+        )
+
+    def bom_label(self) -> str:
+        return "Exterior wood screw"
+
+
 @register_component("hex_nut")
 class HexNut(Component):
     """Finished hex nut with washer-face chamfers.
