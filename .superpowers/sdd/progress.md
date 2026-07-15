@@ -81,6 +81,23 @@ Copies in ~/Downloads/Build Documents/ (HTML + print PDF). NOT in vault
 kit thumbnails, caddy consumer manual as second consumer of the layer,
 per-blank orientation vocabulary (new).
 
+ILLUSTRATION ITERATION (2026-07-15, owner: "it should have illustrations"):
+every machining plan diagram is now a DIMENSIONED DRAWING — ordinate
+ticks on the box edges, fanned leader lines, rotated value labels (full
+precision; %g would have rounded 1006.475), the drawing as the primary
+figure with the 3D scene demoted to an orientation thumbnail, and the
+redundant value-list notes gone. DiagramPrimitive gained text `rotation`
+(default 0, prior surfaces byte-identical). Naive-reader round 5:
+CONDITIONAL PASS whose must-fix (missing wood-list row) verified FALSE —
+the THIRD reader tripped by the two-column parts list — fixed
+mechanically (short groups single-column; size blocks bind spaces AND
+hyphens); its real legibility should-fixes fixed (labels spread wider
+than the box with alternating tick lengths; grooves get one
+direction-true dim; the toe keep-out band no longer dimensions next to
+the rear screw row; densest diagrams display at 2.5in). 11=11 at every
+round. Suite at 4deb48c: 1889 passed / 4 skipped / 1 xfailed.
+
+
 ## ★ SESSION UPDATE 16 (2026-07-14 — STEPDOC +instruction-grammar v1 COMPLETE on branch; DB40 consumer manual passes review)
 
 The consumer instruction layer exists: a pure ActionFrame projection
