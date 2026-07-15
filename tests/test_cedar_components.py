@@ -4,6 +4,7 @@ import math
 
 import pytest
 
+from detailgen.core.buildinfo import geometry_hash
 from detailgen.core.registry import components
 from detailgen.core.units import IN
 from detailgen.spec.compiler import compile_spec
@@ -22,6 +23,46 @@ def test_cedar_panel_is_registered_with_exterior_truthful_language():
     assert "untreated" in panel.assumptions().lower()
     assert "indoor" not in panel.assumptions().lower()
     assert "pressure-treated" not in panel.assumptions().lower()
+
+
+def test_cedar_panel_compatibility_surface_is_characterized():
+    from detailgen.components.cedar import CedarPanel
+
+    panel = CedarPanel(8 * IN, 5.5 * IN, 0.75 * IN, ease_radius=1 / 16 * IN)
+    panel.apply_feature_cut(
+        4 * IN,
+        2.75 * IN,
+        0.5 * IN,
+        noun="probe",
+        step_kind="bore",
+        provenance="probe",
+    )
+
+    assert geometry_hash(panel.solid) == (
+        "0cf648eaa0442878c6ceb3b13de6eb26f4eb72d7092c9561473ce1bc3747b1f2"
+    )
+    assert set(panel.datums) == {"origin", "base", "top", "end_near", "end_far"}
+    assert panel.datum("base").origin == pytest.approx((4 * IN, 2.75 * IN, 0))
+    assert panel.datum("top").origin == pytest.approx(
+        (4 * IN, 2.75 * IN, 0.75 * IN)
+    )
+    assert panel.datum("end_near").origin == pytest.approx(
+        (0, 2.75 * IN, 0.375 * IN)
+    )
+    assert panel.datum("end_far").origin == pytest.approx(
+        (8 * IN, 2.75 * IN, 0.375 * IN)
+    )
+    record = panel.fabrication_record("probe")
+    assert [step.kind for step in record.steps] == ["crosscut", "ease", "bore"]
+    assert record.stock.profile == "3/4 in cedar panel, 5 1/2 in wide"
+    assert record.stock.material_key == "cedar"
+    assert panel.solid.val().Volume() == pytest.approx(530680.747769327)
+    assert panel.bom_label() == "3/4 in cedar panel"
+    assert panel.bom_length_mm() == pytest.approx(8 * IN)
+    assert panel.assumptions() == (
+        "Solid untreated exterior cedar panel; species, grade, weathering, "
+        "and structural capacity are not analyzed."
+    )
 
 
 def test_cedar_panel_folds_every_distinct_bore_from_one_fabrication_record():
