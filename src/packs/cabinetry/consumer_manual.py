@@ -36,12 +36,14 @@ from .instruction_manual import (
 _NUMBER_TOKEN = re.compile(r"\d+(?:[./]\d+)*")
 
 _KIT_GATE = (
-    "Begin only with the prepared kit: every part cut, edge-banded, bored, "
-    "and labeled per the fabrication packet, with the signed "
-    "purchasing/cutting release record complete. Parts — including handed "
-    "left/right pieces — are identified by their fabrication labels; stop "
-    "and re-label from the packet before assembling any unlabeled part. "
-    "This manual repeats no fabrication work."
+    "Do the fabrication packet (linked on the cover) first — it walks "
+    "through cutting every part, machining the back and drawer-bottom "
+    "grooves, boring the screw holes, edge-banding, and labeling, and it "
+    "ends with the signed purchasing/cutting release record. This manual "
+    "begins where that packet ends: every part cut, grooved, bored, "
+    "edge-banded, and labeled. Parts — including handed left/right pieces "
+    "— are identified by their fabrication labels; stop and re-label from "
+    "the packet before assembling any unlabeled part."
 )
 
 
@@ -559,9 +561,9 @@ def build_cabinetry_consumer_manual(
         letters=letters,
         kit_gate=_KIT_GATE,
         cover_caption=(
-            "Shop assembly and installation companion. Technical evidence, "
-            "fabrication data, and the review trace live in the linked "
-            "documents."),
+            "Build order: cut and machine every part with the fabrication "
+            "packet first, then assemble with this manual. Technical "
+            "evidence and the review trace live in the linked documents."),
         related_documents=related_documents,
     )
 
