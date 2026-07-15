@@ -80,6 +80,29 @@ class TestPagePacking:
 
 
 class TestHoldIsolation:
+    def test_hold_page_is_unavoidable_and_precedes_actions(self):
+        hold = ActionFrame(
+            frame_id="release_hold",
+            caption="Stop until the field and structural record is accepted.",
+            source_step_ids=("release_hold",), owned_events=(),
+            focus_part_ids=(), is_hold_gate=True,
+        )
+        action = ActionFrame(
+            frame_id="layout_wall",
+            caption="Lay out the accepted support axes.",
+            source_step_ids=("layout_wall",), owned_events=(),
+            focus_part_ids=(),
+        )
+        manual = compose_consumer_manual(
+            frames=(hold, action), title="DV72 installation",
+            basename="dv72_installation_guide.html", letters=(),
+            kit_gate="Field release required",
+            cover_caption="Empty cabinet only",
+        )
+        assert [page.kind for page in manual.pages] == [
+            "cover", "inventory", "hold", "frames",
+        ]
+
     def test_hold_frame_gets_its_own_page(self):
         frames = [
             _frame("f1"), _frame("f2"), _frame("f3"),
