@@ -161,6 +161,63 @@ def _axis_mapping(rows):
     return mappings.pop()
 
 
+def _origin_words(rows) -> str:
+    """The typed origin phrase shared by the rows' coordinate systems.
+
+    Round 2 of the naive-builder read flagged that different steps
+    reference different corners of the same physical part; printing each
+    diagram's own typed origin words ("front-bottom of side blank",
+    "lower-left corner") ties the drawn datum to a physical corner
+    without inventing orientation prose.
+    """
+    origins = set()
+    for system in {row.coordinate_system for row in rows}:
+        for clause in system.split(";"):
+            clause = clause.strip()
+            if clause.startswith("origin="):
+                origins.add(clause[len("origin="):].strip())
+    if len(origins) != 1:
+        # Under one resolved plot mapping (enforced by _axis_mapping),
+        # every row's origin lands on the same drawn lower-left corner, so
+        # phrases may legitimately differ in vocabulary. Prefer the one
+        # that names physical edges over the generic cut-list wording.
+        physical = {origin for origin in origins
+                    if not origin.startswith("cut-list")}
+        if len(physical) != 1:
+            raise ValueError(
+                "one plan diagram cannot mix machining rows with different "
+                f"typed origins: {sorted(origins)!r}")
+        return physical.pop()
+    return origins.pop()
+
+
+_NOTE_WRAP_CHARS = 38
+
+
+def _wrap_notes(notes) -> tuple[str, ...]:
+    """Wrap note rows so no line can run past the drawing's right edge.
+
+    Round 2 of the naive-builder read caught two clipped dimension lines
+    (toe rear row, toe-rail heights) — at the note font a line longer
+    than ~38 characters leaves the 100-unit canvas, and a clipped number
+    is a guessed number on paper.
+    """
+    wrapped = []
+    for note in notes:
+        words = note.split(" ")
+        line = ""
+        for word in words:
+            candidate = f"{line} {word}".strip()
+            if line and len(candidate) > _NOTE_WRAP_CHARS:
+                wrapped.append(line)
+                line = word
+            else:
+                line = candidate
+        if line:
+            wrapped.append(line)
+    return tuple(wrapped)
+
+
 def _machining_plan_diagram(
     project,
     *,
@@ -224,10 +281,12 @@ def _machining_plan_diagram(
                 f"mm outside the {x_extent:g} x {y_extent:g} mm blank; its "
                 "coordinate system does not match the plan mapping")
 
+    origin = _origin_words(rows).upper()
+    notes = _wrap_notes((f"MEASURE FROM: {origin} (LOWER-LEFT)", *notes))
     pad, top = 8.0, 12.0
     # Reserve real room for every note row so nothing clips below the
     # canvas: the drawn box shrinks before a note line ever would.
-    notes_h = 9.0 + 5.2 * max(len(notes), 1) + 2.0
+    notes_h = 4.5 + 5.2 * len(notes) + 2.0
     box_w = 100.0 - 2.0 * pad
     box_h = box_w * v_extent / h_extent
     max_h = 100.0 - top - notes_h
@@ -253,8 +312,6 @@ def _machining_plan_diagram(
     primitives = [
         _mark("rect", pad, top, box_w, box_h, role="prior",
               label=outline_label),
-        _mark("text", 50.0, top + box_h + 4.5, role="note",
-              label="MEASURE FROM THE LOWER-LEFT CORNER"),
     ]
     source_refs = []
     for row in rows:
@@ -319,7 +376,7 @@ def _machining_plan_diagram(
                 ))
     for index, note in enumerate(notes):
         primitives.append(_mark(
-            "text", 50.0, top + box_h + 9.0 + 5.2 * index, role="note",
+            "text", 50.0, top + box_h + 4.5 + 5.2 * index, role="note",
             label=note))
     return OperationDiagram(
         diagram_id=diagram_id,
@@ -352,6 +409,21 @@ def _back_groove_diagram(project) -> OperationDiagram:
         raise ValueError(
             "captured-back groove rows share a reader name; the per-part "
             "position list would be ambiguous")
+    # The caption offers the builder a flip check ("the groove hugs the
+    # cabinet-rear edge") — prove the underlying geometric fact first: on
+    # every grooved blank the groove sits within a band's reach of one
+    # width edge (mirrored parts hug opposite drawn edges, which is
+    # exactly the trap the check exists for).
+    items = _cut_items(project)
+    for row in rows:
+        blank_width = float(items[row.part_id].width_mm)
+        near = min(row.location_mm[1],
+                   blank_width - (row.location_mm[1] + row.width_mm))
+        if near > 10.0:
+            raise ValueError(
+                f"captured-back groove {row.feature_id!r} sits {near:g} mm "
+                "from the nearest width edge; the caption's rear-edge flip "
+                "check would be false")
     starts = sorted(start_of.items())
     return _machining_plan_diagram(
         project,
@@ -359,11 +431,12 @@ def _back_groove_diagram(project) -> OperationDiagram:
         title=f"Captured-back groove — {len(rows)} grooved parts, "
               "positions printed below",
         caption=(
-            f"One straight groove, {_reader_len(width)} wide by "
-            f"{_reader_len(depth)} deep, on each of the {len(rows)} grooved "
-            "parts — same blade width and depth. The box shows the left "
-            "cabinet side; every part's own band position, measured up "
-            "from its lower-left corner as drawn, is printed below."),
+            f"One groove per part, {_reader_len(width)} wide by "
+            f"{_reader_len(depth)} deep — same blade and depth for all "
+            f"{len(rows)}. Each part's band position is printed below, "
+            "measured up from its lower-left corner. Every groove hugs its "
+            "part's cabinet-rear edge: if yours lands near the opposite "
+            "edge, the blank is flipped."),
         allowed_numbers=_nums(len(rows), _reader_len(width),
                               _reader_len(depth)),
         part_id=_model_part_id(project, "left_end"),
@@ -372,8 +445,7 @@ def _back_groove_diagram(project) -> OperationDiagram:
         notes=(
             f"GROOVE {_reader_len(width)} WIDE x {_reader_len(depth)} DEEP",
             "BAND POSITION, UP AS DRAWN (mm):",
-            " - ".join(f"{name} {start:g}" for name, start in starts[:2]),
-            " - ".join(f"{name} {start:g}" for name, start in starts[2:]),
+            *(f"{name}: {start:g}" for name, start in starts),
         ),
     )
 

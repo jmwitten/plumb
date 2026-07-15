@@ -180,3 +180,67 @@ Listed for HEAD completeness; confirm the fix stays in the merged version.
 - **Completeness + symmetry guards fire.** Every released `fab.*` step maps to
   exactly one frame's `source_step_ids` (test passes), and the end/toe/runner
   "identical on both …" claims raise loudly on mutated inputs.
+
+---
+
+## Fix-round verification — commit `77f438a`
+
+**Verdict: CONFIRMED.** All 1 Critical / 2 Important / 2 blocking Minor
+findings are resolved in the committed tree, each with a regression test.
+`tests/test_cabinetry_cutting_guide.py`: **40 passed**. Guide re-verified:
+11 composed pages, 1315 instructional words (titles now counted, ≤1500).
+
+- **C1 (Critical) — resolved.** `_machining_plan_diagram`
+  (cutting_guide.py:186-195) now runs `validate_caption` over the diagram
+  `title` and `caption` with a per-diagram `allowed_numbers` and the consumer
+  forbidden-token set — the same contract frames use. Every diagram count is
+  interpolated (`{len(rows)}`, `{total}`, `{per_column}`, `{per_front}`,
+  `{backs}`, `{holes}`); the hand-typed number-words are gone
+  (`"all four"/"other three"` → `_back_groove_diagram`; the shared
+  `_toe_attachment_diagram` "Six"/"all six" is retired and replaced by
+  `_toe_centers_diagram` interpolating `{total}`). Regression:
+  `test_diagram_titles_follow_mutated_machining` mutates a toe row and asserts
+  the diagram **title** becomes "4 bottom-to-toe…". I re-ran my own
+  demonstration mutation — frame and diagram now agree.
+- **I1 (Important) — resolved.** Every "each of the N parts gets K" claim is
+  backed by a uniformity guard: `_per_part_total` (…:1064-1071) at the frame
+  level for box sides and box fronts, and `_uniform` over per-part counts
+  inside `_box_joinery_diagram`, `_rear_prep_diagram` (`_per_back`),
+  `_box_front_holes_diagram`, and `_pull_bore_diagram`. Regression:
+  `test_per_part_uniformity_guard_fires_on_divergent_counts` drops one
+  `pull_bore` row and asserts a loud "disagree" failure.
+- **I2 (Important) — resolved.** `test_at_most_1500_visible_instructional_words`
+  now feeds both diagram `title` and `caption` into the count (:90-92); the
+  dense dimension **notes** stay excluded, documented in-code as layout data
+  per the owner's dense-coordinate rule. 1315/1500.
+- **M1 — resolved.** A notch row with `location_mm[1] != 0` raises
+  (…:279-283). Regression: `test_floating_notch_fails_loudly`.
+- **M2 — resolved.** `count < 1` raises instead of `max(count,1)` fabricating
+  a phantom bore (…:299-302). Regression: `test_zero_count_machining_row_fails_loudly`.
+- **M3 — retained.** Note-region reserve scales with note count
+  (`notes_h = 9 + 5.2·max(len(notes),1) + 2`; `max_h = 100 - top - notes_h`),
+  so `top + box_h + notes_h ≤ 100` and no note row clips.
+
+### Residual observations (non-blocking, no action required)
+
+- `validate_caption` matches digit tokens only, not English number-words, so
+  the C1 guard is partial by construction — author discipline (interpolate,
+  drop number-words) is what actually holds. I swept the rendered visible text:
+  the only remaining number-words are the model's own name ("DB40 three-drawer
+  …") and structural constants — "both cabinet ends / both columns / both ends
+  / both rails" (each machine-guarded by an existing symmetry check) and "cut
+  **both** lower-corner notches / drill **both** runner hook holes"
+  (cutting_guide.py:1225-1226), where "both" = 2. That last "both" is the one
+  count-word not forced to its value: `notches_per_back`/`holes_per_back` are
+  guarded uniform but not guarded `== 2`, and the parallel diagram already
+  interpolates them, so a (uniform) model change to ≠2 would leave this fref
+  word stale while the diagram stays correct. Risk is negligible (a rectangle
+  has two lower corners), but interpolating it would close the gap.
+- `_STEP_TITLES["fab.shell_back_grooves"] = "Cut the four back grooves"` still
+  hard-codes "four", but panel/step titles are **not** rendered to the reader
+  (confirmed by rendering the guide and grepping the visible text — absent), so
+  it is a dead internal string, not a reader-honesty risk.
+- `_per_part_total` uses `max(row.count, 1)`, which would count a `count == 0`
+  row as 1 — mildly inconsistent with M2's strict stance, but such rows are
+  rejected upstream by the diagram builder's `count < 1` raise, so no live path
+  reaches it.
