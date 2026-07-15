@@ -175,15 +175,26 @@ def test_static_cut_release_is_not_revoked_by_runner_or_dynamic_gates():
     ):
         assert contradiction not in joined
 
+    for sentence in re.split(r"(?<=[.!?])\s+", joined):
+        if re.search(r"\bjoinery\b", sentence, flags=re.I) and re.search(
+            r"\b(?:held|withheld)\b", sentence, flags=re.I
+        ):
+            assert re.search(
+                r"joinery (?:design and finished cut extents )?(?:is|are) conditionally released",
+                sentence,
+                flags=re.I,
+            ), sentence
+
 
 def test_review_exposes_axes_site_assumptions_faucet_target_and_all_loads():
     html = _documents()["dv72_review_installation.html"]
     project = compile_project_file(FIXTURE)
 
-    assert "x increases right along the wall" in html
-    assert "y = 0 at the project datum" in html
+    assert "x = 0 at the finished left end of the assumed 144.00 in wall" in html
+    assert "y = 0 at the project datum plane" in html
+    assert "1.00 in in front of the modeled finished vanity-front plane" in html
     assert "y increases toward the wall" in html
-    assert "z increases above the floor datum" in html
+    assert "z = 0 at the assumed finished-floor datum" in html
     assert "straight, flat, and plumb wall" in html
     assert "4.50 in above the finished counter" in html
     assert "21.00 in clear room depth in front" in html
@@ -204,6 +215,46 @@ def test_mount_diagram_uses_supports_as_primary_gravity_path():
     assert 'data-load-path="top-to-rail"' not in html
     assert "surveyed framing" not in html
     assert "top/fixtures/contents → case → continuous rail" not in html
+
+
+def test_production_cut_authority_requires_written_fabricator_acceptance():
+    html = _documents()["dv72_fabrication_coordination.html"]
+
+    assert "FABRICATOR ACCEPTANCE REQUIRED" in html
+    assert (
+        "released only after written cabinet-fabricator acceptance of the "
+        "complete owner_assumed shop basis"
+    ) in html
+    assert "Before that written acceptance, no production cut is authorized" in html
+    assert "accepted replacements require regeneration of affected cut authority" in html
+
+
+def test_review_distinguishes_selected_veneer_from_unresolved_pulls():
+    review = _documents()["dv72_review_installation.html"]
+
+    assert (
+        "Veneer sequence is conditionally selected owner_assumed pending written "
+        "cabinet-fabricator acceptance"
+    ) in review
+    assert "Half-moon brass pulls remain unresolved" in review
+
+
+def test_nominal_profile_panels_map_to_selected_19mm_material_basis():
+    project = compile_project_file(FIXTURE)
+    html = _documents()["dv72_fabrication_coordination.html"]
+    rows = re.findall(r'<tr data-cut-list-row=".*?</tr>', html)
+    nominal_roles = {
+        item.role for item in project.artifacts.cut_list
+        if item.thickness_mm == pytest.approx(project.model.profile.carcass_thickness_mm)
+        or item.thickness_mm == pytest.approx(project.model.profile.door_thickness_mm)
+    }
+
+    assert project.model.profile.carcass_thickness_mm == pytest.approx(19.05)
+    assert nominal_roles
+    for role in nominal_roles:
+        row = next(row for row in rows if f".{role}</code>" in row)
+        assert "19.0 mm veneer-core plywood; selected shop basis below" in row
+        assert "thickness-specific material basis requires" not in row
 
 
 def test_validation_assigns_owner_and_blocking_phase_to_every_finding():

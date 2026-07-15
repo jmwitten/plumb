@@ -115,7 +115,9 @@ def _dual(mm: float) -> str:
 def _fabrication_status(project) -> tuple[bool, str]:
     status = project.model.release.fabrication_status
     if status == "CONDITIONAL_FABRICATION_RELEASE":
-        return True, "CONDITIONAL FABRICATION RELEASE"
+        return True, (
+            "CONDITIONAL FABRICATION RELEASE — FABRICATOR ACCEPTANCE REQUIRED"
+        )
     if status == "HOLD_PRODUCT_GEOMETRY":
         return False, "FABRICATION HOLD — PRODUCT GEOMETRY"
     raise ValueError(f"unsupported DV72 fabrication status {status!r}")
@@ -180,7 +182,18 @@ def _assumption_schedule(project) -> str:
         f'<td><code>{study._e(assumed.provenance)}</code>; not field verified</td></tr>'
     )
     qualitative_rows = (
-        ("coordinate_axes", "x increases right along the wall; y = 0 at the project datum and y increases toward the wall; z increases above the floor datum", "field-coordinate convention"),
+        (
+            "coordinate_axes",
+            f"x = 0 at the finished left end of the assumed "
+            f"{assumed.wall_length_mm / 25.4:.2f} in wall and x increases right "
+            "along the wall; y = 0 at the project datum plane, "
+            f"{(project.model.section.site.wall.plane_origin_mm[1] - project.model.section.vanity.body_depth_mm) / 25.4:.2f} in "
+            "in front of the modeled finished vanity-front plane at y = "
+            f"{_dual(project.model.section.site.wall.plane_origin_mm[1] - project.model.section.vanity.body_depth_mm)}, "
+            "and y increases toward the wall; z = 0 at the assumed finished-floor "
+            "datum and z increases upward",
+            "field-coordinate convention",
+        ),
         ("wall_geometry", "straight, flat, and plumb wall", "case-fit basis"),
         ("faucet_target", "4.50 in above the finished counter", "spout-center height target"),
         ("room_clearance", f"{code.front_clearance_mm / 25.4:.2f} in clear room depth in front", "selected-code-profile coordination target"),
@@ -250,7 +263,7 @@ def _rough_in_section(project) -> str:
 
 def build_double_vanity_review_html(project) -> str:
     body = "".join((
-        '<section><h2>Reference-image intent</h2><p><code>IMG_7670.HEIC</code> controls visual intent only: warm figured wood, four flush slab fronts with dark reveals, brass half-moon pulls, a pale substantial counter, broad rectangular sinks, and a clean floating shadow line. It has no dimensional, structural, plumbing, or fabrication authority.</p></section>',
+        '<section><h2>Reference-image intent</h2><p><code>IMG_7670.HEIC</code> controls visual intent only: warm figured wood, four flush slab fronts with dark reveals, brass half-moon pulls, a pale substantial counter, broad rectangular sinks, and a clean floating shadow line. Veneer sequence is conditionally selected owner_assumed pending written cabinet-fabricator acceptance. Half-moon brass pulls remain unresolved. The image has no dimensional, structural, plumbing, or fabrication authority.</p></section>',
         _assumption_schedule(project),
         _system_section(project),
         '<section><h2>Overall review geometry</h2><div class="diagram-grid">',
@@ -328,7 +341,13 @@ def _fabrication_inventory(project) -> str:
             'published for fabrication use.</p></section>'
         )
     def material_basis(item) -> str:
-        if abs(item.thickness_mm - 19.0) <= 1e-6:
+        nominal_profile_tolerance_mm = 0.1
+        if (
+            abs(item.thickness_mm - project.model.profile.carcass_thickness_mm)
+            <= nominal_profile_tolerance_mm
+            or abs(item.thickness_mm - project.model.profile.door_thickness_mm)
+            <= nominal_profile_tolerance_mm
+        ):
             return "19.0 mm veneer-core plywood; selected shop basis below"
         if abs(item.thickness_mm - 15.0) <= 1e-6:
             return "15.0 mm veneer-core plywood; selected shop basis below"
@@ -343,8 +362,8 @@ def _fabrication_inventory(project) -> str:
         for item in project.artifacts.cut_list
     )
     return (
-        '<section><h2>Released cabinet and drawer inventory</h2>'
-        f'<p><b>{len(project.artifacts.cut_list)} released parts.</b> Dimensions are exact model outputs governed by the selected owner-assumed shop basis below. Runner drilling/templates, locking-device setup, stone cutting, procurement, wall work, loading, trade work, and installation remain outside this release.</p>'
+        '<section><h2>Released cabinet and drawer inventory — written acceptance required</h2>'
+        f'<p><b>{len(project.artifacts.cut_list)} released parts after written acceptance.</b> Before written cabinet-fabricator acceptance of the complete owner_assumed shop basis, these exact model outputs are not authorized for production cutting. Runner drilling/templates, locking-device setup, stone cutting, procurement, wall work, loading, trade work, and installation remain outside this release.</p>'
         '<div class="table-wrap"><table><thead><tr><th>Part id</th><th>Canonical name</th><th>Released size</th><th>Material assumption</th></tr></thead><tbody>'
         + rows + '</tbody></table></div></section>'
     )
@@ -400,8 +419,8 @@ def _fabrication_boundaries(project) -> str:
 def build_double_vanity_fabrication_html(project) -> str:
     fabrication_released, visible_status = _fabrication_status(project)
     if fabrication_released:
-        authority = '<section><h2>Fabrication authority</h2><p><b>Conditional cut authorization covers only the listed cabinet and drawer parts at their model dimensions.</b> Stone, runner machining, wall work, loading, trade work, and installation are outside this release.</p></section>'
-        status_content = "Cabinet and drawer part dimensions are released. Stone cutting, runner machining, wall drilling, loading, trade work, and installation remain held."
+        authority = '<section><h2>Fabrication authority</h2><p><b>Cabinet and drawer finished-cut extents are released only after written cabinet-fabricator acceptance of the complete owner_assumed shop basis.</b> Before that written acceptance, no production cut is authorized. Stone, runner machining, wall work, loading, trade work, and installation are outside this release.</p></section>'
+        status_content = "Finished-cut extents become usable only after written cabinet-fabricator acceptance of the complete owner_assumed shop basis. Before acceptance, no production cut is authorized. Stone cutting, runner machining, wall drilling, loading, trade work, and installation remain held."
     else:
         authority = '<section><h2>Fabrication authority</h2><p><b>Product geometry is held.</b> No cabinet, drawer, stone, runner-machining, wall-work, loading, trade-work, or installation authority is issued.</p></section>'
         status_content = "Product geometry is held. Cabinet, drawer, stone, runner machining, wall drilling, loading, trade work, and installation remain withheld."

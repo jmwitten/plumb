@@ -213,11 +213,25 @@ def _motion_states(project) -> str:
     model = project.model
     upper = model.drawer("left", "upper")
     opening = model.sink_bays[0].service_opening_smallest_mm
+    if _cabinet_cut_released(project):
+        closed_authority = (
+            "Joinery design and finished cut extents are conditionally released; "
+            "runner drilling/templates, locking-device setup, dynamic/service "
+            "proof, field-tolerance and rough-in verification, and assembly "
+            "remain held."
+        )
+    else:
+        closed_authority = (
+            "Product geometry hold withholds drawer and joinery cut authority; "
+            "runner drilling/templates, locking-device setup, dynamic/service "
+            "proof, field-tolerance and rough-in verification, and assembly also "
+            "remain held."
+        )
     states = (
         (
             "closed", "Closed",
             f"Provisional analytic obstacle margin: {_mm(upper.closed_clearance_mm or 0)}; not release evidence.",
-            f"The manufacturer-sized basin and product-driven plumbing solids fit inside the analytic U target for selected runner {upper.runner.selected_sku}. Runner machining, joinery, field tolerance, and rough-in verification remain held.",
+            f"The manufacturer-sized basin and product-driven plumbing solids fit inside the analytic U target for selected runner {upper.runner.selected_sku}. {closed_authority}",
         ),
         (
             "full-extension", "Full extension", "UNKNOWN — dynamic gate open.",
@@ -351,7 +365,7 @@ def _inventory(project) -> str:
         '<p>MOVENTO 763.4570S applies only to the upper U drawers. MOVENTO '
         '763.3050S applies to the lower shortened drawers. Runner machining '
         'and installation remain withheld.</p><ul>' + drawers
-        + '</ul><p>Four half-moon brass pulls, four runner/locking-device sets, drawer joinery, sheet product/SKU, veneer sequence, edge band, finish, top, sinks, clamps, faucet/valves, traps, supplies, shutoffs, sealants, backing, and structural fasteners remain procurement or coordination items. No quantity here authorizes purchase.</p>'
+        + '</ul><p><code>owner_assumed</code>: Veneer sequence is conditionally selected owner_assumed pending written cabinet-fabricator acceptance. Four half-moon brass pulls remain unresolved. Runner/locking-device sets, sheet-product SKU, top, sinks, clamps, faucet/valves, traps, supplies, shutoffs, sealants, backing, and structural fasteners remain procurement or coordination items. No quantity here authorizes purchase.</p>'
         + '<div class="table-wrap"><table><thead><tr><th>Model id</th><th>Canonical name</th><th>Provisional study size</th><th>Status</th></tr></thead><tbody>'
         + rows + '</tbody></table></div></section>'
     )

@@ -66,6 +66,8 @@ def test_study_projects_fixture_plumbing_drawer_and_code_facts_from_model():
     assert "MOVENTO 763.4570S applies only to the upper U drawers" in html
     assert "MOVENTO 763.3050S applies to the lower shortened drawers" in html
     assert "457.0 mm drawer length" in html
+    assert "Veneer sequence is conditionally selected owner_assumed" in html
+    assert "half-moon brass pulls remain unresolved" in html
     assert "lower runner family itself remains unselected" not in html
     assert "2022PC_Chapter4_FixturesWBwm.pdf" in html
     assert "2022PC_Chapter10_TrapsWBwm.pdf" in html
