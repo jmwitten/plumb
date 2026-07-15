@@ -91,29 +91,29 @@ def test_caddy_inspector_adds_reader_names_without_rekeying_machine_identity():
     assert list(payload["parts"]) == machine_names
     assert payload["part_order"] == machine_names
     assert list(payload["id_to_name"].values()) == machine_names
-    assert "Registration rail" not in payload["parts"]
-    rails = [
+    assert "Side panel" not in payload["parts"]
+    sides = [
         payload["parts"][name]
-        for name in ("registration rail +X", "registration rail -X")
+        for name in ("side panel +X", "side panel -X")
     ]
-    assert [part["name"] for part in rails] == [
-        "registration rail +X", "registration rail -X"
+    assert [part["name"] for part in sides] == [
+        "side panel +X", "side panel -X"
     ]
-    assert [part["reader_name"] for part in rails] == [
-        "Registration rail", "Registration rail"
+    assert [part["reader_name"] for part in sides] == [
+        "Side panel", "Side panel"
     ]
-    assert [part["instance_index"] for part in rails] == [1, 2]
-    assert [part["instance_count"] for part in rails] == [2, 2]
-    assert [part["display_name"] for part in rails] == [
-        "Registration rail (1 of 2)", "Registration rail (2 of 2)"
+    assert [part["instance_index"] for part in sides] == [1, 2]
+    assert [part["instance_count"] for part in sides] == [2, 2]
+    assert [part["display_name"] for part in sides] == [
+        "Side panel (1 of 2)", "Side panel (2 of 2)"
     ]
 
-    screws = [
+    keys = [
         part for part in payload["parts"].values()
-        if part["reader_name"] == "Rail-to-side screw"
+        if part["reader_name"] == "Corner key"
     ]
-    assert [part["display_name"] for part in screws] == [
-        f"Rail-to-side screw ({index} of 8)" for index in range(1, 9)
+    assert [part["display_name"] for part in keys] == [
+        f"Corner key ({index} of 4)" for index in range(1, 5)
     ]
 
 

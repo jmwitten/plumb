@@ -97,7 +97,7 @@ components:
     type: wood_dowel
     name: corner key +X front
     reader_name: Corner key
-    params: {diameter: "$dowel_dia", length: "$dowel_finish_len"}
+    params: {diameter: "$dowel_dia", length: "$dowel_finish_len", end_trim: miter_flush}
     place:
       raw:
         at: ["$side_inner_x", "$dowel_station_near", "$top_top_z"]
@@ -107,7 +107,7 @@ components:
     type: wood_dowel
     name: corner key +X back
     reader_name: Corner key
-    params: {diameter: "$dowel_dia", length: "$dowel_finish_len"}
+    params: {diameter: "$dowel_dia", length: "$dowel_finish_len", end_trim: miter_flush}
     place:
       raw:
         at: ["$side_inner_x", "$dowel_station_far", "$top_top_z"]
@@ -117,21 +117,21 @@ components:
     type: wood_dowel
     name: corner key -X front
     reader_name: Corner key
-    params: {diameter: "$dowel_dia", length: "$dowel_finish_len"}
+    params: {diameter: "$dowel_dia", length: "$dowel_finish_len", end_trim: miter_flush}
     place:
       raw:
         at: ["= -side_inner_x", "$dowel_station_near", "$top_top_z"]
-        rotate: [["Y", 135]]
+        rotate: [["X", 180], ["Y", 135]]
 
   - id: dowel_neg_far
     type: wood_dowel
     name: corner key -X back
     reader_name: Corner key
-    params: {diameter: "$dowel_dia", length: "$dowel_finish_len"}
+    params: {diameter: "$dowel_dia", length: "$dowel_finish_len", end_trim: miter_flush}
     place:
       raw:
         at: ["= -side_inner_x", "$dowel_station_far", "$top_top_z"]
-        rotate: [["Y", 135]]
+        rotate: [["X", 180], ["Y", 135]]
 
 connections:
   - type: dowel_reinforced_miter
@@ -143,7 +143,7 @@ connections:
     process:
       cure:
         instructions:
-          - "Dry-fit the +X 45-degree miter, then spread the selected wood adhesive on both prepared miter faces and into both dowel holes."
+          - "Dry-fit the 45-degree miter, then spread the selected wood adhesive on both prepared miter faces and into both dowel holes."
           - "Insert both corner keys, clamp the corner closed in both directions, and maintain the selected adhesive label's required fixture state."
         completion: selected_label_full_cure
         why: >-
@@ -159,7 +159,7 @@ connections:
     process:
       cure:
         instructions:
-          - "Dry-fit the -X 45-degree miter, then spread the selected wood adhesive on both prepared miter faces and into both dowel holes."
+          - "Dry-fit the 45-degree miter, then spread the selected wood adhesive on both prepared miter faces and into both dowel holes."
           - "Insert both corner keys, clamp the corner closed in both directions, and maintain the selected adhesive label's required fixture state."
         completion: selected_label_full_cure
         why: >-

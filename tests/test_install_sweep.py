@@ -71,66 +71,35 @@ def _ungoverned_doc(text):
     return load_spec_text(yaml.safe_dump(raw, sort_keys=False))
 
 
-# -- flavor (a): the caddy — glued rail->top joints (GLUE arc) -----------------
-#
-# The rail->top joints are `glued` bonds (owner directive — no pocket jig):
-# NO hardware, install_contract (), so the Fastener-installability machinery
-# has NOTHING to judge there — no contract, no NO-METHOD UNKNOWN, no axis
-# verdicts. Every install verdict the caddy carries comes from the 8 side
-# screws. The reversion probe at the bottom of this section keeps the
-# ORIGINAL D6 impossible-joint defect catchable on the shipped spec by
-# re-adding a buried straight up screw as a text mutation.
+# -- the caddy — keyed adhesive joints have no metal-fastener install axis -----
 
 
 def test_caddy_glued_top_joints_carry_no_install_verdicts(swept):
-    """The glued rail->top bonds have no fastener: zero install findings
-    mention them or any up screw, no NO-METHOD UNKNOWN exists anywhere
-    (the glued type's explicit empty contract is 'nothing to contract',
-    never a gap), and the ONLY install verdicts on the whole detail are the
-    8 side screws' (pinned per-verdict in the tests below)."""
+    """Keyed miters derive bond/key evidence without inventing screw checks."""
     detail, report = swept["armchair_caddy"]
-    inst = _install(report)
-    assert not [f for f in inst if "rail-up screw" in f.subject]
-    assert not [f for f in inst if "-> top underside" in f.subject]
-    assert not [f for f in inst if f.check == "install_method"]
-    assert len(inst) == 16          # 8 side screws x (termination + access)
-    assert all("rail-side screw" in f.subject for f in inst)
-    # the bonds themselves are derived: one bonded_to edge per glued joint.
+    assert _install(report) == []
+    assert detail._connection_checks.installs == []
     bonded = [e for e in detail._connection_checks.edges
               if e.kind == "bonded_to"]
+    keyed = [e for e in detail._connection_checks.edges
+             if e.kind == "keyed_by"]
     assert len(bonded) == 2
-    assert all("top underside (glued)" in e.connection for e in bonded)
+    assert len(keyed) == 2
+    assert all("dowel-reinforced miter" in e.connection
+               for e in (*bonded, *keyed))
+    assert not [part for part in detail.assembly.parts
+                if "screw" in part.name.lower()]
 
 
 def test_cat_g_caddy_bench_frame_clears_arm_with_declared_trust(swept):
-    """CAT-G forward half: the shipped caddy explicitly says it is assembled
-    off the sofa.  Its eight measured arm intersections therefore clear in
-    the whole-detail bench frame, with the claim and its ceiling on paper."""
-    _, report = swept["armchair_caddy"]
-    side = [f for f in _install(report, "install_access")
-            if "rail-side screw" in f.subject]
-    assert len(side) == 8
-    for f in side:
-        assert f.verdict == "PASS" and f.passed and not f.blocking
-        assert "sofa arm" in f.detail
-        assert "absent from bench frame" in f.detail
-        assert "[staging]" in f.detail
-        assert "DECLARED TRUST" in f.detail
-        assert "assembled off the sofa" in f.detail.lower()
-        assert "insertion travel is not analyzed" in f.detail
-        assert f.declared_order and f.declared_trust
-    # Termination now PASSES at the AUTHORED joint-geometry minimum: 0.5in
-    # is the geometric max bite into the 0.75in side board that keeps the
-    # 0.25in show-face cover (the half-length default of 0.62in is
-    # unreachable in this joint) — provenance printed, why in the
-    # connection assumptions.
-    side_t = [f for f in _install(report, "install_termination")
-              if "rail-side screw" in f.subject]
-    assert len(side_t) == 8
-    for f in side_t:
-        assert f.verdict == "PASS"
-        assert "0.50\" bite into side board" in f.detail
-        assert ">= 0.50\" declared minimum [authored_override]" in f.detail
+    """Bench staging stays explicit even though no tool corridors are needed."""
+    detail, report = swept["armchair_caddy"]
+    assert _install(report, "install_access") == []
+    staging = detail._connection_checks.event_graph.staging
+    assert staging.mode == "bench_then_set"
+    assert "DECLARED TRUST" in staging.why
+    assert "insertion travel" in staging.why
+    assert staging.context_parts == frozenset({"boulder-0"})
 
 
 def test_caddy_has_no_install_blocker_after_declared_staging(swept):
@@ -141,93 +110,25 @@ def test_caddy_has_no_install_blocker_after_declared_staging(swept):
     detail.require_clean()
 
 
-#: The D6 impossible joint, re-added to the SHIPPED spec as a text mutation:
-#: one straight 2in up screw with its head at the retired upscrew_z station
-#: (-1.5in — 4.00in inside the solid 5.5in rail), driven through a
-#: cleat_screwed rail->top connection with NO install: block, so it reverts
-#: to the type's driven_straight default and half-length minimum.
-_GHOST_COMPONENT = """\
-  - id: vscrew_ghost
-    type: structural_screw
-    name: rail-up screw +X ghost
-    params: {diameter: "$screw_dia", length: "2.0 in"}
-    place: {raw: {at: ["= side_inner_x - rail_thk/2", "0 in", "= -1.5"], rotate: [["Y", 180]]}}
+def test_caddy_keyed_miter_rejects_extra_hardware(swept):
+    """The connection type fails closed when its two-key role is padded."""
+    def add_third_key(raw):
+        raw["connections"][0]["hardware"].append("dowel_neg_near")
 
-"""
-
-_GHOST_CONNECTION = """\
-  - type: cleat_screwed
-    label: "rail +X -> top underside (REVERSION PROBE: straight up screw)"
-    params: {n_screws: 1}
-    parts: [cleat_pos, top]
-    hardware: [vscrew_ghost]
-
-"""
+    with pytest.raises(ValueError, match=r"expected 2 hardware item\(s\).+got 3"):
+        _mutated_spec("armchair_caddy", add_third_key).validate()
 
 
-def test_caddy_driven_straight_reversion_is_still_caught(swept):
-    """CAT-A's preserved would-have-caught property, on the SHIPPED spec.
-    The glued joints removed the up screws entirely, so the original probe
-    (strip the pocket install: blocks) has nothing left to strip — instead
-    the mutation RE-ADDS the D6 defect: a straight 2in up screw buried
-    mid-plate in the rail, on a cleat_screwed rail->top connection with no
-    authored contract. The original defect verdicts return: a buried-head
-    access FAIL (the impossible joint) and an embedment FAIL against the
-    half-length default. The general model still catches the original
-    defect; the shipped spec's honesty is the joint, not a silenced check.
-    (The impossible-joint flavor is ALSO covered synthetically — CAT-1 in
-    test_install_axes.py; this keeps it covered on the real spec.)"""
-    text = (ROOT / "details" / "armchair_caddy.spec.yaml").read_text()
-    anchor_comp = "# --- connections: the hidden rail joints"
-    anchor_conn = "# --- staging: the actual shop-to-room assembly strategy"
-    assert anchor_comp in text and anchor_conn in text
-    mutated = text.replace(anchor_comp, _GHOST_COMPONENT + anchor_comp)
-    mutated = mutated.replace(anchor_conn, _GHOST_CONNECTION + anchor_conn)
-    report = compile_spec(_ungoverned_doc(mutated)).validate()
-
-    ghost_a = [f for f in _install(report, "install_access")
-               if "ghost" in f.subject]
-    assert len(ghost_a) == 1
-    f = ghost_a[0]
-    assert f.verdict == "FAIL"
-    assert "entry face buried" in f.detail
-    assert "mid-plate" in f.detail
-    assert "4.00\" inside registration rail" in f.detail
-    assert "impossible joint as declared" in f.detail
-
-    ghost_t = [f for f in _install(report, "install_termination")
-               if "ghost" in f.subject]
-    assert len(ghost_t) == 1
-    assert ghost_t[0].verdict == "FAIL"
-    assert "embedment below the declared minimum" in ghost_t[0].detail
-    assert "[assumption]" in ghost_t[0].detail
-    # the 8 shipped side screws keep their authored-minimum PASS untouched.
-    side_t = [f for f in _install(report, "install_termination")
-              if "rail-side screw" in f.subject]
-    assert len(side_t) == 8 and all(f.verdict == "PASS" for f in side_t)
-
-
-def test_caddy_synthetic_overlong_side_screw_fails_naming_show_face(swept):
-    """The live-verified silent breach (installability-design.md §Motivating
-    failure): a 1.75in side screw exits the side board's OUTER SHOW FACE by
-    0.25in and shipped CLEAN before this branch. Built as a synthetic spec
-    mutation — the shipped spec keeps its honest 1.25in screws."""
-    text = (ROOT / "details" / "armchair_caddy.spec.yaml").read_text()
-    assert "screw_len_h: 1.25" in text  # the shipped value this mutates
-    doc = _ungoverned_doc(text.replace("screw_len_h: 1.25",
-                                       "screw_len_h: 1.75"))
-    report = compile_spec(doc).validate()
-    side = [f for f in _install(report, "install_termination")
-            if "rail-side screw" in f.subject]
-    assert len(side) == 8
-    for f in side:
-        assert f.verdict == "FAIL"
-        assert "undeclared exit" in f.detail
-        # the exact face: the side board's outer (+/-X) face, breached 0.25in
-        assert "side board" in f.detail
-        assert "X face at" in f.detail
-        assert "by 0.25\"" in f.detail
-        assert "the contract declares exit=none" in f.detail
+def test_caddy_synthetic_oversized_corner_keys_fail_interference(swept):
+    """An implausibly large key cannot hide inside the allowed joint overlap."""
+    detail = _mutated_spec(
+        "armchair_caddy", lambda raw: raw["params"].update(dowel_dia=2.0))
+    report = detail.validate()
+    failures = [f for f in report.failures
+                if f.check == "interference" and "corner key" in f.subject]
+    assert len(failures) == 4
+    assert all("sofa arm" in f.subject for f in failures)
+    assert all("unexpected overlap" in f.detail for f in failures)
 
 
 # -- flavor (c): the stool's station-at-interface — FIXED (fix arc) -------------
@@ -483,13 +384,11 @@ def _mutated_platform(mutate):
 def test_cat_g_reversion_without_staging_restores_all_four_unknown_facts():
     detail = _mutated_spec("armchair_caddy",
                            lambda raw: raw.pop("sequence"))
-    access = _install(detail.validate(), "install_access")
-    assert len(access) == 8
-    for finding in access:
-        assert finding.verdict == "UNKNOWN"              # class
-        assert finding.blocking and not finding.passed    # gate
-        assert "sofa arm" in finding.detail               # occupant
-        assert "staging declaration" in finding.detail    # missing fact
+    report = detail.validate()
+    assert _install(report, "install_access") == []
+    assert detail._connection_checks.event_graph.staging is None
+    assert not [event for event in detail._connection_checks.event_graph.events
+                if event.kind == "join"]
 
 
 def test_cat_g_explicit_in_situ_makes_all_eight_arm_hits_fail():
@@ -500,14 +399,11 @@ def test_cat_g_explicit_in_situ_makes_all_eight_arm_hits_fail():
         }}
 
     detail = _mutated_spec("armchair_caddy", in_situ)
-    access = _install(detail.validate(), "install_access")
-    assert len(access) == 8
-    for finding in access:
-        assert finding.verdict == "FAIL" and finding.blocking
-        assert "sofa arm" in finding.detail
-        assert "provably present" in finding.detail
-        assert "[staging]" in finding.detail
-        assert "assemble directly around the sofa arm" in finding.detail
+    report = detail.validate()
+    assert _install(report, "install_access") == []
+    staging = detail._connection_checks.event_graph.staging
+    assert staging.mode == "in_situ"
+    assert staging.why == "test mirror: assemble directly around the sofa arm"
 
 
 def test_cat_i_opposite_authored_order_flips_the_toes_to_fail():

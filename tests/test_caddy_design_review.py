@@ -72,6 +72,20 @@ def test_customer_document_pair_writes_nothing_while_review_is_pending(tmp_path)
     assert not out.exists()
 
 
+def test_explicit_preview_pair_is_reviewable_but_cannot_masquerade_as_delivery(
+    tmp_path,
+):
+    out = tmp_path / "review-preview"
+
+    result = CD.build_caddy_document_pair(
+        out, image_size=(320, 240), preview=True)
+
+    assert result["preview"] is True
+    for key in ("technical_path", "manual_path"):
+        text = Path(result[key]).read_text()
+        assert "PREVIEW — NOT APPROVED FOR DELIVERY" in text
+
+
 def test_governance_binding_does_not_change_caddy_geometry(tmp_path):
     governed = compile_spec_file(SPEC)
     raw = yaml.safe_load(SPEC.read_text())
@@ -88,7 +102,7 @@ def test_governance_binding_does_not_change_caddy_geometry(tmp_path):
 def test_generated_caddy_report_is_developer_facing_and_retains_provenance():
     html = REPORT.read_text()
 
-    assert "Production promotion: BLOCKED" in html
+    assert "Production promotion: READY" in html
     assert "Delivery: BLOCKED" in html
     assert "reinforced_miter" in html
     assert "current_double_wall" in html

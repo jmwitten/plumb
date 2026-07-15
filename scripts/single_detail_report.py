@@ -54,12 +54,11 @@ TITLE = "Armchair Coffee Caddy — Model-Backed Build Document"
 # Caddy-specific text passed into the reused (parametrized) site builders so the
 # reader-facing document carries the CADDY's identity, not the zipline's (F1-F4).
 CADDY_BUY_LEDE = (
-    "Everything modeled to build the caddy: one 5/4x6 top board, two 1x6 side "
-    "boards, two 1x6 registration rails, and eight joint screws. Glue, finish, "
-    "abrasives, and optional protective padding are listed in Build notes as "
-    "shop consumables rather than geometry/BOM rows. Bring the actual intended "
-    "cup as a loose fit template. The sofa arm and adjacent cushion/upholstery "
-    "are existing fit context, not bought.")
+    "Everything modeled to build the caddy: three matching 3/4-inch hardwood "
+    "panels and four 3/8-inch hardwood corner-key dowels. Wood glue, finish, "
+    "abrasives, and optional protective padding are shop consumables rather "
+    "than geometry/BOM rows. Bring the intended cup and chair as fit templates. "
+    "The sofa arm and upholstery are existing context, not bought.")
 
 CADDY_FOOTER = {
     "byline": "Witten Dacha &middot; Armchair Coffee Caddy",
@@ -74,12 +73,12 @@ CADDY_FOOTER = {
 CADDY_TITLE_BLOCK = {
     "eyebrow": "Furniture &middot; Weekend Build",
     "h1": "Armchair Coffee Caddy",
-    "lede": ("A loose five-piece saddle that straddles a sofa arm and holds a coffee "
-             "cup — it fastens to nothing on the sofa and lifts straight off. Every "
-             "drawing and number below is generated from one validated parametric 3D model."),
+    "lede": ("A removable three-panel hardwood sleeve with dowel-reinforced miter "
+             "corners. It fastens to nothing on the sofa and lifts straight off. "
+             "Every drawing and number below comes from one validated parametric model."),
     "scale": "Rendered to scale; verify on your arm",
-    "stock": ("1x 5/4x6 offcut + 1x 1x6 offcut + 8 screws + wood glue + "
-              "intended cup (fit template)"),
+    "stock": ("3/4in hardwood panels + four 3/8in hardwood dowels + wood glue + "
+              "intended cup and chair (fit templates)"),
 }
 
 # F4 (CLOSED by CL-2): the top board's cup hole is now a `bore` FEATURE that
@@ -95,99 +94,31 @@ _CUT_NOTE_CONTEXT = ""
 PANEL = {
     "letter": "A",
     "title": "Armchair Coffee Caddy",
-    "sub": "a five-piece saddle that straddles a sofa arm",
+    "sub": "a three-panel waterfall sleeve with keyed miter corners",
     "views": ["iso", "front", "top", "cup", "joint"],
     "captions": {
-        "iso": "The five-piece saddle with the context arm ghosted (the solid arm "
-               "occludes it in a plain view — see the visual-review notes). Top board "
-               "caps the arm; two side boards hang down its sides; the cup hole is "
-               "bored through the top.",
-        "front": "Along the arm. The saddle straddles the arm; both side boards are "
-                 "flush with the top-board ends, and each inner face sits 1in outside "
-                 "the sofa-arm side. The two "
-                 "interior 1x6 registration rails hold a 1/4in reveal off the arm and "
-                 "limit cross-arm rocking. The boards stop above the arm bottom; "
-                 "longitudinal sliding is not analyzed.",
-        "top": "Straight down: the cup-hole opening (the arm shows through it) on a "
-               "CLEAN show face — every fastener is hidden in the interior rails below, "
-               "none on top.",
-        "cup": "Cup-hole interior — a full-thickness bore through the 1in top board; a "
-               "cup's tapered body/lip catches on it and the cup rests on the arm top.",
-        "joint": "Underside with the arm hidden: both full-depth 1x6 registration rails "
-                 "are GLUED to the top underside and screwed into the side boards' inner "
-                 "faces. No fastener lands on the top show face.",
+        "iso": "The three-panel caddy with the context arm hidden so the continuous waterfall form reads. Two diagonal corner keys reinforce each miter.",
+        "front": "Along the arm: the matching side panels directly define the 6.5in clear opening around the modeled 6in arm. The 1/4in nominal gap at each side permits removal; sliding and insertion travel are not analyzed.",
+        "top": "Straight down: the centered cup opening and flush wooden key ends on the hardwood show face. There are no rails, brackets, or metal fasteners.",
+        "cup": "The full-thickness 3/4in cup bore acts as a locating ring; the intended cup and actual chair remain required fit checks.",
+        "joint": "Underside with the arm hidden: each 45-degree corner is glued and crossed by two 3/8in hardwood keys; the dedicated cutaway view exposes their internal axes.",
     },
-    "why": ("WHY A LOOSE GRAVITY SADDLE (NOT FASTENED TO THE SOFA)?",
-            "The caddy fastens to nothing on the sofa. It drops onto the arm and lifts "
-            "straight off — the two deep interior registration rails hold a 1/4in reveal "
-            "off the arm's sides and limit cross-arm rocking; gravity holds it down. "
-            "There is no positive longitudinal retainer, so sliding along the arm is "
-            "not analyzed. "
-            "The side boards are flush with the top-board ends, but their inner faces "
-            "sit 1in outside the arm sides; it is the rails, not "
-            "the sides, that register the caddy across a 1/4in reveal rather than gripping."),
+    "why": (
+        "WHY A REINFORCED-MITER WATERFALL?",
+        "The three matching panels create the conventional clean waterfall form supported by the retained furniture precedents. The side panels establish fit directly, while two dowels reinforce each glued miter without adding rails or visible metal. Sliding and tip resistance remain unproved.",
+    ),
     "narrative": [
-        "One 5/4x6 top board (dressed 1in x 5.5in), {top_len:g}in long, caps the arm, "
-        "bored with a {cup_dia:g}in cup hole. Two 1x6 side boards (0.75in x 5.5in) "
-        "drop {side_drop:g}in down the arm's sides, flush with the top-board ends. "
-        "Each side board's inner face is 1in outside the sofa-arm side: 0.75in is "
-        "occupied by the registration rail and 0.25in remains clear to the arm.",
-        "The top<->side corners are joined by two HIDDEN full-depth 1x6 registration "
-        "rails (dressed 0.75in x 5.5in, dropping 5.5in down the arm side), each GLUED "
-        "up to the top board's underside (long grain both faces) and screwed "
-        "horizontally into the side board's inner face — 8 interior screws total, all "
-        "into FACE grain, none on the show face.",
-        "All long edges are eased. The sofa arm is shown for reference — an existing "
-        "piece of furniture, not purchased, and it carries no structural claim.",
-        "Support/Stability and Structural capacity are honestly NOT ANALYZED (a loose "
-        "saddle has no walking-surface support obligation and no capacity rung) — see "
-        "the coverage matrix below.",
+        "Three matching {panel_thk:g}in hardwood panels make the shell. The top's long point is {top_long_len:g}in; each side's long point is {side_long_len:g}in, leaving {side_drop:g}in below the top underside. The centered {cup_dia:g}in cup hole is bored through the top.",
+        "Both corners are 45-degree glued miters. Two {dowel_dia:g}in hardwood corner keys cross each joint at {dowel_edge_station:g}in from the front and back edges. The four keys finish flush; no rail or metal fastener remains.",
+        "All long edges are eased. The sofa arm is existing fit context and carries no structural claim.",
+        "Support/stability, insertion travel, sliding resistance, and structural capacity are honestly NOT ANALYZED; see the coverage matrix.",
     ],
     "fieldnotes": [
-        ("Top cut formula — measure before cutting.", "Top cut = arm width + 2 x "
-         "(side thickness + rail thickness + reveal) = {arm_w:g}in + 2 x "
-         "({stock_thk:g}in + {rail_thk:g}in + {arm_gap:g}in) = {top_len:g}in. "
-         "That leaves {inner_span:g}in between side-board inner faces and "
-         "the rail inner faces {rail_clear_span:g}in apart. The side boards finish "
-         "flush with the top ends and with its front/back edges."),
-        ("Rail layout.", "Lay the top show-face down. Mark each rail's outer face "
-         "{stock_thk:g}in in from its top-board end; the two {rail_len:g}in rails "
-         "run the full front-to-back depth with their front and back edges flush to "
-         "the top. Dry-clamp a side board outside each rail and verify square."),
-        ("Cup hole.", "A {cup_dia:g}in full-thickness bore is centered "
-         "{cup_center_from_end:g}in from either top-board end and on the width "
-         "centerline. The intended cup is a required loose fit template: before "
-         "cutting, confirm its base/body can enter, its lip or taper cannot fall "
-         "through, its handle clears, and it can be lifted out. The model assumes "
-         "the arm top beneath the bore is firm and planar; if it is soft or deeply "
-         "upholstered, do not use this design for a hot drink without revising it "
-         "to add modeled bottom support."),
-        ("Screw stations — four per rail.", "From the front edge of each rail, mark "
-         "columns at {screw_station_near:.2f}in and {screw_station_far:.2f}in; the "
-         "two distances sum to the {board_depth:g}in rail depth. Mark upper/lower "
-         "rows {sidescrew_drop_u:g}in and {sidescrew_drop_l:g}in below the top "
-         "underside. Predrill and countersink for #10-class {screw_len_h:g}in "
-         "flat-head wood/structural screws per the selected screw manufacturer's "
-         "chart; seat every head flush with the rail face."),
-        ("Tools and consumables.", "Tools: tape measure, square, pencil, saw, "
-         "drill/driver, pilot/countersink bits, clamps, sanding tools, and "
-         "eye/hearing/dust protection. For the {cup_dia:g}in opening, use a hole saw "
-         "or Forstner bit in a drill press with the workpiece clamped; use a handheld "
-         "drill only when the bit maker permits it and with its specified arbor, "
-         "side handle, speed, and workholding. Otherwise drill a starter hole and "
-         "cut to the line with a jigsaw. Consumables: "
-         "wood glue compatible with the chosen stock, sandpaper, water-resistant "
-         "finish and applicator; optional felt/cork may be added only after its "
-         "thickness is included in the fit check. If the modeled pressure-treated "
-         "decking is used indoors, let it dry and follow the treatment supplier's "
-         "cutting, dust-control, and compatible-finish instructions; dry furniture-"
-         "grade stock at the same finished dimensions is preferable indoors."),
-        ("Dry-fit and use gate.", "Before glue, test the empty saddle on the actual "
-         "arm with its adjacent cushion/upholstery in place: check taper/curvature, "
-         "cushion clearance, square bearing, intended-cup fit, and "
-         "movement in both directions. Seal the bore and all faces. Do not use it "
-         "with a hot drink unless the finished empty caddy is stable; longitudinal "
-         "sliding is not analyzed and no load capacity is certified."),
+        ("Panel cuts.", "Use one finished thickness ({panel_thk:g}in) and width ({panel_width:g}in) for all three show parts. Cut the top to a {top_long_len:g}in long point with both ends mitered; cut two sides to a {side_long_len:g}in long point with the joint ends mitered. Preserve the long-point dimensions while fitting the corners."),
+        ("Corner-key layout.", "Dry-close each miter with front/back edges flush. Using a doweling jig that holds the {dowel_dia:g}in bore across the 45-degree joint, mark paired centers {dowel_edge_station:g}in from the front and back edges. Drill matched holes, dry-fit both keys, then glue and clamp square."),
+        ("Cup hole.", "The {cup_dia:g}in full-thickness bore is centered on the {top_long_len:g}in top and on its width centerline. Confirm the intended cup enters, cannot fall through, clears its handle, and lifts out before cutting."),
+        ("Tools and consumables.", "Use a tape, square, pencil, accurate 45-degree cutting setup, doweling jig, drill, clamps, sanding tools, and eye/hearing/dust protection. Select hardwood-compatible glue and a water-resistant finish; follow their labels."),
+        ("Dry-fit and use gate.", "Before glue, test the empty shell over the actual arm and adjacent upholstery. Verify the {inner_span:g}in opening, cushion clearance, square bearing, cup fit, and movement in both directions. Do not use a hot drink unless the finished caddy passes a representative stability test."),
     ],
 }
 
@@ -197,7 +128,7 @@ VIEW_FILES = {
     "front": "v2_front.png",
     "top": "v4_top.png",
     "cup": "z1_cup.png",
-    "joint": "g3_underside.png",
+    "joint": "g2_joint.png",
 }
 
 WEB_GLB_TOL = (0.4, 0.5)   # coarse web-viewer tolerance (same class as the site's)
@@ -212,15 +143,12 @@ WEB_GLB_TOL = (0.4, 0.5)   # coarse web-viewer tolerance (same class as the site
 CADDY_DESIGN_STORE = find_detail_store(REVIEWS_DIR, "caddy", "design")
 DESIGN_TITLE = "Design review &mdash; aesthetic / intent register"
 DESIGN_LEDE = (
-    "Design findings judge the construction against the piece's INTENT (this caddy "
-    "is aesthetic-dominant living-room furniture, reference: a hardwood butcher-block "
-    "armrest table with no visible fasteners). They are RECOMMENDATIONS against that "
-    "intent, never invariant verdicts — they gate nothing and flip nothing; the owner "
-    "picks the fix. Aesthetic/design quality maps to NO existing invariant family "
-    "(the missing family a future Design Exploration Graph would add), so every "
-    "family reads UNKNOWN here. Per the 2026-07-08 ruling: D1 (hidden fasteners) and "
-    "D2 (hardwood) are adopted as recorded intent; both need CL v2 vocabulary to "
-    "express in-spec, so the geometry is unchanged and the gap is handed off.")
+    "The governed precedent-first review compares four genuinely different caddy "
+    "architectures against the brief. The selected three-panel reinforced miter is "
+    "now implemented: matching hardwood panels, four diagonal hardwood keys, no rails, "
+    "and no metal fasteners. These visual findings remain recommendations and honest "
+    "unknowns; the separate design-review artifact carries the provenance, comparison, "
+    "novelty review, approval fingerprint, and still-pending delivery confirmation.")
 
 # ------------------------------------------------------------------------------
 # SECOND consumer: the kids' two-step step stool (task STOOLBUILD, the first
@@ -1401,7 +1329,8 @@ def _consumer_for(spec_path: Path) -> dict:
 def build_document(out: Path, spec_path: Path = CADDY_SPEC,
                    preview: bool = False,
                    companion_href: str | None = None,
-                   *, compiled_detail=None, instruction_manual=None) -> dict:
+                   *, compiled_detail=None, instruction_manual=None,
+                   document_notice: str | None = None) -> dict:
     """Compile + validate the detail named by ``spec_path``, build its
     single-detail HTML build document (reusing consolidated_report's machinery),
     write it to ``out``, and return a summary dict
@@ -1432,6 +1361,16 @@ def build_document(out: Path, spec_path: Path = CADDY_SPEC,
             extra_sections=consumer.get("extra_sections", ()),
             companion_href=companion_href,
             instruction_manual=instruction_manual)
+
+    if document_notice:
+        notice = _html.escape(document_notice)
+        banner = (
+            '<aside role="status" style="position:sticky;top:0;z-index:9999;'
+            'padding:12px;text-align:center;background:#7f1d1d;color:white;'
+            'font:800 16px/1.2 system-ui">'
+            f'{notice}</aside>'
+        )
+        html = html.replace("<body>", f"<body>{banner}", 1)
 
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)

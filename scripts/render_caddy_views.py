@@ -26,13 +26,15 @@ SPEC = ROOT / "details" / "armchair_caddy.spec.yaml"
 
 COLOR = {
     "sofa arm": (0.78, 0.75, 0.70),
-    "side board +X": (0.80, 0.62, 0.42),
-    "side board -X": (0.80, 0.62, 0.42),
-    "top board": (0.66, 0.48, 0.30),
-    "registration rail +X": (0.86, 0.72, 0.50),
-    "registration rail -X": (0.86, 0.72, 0.50),
+    "side panel +X": (0.80, 0.62, 0.42),
+    "side panel -X": (0.80, 0.62, 0.42),
+    "top panel": (0.66, 0.48, 0.30),
+    "corner key +X front": (0.93, 0.80, 0.42),
+    "corner key +X back": (0.93, 0.80, 0.42),
+    "corner key -X front": (0.93, 0.80, 0.42),
+    "corner key -X back": (0.93, 0.80, 0.42),
 }
-SCREW = (0.55, 0.57, 0.60)
+OTHER = (0.55, 0.57, 0.60)
 LIGHT = LightSource(azdeg=-35, altdeg=55)
 
 
@@ -43,7 +45,7 @@ def _part_polys(part):
     return vertices, faces
 
 
-def _shade(base, faces):
+def _shade(base, faces, alpha=1.0):
     """Flat-shade each triangle by its normal against the light source."""
     colors = []
     for face in faces:
@@ -53,7 +55,7 @@ def _shade(base, faces):
         light = np.array([-0.4, -0.5, 0.9])
         light = light / np.linalg.norm(light)
         strength = 0.45 + 0.55 * max(0.0, float(np.dot(normal, light)))
-        colors.append((*[channel * strength for channel in base], 1.0))
+        colors.append((*[channel * strength for channel in base], alpha))
     return colors
 
 
@@ -68,22 +70,23 @@ def render_caddy_views(detail, out_dir: str | Path = DEFAULT_OUT) -> tuple[Path,
     for part in detail.assembly.parts:
         vertices, faces = _part_polys(part)
         all_vertices.append(vertices)
-        parts.append((part.name, COLOR.get(part.name, SCREW), faces))
+        parts.append((part.name, COLOR.get(part.name, OTHER), faces))
     vertices = np.vstack(all_vertices)
     global_min, global_max = vertices.min(0), vertices.max(0)
     written = []
 
-    def draw(filename, elev, azim, title, lims=None, hide=()):
+    def draw(filename, elev, azim, title, lims=None, hide=(), ghost=()):
         figure = plt.figure(figsize=(7, 6), dpi=130)
         ax = figure.add_subplot(111, projection="3d")
         for name, base, faces in parts:
             if name in hide:
                 continue
+            is_ghost = name in ghost
             collection = Poly3DCollection(
                 faces,
-                facecolors=_shade(base, faces),
-                edgecolors=(0, 0, 0, 0.18),
-                linewidths=0.2,
+                facecolors=_shade(base, faces, 0.16 if is_ghost else 1.0),
+                edgecolors=(0, 0, 0, 0.08 if is_ghost else 0.18),
+                linewidths=0.1 if is_ghost else 0.2,
             )
             ax.add_collection3d(collection)
         if lims is None:
@@ -105,26 +108,27 @@ def render_caddy_views(detail, out_dir: str | Path = DEFAULT_OUT) -> tuple[Path,
         plt.close(figure)
         written.append(path)
 
-    draw("v1_iso.png", 22, -55, "ISO — whole caddy saddling the arm")
-    draw("v2_front.png", 6, -89, "FRONT (along -Y): straddle, cup-hole edge, sides hang free")
-    draw("v3_end.png", 6, 1, "END: arm length, side-board 7in drop")
-    draw("v4_top.png", 88, -90, "TOP (-Z): cup-hole opening — clean show face, NO fasteners")
-    draw("z1_cup.png", 55, -60, "ZOOM cup-hole interior (top board notch)",
+    draw("v1_iso.png", 22, -55, "ISO — three-panel caddy saddling the arm")
+    draw("v2_front.png", 6, -89, "FRONT (along -Y): panel-defined fit and 7in drop")
+    draw("v3_end.png", 6, 1, "END: arm length and removable waterfall sleeve")
+    draw("v4_top.png", 88, -90, "TOP (-Z): cup opening + flush wooden key ends")
+    draw("z1_cup.png", 55, -60, "ZOOM cup-hole interior (3/4in top panel)",
          lims=([-60, -60, -20], [60, 60, 40]))
     draw("z2_joint.png", 26, -55,
-         "ZOOM registration-rail corner: hidden full-depth 1x6 rail, face-grain screws (2 pairs)",
+         "ZOOM reinforced miter: two diagonal hardwood corner keys",
          lims=([40, -55, -155], [125, 55, 40]))
     draw("z3_gap.png", 8, -89,
-         "ZOOM arm-clearance fit (registration rail holds the 0.25in reveal off the arm)",
+         "ZOOM panel-defined fit: 0.25in nominal clearance each side",
          lims=([55, -75, -160], [125, 75, 35]))
     draw("g1_iso.png", 24, -55,
-         "ISO (arm hidden) — 3 boards + 2 hidden full-depth registration rails",
+         "ISO (arm hidden) — three matching hardwood panels",
          hide=("sofa arm",))
     draw("g2_joint.png", 30, -60,
-         "ZOOM registration-rail corner (arm hidden): 1x6 rail glued to the top + screwed into the side face (upper + lower)",
-         lims=([40, -60, -155], [125, 60, 40]), hide=("sofa arm",))
+         "CUTAWAY reinforced miter: ghosted panels expose two diagonal keys",
+         lims=([40, -60, -155], [125, 60, 40]), hide=("sofa arm",),
+         ghost=("top panel", "side panel +X"))
     draw("g3_underside.png", -35, -55,
-         "UNDERSIDE (arm hidden): deep rails register + fasten the top to the sides, no show-face screws",
+         "UNDERSIDE (arm hidden): keyed miters, no rails or metal fasteners",
          hide=("sofa arm",))
     return tuple(written)
 

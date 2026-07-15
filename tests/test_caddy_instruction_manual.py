@@ -57,7 +57,7 @@ def test_pair_has_exact_distinct_basenames_and_reciprocal_relative_links(pair):
     assert "file://" not in technical.read_text() + manual.read_text()
 
 
-def test_technical_companion_uses_the_same_five_panel_schedule(pair):
+def test_technical_companion_uses_the_same_four_panel_schedule(pair):
     technical = Path(pair["technical_path"]).read_text()
     match = re.search(
         r'<script type="application/json" id="detail-data-armchair_caddy">'
@@ -69,10 +69,10 @@ def test_technical_companion_uses_the_same_five_panel_schedule(pair):
     payload = json.loads(match.group(1))
 
     assert [panel["number"] for panel in payload["instruction_panels"]] == [
-        1, 2, 3, 4, 5]
-    assert payload["parts"]["top board"]["first_panel"] == 1
-    assert payload["parts"]["rail-side screw +X upper 0"]["first_panel"] == 4
-    assert payload["parts"]["sofa arm"]["first_panel"] == 5
+        1, 2, 3, 4]
+    assert payload["parts"]["top panel"]["first_panel"] == 1
+    assert payload["parts"]["corner key +X front"]["first_panel"] == 2
+    assert payload["parts"]["sofa arm"]["first_panel"] == 4
 
 
 def test_pair_compiles_the_detail_only_once(
@@ -156,16 +156,15 @@ def test_manual_is_self_contained_and_has_one_model_backed_panel_per_cohort(pair
 
     assert html.startswith("<!doctype html>")
     assert html.rstrip().endswith("</html>")
-    assert html.count('class="instruction-panel"') == 5
-    assert html.count("data:image/png;base64,") == 5
+    assert html.count('class="instruction-panel"') == 4
+    assert html.count("data:image/png;base64,") == 4
     assert "src=\"http" not in html and "href=\"http" not in html
     visible = _visible_text(html)
-    assert "Prepare Top board, 2 × Side board, and 2 × Registration rail" in visible
-    assert "Bond 2 × Registration rail and Top board" in visible
+    assert "Prepare Top panel and 2 × Side panel" in visible
+    assert "Bond Top panel and 2 × Side panel" in visible
     assert "Hold 2 adhesive bonds to full cure" in visible
-    assert "Fasten 2 × Registration rail and 2 × Side board" in visible
     assert "Set completed armchair caddy over Sofa arm" in visible
-    assert '<input id="panel-slider" type="range" min="1" max="5"' in html
+    assert '<input id="panel-slider" type="range" min="1" max="4"' in html
     assert 'id="panel-progress"' in html
     assert "ArrowLeft" in html and "ArrowRight" in html
     assert "hashchange" in html
@@ -176,7 +175,7 @@ def test_manual_renders_typed_resource_icons_and_release_boundary(pair):
     html = Path(pair["manual_path"]).read_text()
     visible = _visible_text(html)
 
-    for icon in ("screw", "adhesive", "clamp", "driver"):
+    for icon in ("saw", "drill", "adhesive", "clamp"):
         assert f'data-icon="{icon}"' in html
         assert f'aria-label="{icon} icon"' in html
     assert html.count('class="resource-icon"') >= 4
@@ -190,17 +189,17 @@ def test_manual_carries_typed_gates_stations_rationales_and_declared_trust(pair)
     visible = _visible_text(Path(pair["manual_path"]).read_text())
 
     for text in (
-        "4-3/4\" from either end",
-        "front/back edges flush",
-        "2.15\" from each rail end",
-        "3/4\" below the top underside",
+        "4\" from either end",
+        "1-3/16\" from each front/back edge",
+        "miter faces close without a gap",
+        "Insert both corner keys",
         "No generic duration is represented",
         "Why this order",
         "DECLARED TRUST",
         "insertion travel is not analyzed",
     ):
         assert text in visible
-    for machine_term in ("+X", "-X", "lumber-", "structural_screw-"):
+    for machine_term in ("+X", "-X", "hardwood_panel-", "wood_dowel-"):
         assert machine_term not in visible
 
 
@@ -208,23 +207,22 @@ def test_manual_explains_callout_numbers_with_shared_reader_names(pair):
     visible = _visible_text(Path(pair["manual_path"]).read_text())
 
     assert "Picture key" in visible
-    assert "Top board" in visible
-    assert "Side board" in visible
-    assert "Registration rail" in visible
-    assert "Rail-to-side screw" in visible
+    assert "Top panel" in visible
+    assert "Side panel" in visible
+    assert "Corner key" in visible
     assert "Sofa arm" in visible
 
 
-def test_pair_reports_content_hashes_and_five_keyed_panel_images(pair):
+def test_pair_reports_content_hashes_and_four_keyed_panel_images(pair):
     assert len(pair["technical_sha256"]) == 64
     assert len(pair["manual_sha256"]) == 64
     assert pair["technical_sha256"] != pair["manual_sha256"]
     paths = tuple(Path(path) for path in pair["panel_images"])
-    assert len(paths) == 5
+    assert len(paths) == 4
     assert all(re.fullmatch(r"[0-9a-f]{64}\.png", path.name)
                for path in paths)
     assert all(path.exists() for path in paths)
-    assert pair["panel_count"] == 5
+    assert pair["panel_count"] == 4
     assert pair["asset_keys"] == tuple(path.stem for path in paths)
 
 
@@ -265,5 +263,5 @@ def test_pair_regeneration_is_deterministic_after_generated_stamp_normalization(
     before = manual_path.read_bytes()
     shutil.rmtree(manual_path.parent / "instruction_panels")
     assert manual_path.read_bytes() == before
-    assert before.count(b"data:image/png;base64,") == 5
+    assert before.count(b"data:image/png;base64,") == 4
     assert b"instruction_panels/" not in before

@@ -92,6 +92,7 @@ def test_four_dowels_match_precedent_size_stations_and_diagonal_axes(caddy):
                for part in dowels)
     assert all(part.component.length == pytest.approx(math.sqrt(2) * 0.75 * IN)
                for part in dowels)
+    assert all(part.component.end_trim == "miter_flush" for part in dowels)
     stations = sorted(round(part.world_frame.origin[1] / IN, 6) for part in dowels)
     assert stations == [-1.5625, -1.5625, 1.5625, 1.5625]
     axes = {tuple(round(value, 6) for value in part.world_frame.x_axis)
@@ -99,6 +100,14 @@ def test_four_dowels_match_precedent_size_stations_and_diagonal_axes(caddy):
     diagonal = round(1 / math.sqrt(2), 6)
     assert axes == {(diagonal, 0.0, -diagonal),
                     (-diagonal, 0.0, -diagonal)}
+
+    top = detail._by_id["top"].world_solid()
+    for part in dowels:
+        side = detail._by_id[
+            "side_pos" if "+X" in part.name else "side_neg"
+        ].world_solid()
+        outside_panels = part.world_solid().cut(top.union(side)).val().Volume()
+        assert outside_panels == pytest.approx(0.0, abs=1e-5)
 
 
 def test_top_retains_centered_three_and_half_inch_cup_bore(caddy):

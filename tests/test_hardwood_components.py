@@ -80,6 +80,25 @@ def test_wood_dowel_is_a_finished_cylinder_along_local_positive_x():
     assert pin.material_key == "hardwood"
 
 
+def test_miter_flush_dowel_has_skewed_ends_inside_the_corner_envelope():
+    from detailgen.components.hardwood import WoodDowel
+
+    thickness = 0.75 * IN
+    length = math.sqrt(2) * thickness
+    pin = WoodDowel(0.375 * IN, length, end_trim="miter_flush")
+    rotated = pin.solid.rotate((0, 0, 0), (0, 1, 0), 45)
+    bb = rotated.val().BoundingBox()
+
+    assert bb.xmax == pytest.approx(thickness)
+    projected_radius = pin.diameter / math.sqrt(2)
+    assert bb.xmin == pytest.approx(-projected_radius)
+    assert bb.zmin == pytest.approx(-thickness - projected_radius)
+    assert bb.zmax == pytest.approx(0.0, abs=1e-6)
+    assert pin.solid.val().Volume() == pytest.approx(
+        math.pi * (pin.diameter / 2) ** 2 * length)
+    assert "trim" in pin.assumptions().lower()
+
+
 def test_detail_spec_compiles_a_mitered_hardwood_panel_with_a_bore_feature():
     doc = load_spec_text(
         """

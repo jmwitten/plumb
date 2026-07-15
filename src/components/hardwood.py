@@ -195,18 +195,48 @@ class WoodDowel(Component):
         diameter: float,
         length: float,
         name: str = "hardwood dowel",
+        end_trim: str = "square",
     ):
         super().__init__(name)
         self.diameter = float(diameter)
         self.length = float(length)
+        self.end_trim = str(end_trim)
+        if self.end_trim not in {"square", "miter_flush"}:
+            raise ValueError(
+                "wood dowel end_trim must be 'square' or 'miter_flush'; "
+                f"got {self.end_trim!r}"
+            )
 
     def _build(self) -> cq.Workplane:
-        return axis_cylinder(
-            self.diameter / 2,
-            self.length,
-            (0.0, 0.0, 0.0),
+        radius = self.diameter / 2
+        cylinder = axis_cylinder(
+            radius, self.length, (0.0, 0.0, 0.0), (1.0, 0.0, 0.0)
+        )
+        if self.end_trim == "square":
+            return cylinder
+
+        # The nominal axis runs from the top-face center to the side-face
+        # center. Stock extends beyond both centers before two 45-degree
+        # face-plane trims are made; otherwise square cylinder ends protrude.
+        # In local X/Z the retained half-spaces are z <= x and z <= L - x.
+        # After placement those are the horizontal top and vertical side faces,
+        # exposing two oval plugs while staying inside the panel union.
+        extended = axis_cylinder(
+            radius,
+            self.length + 4 * radius,
+            (-2 * radius, 0.0, 0.0),
             (1.0, 0.0, 0.0),
         )
+        half = self.length / 2
+        margin = self.length + 2 * radius
+        envelope = (
+            cq.Workplane("XZ")
+            .polyline(((-margin, -margin), (half, half),
+                       (self.length + margin, -margin)))
+            .close()
+            .extrude(self.diameter + 2.0, both=True)
+        )
+        return extended.intersect(envelope)
 
     def _datums(self) -> dict[str, Frame]:
         return {
@@ -228,14 +258,21 @@ class WoodDowel(Component):
         )
 
     def assumptions(self) -> str:
+        if self.end_trim == "miter_flush":
+            return (
+                "Modeled with skew end trims flush to the two outside faces of "
+                "a 45-degree miter; install from dowel rod with glue, then trim "
+                "and sand both exposed ends flush."
+            )
         return (
-            "Modeled at its finished flush length; install from dowel rod with "
-            "glue, then trim and sand both exposed ends flush."
+            "Modeled at its finished square-cut length; install from dowel rod "
+            "with glue and finish the exposed ends as specified."
         )
 
     def bom_group(self) -> str:
         return (
-            f"WoodDowel|{round(self.diameter, 3)}|{round(self.length, 3)}"
+            f"WoodDowel|{round(self.diameter, 3)}|{round(self.length, 3)}|"
+            f"{self.end_trim}"
         )
 
     def bom_label(self) -> str:
@@ -251,4 +288,3 @@ class WoodDowel(Component):
         if self.length <= 0:
             problems.append(f"{self.name}: non-positive length")
         return problems
-

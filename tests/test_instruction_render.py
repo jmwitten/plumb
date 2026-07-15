@@ -65,127 +65,110 @@ def test_instruction_rendering_api_is_public():
     ))
 
 
-def test_prepare_station_locates_bore_from_both_top_board_ends(caddy, stationed):
+def test_prepare_station_locates_bore_from_both_top_panel_ends(caddy, stationed):
     prepare = _panel(stationed, "prepare")
     bore = next(station for station in prepare.stations
                 if station.feature == "cup hole center")
 
     assert bore.reference_part_id == next(
         part.id for part in caddy.assembly.parts
-        if part.reader_name == "Top board")
-    assert bore.reference_length_mm == pytest.approx(241.3)
-    assert bore.near_mm == pytest.approx(120.65)
-    assert bore.far_mm == pytest.approx(120.65)
+        if part.reader_name == "Top panel")
+    assert bore.reference_length_mm == pytest.approx(203.2)
+    assert bore.near_mm == pytest.approx(101.6)
+    assert bore.far_mm == pytest.approx(101.6)
     assert "from either end" in bore.label
     assert "width centerline" in bore.label
     assert "+X" not in bore.label and "-X" not in bore.label
 
 
-def test_bond_stations_locate_each_rail_from_top_and_flush_datums(stationed):
+def test_bond_stations_locate_each_corner_key_pair_from_panel_edges(stationed):
     bond = _panel(stationed, "bond")
 
     assert len(bond.stations) == 2
     assert {station.feature for station in bond.stations} == {
-        "registration rail placement"}
+        "symmetric corner-key pair"}
     for station in bond.stations:
-        assert station.near_mm == pytest.approx(19.05)
-        assert station.far_mm == pytest.approx(222.25)
-        assert station.reference_length_mm == pytest.approx(241.3)
-        assert "front/back edges flush" in station.label
-        assert "top underside" in station.label
+        assert station.near_mm == pytest.approx(30.1625)
+        assert station.far_mm == pytest.approx(109.5375)
+        assert station.reference_length_mm == pytest.approx(139.7)
+        assert "from each front/back edge" in station.label
+        assert "miter faces close without a gap" in station.label
+        assert station.mirror_p0 is not None and station.mirror_p1 is not None
         assert "+X" not in station.label and "-X" not in station.label
     labels = "\n".join(station.label for station in bond.stations)
-    assert "side-board contact face" in labels
-    assert '6-1/2" clear between the rails\' inside faces' in labels
+    assert "Side panel (1 of 2)" in labels
+    assert "Side panel (2 of 2)" in labels
 
 
-def test_fasten_stations_locate_symmetric_pairs_from_either_rail_end(stationed):
-    fasten = _panel(stationed, "fasten")
+def test_bond_stations_reconcile_symmetric_pairs_from_either_panel_edge(stationed):
+    bond = _panel(stationed, "bond")
 
-    assert len(fasten.stations) == 4
-    assert {round(station.near_mm, 2) for station in fasten.stations} == {
-        54.61}
+    assert len(bond.stations) == 2
+    assert {round(station.near_mm, 2) for station in bond.stations} == {30.16}
     assert all(
         station.near_mm + station.far_mm
         == pytest.approx(station.reference_length_mm)
-        for station in fasten.stations
+        for station in bond.stations
     )
-    labels = "\n".join(station.label for station in fasten.stations)
-    assert {round(station.secondary_mm, 2)
-            for station in fasten.stations} == {19.05, 101.6}
-    assert all(station.q0 is not None and station.q1 is not None
-               for station in fasten.stations)
-    assert all(station.mirror_p0 is not None and station.mirror_p1 is not None
-               for station in fasten.stations)
-    assert '3/4" below the top underside' in labels
-    assert '4" below the top underside' in labels
-    assert "from each rail end" in labels
-    assert "front rail end" not in labels and "back rail end" not in labels
+    labels = "\n".join(station.label for station in bond.stations)
+    assert '1-3/16" from each front/back edge' in labels
     assert "+X" not in labels and "-X" not in labels
-    assert "Registration rail (1 of 2)" in labels
-    assert "Registration rail (2 of 2)" in labels
-
-    instructions = "\n".join(fasten.instructions)
-    for index in (1, 2):
-        assert f"Side board ({index} of 2)" in instructions
-        assert f"Registration rail ({index} of 2)" in instructions
-    assert "top edge against the top underside" in instructions
-    assert "front/back edges flush with the top" in instructions
-    assert "outside face flush with the nearest top-board end" in instructions
-    assert "Drill from the rail's inside face into the side board" in instructions
+    instructions = "\n".join(bond.instructions)
+    assert instructions.count("Dry-fit the 45-degree miter") == 2
+    assert instructions.count("Insert both corner keys") == 2
 
 
-def test_fasten_overlay_draws_every_station_on_both_registration_rails(
+def test_bond_overlay_draws_every_corner_key_station(
     stationed,
 ):
-    fasten = _panel(stationed, "fasten")
+    bond = _panel(stationed, "bond")
 
-    markers, dimensions = _stations_for_overlay(fasten)
+    markers, dimensions = _stations_for_overlay(bond)
 
-    assert markers == fasten.stations
-    assert dimensions == fasten.stations
-    assert len({station.reference_part_id for station in markers}) == 2
+    assert markers == bond.stations
+    assert dimensions == bond.stations
+    assert len({station.reference_part_id for station in markers}) == 1
 
 
-def test_moving_authored_screw_offset_moves_raw_stations_and_rekeys(
+def test_moving_authored_dowel_offset_moves_raw_stations_and_rekeys(
     caddy, stationed, tmp_path,
 ):
     changed_spec = tmp_path / SPEC.name
     _write_ungoverned_variant(
         changed_spec,
-        SPEC.read_text().replace("screw_dy_h: 0.6", "screw_dy_h: 0.8"),
+        SPEC.read_text().replace(
+            "dowel_edge_station: 1.1875", "dowel_edge_station: 1.0"),
     )
     changed = compile_spec_file(changed_spec)
     changed.validate()
     changed_manual = attach_caddy_stations(
         changed, build_instruction_manual(changed))
 
-    original = _panel(stationed, "fasten")
-    moved = _panel(changed_manual, "fasten")
+    original = _panel(stationed, "bond")
+    moved = _panel(changed_manual, "bond")
     assert {round(station.near_mm, 2) for station in moved.stations} == {
-        49.53}
+        25.4}
     assert tuple(station.near_mm for station in original.stations) != tuple(
         station.near_mm for station in moved.stations)
     assert panel_content_key(caddy, original) != panel_content_key(changed, moved)
-    for action in ("prepare", "bond", "cure"):
-        assert panel_content_key(caddy, _panel(stationed, action)) == \
-            panel_content_key(changed, _panel(changed_manual, action))
+    assert panel_content_key(caddy, _panel(stationed, "prepare")) == \
+        panel_content_key(changed, _panel(changed_manual, "prepare"))
+    assert panel_content_key(caddy, _panel(stationed, "cure")) != \
+        panel_content_key(changed, _panel(changed_manual, "cure"))
     assert panel_content_key(
         caddy, _panel(stationed, "join")) != panel_content_key(
             changed, _panel(changed_manual, "join"))
 
 
-def test_asymmetric_screw_pair_without_a_physical_end_anchor_fails_closed(
+def test_asymmetric_corner_key_pair_without_a_physical_edge_anchor_fails_closed(
     caddy, tmp_path,
 ):
     changed_spec = tmp_path / SPEC.name
     _write_ungoverned_variant(
         changed_spec,
         SPEC.read_text().replace(
-            'place: {raw: {at: ["$rail_inner_x", "$screw_dy_h", '
-            '"$sidescrew_z_u"], rotate: [["Y", -90]]}}',
-            'place: {raw: {at: ["$rail_inner_x", "= screw_dy_h + 0.2", '
-            '"$sidescrew_z_u"], rotate: [["Y", -90]]}}',
+            'at: ["$side_inner_x", "$dowel_station_far", "$top_top_z"]',
+            'at: ["$side_inner_x", "= dowel_station_far - 0.2", "$top_top_z"]',
             1,
         ),
     )
@@ -194,13 +177,13 @@ def test_asymmetric_screw_pair_without_a_physical_end_anchor_fails_closed(
 
     with pytest.raises(
         InstructionPresentationError,
-        match="screw pair.*not end-symmetric.*physical end anchor",
+        match="corner keys.*not symmetric.*front/back edges",
     ):
         attach_caddy_stations(changed, build_instruction_manual(changed))
 
 
 def test_content_key_ignores_prose_but_covers_station_inputs(caddy, stationed):
-    panel = _panel(stationed, "fasten")
+    panel = _panel(stationed, "bond")
     prose_only = replace(
         panel,
         title="Editor-only alternate title",
@@ -215,7 +198,7 @@ def test_content_key_ignores_prose_but_covers_station_inputs(caddy, stationed):
 
 
 def test_content_key_covers_source_event_identity(caddy, stationed):
-    panel = _panel(stationed, "fasten")
+    panel = _panel(stationed, "bond")
     changed_event = replace(
         panel,
         source_events=(*panel.source_events[:-1], ("drive", "different", "role")),
@@ -260,7 +243,7 @@ def test_overlay_failure_does_not_publish_or_poison_a_content_key(
     from PIL import Image
     import detailgen.rendering.instruction_render as renderer_module
 
-    panel = _panel(stationed, "fasten")
+    panel = _panel(stationed, "bond")
     key = panel_content_key(caddy, panel, size=(320, 240))
     expected = tmp_path / f"{key}.png"
     real_draw_overlay = renderer_module._draw_overlay
@@ -326,7 +309,7 @@ def test_stationed_panels_draw_dimension_blue_and_numbered_callouts(
     from PIL import Image
 
     paths = render_instruction_images(caddy, stationed, tmp_path, size=(1200, 900))
-    image = Image.open(paths[_panel(stationed, "fasten").index]).convert("RGB")
+    image = Image.open(paths[_panel(stationed, "bond").index]).convert("RGB")
     colors = dict((color, count) for count, color in image.getcolors(1_000_000))
 
     assert colors[(37, 99, 235)] > 50  # dimension leaders/text

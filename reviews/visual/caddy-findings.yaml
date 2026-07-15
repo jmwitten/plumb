@@ -1,151 +1,58 @@
-# Visual-review findings store — armchair caddy (task 8).
-#
-# The caddy's own store under the per-detail naming convention
-# (<name>-findings.yaml; task VISREVSTORES), a sibling of the golden-locked
-# zipline seed store (reviews/visual/zipline-findings.yaml, F1-F6) that does not
-# churn it. Loaded by the SAME strict loader (detailgen.review.load_findings_file):
-# every field validated, resolutions require evidence, unresolved is a legal
-# persistent open state.
-#
-# Renders reviewed: the shaded matplotlib views the caddy renderer emits
-# (scripts/render_caddy_views.py -> outputs/armchair_caddy/views/*.png). This
-# environment has no Blender/GPU path, so views are rasterized from the
-# tessellated world solids instead — the same geometry the GLB carries. Render
-# refs carry no content_hash (no live review manifest for the caddy yet), so
-# their staleness is honestly "unverifiable" until re-reviewed against one — the
-# same honest state the seed store's pre-manifest findings carry.
-#
-# BINDING: findings are SUSPICIONS, never proof. Nothing here relaxes or gates an
-# invariant verdict; C2's honest resolution is the coverage matrix's existing
-# UNKNOWN, not a new clean claim.
-
 version: 1
 findings:
   - id: C1
-    subject: caddy overview render — context body occludes the subject
-    suspected_issue: >-
-      In the default ISO and oblique views the solid sofa-arm CONTEXT box
-      dominates the frame and OCCLUDES the caddy itself — a reader's first view
-      shows mostly the arm, not the three boards that are the actual subject. A
-      doc built on these primary views would under-communicate the built work.
+    subject: caddy overview render — context arm occludes the built work
+    suspected_issue: The solid sofa-arm context dominates ordinary oblique views and can hide the caddy shell.
     severity: MEDIUM
-    visual_evidence: >-
-      v1_iso.png — the arm fills the frame and the wooden boards are a thin
-      sliver at top-left. z2_joint.png — the arm corner fully hides the +X butt
-      joint being zoomed. g1_iso.png, rendered with the arm HIDDEN, shows the
-      three-board saddle clearly, confirming the occluder is the context body,
-      not missing geometry.
+    visual_evidence: v1_iso.png is context-heavy; g1_iso.png hides the arm and exposes all three hardwood panels.
     renders:
       - path: outputs/armchair_caddy/views/v1_iso.png
-      - path: outputs/armchair_caddy/views/z2_joint.png
       - path: outputs/armchair_caddy/views/g1_iso.png
     invariant_family: UNKNOWN
-    recommended_action: >-
-      The renderer should GHOST or hide role:existing context bodies (the arm) in
-      primary views, or bias the default camera above the arm, so the subject
-      reads. Until then the view-coverage step must ship arm-hidden variants for
-      any view whose subject is occluded by context.
+    recommended_action: Keep the arm-hidden overview and automate context ghosting in the shared renderer later.
     resolution:
       status: unresolved
       note: ""
-    notes: >-
-      Presentation concern, not a model defect — the arm is correctly an
-      `existing` context body. The task-8 view-coverage table WORKS AROUND it
-      (arm-hidden g1/g2/g3 variants), but the render-level fix (auto-ghost
-      existing bodies; ultimately a Presentation-Graph-derived rule, AD#3) is not
-      built, so this stays an honest OPEN work item.
+    notes: Presentation concern only; the arm is correctly modeled as existing fit context.
+
   - id: C2
-    subject: caddy stability — loose gravity saddle on the sofa arm
-    suspected_issue: >-
-      The caddy only rests on the arm by gravity and captures it across the width
-      (two side boards on the X faces); nothing resists sliding ALONG the arm (Y)
-      or tipping under an off-centre cup load. The render looks like a piece that
-      could rock or slide — is that stability represented, or silently assumed OK?
+    subject: loose gravity saddle — sliding and off-center stability
+    suspected_issue: The panel-defined 1/4-inch side clearances permit removal but do not prove resistance to sliding or tipping.
     severity: MEDIUM
-    visual_evidence: >-
-      v2_front.png and g1_iso.png show the side boards gripping the arm only
-      across X, leaving the caddy free in Y and Z; z3_gap.png shows the deliberate
-      0.25in clearance each side, so no friction grip is modelled.
+    visual_evidence: v2_front.png and z3_gap.png show the side-panel fit and deliberate clearance around the arm.
     renders:
       - path: outputs/armchair_caddy/views/v2_front.png
       - path: outputs/armchair_caddy/views/z3_gap.png
     invariant_family: Support/Stability representation
-    recommended_action: >-
-      Confirm the compiler does NOT silently pass stability: the coverage matrix
-      must show Support/Stability and Structural capacity as UNKNOWN — NOT
-      ANALYZED for this detail (no walking_surface, no capacity rung), so the
-      apparent looseness is an honest non-claim, not a hidden CLEAN.
+    recommended_action: Preserve the UNKNOWN verdict and require a representative empty-caddy stability and fit test before hot-drink use.
     resolution:
       status: documented-assumption-or-unknown
-      note: >-
-        Verified in the rendered validation_report.md: Support/Stability
-        representation and Structural capacity both read "UNKNOWN — NOT ANALYZED",
-        and Load-path likewise. The caddy declares no walking_surface, so no
-        support obligation is generated, and no capacity rung is evaluated — the
-        honest non-clean verdict IS the representation of "stability not
-        evaluated for this loose, removable saddle." Nothing claims it stable.
-        The intended loose fit (a removable caddy you reposition and lift off)
-        explains the clearance; a dedicated anti-slide / tip-under-load rung would
-        be a future invariant (rung-4 / engineer-of-record), out of scope here.
-        This is the directive's canonical resolution — a visual suspicion
-        resolving to the honest UNKNOWN the coverage already carries, never a
-        forced pass.
+      note: The coverage matrix and build documents say stability, sliding resistance, insertion travel, and structural capacity are not analyzed; no clean claim is inferred.
+
   - id: C3
-    subject: cup hole — top board notch functional fit
-    suspected_issue: >-
-      The cup hole is a full-thickness bore whose FLOOR is the sofa-arm top
-      surface itself (the top board seats flush on the arm), so a cup dropped in
-      rests on the arm through a 1in-thick locating ring rather than sitting in a
-      recessed well. Does a "coffee holder" hold a cup as implied?
+    subject: cup opening — locating ring rests over the sofa arm
+    suspected_issue: The full-thickness bore has no separate floor, so cup fit depends on the intended cup and the actual arm surface.
     severity: LOW
-    visual_evidence: >-
-      v4_top.png — the gray arm surface is visible straight through the cup hole;
-      z1_cup.png — looking into the bore shows the arm top immediately below the
-      1in board, with no separate well floor.
+    visual_evidence: v4_top.png and z1_cup.png show the centered opening and the arm immediately below it.
     renders:
       - path: outputs/armchair_caddy/views/v4_top.png
       - path: outputs/armchair_caddy/views/z1_cup.png
     invariant_family: Functional use
-    recommended_action: >-
-      Confirm the locating-ring design is intended; if a deeper well or closed
-      bottom is wanted, that is a design change, not a compiler-invariant issue.
+    recommended_action: Keep the intended cup as a required loose-fit template and do not claim universal cup compatibility.
     resolution:
       status: documented-assumption-or-unknown
-      note: >-
-        Intended and documented: the build-doc assumptions section states the
-        hole is sized so the cup's tapered body / lip catches on the 1in board,
-        and the coincident top-board-bottom / arm-top planes (both Z=0) are the
-        gravity-bearing surface — so a cup resting on the arm through the ring is
-        the design, not a miss. Functional-use adequacy (does a given cup catch?)
-        is not analyzed to a number — an honest UNKNOWN, outside the geometry
-        pipeline's scope. No compiler-invariant gap.
+      note: The bore is intentionally a locating ring; the manual requires a physical cup-fit check and retains the hot-drink warning.
+
   - id: C4
-    subject: butt-joint fastening — visibility in the renders
-    suspected_issue: >-
-      The 2-screws-per-joint fastening is hard to SEE in the renders: the
-      near-flush galvanized heads are small, and in oblique views they sit behind
-      the arm. A builder scanning the doc could miss how the top board is fixed
-      to the sides.
+    subject: reinforced-miter construction — corner keys must read in the views
+    suspected_issue: The small diagonal hardwood keys can be hard to distinguish in a whole-model render.
     severity: LOW
-    visual_evidence: >-
-      z2_joint.png (arm present) — the joint and its screws are fully occluded by
-      the arm corner; g2_joint.png (arm hidden) — the joint reads but the flush
-      heads are faint; v4_top.png shows only faint marks at the screw stations.
+    visual_evidence: g2_joint.png provides an arm-hidden close view of both keys crossing one representative 45-degree corner.
     renders:
       - path: outputs/armchair_caddy/views/g2_joint.png
-      - path: outputs/armchair_caddy/views/v4_top.png
+      - path: outputs/armchair_caddy/views/g3_underside.png
     invariant_family: UNKNOWN
-    recommended_action: >-
-      The view-coverage step must ship a dedicated arm-hidden, top-biased zoom of
-      a butt joint that clearly shows both screws; a fastener highlight/callout
-      in the render would help further.
+    recommended_action: Retain the dedicated joint zoom and geometry-derived key stations in the illustrated manual.
     resolution:
-      status: documented-assumption-or-unknown
-      note: >-
-        The fastening is fully REPRESENTED in the model — 4 structural screws via
-        two RailCapScrewed connections, hardware-presence PASS in the validation
-        report, screw-into-wood overlaps allowlisted — so this is purely a
-        render-salience / view-coverage concern, not a construction-completeness
-        gap. Addressed by the task-8 view-coverage table, which mandates the
-        arm-hidden butt-joint zoom (g2_joint.png). A render-level fastener
-        callout would be a presentation improvement, tracked with C1.
+      status: fixed-by-revision
+      note: The current renderer colors the four corner keys separately, the arm-hidden joint zoom exposes one complete pair, and the manual dimensions both paired stations from the compiled geometry.
