@@ -146,6 +146,8 @@ class ProcessStep:
         kind alone is a unique key."""
         if self.kind == "drill":
             return ("drill", self.param("x"), self.param("z"))
+        if self.kind == "miter_crosscut":
+            return ("miter_crosscut", self.param("end"))
         if self.kind in ("notch", "bore", "groove"):
             # A material-removing pocket keys on the FEATURE it realises (CL-2):
             # its provenance (the feature's authored id / content key) when it has
@@ -158,6 +160,38 @@ class ProcessStep:
     @classmethod
     def crosscut(cls, to_length_mm: float, provenance: str = "") -> "ProcessStep":
         return cls("crosscut", {"to_length_mm": float(to_length_mm)}, provenance)
+
+    @classmethod
+    def miter_crosscut(
+        cls,
+        end: str,
+        angle_degrees: float = 45.0,
+        long_face: str = "top",
+        provenance: str = "",
+    ) -> "ProcessStep":
+        """Cut one stock end on an angle across its local X-Z section.
+
+        ``end`` names the near or far X end; ``long_face`` names whether the
+        local top (+Z) or bottom (Z=0) face retains the authored long point.
+        The operation removes a full-width triangular prism, so it remains a
+        reusable stock operation rather than caddy-specific geometry.
+        """
+        if end not in {"near", "far"}:
+            raise ValueError("miter_crosscut end must be 'near' or 'far'")
+        if long_face not in {"top", "bottom"}:
+            raise ValueError(
+                "miter_crosscut long_face must be 'top' or 'bottom'"
+            )
+        angle = float(angle_degrees)
+        if not 0.0 < angle < 90.0:
+            raise ValueError(
+                "miter_crosscut angle_degrees must be between 0 and 90"
+            )
+        return cls(
+            "miter_crosscut",
+            {"end": end, "angle_degrees": angle, "long_face": long_face},
+            provenance,
+        )
 
     @classmethod
     def ease(cls, radius: float, provenance: str = "", edges: str = "|X") -> "ProcessStep":
@@ -302,6 +336,13 @@ class ProcessRecord:
 
         notes: list[str] = []
         for s in self.steps:
+            if s.kind == "miter_crosscut":
+                angle = f'{round(float(s.param("angle_degrees")), 3):g}'
+                notes.append(
+                    f'miter crosscut: {s.param("end")} end at {angle}°, '
+                    f'{s.param("long_face")} face long'
+                )
+                continue
             if s.kind not in ("notch", "bore"):
                 continue
             radius = f'{round(inches(s.param("radius")), 3):g}"'
@@ -438,9 +479,42 @@ def _apply_step(wp, step: ProcessStep, stock: StockRef):
             .translate((x, y, z))
         )
         return wp.cut(cutter)
+    if step.kind == "miter_crosscut":
+        import cadquery as cq
+
+        end = step.param("end")
+        long_face = step.param("long_face")
+        angle = math.radians(float(step.param("angle_degrees")))
+        setback = z_dim / math.tan(angle)
+        length = wp.val().BoundingBox().xlen
+        if setback >= length:
+            raise ValueError(
+                "miter_crosscut setback must be shorter than the crosscut "
+                f"length; got {setback:g} mm setback for {length:g} mm stock"
+            )
+
+        if end == "near" and long_face == "top":
+            points = [(0.0, 0.0), (setback, 0.0), (0.0, z_dim)]
+        elif end == "far" and long_face == "top":
+            points = [(length, 0.0), (length - setback, 0.0),
+                      (length, z_dim)]
+        elif end == "near" and long_face == "bottom":
+            points = [(0.0, 0.0), (0.0, z_dim), (setback, z_dim)]
+        else:  # far end, bottom face long
+            points = [(length, 0.0), (length, z_dim),
+                      (length - setback, z_dim)]
+
+        cutter = (
+            cq.Workplane("XZ", origin=(0.0, y_dim, 0.0))
+            .polyline(points)
+            .close()
+            .extrude(y_dim)
+        )
+        return wp.cut(cutter)
     raise UnknownProcessStepKind(
         f"fold cannot apply a {step.kind!r} step to geometry — the v1 geometry-"
-        f"producing kinds are crosscut/ease/notch/drill/groove. A non-geometric process "
+        f"producing kinds are crosscut/miter_crosscut/ease/notch/drill/groove. "
+        f"A non-geometric process "
         f"kind (e.g. cure, inspect) is a valid ProcessStep but must not reach fold."
     )
 
