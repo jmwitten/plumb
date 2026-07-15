@@ -31,23 +31,24 @@ def test_viewer_payload_adds_panel_schedule_only_when_explicitly_supplied(
     assert all("first_panel" not in row for row in legacy["parts"].values())
 
     assert [panel["number"] for panel in staged["instruction_panels"]] == [
-        1, 2, 3, 4, 5]
+        1, 2, 3, 4]
     assert [panel["action"] for panel in staged["instruction_panels"]] == [
-        "prepare", "bond", "cure", "fasten", "join"]
-    assert staged["parts"]["side board +X"]["first_panel"] == 1
-    assert staged["parts"]["top board"]["first_panel"] == 1
-    assert staged["parts"]["rail-side screw +X upper 0"]["first_panel"] == 4
-    assert staged["parts"]["sofa arm"]["first_panel"] == 5
-    screw = "rail-side screw +X upper 0"
-    assert legacy["parts"][screw]["dims"] == '0.19" dia x 1.2"'
-    assert staged["parts"][screw]["dims"] == '3/16" dia × 1-1/4"'
+        "prepare", "bond", "cure", "join"]
+    assert staged["parts"]["side panel +X"]["first_panel"] == 1
+    assert staged["parts"]["top panel"]["first_panel"] == 1
+    assert staged["parts"]["corner key +X front"]["first_panel"] == 2
+    assert staged["parts"]["sofa arm"]["first_panel"] == 4
+    key = "corner key +X front"
+    assert legacy["parts"][key]["dims"] == \
+        "3/8 in hardwood dowel x 1 1/16 in finished"
+    assert staged["parts"][key]["dims"] == \
+        "3/8 in hardwood dowel x 1 1/16 in finished"
 
     assert set(staged["instruction_panels"][0]["arrivals"]) == {
-        "side board +X", "side board -X", "top board",
-        "registration rail +X", "registration rail -X",
+        "side panel +X", "side panel -X", "top panel",
     }
-    assert len(staged["instruction_panels"][3]["arrivals"]) == 8
-    assert staged["instruction_panels"][4]["arrivals"] == ["sofa arm"]
+    assert len(staged["instruction_panels"][1]["arrivals"]) == 4
+    assert staged["instruction_panels"][3]["arrivals"] == ["sofa arm"]
 
 
 @pytest.mark.parametrize("mutation, message", [
@@ -77,6 +78,28 @@ def test_viewer_source_creates_integer_panel_control_only_for_panel_metadata():
     assert "arrivalNames" in js
     assert "applyAssemblyPanel" in js
     assert ".v-assembly-current" in css
+
+
+def test_instruction_viewer_opens_on_completed_assembly():
+    js = viewer_js()
+
+    assert (
+        'assembly.value = String(payload.instruction_panels.length);'
+        in js
+    )
+    assert "applyAssemblyPanel(assembly.value);" in js
+    assert "applyAssemblyPanel(1);" not in js
+
+
+def test_explode_temporarily_reveals_future_parts():
+    js = viewer_js()
+
+    assert "var explodeAmount = 0;" in js
+    assert "function applyPartVisibility()" in js
+    assert "var revealAll = explodeAmount > 0;" in js
+    assert "var visible = revealAll || first_panel <= currentPanel;" in js
+    assert "explodeAmount = parseFloat(explode.value) || 0;" in js
+    assert "applyPartVisibility();" in js
 
 
 def test_panel_input_changes_visibility_without_changing_explode_value():

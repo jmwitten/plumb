@@ -875,6 +875,7 @@ _NUT = ("HexNut",)
 _ROD = ("ThreadedRod",)
 _EPOXY = ("Epoxy",)
 _POST_BASE = ("PostBase",)
+_DOWEL = ("WoodDowel",)
 
 
 def _require_hardware_roles(conn: "Connection", roles: list[tuple[str, ...]]) -> list[Placed]:
@@ -1875,3 +1876,78 @@ class Glued(ConnectionType):
         # guards loud on this path too.
         self._unpack(conn)
         return ()
+
+
+@connection_types.register("dowel_reinforced_miter")
+class DowelReinforcedMiter(Glued):
+    """Two hardwood panels joined at a glued miter and keyed by two dowels.
+
+    The adhesive bond and the wooden keys are distinct facts: ``bonded_to``
+    names the glued mating plane, while ``keyed_by`` names the mechanical
+    reinforcement.  Neither implies analyzed capacity or a gravity seat.
+    """
+
+    label = "dowel_reinforced_miter"
+
+    transfer_claims = (
+        TransferClaim(
+            "pull_out",
+            True,
+            "placeholder",
+            "verified_heuristic",
+            "glued miter mechanically crossed by hardwood dowels resists "
+            "corner opening; capacity NOT analyzed — representative",
+        ),
+        TransferClaim(
+            "shear",
+            True,
+            "placeholder",
+            "verified_heuristic",
+            "glued miter and crossing hardwood dowels resist racking/shear; "
+            "capacity NOT analyzed — representative",
+        ),
+    )
+
+    def _unpack(self, conn: Connection):
+        if len(conn.parts) != 2:
+            raise ValueError(
+                f"Connection {conn.label!r} ({self.label}): a reinforced "
+                f"miter joins EXACTLY two mitered panels, got "
+                f"{len(conn.parts)} parts ({[p.name for p in conn.parts]})."
+            )
+        for part in conn.parts:
+            if type(part.component).__name__ != "HardwoodPanel":
+                raise ValueError(
+                    f"Connection {conn.label!r} ({self.label}): member "
+                    f"{part.name!r} must be HardwoodPanel, got "
+                    f"{type(part.component).__name__}."
+                )
+        first, second = conn.parts
+        front, back = _require_hardware_roles(conn, [_DOWEL, _DOWEL])
+        return first, second, (front, back)
+
+    def allowed_intersections(self, conn: Connection):
+        first, second, dowels = self._unpack(conn)
+        return {
+            (dowel, member)
+            for dowel in dowels
+            for member in (first, second)
+        }
+
+    def bonded_pairs(self, conn: Connection):
+        first, second, dowels = self._unpack(conn)
+        return [(first, second)] + [
+            (dowel, member)
+            for dowel in dowels
+            for member in (first, second)
+        ]
+
+    def edges(self, conn: Connection):
+        first, second, dowels = self._unpack(conn)
+        out = []
+        for dowel in dowels:
+            out.append(Edge(first.id, dowel.id, "installed_before", conn.label))
+            out.append(Edge(second.id, dowel.id, "installed_before", conn.label))
+        out.append(Edge(first.id, second.id, "bonded_to", conn.label))
+        out.append(Edge(first.id, second.id, "keyed_by", conn.label))
+        return out

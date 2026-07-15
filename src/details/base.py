@@ -383,6 +383,15 @@ class Detail(ABC):
         self._report.require_clean()
         return self._report
 
+    def require_delivery_ready(self) -> ValidationReport:
+        """Require every gate for a certified delivery artifact.
+
+        Ordinary details retain the historical physical-validation gate.
+        Governed front ends override this hook to add lifecycle policy without
+        changing validation semantics.
+        """
+        return self.require_clean()
+
     # -- stage 4-5: rendering (gated) + documentation -------------------------
 
     def render(self, out_dir: str | Path) -> Path:
@@ -395,7 +404,7 @@ class Detail(ABC):
         counterpart for a *documentation* surface is :meth:`render_documentation`
         (it draws the geometry and SURFACES the honest verdict rather than
         refusing). Returns the output directory."""
-        self.require_clean()
+        self.require_delivery_ready()
         return self._render_into(out_dir)
 
     def render_documentation(self, out_dir: str | Path) -> Path:

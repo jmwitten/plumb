@@ -1,404 +1,213 @@
-# DetailSpec — armchair coffee-holder saddle (a tiny NOVEL smoke detail).
+# DetailSpec — governed three-panel reinforced-miter armchair caddy.
 #
-# A five-piece saddle that straddles a sofa arm and holds a coffee cup. Nothing
-# fastens to the sofa: the caddy is a loose object that BEARS on the arm top by
-# gravity, saddle-style. One flat top board (5/4x6, bored with a cup hole) caps
-# the arm; two side boards (1x6) drop ~7in down the arm's two sides and butt
-# under the top board. The top<->side joints are made with HIDDEN interior
-# registration rails (design findings D1 + D6): a full-depth 1x6 rail in each
-# corner, dropping 5.5in down the arm side, GLUED up to the top board's
-# underside (the rail's long-grain top edge to the top's face grain — a
-# declared `glued` connection whose typed process fact owns preparation,
-# fixturing, and label-governed completion) and screwed horizontally into the
-# side board's inner face (FACE grain) — NO fastener on the top show face and
-# none in end grain. The deep rail REGISTERS the caddy
-# across the arm to limit cross-arm rocking (D6); the top still BEARS on the side
-# boards' top end grain (a real, declared gravity seat); the rails hold the
-# assembly together and register it, they are not the seat. All long edges eased.
-# The cup hole is the top board's `bore` FEATURE — a designed recess, named as itself.
-#
-# This detail is deliberately small and free-standing: it is the pipeline's
-# generality smoke test (a novel spec that is NOT the zipline), re-run from
-# scratch at each FAB milestone to watch the SAME design gain process records,
-# a derived cut list, and evidence walkback over time. It is NOT composed into
-# the site model and NOT part of the consolidated 4-detail report.
-#
-# Value language (detailgen/spec/values.py): a bare number/string/bool passes
-# through (a nominal size, an axis letter, a bearing area in mm2, an angle in
-# degrees); "$name" / "= expr" resolve params/derived as LENGTHS -> mm; "8 in"
-# is an explicit quantity. Everything derivable (placements, bearings, BOM,
-# fabrication records) is derived by the compiler, not written here.
+# Three matching 3/4-inch hardwood panels form a removable waterfall sleeve.
+# Each 45-degree glued corner is mechanically keyed by two 3/8-inch hardwood
+# dowels, following the retained Woodworker's Journal precedent. The side
+# panels themselves define the fit opening; no internal rails or metal
+# fasteners remain. Capacity and hot-drink stability remain explicitly
+# unanalyzed.
 
 name: armchair caddy
 type: armchair_caddy
 units: in
 
-# --- author intent: the saddle's dimensions (inches) -------------------------
+design_review:
+  record: armchair_caddy.design-review.yaml
+  selected_concept: reinforced_miter
+
 params:
-  # The sofa arm the caddy sits on: an EXISTING body (context, not purchased),
-  # modeled as a plain box ~6 wide x 10 long x 8 tall. Its top surface is the
-  # Z=0 datum; the box extends DOWN into -Z (the Boulder top-pad convention).
-  arm_w: 6.0              # arm width in X — the span the saddle straddles
-  arm_l: 10.0             # arm length in Y — the run the caddy sits along
-  arm_h: 8.0              # arm height in Z — how far the box drops below the top
-  # The saddle boards: the two SIDE boards are nominal 1x6 stock (dressed 0.75 x
-  # 5.5) — 1x8/5/4x8 are not in the component library's nominal table, so the
-  # design is SIMPLIFIED to the nearest real stock rather than extending src/.
-  # The TOP board is 5/4x6 decking (dressed 1.0 x 5.5): a beefier cap that carries
-  # the cup hole (a full-thickness bored recess the coffee cup nests into).
-  stock_thk: 0.75         # 1x side-board dressed thickness
-  deck_thk: 1.0           # 5/4x6 top-board dressed thickness (a full 1")
-  board_depth: 5.5        # 1x6 / 5/4x6 dressed depth — the caddy's dimension along the arm (Y)
-  side_drop: 7.0          # side-board length: how far the sides hang down the arm (Z)
-  ease_r: 0.125           # eased long-edge radius on every board
-  # The cup hole: a full-thickness cylindrical bore through the top board, sized so
-  # a coffee cup's tapered body/lip catches on it (a real arm-caddy drink recess).
-  cup_dia: 3.5            # coffee-cup bore diameter — the cup rim rests on the board
-  # HIDDEN registration RAILS (design finding D6 — the D1 cleats hid the fasteners
-  # but regressed the caddy's grip on the arm ~4.6x). Each top<->side corner gets a
-  # full-depth 1x6 rail (dressed 0.75 x 5.5) tucked inside, dropping 5.5in down the
-  # arm side, GLUED up to the top board's underside AND screwed horizontally into
-  # the side board's inner face (FACE grain) — no fastener on the show face and
-  # none in end grain. The deep rail REGISTERS the caddy against the arm side (rock
-  # ~2.6deg, vs the shallow 1x2 cleat's 9.5deg); it does NOT seat gravity. The
-  # caddy's interior is otherwise filled by the arm, so the SIDE boards sit out one
-  # rail thickness and the rail holds the original 1/4in reveal off the arm side.
-  rail_thk: 0.75          # 1x6 dressed thickness — the rail face fastened to the side (X)
-  rail_drop: 5.5          # 1x6 dressed width — how far the rail drops down the arm side (Z)
-  rail_len: 5.5           # rail length along the arm (Y) — the saddle's full board depth
-  arm_gap: 0.25           # rail-to-arm reveal (the original saddle clearance, held by the rail)
-  # Rail-to-top joints: GLUE, no hardware — the rail's 0.75 x 5.5 long-grain top
-  # edge bonds to the top board's underside face (the `glued` connections below
-  # carry the technique + cure note). Rail-to-side joints: hidden structural
-  # screws, 2 PAIRS per rail (upper + lower — the D6 deep-registration fix),
-  # passing the rail's 0.75 thickness and biting ~0.5 into the side's face
-  # (never breaching its outer show face).
-  screw_dia: 0.19         # #10-class structural screw shank
-  screw_len_h: 1.25       # SIDE screw: 0.75 through the rail + ~0.5 into the side board's face
-  screw_dy_h: 0.6         # SIDE screws: offset each side of centre along Y
-  sidescrew_drop_u: 0.75  # upper row below the top underside
-  sidescrew_drop_l: 4.0   # lower row below the top underside
+  arm_w: 6.0
+  arm_l: 10.0
+  arm_h: 8.0
+  panel_thk: 0.75
+  panel_width: 5.5
+  side_drop: 7.0
+  arm_gap: 0.25
+  ease_r: 0.125
+  cup_dia: 3.5
+  dowel_dia: 0.375
+  dowel_edge_station: 1.1875
 
-# --- derived dimensions: the fit relationships (CL v1 will derive these) ------
 derived:
-  # Saddle reveal: each side board sits one rail thickness + the reveal off the
-  # arm, so the rail (fastened to the side's inner face) holds the original 1/4in
-  # gap to the arm. Authored arithmetic for now (named, not magic).
-  clear: "= rail_thk + arm_gap"            # side-board-inner-face-to-arm-side clearance (= 1.0)
-  inner_span: "= arm_w + 2*clear"          # 6.0 arm + 1.0 per side = 8.0
-  side_inner_x: "= inner_span / 2"          # side-board inner face X (= 4.0)
-  side_outer_x: "= side_inner_x + stock_thk"  # side-board outer face X (= 4.75)
-  top_len: "= 2 * side_outer_x"            # top board spans both outer faces (= 9.5)
-  rail_clear_span: "= arm_w + 2*arm_gap"   # inside face to inside face (= 6.5)
-  screw_station_near: "= board_depth/2 - screw_dy_h"  # from either front/back edge
-  screw_station_far: "= board_depth/2 + screw_dy_h"
-  cup_center_from_end: "= top_len/2"
-  side_bot_z: "= -side_drop"               # side-board bottom Z (= -7.0)
-  top_top_z: "$deck_thk"                   # top board's top face Z (the show face — no fasteners land here)
-  # Rail + screw plan (world): the +X rail's inner face in X, its bottom in Z,
-  # and the two side-screw heights (upper + lower). -X mirrors these. (The
-  # cup-hole radius is no longer a derived param — the `bore` FEATURE derives
-  # it from $cup_dia.)
-  rail_inner_x: "= side_inner_x - rail_thk"     # +X rail inner face X (= 3.25, 1/4in off the arm)
-  rail_bot_z: "= -rail_drop"                     # rail bottom Z (= -5.5, 5.5in down the arm side)
-  sidescrew_z_u: "= -sidescrew_drop_u"           # SIDE screw UPPER pair Z (near the rail top)
-  sidescrew_z_l: "= -sidescrew_drop_l"            # SIDE screw LOWER pair Z (the D6 deep-registration pair)
+  inner_span: "= arm_w + 2*arm_gap"
+  side_inner_x: "= inner_span / 2"
+  side_outer_x: "= side_inner_x + panel_thk"
+  top_long_len: "= inner_span + 2*panel_thk"
+  side_long_len: "= side_drop + panel_thk"
+  side_bot_z: "= -side_drop"
+  top_top_z: "$panel_thk"
+  dowel_finish_len: "= (2 ** 0.5) * panel_thk"
+  dowel_station_near: "= -panel_width/2 + dowel_edge_station"
+  dowel_station_far: "= panel_width/2 - dowel_edge_station"
 
-# --- components + placement (order = build order) ----------------------------
 components:
-  # The sofa arm — EXISTING context box. Boulder is the library's rectangular
-  # prism with its top pad at Z=0 (body into -Z), which is exactly a sofa-arm
-  # top-surface datum. Not purchased; grounded by the site (self-grounded).
   - id: arm
     type: boulder
     name: sofa arm
     reader_name: Sofa arm
-    # Boulder maps its `length` to X and `width` to Y, so the 6in straddled
-    # dimension (arm_w) is the `length` (X) and the 10in run (arm_l) is the `width` (Y).
     params: {width: "$arm_l", length: "$arm_w", depth: "$arm_h"}
-    # identity placement: top pad centred at the origin, top surface at Z=0
 
-  # Two side boards: stand vertically, thickness (0.75) facing the arm in X,
-  # depth (5.5) along the arm in Y, length (7) dropping in Z from 0 to -7. Inner
-  # faces held `clear` off the arm sides — a gravity saddle, no bearing on the arm.
-  - id: side_pos
-    type: lumber
-    name: side board +X
-    reader_name: Side board
-    params: {nominal: "1x6", length: "$side_drop", ease_radius: "$ease_r"}
-    place: {raw: {at: ["$side_inner_x", "= -board_depth/2", "$side_bot_z"], rotate: [["Y", -90], ["Z", -90]]}}
-  - id: side_neg
-    type: lumber
-    name: side board -X
-    reader_name: Side board
-    params: {nominal: "1x6", length: "$side_drop", ease_radius: "$ease_r"}
-    place: {raw: {at: ["= -side_outer_x", "= -board_depth/2", "$side_bot_z"], rotate: [["Y", -90], ["Z", -90]]}}
-
-  # Top board: 5/4x6 decking laid flat across the arm, length (9.5) along X spanning
-  # both side boards, depth (5.5) along Y, thickness (1.0) vertical in Z with its
-  # bottom on the arm top at Z=0. Bored through the middle with the CUP HOLE — a
-  # designed full-thickness cylindrical recess (the `bore` FEATURE below); its
-  # centre is the board-local middle (derived), over the arm. DeckBoard lays flat
-  # by construction, so no rotation is needed.
   - id: top
-    type: deck_board
-    name: top board
-    reader_name: Top board
+    type: hardwood_panel
+    name: top panel
+    reader_name: Top panel
     params:
-      length: "$top_len"
+      length: "$top_long_len"
+      width: "$panel_width"
+      thickness: "$panel_thk"
+      miter_ends: [near, far]
       ease_radius: "$ease_r"
-    place: {raw: {at: ["= -top_len/2", "= -board_depth/2", "0 in"]}}
-    # The cup hole is a designed BORE (CL-2) — a full-thickness cylindrical recess
-    # the coffee cup nests into. It is NOT a clearance around any member (there is
-    # nothing to clear), so it is a `bore`, not a `clearance_cut`: the compiler
-    # derives the cut at the board centre from the diameter, and the fabrication
-    # step + tooltip speak the bore's own name ("cup hole"), never trunk language.
+    place:
+      raw:
+        at: ["= -top_long_len/2", "= -panel_width/2", "0 in"]
     features:
       - bore: {dia: $cup_dia, id: cup_hole, name: "cup hole"}
 
-  # Two interior registration rails (full-depth 1x6): each tucks in a top<->side
-  # corner, thickness (0.75) in X flush against the side board's inner face, width
-  # (5.5) dropping in Z from the top underside (Z=0) to -5.5, length (5.5, the full
-  # board depth) along Y. The ["Z", 90] turn lays the stick's length along the arm
-  # run; the rail clears the arm by `arm_gap` and registers the caddy along its deep
-  # inner face. (Authored id kept `cleat_pos`/`cleat_neg`: this is the D1 cleat
-  # DEEPENED into a rail — the same member, resized — not a new part.)
-  - id: cleat_pos
-    type: lumber
-    name: registration rail +X
-    reader_name: Registration rail
-    params: {nominal: "1x6", length: "$rail_len"}
-    place: {raw: {at: ["$side_inner_x", "= -rail_len/2", "$rail_bot_z"], rotate: [["Z", 90]]}}
-  - id: cleat_neg
-    type: lumber
-    name: registration rail -X
-    reader_name: Registration rail
-    params: {nominal: "1x6", length: "$rail_len"}
-    place: {raw: {at: ["= -rail_inner_x", "= -rail_len/2", "$rail_bot_z"], rotate: [["Z", 90]]}}
+  - id: side_pos
+    type: hardwood_panel
+    name: side panel +X
+    reader_name: Side panel
+    params:
+      length: "$side_long_len"
+      width: "$panel_width"
+      thickness: "$panel_thk"
+      miter_ends: [far]
+      ease_radius: "$ease_r"
+    place:
+      raw:
+        at: ["$side_inner_x", "= panel_width/2", "$side_bot_z"]
+        rotate: [["Y", -90], ["Z", 180]]
 
-  # SIDE screws: driven horizontally into each side board's inner face — 2 PAIRS
-  # per rail (upper + lower), the D6 deep-registration fix. +X rail drives +X
-  # (["Y", -90] turns -Z into +X); -X rail drives -X (["Y", 90]). The head sits at
-  # the rail's inner face, the tip stops inside the side board. The UPPER pair
-  # (hscrew_?0/?1) is UNCHANGED from the D1 cleat (persists); the LOWER pair
-  # (hscrew_?2/?3) is added down the deep rail.
-  - id: hscrew_p0
-    type: structural_screw
-    name: rail-side screw +X upper 0
-    reader_name: Rail-to-side screw
-    params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["$rail_inner_x", "= -screw_dy_h", "$sidescrew_z_u"], rotate: [["Y", -90]]}}
-  - id: hscrew_p1
-    type: structural_screw
-    name: rail-side screw +X upper 1
-    reader_name: Rail-to-side screw
-    params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["$rail_inner_x", "$screw_dy_h", "$sidescrew_z_u"], rotate: [["Y", -90]]}}
-  - id: hscrew_p2
-    type: structural_screw
-    name: rail-side screw +X lower 0
-    reader_name: Rail-to-side screw
-    params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["$rail_inner_x", "= -screw_dy_h", "$sidescrew_z_l"], rotate: [["Y", -90]]}}
-  - id: hscrew_p3
-    type: structural_screw
-    name: rail-side screw +X lower 1
-    reader_name: Rail-to-side screw
-    params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["$rail_inner_x", "$screw_dy_h", "$sidescrew_z_l"], rotate: [["Y", -90]]}}
-  - id: hscrew_m0
-    type: structural_screw
-    name: rail-side screw -X upper 0
-    reader_name: Rail-to-side screw
-    params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["= -rail_inner_x", "= -screw_dy_h", "$sidescrew_z_u"], rotate: [["Y", 90]]}}
-  - id: hscrew_m1
-    type: structural_screw
-    name: rail-side screw -X upper 1
-    reader_name: Rail-to-side screw
-    params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["= -rail_inner_x", "$screw_dy_h", "$sidescrew_z_u"], rotate: [["Y", 90]]}}
-  - id: hscrew_m2
-    type: structural_screw
-    name: rail-side screw -X lower 0
-    reader_name: Rail-to-side screw
-    params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["= -rail_inner_x", "= -screw_dy_h", "$sidescrew_z_l"], rotate: [["Y", 90]]}}
-  - id: hscrew_m3
-    type: structural_screw
-    name: rail-side screw -X lower 1
-    reader_name: Rail-to-side screw
-    params: {diameter: "$screw_dia", length: "$screw_len_h"}
-    place: {raw: {at: ["= -rail_inner_x", "$screw_dy_h", "$sidescrew_z_l"], rotate: [["Y", 90]]}}
+  - id: side_neg
+    type: hardwood_panel
+    name: side panel -X
+    reader_name: Side panel
+    params:
+      length: "$side_long_len"
+      width: "$panel_width"
+      thickness: "$panel_thk"
+      miter_ends: [far]
+      ease_radius: "$ease_r"
+    place:
+      raw:
+        at: ["= -side_inner_x", "= -panel_width/2", "$side_bot_z"]
+        rotate: [["Y", -90]]
 
-# --- connections: the hidden rail joints (Construction-Graph edges) -----------
-# Two GLUED rail->top bonds + two cleat_screwed rail->side joints: each rail is
-# GLUED up to the top board's underside (its long-grain top edge to the top's
-# face grain — the `glued` connection derives the connectivity bond + the
-# bonded_to load edge; no hardware at all) AND screwed horizontally into its
-# side board's inner face (FACE grain — the cleat_screwed connection derives
-# the screw overlaps + bonds + install order + the fastened_by edge). Neither
-# joint emits a bearing or bears_on: a rail registers/holds parts together, it
-# is not a gravity seat. The top's real gravity seat on the side end grain is a
-# SEPARATE, declared bearing (below). The side joints carry 4 screws each
-# (upper + lower pair) — the D6 deep-registration fix. Face-grain screw
-# withdrawal is stronger than end grain but is NOT analyzed to a number here;
-# adhesive bond capacity is likewise NOT analyzed.
-#
-# The glue bond's technique is a typed PROCESS fact; cross-connection order is
-# owned only by sequence.after — assembled OFF the sofa.
-# The side joints' authored embedment minimums replace the half-length
-# rule-of-thumb with joint-geometry numbers; each connection's assumptions
-# carry the why.
+  - id: dowel_pos_near
+    type: wood_dowel
+    name: corner key +X front
+    reader_name: Corner key
+    params: {diameter: "$dowel_dia", length: "$dowel_finish_len", end_trim: miter_flush}
+    place:
+      raw:
+        at: ["$side_inner_x", "$dowel_station_near", "$top_top_z"]
+        rotate: [["Y", 45]]
+
+  - id: dowel_pos_far
+    type: wood_dowel
+    name: corner key +X back
+    reader_name: Corner key
+    params: {diameter: "$dowel_dia", length: "$dowel_finish_len", end_trim: miter_flush}
+    place:
+      raw:
+        at: ["$side_inner_x", "$dowel_station_far", "$top_top_z"]
+        rotate: [["Y", 45]]
+
+  - id: dowel_neg_near
+    type: wood_dowel
+    name: corner key -X front
+    reader_name: Corner key
+    params: {diameter: "$dowel_dia", length: "$dowel_finish_len", end_trim: miter_flush}
+    place:
+      raw:
+        at: ["= -side_inner_x", "$dowel_station_near", "$top_top_z"]
+        rotate: [["X", 180], ["Y", 135]]
+
+  - id: dowel_neg_far
+    type: wood_dowel
+    name: corner key -X back
+    reader_name: Corner key
+    params: {diameter: "$dowel_dia", length: "$dowel_finish_len", end_trim: miter_flush}
+    place:
+      raw:
+        at: ["= -side_inner_x", "$dowel_station_far", "$top_top_z"]
+        rotate: [["X", 180], ["Y", 135]]
+
 connections:
-  - type: glued
-    label: "rail +X -> top underside (glued)"
-    parts: [cleat_pos, top]
+  - type: dowel_reinforced_miter
+    label: "top -> side +X (dowel-reinforced miter)"
+    parts: [top, side_pos]
+    hardware: [dowel_pos_near, dowel_pos_far]
     assumptions:
-      - "Adhesive bond, long grain both sides: the rail's 0.75in x 5.5in top edge (long grain) mates flush to the top board's underside FACE grain — the strong glue case; bond capacity NOT analyzed to a number."
+      - "The two 3/4in hardwood miter faces and both 3/8in corner-key dowels receive wood glue; the dowels cross the joint at its thickness centerline. Adhesive, dowel, and joint capacity are NOT analyzed."
     process:
       cure:
         instructions:
-          - "Spread the selected wood adhesive on both prepared long-grain mating faces: the rail's top edge and the top board's underside."
-          - "Clamp the rail flush to the top underside and maintain the selected adhesive label's required fixture state."
+          - "Dry-fit the 45-degree miter, then spread the selected wood adhesive on both prepared miter faces and into both dowel holes."
+          - "Insert both corner keys, clamp the corner closed in both directions, and maintain the selected adhesive label's required fixture state."
         completion: selected_label_full_cure
         why: >-
-          This detail selects an adhesive bond at this long-grain mating plane;
-          the selected product label and actual shop conditions govern when
-          that bond reaches full cure/full strength.
-  - type: cleat_screwed
-    label: "rail +X -> side +X inner face (screwed, face grain, upper + lower pairs)"
-    params: {n_screws: 4}
-    parts: [cleat_pos, side_pos]
-    hardware: [hscrew_p0, hscrew_p1, hscrew_p2, hscrew_p3]
-    install:
-      embedment: "0.5 in"
-      head: flush_countersunk
-    assumptions:
-      - "Screws bite the side board's FACE grain (broad face) — stronger in withdrawal than end grain; not analyzed to a number here."
-      - "Authored embedment minimum 0.5in into the 0.75in side board: the geometric maximum honest bite that keeps 0.25in of show-face cover (the half-length default of 0.62in is not reachable in this joint without breaching the outer show face). Four screws per joint; withdrawal demand is the caddy's few-pound service load — engineering judgment, not analyzed to a number."
-  - type: glued
-    label: "rail -X -> top underside (glued)"
-    parts: [cleat_neg, top]
-    assumptions:
-      - "Adhesive bond, long grain both sides: the rail's 0.75in x 5.5in top edge (long grain) mates flush to the top board's underside FACE grain — the strong glue case; bond capacity NOT analyzed to a number."
-    process:
-      cure:
-        instructions:
-          - "Spread the selected wood adhesive on both prepared long-grain mating faces: the rail's top edge and the top board's underside."
-          - "Clamp the rail flush to the top underside and maintain the selected adhesive label's required fixture state."
-        completion: selected_label_full_cure
-        why: >-
-          This detail selects an adhesive bond at this long-grain mating plane;
-          the selected product label and actual shop conditions govern when
-          that bond reaches full cure/full strength.
-  - type: cleat_screwed
-    label: "rail -X -> side -X inner face (screwed, face grain, upper + lower pairs)"
-    params: {n_screws: 4}
-    parts: [cleat_neg, side_neg]
-    hardware: [hscrew_m0, hscrew_m1, hscrew_m2, hscrew_m3]
-    install:
-      embedment: "0.5 in"
-      head: flush_countersunk
-    assumptions:
-      - "Screws bite the side board's FACE grain (broad face) — stronger in withdrawal than end grain; not analyzed to a number here."
-      - "Authored embedment minimum 0.5in into the 0.75in side board: the geometric maximum honest bite that keeps 0.25in of show-face cover (the half-length default of 0.62in is not reachable in this joint without breaching the outer show face). Four screws per joint; withdrawal demand is the caddy's few-pound service load — engineering judgment, not analyzed to a number."
+          The selected adhesive label and actual shop conditions govern when
+          this keyed hardwood miter reaches full cure/full strength.
 
-# --- staging: the actual shop-to-room assembly strategy ---------------------
-# The caddy is a loose finished object, never joinery assembled around the
-# upholstered arm. `bench_then_set` is whole-detail sugar: all constructed
-# parts and their connections share one bench frame; the existing sofa arm is
-# outside it. This context exclusion is DECLARED TRUST until insertion travel
-# over the arm is analyzed (P1), so every dependent verdict says so.
+  - type: dowel_reinforced_miter
+    label: "top -> side -X (dowel-reinforced miter)"
+    parts: [top, side_neg]
+    hardware: [dowel_neg_near, dowel_neg_far]
+    assumptions:
+      - "The two 3/4in hardwood miter faces and both 3/8in corner-key dowels receive wood glue; the dowels cross the joint at its thickness centerline. Adhesive, dowel, and joint capacity are NOT analyzed."
+    process:
+      cure:
+        instructions:
+          - "Dry-fit the 45-degree miter, then spread the selected wood adhesive on both prepared miter faces and into both dowel holes."
+          - "Insert both corner keys, clamp the corner closed in both directions, and maintain the selected adhesive label's required fixture state."
+        completion: selected_label_full_cure
+        why: >-
+          The selected adhesive label and actual shop conditions govern when
+          this keyed hardwood miter reaches full cure/full strength.
+
 sequence:
-  after:
-    - connection: "rail +X -> side +X inner face (screwed, face grain, upper + lower pairs)"
-      after:
-        - cure: "rail +X -> top underside (glued)"
-        - cure: "rail -X -> top underside (glued)"
-      why: >-
-        Complete both rail-to-top glue-ups and hold each to the selected
-        adhesive's full-cure condition before changing the bench operation to
-        side-board fastening. Each cured rail then preserves its own
-        registration datum while its matching side board is positioned and screwed.
-        This is this caddy's declared batch workflow, not a universal
-        glue-before-screws rule.
-    - connection: "rail -X -> side -X inner face (screwed, face grain, upper + lower pairs)"
-      after:
-        - cure: "rail +X -> top underside (glued)"
-        - cure: "rail -X -> top underside (glued)"
-      why: >-
-        Complete both rail-to-top glue-ups and hold each to the selected
-        adhesive's full-cure condition before changing the bench operation to
-        side-board fastening. Each cured rail then preserves its own
-        registration datum while its matching side board is positioned and screwed.
-        This is this caddy's declared batch workflow, not a universal
-        glue-before-screws rule.
   assembly:
     mode: bench_then_set
     why: >-
-      All five fabricated members and their four joints form one loose unit
-      assembled off the sofa; only after that unit is complete according to
-      each connection's own technique and process facts is the finished caddy
-      carried to the chair and set over the sofa arm. The sofa arm is
-      connection-free context, so its absence from the bench frame is a
-      DECLARED TRUST claim until insertion travel is analyzed (P1).
+      The three panels and four corner keys form one loose unit assembled,
+      clamped, cured, trimmed, sanded, and finished off the sofa. The completed
+      caddy is then carried to the chair and lowered over the connection-free
+      sofa-arm context. Arm exclusion is DECLARED TRUST until insertion travel
+      over the upholstery is analyzed.
 
-# --- roles: the load-system role of each part --------------------------------
-# The sofa arm is a pre-EXISTING site body: it self-grounds (it is furniture that
-# sits on the floor, outside the caddy's constructed load path), exactly the way
-# the platform's living trunk self-grounds. Nothing is a `walking_surface` here —
-# the caddy is a loose saddle, not an occupied surface, so no support obligation
-# is generated; its bearing on the arm is REPRESENTED (below), capacity UNKNOWN.
 roles:
   arm: {role: existing, grounded_by: site}
 
-# --- validation: the checks the connections don't generate -------------------
-# NO `ground:` terminal — the caddy is a loose object with no constructed
-# foundation (it rests on existing furniture), so the floating-part-to-ground
-# check does not apply; connectivity within the caddy is proven by the top's
-# bearings + the cleat screws (each cleat is bonded to the top AND its side by
-# its screws). The three bearings below are the honest support story: the top
-# board bears flat on the arm top (the gravity saddle) and on each side board's
-# end grain (the butt joints — a real gravity seat the cleats do NOT replace).
-# The side boards do NOT bear on the arm — the `clear` gap in X is left
-# un-declared, the truthful statement that they hang free of the arm sides.
 validation:
   bearings:
-    - {a: top, b: arm, axis: Z, area: 2000}       # gravity saddle: cap on the arm top (REPRESENTED)
-    - {a: top, b: side_pos, axis: Z, area: 800}   # butt joint: cap on +X side end grain
-    - {a: top, b: side_neg, axis: Z, area: 800}   # butt joint: cap on -X side end grain
+    - {a: top, b: arm, axis: Z, area: 2000}
   dimensions:
-    - name: "top board bottom rests on the arm top (Z=0)"
+    - name: "top panel underside rests on the arm top"
       part: top
       measure: zmin
       expected: "0 in"
       tolerance: "0.02 in"
-    - name: "top board spans both side boards (inner span + 2 thicknesses)"
+    - name: "top panel retains the eight-inch outside long point"
       part: top
       measure: xlen
-      expected: "$top_len"
+      expected: "$top_long_len"
       tolerance: "0.02 in"
-    - name: "side board drops the full side_drop below the arm top"
-      part: side_pos
-      measure: zmin
-      expected: "$side_bot_z"
-      tolerance: "0.02 in"
-    - name: "side board inner face clears the arm side (gravity saddle fit)"
+    - name: "positive side inside face sets the clear opening"
       part: side_pos
       measure: xmin
       expected: "$side_inner_x"
       tolerance: "0.02 in"
+    - name: "side panel retains seven inches below the top underside"
+      part: side_pos
+      measure: zmin
+      expected: "$side_bot_z"
+      tolerance: "0.02 in"
 
-# --- presentation surfaces (task 8: doc render through the real entry path) ----
-# The caddy carries its own build document so the smoke test exercises the FULL
-# pipeline INCLUDING documentation render (via Detail.render_documentation) — the
-# ungated doc path FAB-3 added, not a build_html shortcut. Callouts track the live
-# saddle dimensions; export writes the GLB the 3D viewer reads.
 callouts:
-  - {param: inner_span, label: "INNER SPAN {v}", p0: ["= -inner_span/2", "= board_depth/2 + 1", "= deck_thk"], p1: ["= inner_span/2", "= board_depth/2 + 1", "= deck_thk"]}
+  - {param: inner_span, label: "CLEAR OPENING {v}", p0: ["= -inner_span/2", "= panel_width/2 + 1", "$panel_thk"], p1: ["= inner_span/2", "= panel_width/2 + 1", "$panel_thk"]}
   - {param: side_drop, label: "{v} DROP", p0: ["= side_outer_x + 1", 0, 0], p1: ["= side_outer_x + 1", 0, "= -side_drop"]}
-  - {param: cup_dia, label: "CUP {v}", p0: ["= -cup_dia/2", 0, "= deck_thk + 0.5"], p1: ["= cup_dia/2", 0, "= deck_thk + 0.5"]}
+  - {param: cup_dia, label: "CUP {v}", p0: ["= -cup_dia/2", 0, "= panel_thk + 0.5"], p1: ["= cup_dia/2", 0, "= panel_thk + 0.5"]}
 
 export: {glb_tolerance: 0.1, glb_angular_tolerance: 0.15}
 
@@ -407,17 +216,12 @@ doc:
     - prose: |
         # Armchair Coffee Caddy — Validation Report
 
-        A five-piece saddle that straddles a sofa arm and holds a coffee cup, generated by the `detailgen` parametric library. Nothing fastens to the sofa: the caddy is a loose object that BEARS on the arm top by gravity, saddle-style. One 5/4x6 top board (bored with a {cup_dia:g}" cup hole) caps the arm; two 1x6 side boards drop {side_drop:g}" down the arm's two sides and butt under the top board. The top<->side joints use HIDDEN interior registration rails — a full-depth 1x6 rail in each corner, dropping 5.5" down the arm side, GLUED up to the top board's underside at a declared long-grain adhesive bond and screwed horizontally into the side board's inner face (FACE grain), with NO fastener on the top show face. The deep rails register the caddy across the arm and limit cross-arm rocking (design finding D6); longitudinal sliding is not analyzed. The top still bears on the side boards' top end grain (a real, declared gravity seat the rails do not replace). Deterministic computed placement is canonical.
-
-        ## Collision / interference
-        - Pairwise interference checks run: **{interference_checks}**
-        - Unintended collisions detected: **{interference_failures}**
-        - Screw-into-rail and screw-into-board overlaps at the rail joints are expected and allowlisted.
-    - findings: {header: "## Flush-bearing contacts (min-distance + bearing-area proof)", check: bearing}
-    - hardware_presence: {header: "## Connection hardware presence", cap: 8}
+        A removable three-panel hardwood sleeve with two glued 45-degree miters. Two 3/8" diagonal hardwood corner keys reinforce each joint at 1-3/16" from the front and back edges. The side panels directly define a 6.5" clear opening around the modeled 6" sofa arm; no registration rails or metal fasteners remain. The centered 3.5" cup hole is retained.
+    - findings: {header: "## Bearing contact", check: bearing}
+    - hardware_presence: {header: "## Corner-key presence", cap: 4}
     - derivation_log:
         header: "## Construction Graph — derivation log"
-        preamble: "Every overlap/bond/hardware-presence/load-path and process-order fact for the four hidden rail joints is generated from a declared Connection or typed sequence constraint — a `glued` bond at each rail->top corner, a `cleat_screwed` joint at each rail->side face — recorded here with its source rule and confidence:"
+        preamble: "Each corner derives its adhesive bond, mechanical keying, allowed dowel intersections, cure fact, and load-path evidence from a declared dowel_reinforced_miter connection:"
         mode: per_connection
         cap: 32
     - findings: {header: "## Dimension checks", check: dimension}
@@ -425,9 +229,8 @@ doc:
     - bom_table: {header: "## Bill of materials"}
     - prose: |
         ## Modeling assumptions & honest limits
-        - **Gravity saddle, no fastening to the sofa.** The caddy rests on the arm top and lifts straight off. Each side board is flush with its top-board end, while its inner face sits {clear:g}" outside the sofa-arm side; the registration rail occupies 0.75" of that span and leaves a {arm_gap:g}" clear reveal at the arm. Support/Stability, Load-path, and Structural capacity are honestly NOT ANALYZED (a loose saddle has no walking-surface support obligation and no capacity rung here) — see the coverage matrix appended below.
-        - **The arm is EXISTING context**, modeled as a plain box (Boulder primitive), self-grounded like the platform's living tree — not purchased, excluded from the buy list, and carrying no structural claim.
-        - **The cup hole is a full-thickness bore** ({cup_dia:g}" diameter) sized so a coffee cup's tapered body/lip catches on it; it is the top board's `bore` FEATURE — a designed recess that carries its own name through fabrication (never borrowed clearance language).
-        - **Hidden registration rails — adhesive bonds at the top, face-grain screws at the sides.** The top<->side joints use two full-depth interior 1x6 rails (dropping 5.5" down the arm side), each bonded to the top board's underside and screwed into its side board's inner face (upper + lower screw pairs) — no fastener on the show face and none in end grain. The bond mates the rail's long-grain top edge (0.75" x 5.5") to the top's face grain — long grain both sides, the strong glue case. Wood adhesive and clamps are shop consumables/tools, not billed BOM rows. Adhesive bond capacity is NOT analyzed to a number; the deep rails register the caddy across the arm and limit cross-arm rocking (design finding D6), but longitudinal sliding is not analyzed. Face-grain screw withdrawal is stronger than end grain but is NOT analyzed to a number here. Adhesive preparation, fixturing, completion, and project-specific order are printed only in the graph-derived Build sequence.
-        - **Installability follows the declared bench strategy.** All five fabricated members and their four joints are assembled as one unit OFF the sofa. The authored `bench_then_set` construction frame excludes the existing arm, so all eight driver corridors pass in that declared frame. Because the arm touches no connection, that exclusion is explicitly DECLARED TRUST until insertion travel over the upholstered arm is analyzed; it is not a geometric proof of placement. The glued rail->top bonds carry no fastener for the installability checks to judge. The authored embedment minimum (0.5" into the side boards) is a joint-geometry number that keeps the show faces intact; the connection assumptions carry the reasoning.
-        - **Stability is NOT ANALYZED.** The rail depth was chosen to restore the caddy's grip on the arm (reviewer rigid-body geometry: rock angle ~2.6° with the 5.5" rail vs ~9.5° with the shallow 1x2 cleat, ~2.05° for the pre-cleat full-depth sides), but detailgen has no rocking/stability rung — Support/Stability stays UNKNOWN, no stability number is claimed as proven.
+        - **Gravity saddle.** The caddy rests on the arm top and lifts off by hand; nothing fastens to upholstery.
+        - **Panel-defined fit.** Matching 3/4" sides leave a 6.5" clear opening, or 1/4" nominal clearance at each side of the modeled 6" arm. Upholstery compression and insertion travel are not analyzed.
+        - **Reinforced miters.** Each prepared 45-degree hardwood joint receives adhesive and two 3/8" diagonal corner keys. The selected adhesive label governs clamping and cure. Adhesive, dowel, panel, and joint capacity are NOT analyzed.
+        - **Cup opening.** The centered 3.5" full-thickness bore remains a loose-fit feature; verify the intended cup before finishing.
+        - **Hot-drink stability is NOT ANALYZED.** Test the finished empty caddy for rocking and sliding on the actual chair before use.

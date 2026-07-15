@@ -206,20 +206,16 @@ def test_caddy_ordinals_match_projection_viewer_and_inspector():
     repeated = [
         part
         for part in detail.assembly.parts
-        if part.reader_name in {"Registration rail", "Rail-to-side screw"}
+        if part.reader_name in {"Side panel", "Corner key"}
     ]
 
     assert [labels[part.id].display_name for part in repeated] == [
-        "Registration rail (1 of 2)",
-        "Registration rail (2 of 2)",
-        "Rail-to-side screw (1 of 8)",
-        "Rail-to-side screw (2 of 8)",
-        "Rail-to-side screw (3 of 8)",
-        "Rail-to-side screw (4 of 8)",
-        "Rail-to-side screw (5 of 8)",
-        "Rail-to-side screw (6 of 8)",
-        "Rail-to-side screw (7 of 8)",
-        "Rail-to-side screw (8 of 8)",
+        "Side panel (1 of 2)",
+        "Side panel (2 of 2)",
+        "Corner key (1 of 4)",
+        "Corner key (2 of 4)",
+        "Corner key (3 of 4)",
+        "Corner key (4 of 4)",
     ]
     for part in repeated:
         label = labels[part.id]
@@ -237,19 +233,13 @@ def test_caddy_ordinals_match_projection_viewer_and_inspector():
 def test_caddy_authors_the_closed_reader_vocabulary():
     expected = {
         "arm": ("sofa arm", "Sofa arm"),
-        "side_pos": ("side board +X", "Side board"),
-        "side_neg": ("side board -X", "Side board"),
-        "top": ("top board", "Top board"),
-        "cleat_pos": ("registration rail +X", "Registration rail"),
-        "cleat_neg": ("registration rail -X", "Registration rail"),
-        "hscrew_p0": ("rail-side screw +X upper 0", "Rail-to-side screw"),
-        "hscrew_p1": ("rail-side screw +X upper 1", "Rail-to-side screw"),
-        "hscrew_p2": ("rail-side screw +X lower 0", "Rail-to-side screw"),
-        "hscrew_p3": ("rail-side screw +X lower 1", "Rail-to-side screw"),
-        "hscrew_m0": ("rail-side screw -X upper 0", "Rail-to-side screw"),
-        "hscrew_m1": ("rail-side screw -X upper 1", "Rail-to-side screw"),
-        "hscrew_m2": ("rail-side screw -X lower 0", "Rail-to-side screw"),
-        "hscrew_m3": ("rail-side screw -X lower 1", "Rail-to-side screw"),
+        "top": ("top panel", "Top panel"),
+        "side_pos": ("side panel +X", "Side panel"),
+        "side_neg": ("side panel -X", "Side panel"),
+        "dowel_pos_near": ("corner key +X front", "Corner key"),
+        "dowel_pos_far": ("corner key +X back", "Corner key"),
+        "dowel_neg_near": ("corner key -X front", "Corner key"),
+        "dowel_neg_far": ("corner key -X back", "Corner key"),
     }
 
     doc = load_spec_file(CADDY)
@@ -269,10 +259,9 @@ def test_caddy_authors_the_closed_reader_vocabulary():
     } == expected_by_machine
     assert {part.reader_name for part in detail.assembly.parts} == {
         "Sofa arm",
-        "Side board",
-        "Top board",
-        "Registration rail",
-        "Rail-to-side screw",
+        "Top panel",
+        "Side panel",
+        "Corner key",
     }
 
 
@@ -280,8 +269,8 @@ def test_reader_name_only_edit_is_geometry_and_truth_inert():
     original = compile_caddy()
     doc = load_spec_file(CADDY)
     components = tuple(
-        replace(component, reader_name="Registration cleat")
-        if getattr(component, "id", None) == "cleat_pos"
+        replace(component, reader_name="Right side panel")
+        if getattr(component, "id", None) == "side_pos"
         else component
         for component in doc.components
     )
@@ -294,7 +283,7 @@ def test_reader_name_only_edit_is_geometry_and_truth_inert():
     ]
 
 
-def test_caddy_reader_surfaces_share_the_same_rail_label(caddy_html):
+def test_caddy_reader_surfaces_share_panel_and_key_labels(caddy_html):
     from detailgen.validation.build_sequence import build_sequence_model
 
     detail = compile_caddy()
@@ -304,24 +293,24 @@ def test_caddy_reader_surfaces_share_the_same_rail_label(caddy_html):
         for step in sequence
         for name, _bom, _fab in step["places"]
     ]
-    assert [name for name in placed_names if name.startswith("Registration rail")] == [
-        "Registration rail (1 of 2)",
-        "Registration rail (2 of 2)",
+    assert [name for name in placed_names if name.startswith("Side panel")] == [
+        "Side panel (1 of 2)",
+        "Side panel (2 of 2)",
     ]
 
     cut_plan = caddy_html.split(
         '<section class="notes cutplan">', 1)[1].split("</section>", 1)[0]
-    assert cut_plan.count("Registration rail (1 of 2)") == 1
-    assert cut_plan.count("Registration rail (2 of 2)") == 1
-    assert "registration rail +X" not in cut_plan
-    assert "registration rail -X" not in cut_plan
+    assert cut_plan.count("Side panel (1 of 2)") == 1
+    assert cut_plan.count("Side panel (2 of 2)") == 1
+    assert "side panel +X" not in cut_plan
+    assert "side panel -X" not in cut_plan
 
     payload = build_inspector_payload(detail)
     assert [
         part["display_name"]
         for part in payload["parts"].values()
-        if part["reader_name"] == "Registration rail"
-    ] == ["Registration rail (1 of 2)", "Registration rail (2 of 2)"]
+        if part["reader_name"] == "Corner key"
+    ] == [f"Corner key ({index} of 4)" for index in range(1, 5)]
 
 
 def test_caddy_existing_context_uses_reader_name_in_bom_and_hover(caddy_html):
@@ -339,14 +328,12 @@ def test_caddy_existing_context_uses_reader_name_in_bom_and_hover(caddy_html):
 
 
 def test_machine_connection_labels_remain_in_raw_contract_appendix(caddy_html):
-    appendix = caddy_html.split(
-        "<section class='notes install-disclosure'>", 1
-    )[1].split("</section>", 1)[0]
-    assert "rail +X" in appendix
+    assert "<section class='notes install-disclosure'>" not in caddy_html
 
     sequence = caddy_html.split(
         "<section class='notes build-sequence'>", 1
     )[1].split("</section>", 1)[0]
-    assert "place Registration rail (1 of 2)" in sequence
-    assert "place Registration rail (2 of 2)" in sequence
-    assert "place registration rail +X" not in sequence
+    assert "top -&gt; side +X (dowel-reinforced miter)" in sequence
+    assert "top -&gt; side -X (dowel-reinforced miter)" in sequence
+    assert "place Side panel (1 of 2)" in sequence
+    assert "place side panel +X" not in sequence

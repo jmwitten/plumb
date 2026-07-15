@@ -17,6 +17,7 @@ suites share it; the Panel E markup / payload-wiring checks stay render-free.
 from __future__ import annotations
 
 import importlib.util
+import math
 import sys
 from pathlib import Path
 
@@ -24,6 +25,7 @@ import pytest
 
 from detailgen.rendering.web_viewer import build_viewer_payload
 from detailgen.rendering.web_viewer.explode import (
+    _unit,
     derive_explode_vectors,
     derive_vertical_stack_explode,
 )
@@ -131,6 +133,37 @@ def test_caddy_sofa_arm_is_pinned():
     arm = payload["parts"]["sofa arm"]
     assert arm["existing"] is True
     assert arm["explode"] == [0.0, 0.0, 0.0]
+
+
+def test_caddy_corner_keys_explode_along_their_declared_axes():
+    caddy = compile_spec_file(DETAILS / "armchair_caddy.spec.yaml")
+    caddy.validate()
+    payload = build_viewer_payload(caddy)
+
+    keys = [
+        part for part in caddy.assembly.parts
+        if part.reader_name == "Corner key"
+    ]
+    assert len(keys) == 4
+    for part in keys:
+        vector = payload["parts"][part.name]["explode"]
+        local_axis = part.component.datum("axis").z_axis
+        world_axis = part.world_frame.transform_direction(local_axis)
+        cross = (
+            vector[1] * world_axis[2] - vector[2] * world_axis[1],
+            vector[2] * world_axis[0] - vector[0] * world_axis[2],
+            vector[0] * world_axis[1] - vector[1] * world_axis[0],
+        )
+
+        assert math.sqrt(sum(value * value for value in cross)) < 1e-6
+        assert sum(
+            vector[index] * world_axis[index] for index in range(3)
+        ) > 0
+
+
+def test_explode_unit_rejects_nonfinite_directions():
+    assert _unit((math.nan, 0.0, 0.0)) is None
+    assert _unit((math.inf, 0.0, 0.0)) is None
 
 
 def test_derived_explode_directions_are_honest(platform_payload):

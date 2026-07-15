@@ -1,0 +1,292 @@
+schema: detailgen/design-review/v1
+project_id: armchair_caddy
+title: Armchair caddy precedent-first design selection
+status: draft
+brief:
+  use: Provide a removable hard surface for a cup and small personal items on a padded armchair arm.
+  loads: Carry its own weight plus an ordinary filled mug and small accessories without relying on permanent sofa attachment.
+  fit_range: Preserve the existing parameterized fit around a six-inch arm with clearance for upholstery and removal by hand.
+  appearance: Read as compact indoor furniture with clean exterior faces, eased edges, and no exposed utilitarian fasteners.
+  builder_skill: Suit an intermediate home woodworker while making any accuracy-sensitive joint setup explicit in the instructions.
+  tools:
+    - tape measure and square
+    - table saw or accurate miter saw
+    - drill or drill press
+    - clamps
+    - sanding tools
+  required_features:
+    - id: req_service_surface
+      text: Provide a stable top surface that transfers ordinary service loads into both hanging side panels.
+    - id: req_fit
+      text: Fit over the modeled arm and preserve clearance from adjacent upholstery throughout installation and use.
+    - id: req_registration
+      text: Limit cross-arm rocking without gripping, fastening to, or otherwise modifying the upholstered chair arm.
+    - id: req_cup_opening
+      text: Retain the modeled centered cup opening and its stated loose-fit verification before any production redesign.
+    - id: req_removable
+      text: Lift off by hand and remain compact enough to store when the chair arm should be unobstructed.
+  constraints:
+    - id: constraint_simplicity
+      text: Minimize permanent part count and repeated assembly operations before optimizing secondary construction preferences.
+      priority: 1
+    - id: constraint_fit_preservation
+      text: Avoid consuming the interior fit envelope with reinforcement unless a required function justifies that material.
+      priority: 2
+    - id: constraint_appearance
+      text: Keep metal fasteners and coarse structural seams away from the visible top and outside faces.
+      priority: 3
+    - id: constraint_tools
+      text: Prefer methods achievable with the listed home-shop tools and clearly disclose specialized jigs or setups.
+      priority: 4
+    - id: constraint_instruction_clarity
+      text: Prefer repeated joints and short verification sequences that can be explained without hidden positioning assumptions.
+      priority: 5
+precedents:
+  - id: rui_lusitano
+    kind: commercial_product
+    title: Lusitano Sofa Armrest Tray in Solid Oak
+    publisher: Rui Silva Studio
+    url: https://www.ruisilvastudio.com/lusitano/sofa-armrest
+    accessed_on: 2026-07-14
+    construction_pattern: A handcrafted solid-oak armrest tray presents a simple continuous sleeve with two sides and a broad top surface.
+    lessons:
+      - A restrained three-panel silhouette can read as finished furniture without visible internal reinforcement walls.
+      - Published inner dimensions make fit a first-class product property rather than an incidental assembly outcome.
+  - id: love_miter
+    kind: build_instruction
+    title: DIY Sofa Arm Table
+    publisher: Love and Renovations
+    url: https://www.loveandrenovations.com/sofa-arm-table/
+    accessed_on: 2026-07-14
+    construction_pattern: Three walnut boards receive forty-five-degree edges and fold together with painter's tape and wood glue.
+    lessons:
+      - The conventional sleeve can use only its three visible panels when loads and handling permit glued miters.
+      - Measuring the actual arm and adding modest sliding clearance precedes every cut in the demonstrated workflow.
+  - id: woodworkers_keyed_miter
+    kind: build_instruction
+    title: Sofa Armrest Table
+    publisher: Woodworker's Journal
+    url: https://www.woodworkersjournal.com/project-sofa-armrest-table/
+    accessed_on: 2026-07-14
+    construction_pattern: Three mitered panels are glued into a sleeve and diagonal dowels mechanically reinforce both corner joints.
+    lessons:
+      - Crossing each miter with two dowels strengthens the conventional shell without adding full-size interior members.
+      - A doweling jig and careful dry fitting trade additional setup accuracy for low part count and clean exterior faces.
+  - id: kreg_pocket_screws
+    kind: build_instruction
+    title: Sofa Arm Table
+    publisher: Kreg Tool
+    url: https://learn.kregtool.com/plans/sofa-arm-table/
+    accessed_on: 2026-07-14
+    construction_pattern: One board becomes a three-panel square-jointed sleeve assembled with four concealed pocket-hole screws.
+    lessons:
+      - Pocket screws provide a documented beginner-accessible alternative when accurate miter joinery is undesirable.
+      - The demonstrated fit subtracts roughly one-half inch from the measured arm width to establish a controlled opening.
+  - id: mitre10_nailed_sleeve
+    kind: build_instruction
+    title: How to make a couch sleeve
+    publisher: Mitre 10
+    url: https://www.mitre10.com.au/diy/how-to-make-a-couch-sleeve
+    accessed_on: 2026-07-14
+    construction_pattern: Plywood top and sides are joined with glue and finish nails before a backed cup-holder opening is cut.
+    lessons:
+      - A real beginner build keeps the load-bearing sleeve direct while integrating a cup opening into the top panel.
+      - The instructions derive dimensions from the actual sofa and treat snug fit as a verification target.
+  - id: fullhearted_brackets
+    kind: build_instruction
+    title: How to Build a DIY Couch Arm Table Tray for Your Sofa
+    publisher: Full Hearted Home
+    url: https://thefullheartedhome.com/how-to-build-a-diy-couch-arm-table-tray-for-your-sofa/
+    accessed_on: 2026-07-14
+    construction_pattern: Three square-cut pine boards form a sleeve with glue and concealed metal corner brackets screwed inside.
+    lessons:
+      - Small inside brackets can replace wooden reinforcement members while preserving simple square cuts.
+      - Bracket clearance must be included when sizing the opening, so concealed hardware still has a measurable fit cost.
+concepts:
+  - id: current_double_wall
+    title: Current double-wall rail construction
+    summary: Three exterior panels surround two full-depth internal registration rails that are glued overhead and screwed into the sides.
+    signature:
+      load_path: top_end_bearing_plus_rail_bonds_to_sides
+      joint_family: butt_joint_with_full_depth_internal_rails
+      part_topology: five_wood_part_double_wall_saddle
+      fastening_strategy: glue_and_eight_concealed_screws
+      visible_seam_strategy: square_butt_exterior_seams
+      fit_strategy: rail_faces_register_with_quarter_inch_reveal
+    features:
+      - id: full_depth_registration_rails
+        description: Two nearly side-sized interior rails both reinforce the corners and register against the upholstered arm.
+        precedent_refs: []
+      - id: concealed_face_grain_screws
+        description: Eight screws enter side-panel face grain from hidden rail faces without piercing any exterior show surface.
+        precedent_refs: [kreg_pocket_screws, fullhearted_brackets]
+    parts:
+      - part_family: exterior structural panels
+        purpose: Form the usable top and two outside faces while carrying service loads around the chair arm.
+        requirement_refs: [req_service_surface, req_fit, req_removable]
+        feature_refs: []
+        joinery_replacement: These three visible panels are irreducible, although their corner connections can be integrated directly into their edges.
+      - part_family: full-depth registration rails
+        purpose: Reinforce both butt joints and present deep interior faces that limit cross-arm rocking at the specified reveal.
+        requirement_refs: [req_registration]
+        feature_refs: [current_double_wall.full_depth_registration_rails]
+        joinery_replacement: Reinforced miters, shouldered rabbets, or compact concealed hardware could absorb the corner function while side geometry handles fit.
+      - part_family: concealed structural screws
+        purpose: Clamp each rail to a side panel and resist joint separation through face-grain screw engagement.
+        requirement_refs: [req_service_surface]
+        feature_refs: [current_double_wall.concealed_face_grain_screws]
+        joinery_replacement: Dowels or purpose-made corner joinery could replace these eight metal fasteners and their drilling operations.
+  - id: reinforced_miter
+    title: Three-panel reinforced-miter shell
+    summary: Three mitered exterior panels form a continuous sleeve while diagonal dowels cross and reinforce each glued corner.
+    signature:
+      load_path: top_through_reinforced_miters_to_sides
+      joint_family: dowel_reinforced_miter
+      part_topology: three_panel_shell_with_small_dowels
+      fastening_strategy: glue_and_diagonal_wood_dowels
+      visible_seam_strategy: continuous_wrapped_grain_miter
+      fit_strategy: side_faces_and_clearance_register
+    features:
+      - id: keyed_miter_corners
+        description: Diagonal dowels mechanically key both glued miter joints while remaining compatible with clean exterior finishing.
+        precedent_refs: [woodworkers_keyed_miter]
+      - id: panel_defined_fit
+        description: The side panels directly define the interior opening without a second wooden wall consuming clearance.
+        precedent_refs: [rui_lusitano, love_miter, woodworkers_keyed_miter]
+    parts:
+      - part_family: mitered structural panels
+        purpose: Create the top, sides, fit opening, and direct service-load path using only the three visible furniture surfaces.
+        requirement_refs: [req_service_surface, req_fit, req_registration, req_removable]
+        feature_refs: [reinforced_miter.panel_defined_fit]
+        joinery_replacement: No panel can be removed because each supplies a required exterior surface and structural side of the sleeve.
+      - part_family: diagonal reinforcing dowels
+        purpose: Cross the two glued miters to resist corner opening without introducing another full-size structural member.
+        requirement_refs: [req_service_surface]
+        feature_refs: [reinforced_miter.keyed_miter_corners]
+        joinery_replacement: Splines or biscuits could serve the same reinforcement role, but plain glue would reduce mechanical reserve.
+  - id: rabbet_and_dowel
+    title: Rabbet-and-dowel shell
+    summary: Each side seats into a shouldered top rabbet and receives concealed cross dowels through the assembled corner.
+    signature:
+      load_path: top_rabbet_shoulders_bear_on_sides
+      joint_family: shouldered_rabbet_with_cross_dowels
+      part_topology: three_panel_shouldered_shell
+      fastening_strategy: glue_and_concealed_cross_dowels
+      visible_seam_strategy: expressed_square_shoulder_line
+      fit_strategy: rabbet_shoulders_locate_side_faces
+    features:
+      - id: locating_rabbet_shoulders
+        description: Two machined shoulders positively locate the side panels and provide bearing during glue-up and service.
+        precedent_refs: []
+      - id: concealed_cross_dowels
+        description: Wooden dowels reinforce each assembled corner without leaving metal hardware or exposed screw heads.
+        precedent_refs: [woodworkers_keyed_miter]
+    parts:
+      - part_family: rabbeted structural panels
+        purpose: Supply every visible surface while the integrated shoulders locate the sides and transfer vertical service loads.
+        requirement_refs: [req_service_surface, req_fit, req_registration, req_removable]
+        feature_refs: [rabbet_and_dowel.locating_rabbet_shoulders]
+        joinery_replacement: The rabbets already integrate the locating member into the top, so no separate cleat or rail remains to remove.
+      - part_family: concealed cross dowels
+        purpose: Resist withdrawal across the rabbet joints while preserving clean top and outside faces after finishing.
+        requirement_refs: [req_service_surface]
+        feature_refs: [rabbet_and_dowel.concealed_cross_dowels]
+        joinery_replacement: Screws could replace the dowels but would add metal hardware and potentially visible plugging operations.
+  - id: concealed_pocket_screw_or_bracket
+    title: Concealed pocket-screw or bracket shell
+    summary: Three square-cut panels use compact concealed hardware at both inside corners, selected for the builder's available jig.
+    signature:
+      load_path: top_butt_bearing_with_hardware_ties_to_sides
+      joint_family: square_butt_with_compact_concealed_hardware
+      part_topology: three_panels_plus_discrete_hardware
+      fastening_strategy: pocket_screws_or_inside_brackets_and_glue
+      visible_seam_strategy: square_butt_seams_with_hidden_hardware
+      fit_strategy: hardware_allowance_plus_side_clearance
+    features:
+      - id: compact_concealed_hardware
+        description: Pocket screws or small metal brackets tie square-cut corners without full-depth wooden reinforcement walls.
+        precedent_refs: [kreg_pocket_screws, fullhearted_brackets]
+      - id: square_cut_workflow
+        description: All three structural panels use square crosscuts and direct inside-corner assembly for accessible fabrication.
+        precedent_refs: [kreg_pocket_screws, fullhearted_brackets, mitre10_nailed_sleeve]
+    parts:
+      - part_family: square-cut structural panels
+        purpose: Form the top, sides, and fit opening with straightforward cuts and direct corner bearing surfaces.
+        requirement_refs: [req_service_surface, req_fit, req_registration, req_removable]
+        feature_refs: [concealed_pocket_screw_or_bracket.square_cut_workflow]
+        joinery_replacement: The visible panels remain necessary, while their square joints deliberately avoid machining integrated shoulders or miters.
+      - part_family: compact concealed hardware
+        purpose: Tie the two square butt joints against separation while remaining inside and away from exterior show faces.
+        requirement_refs: [req_service_surface]
+        feature_refs: [concealed_pocket_screw_or_bracket.compact_concealed_hardware]
+        joinery_replacement: Accurate reinforced joinery could eliminate the purchased hardware at the cost of more demanding cutting and layout.
+comparison:
+  - {id: current_double_wall.strength, concept: current_double_wall, criterion: strength, assessment: advantage, explanation: "Deep glued rails and eight face-grain screws provide redundant corner attachment beyond ordinary sleeve precedents.", evidence_refs: [req_service_surface]}
+  - {id: current_double_wall.part_count, concept: current_double_wall, criterion: part_count, assessment: disadvantage, explanation: "Two substantial rails increase the wooden assembly from the conventional three panels to five members.", evidence_refs: [constraint_simplicity, rui_lusitano]}
+  - {id: current_double_wall.fasteners, concept: current_double_wall, criterion: fasteners, assessment: disadvantage, explanation: "Eight concealed screws exceed the four pocket screws documented for a comparable square-jointed sleeve.", evidence_refs: [kreg_pocket_screws]}
+  - {id: current_double_wall.operations, concept: current_double_wall, criterion: operations, assessment: disadvantage, explanation: "Rail cutting, bilateral layout, two glue bonds, clamping, pilot drilling, countersinking, and fastening expand assembly work.", evidence_refs: [constraint_simplicity]}
+  - {id: current_double_wall.tooling, concept: current_double_wall, criterion: tooling, assessment: advantage, explanation: "Square cuts and ordinary drilling avoid specialized joinery cutters or precision angled dowel fixtures.", evidence_refs: [constraint_tools]}
+  - {id: current_double_wall.tolerances, concept: current_double_wall, criterion: tolerances, assessment: disadvantage, explanation: "Rail thickness and placement consume both sides of the opening and compound fit error across the arm.", evidence_refs: [req_fit, constraint_fit_preservation]}
+  - {id: current_double_wall.material, concept: current_double_wall, criterion: material, assessment: disadvantage, explanation: "Two full-depth one-by-six rails add nearly side-panel-sized stock that produces no usable exterior surface.", evidence_refs: [constraint_simplicity]}
+  - {id: current_double_wall.appearance, concept: current_double_wall, criterion: appearance, assessment: disadvantage, explanation: "Hardware stays hidden, yet square seams and visible interior double walls weaken the simple furniture silhouette.", evidence_refs: [constraint_appearance, rui_lusitano]}
+  - {id: current_double_wall.builder_skill, concept: current_double_wall, criterion: builder_skill, assessment: advantage, explanation: "An intermediate builder can execute familiar square layout, glue-up, pilot holes, and controlled screw driving.", evidence_refs: [constraint_tools]}
+  - {id: current_double_wall.instruction_complexity, concept: current_double_wall, criterion: instruction_complexity, assessment: disadvantage, explanation: "The manual must explain rail orientation, reveal geometry, two adhesive joints, eight stations, and cure sequencing.", evidence_refs: [constraint_instruction_clarity]}
+  - {id: reinforced_miter.strength, concept: reinforced_miter, criterion: strength, assessment: advantage, explanation: "Long glued miter faces plus crossing dowels create a documented mechanically reinforced corner load path.", evidence_refs: [woodworkers_keyed_miter, req_service_surface]}
+  - {id: reinforced_miter.part_count, concept: reinforced_miter, criterion: part_count, assessment: advantage, explanation: "Only three full-size panels define the shell, with small dowels serving as integrated joint reinforcement.", evidence_refs: [rui_lusitano, woodworkers_keyed_miter, constraint_simplicity]}
+  - {id: reinforced_miter.fasteners, concept: reinforced_miter, criterion: fasteners, assessment: advantage, explanation: "Wooden dowels replace repeated metal screws and disappear into the finished corner after trimming.", evidence_refs: [woodworkers_keyed_miter, constraint_appearance]}
+  - {id: reinforced_miter.operations, concept: reinforced_miter, criterion: operations, assessment: neutral, explanation: "Accurate angled cuts and dowel boring replace separate rail fabrication, placement, bonding, and screw installation.", evidence_refs: [woodworkers_keyed_miter, constraint_simplicity]}
+  - {id: reinforced_miter.tooling, concept: reinforced_miter, criterion: tooling, assessment: disadvantage, explanation: "Reliable results require precise forty-five-degree cutting, controlled clamping, and an accurate diagonal doweling setup.", evidence_refs: [woodworkers_keyed_miter, constraint_tools]}
+  - {id: reinforced_miter.tolerances, concept: reinforced_miter, criterion: tolerances, assessment: neutral, explanation: "Miter closure is accuracy-sensitive, but the finished side faces preserve the entire intended fit envelope.", evidence_refs: [req_fit, love_miter]}
+  - {id: reinforced_miter.material, concept: reinforced_miter, criterion: material, assessment: advantage, explanation: "Small dowels reinforce both corners using far less stock than two full-depth registration members.", evidence_refs: [constraint_simplicity, woodworkers_keyed_miter]}
+  - {id: reinforced_miter.appearance, concept: reinforced_miter, criterion: appearance, assessment: advantage, explanation: "Wrapped miters and concealed wooden keys best match the clean continuous solid-oak commercial precedent.", evidence_refs: [rui_lusitano, constraint_appearance]}
+  - {id: reinforced_miter.builder_skill, concept: reinforced_miter, criterion: builder_skill, assessment: disadvantage, explanation: "The builder needs careful saw calibration, tape or clamp technique, and repeatable diagonal drilling practice.", evidence_refs: [love_miter, woodworkers_keyed_miter]}
+  - {id: reinforced_miter.instruction_complexity, concept: reinforced_miter, criterion: instruction_complexity, assessment: advantage, explanation: "Instructions repeat one corner method twice and avoid an independent rail-positioning and fastening sequence.", evidence_refs: [constraint_instruction_clarity, woodworkers_keyed_miter]}
+  - {id: rabbet_and_dowel.strength, concept: rabbet_and_dowel, criterion: strength, assessment: advantage, explanation: "Shoulders provide positive bearing while glued cross dowels resist withdrawal across both assembled corners.", evidence_refs: [req_service_surface]}
+  - {id: rabbet_and_dowel.part_count, concept: rabbet_and_dowel, criterion: part_count, assessment: advantage, explanation: "Three visible panels and small pins supply every structural function without separate wooden reinforcement walls.", evidence_refs: [constraint_simplicity]}
+  - {id: rabbet_and_dowel.fasteners, concept: rabbet_and_dowel, criterion: fasteners, assessment: neutral, explanation: "Multiple wooden pins remain concealed after finishing, although each requires its own accurately registered bore.", evidence_refs: [constraint_appearance, woodworkers_keyed_miter]}
+  - {id: rabbet_and_dowel.operations, concept: rabbet_and_dowel, criterion: operations, assessment: disadvantage, explanation: "Two consistent rabbets, shoulder cleanup, dry fitting, glue-up, and cross drilling create several precision stages.", evidence_refs: [constraint_simplicity, constraint_instruction_clarity]}
+  - {id: rabbet_and_dowel.tooling, concept: rabbet_and_dowel, criterion: tooling, assessment: disadvantage, explanation: "Controlled rabbet cutting needs a table-saw dado setup or router beyond ordinary square-cut assembly.", evidence_refs: [constraint_tools]}
+  - {id: rabbet_and_dowel.tolerances, concept: rabbet_and_dowel, criterion: tolerances, assessment: advantage, explanation: "Machined shoulders positively locate both side faces and make the finished interior span directly inspectable.", evidence_refs: [req_fit, req_registration]}
+  - {id: rabbet_and_dowel.material, concept: rabbet_and_dowel, criterion: material, assessment: advantage, explanation: "Integrated shoulders and short dowels eliminate almost all reinforcement stock outside the visible three panels.", evidence_refs: [constraint_simplicity]}
+  - {id: rabbet_and_dowel.appearance, concept: rabbet_and_dowel, criterion: appearance, assessment: neutral, explanation: "Clean faces conceal hardware, but square shoulder lines interrupt the continuous grain wrap at both corners.", evidence_refs: [constraint_appearance]}
+  - {id: rabbet_and_dowel.builder_skill, concept: rabbet_and_dowel, criterion: builder_skill, assessment: disadvantage, explanation: "Uniform rabbet depth and accurately aligned cross bores demand measured intermediate joinery competence.", evidence_refs: [constraint_tools]}
+  - {id: rabbet_and_dowel.instruction_complexity, concept: rabbet_and_dowel, criterion: instruction_complexity, assessment: neutral, explanation: "Dimensioned machining and pin layout add explanation, while positive shoulders simplify the final glue-up checks.", evidence_refs: [constraint_instruction_clarity]}
+  - {id: concealed_pocket_screw_or_bracket.strength, concept: concealed_pocket_screw_or_bracket, criterion: strength, assessment: neutral, explanation: "Published pocket-screw and bracket builds support ordinary use, but hardware capacity and embedment need selection.", evidence_refs: [kreg_pocket_screws, fullhearted_brackets, req_service_surface]}
+  - {id: concealed_pocket_screw_or_bracket.part_count, concept: concealed_pocket_screw_or_bracket, criterion: part_count, assessment: advantage, explanation: "The shell retains three wooden panels, though several purchased metal hardware pieces remain in the assembly.", evidence_refs: [constraint_simplicity, kreg_pocket_screws]}
+  - {id: concealed_pocket_screw_or_bracket.fasteners, concept: concealed_pocket_screw_or_bracket, criterion: fasteners, assessment: disadvantage, explanation: "Each corner depends on metal screws and possibly brackets whose quantity and specifications must be documented.", evidence_refs: [kreg_pocket_screws, fullhearted_brackets]}
+  - {id: concealed_pocket_screw_or_bracket.operations, concept: concealed_pocket_screw_or_bracket, criterion: operations, assessment: advantage, explanation: "Square cutting followed by repeatable jig drilling or bracket fastening creates a short assembly sequence.", evidence_refs: [kreg_pocket_screws, fullhearted_brackets]}
+  - {id: concealed_pocket_screw_or_bracket.tooling, concept: concealed_pocket_screw_or_bracket, criterion: tooling, assessment: advantage, explanation: "A drill and basic saw suffice with brackets, while pocket screws add one common commercial jig.", evidence_refs: [kreg_pocket_screws, fullhearted_brackets, constraint_tools]}
+  - {id: concealed_pocket_screw_or_bracket.tolerances, concept: concealed_pocket_screw_or_bracket, criterion: tolerances, assessment: advantage, explanation: "Square butt assembly tolerates modest cutting error when hardware is clamped against aligned reference faces.", evidence_refs: [fullhearted_brackets, req_fit]}
+  - {id: concealed_pocket_screw_or_bracket.material, concept: concealed_pocket_screw_or_bracket, criterion: material, assessment: neutral, explanation: "Wood consumption is minimal, but proprietary screws or brackets add purchased material and sourcing choices.", evidence_refs: [kreg_pocket_screws, fullhearted_brackets]}
+  - {id: concealed_pocket_screw_or_bracket.appearance, concept: concealed_pocket_screw_or_bracket, criterion: appearance, assessment: neutral, explanation: "Exterior faces stay clean while interior hardware and square corner seams remain visible from some angles.", evidence_refs: [constraint_appearance, fullhearted_brackets]}
+  - {id: concealed_pocket_screw_or_bracket.builder_skill, concept: concealed_pocket_screw_or_bracket, criterion: builder_skill, assessment: advantage, explanation: "Documented beginner workflows use straightforward measuring, square cuts, clamping, drilling, and screw driving.", evidence_refs: [kreg_pocket_screws, fullhearted_brackets]}
+  - {id: concealed_pocket_screw_or_bracket.instruction_complexity, concept: concealed_pocket_screw_or_bracket, criterion: instruction_complexity, assessment: advantage, explanation: "A concise guide can specify one hardware system, its clearances, and the same connection at both corners.", evidence_refs: [constraint_instruction_clarity, kreg_pocket_screws]}
+deviations:
+  - feature_ref: current_double_wall.full_depth_registration_rails
+    forcing_requirement: req_registration
+    exception: null
+  - feature_ref: rabbet_and_dowel.locating_rabbet_shoulders
+    forcing_requirement: req_registration
+    exception: null
+decision:
+  selected_concept: reinforced_miter
+  rationale: The reinforced-miter shell best combines documented corner strength, conventional three-panel topology, preserved fit volume, low material use, and finished-furniture appearance.
+  decisive_cells:
+    - reinforced_miter.strength
+    - reinforced_miter.part_count
+    - reinforced_miter.material
+    - reinforced_miter.appearance
+    - reinforced_miter.instruction_complexity
+  tradeoffs:
+    - Accurate miter cutting and diagonal dowel layout demand more setup care than square-cut hardware assembly.
+    - A future production redesign must prove cross-arm registration without assuming the current rails remain necessary.
+  application: implemented
+modeling_approval:
+  approved_by: Joel Witten
+  approved_on: 2026-07-14
+  selection_fingerprint: 52e7b80496016b14ef09797dae2b783b29b03bbd0cb115eae1e2ecd5571ba40b
+delivery_confirmation:
+  approved_by: Joel Witten
+  approved_on: 2026-07-15
+  selection_fingerprint: 52e7b80496016b14ef09797dae2b783b29b03bbd0cb115eae1e2ecd5571ba40b
+  model_fingerprint: 35b8793c2792c9513891a335e79aa4036c710c36f5ba7ff79696aa75c7f1e53e

@@ -47,6 +47,11 @@ def spec_to_dict(doc: DetailSpecDoc) -> dict:
     """The authoring mapping for ``doc`` — the exact structure
     :func:`~detailgen.spec.loader.load_spec_text` consumes."""
     out: dict = {"name": doc.name, "type": doc.type, "units": doc.units}
+    if doc.design_review is not None:
+        out["design_review"] = {
+            "record": doc.design_review.record,
+            "selected_concept": doc.design_review.selected_concept,
+        }
     if doc.params:
         out["params"] = dict(doc.params)
     if doc.derived:

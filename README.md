@@ -64,6 +64,7 @@ src/                Importable as the `detailgen` package
                     library (FaceMountHanger / ToeScrewed / … + registry)
   details/          The `Detail` lifecycle base class
   spec/             DetailSpec: a declarative YAML/JSON language + compiler
+  design_review/    Precedent-first design selection, reports, and lifecycle gates
   packs/            Opt-in domain front ends that lower into DetailSpec
   validation/       The sweep -> ValidationReport, plus the coverage matrix,
                     the Evidence Graph, spatial invariants, load-path proof
@@ -164,6 +165,42 @@ dimensions / ground / `spatial`), and load-system `roles`. `platform.spec.yaml`
 reproduces the imperative `platform.py` byte-for-byte; `detailgen.spec.metrics`
 reports the compression it buys — genuine derived : authored facts, escape
 hatches excluded from the honest headline.
+
+### Precedent-first design selection
+
+New details can opt into a structured design review before production modeling.
+The sidecar record captures the design brief, source provenance, materially
+different concepts, a ten-criterion comparison, novelty and part-purpose
+reviews, and an evidence-linked decision. Validation rejects missing evidence,
+near-duplicate concepts, unsupported novelty, incomplete matrices, empty or
+placeholder prose, and copied comparison boilerplate.
+
+```bash
+python -m detailgen.design_review validate details/armchair_caddy.design-review.yaml
+python -m detailgen.design_review report \
+  details/armchair_caddy.design-review.yaml \
+  --output outputs/design-reviews/armchair_caddy.html
+python -m detailgen.design_review gate \
+  details/armchair_caddy.spec.yaml --stage modeling
+python -m detailgen.design_review gate \
+  details/armchair_caddy.spec.yaml --stage delivery
+```
+
+A DetailSpec opts in explicitly with a relative sidecar path and selected
+concept:
+
+```yaml
+design_review:
+  record: armchair_caddy.design-review.yaml
+  selected_concept: reinforced_miter
+```
+
+Drafts still compile so concepts can be investigated. Production promotion
+requires a named approval of the current selection fingerprint. Delivery then
+requires the selected concept to be marked `implemented` and a second named
+confirmation of both the selection and exact model fingerprints. Specs without
+the binding retain the legacy lifecycle. The generated design-selection HTML is
+a developer artifact and is not inserted into the customer build manual.
 
 ### Optional domain packs
 

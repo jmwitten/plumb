@@ -38,6 +38,7 @@ packages = [
     "detailgen.validation",
     "detailgen.rendering",
     "detailgen.rendering.web_viewer",
+    "detailgen.design_review",
     "detailgen.packs",
     "detailgen.packs.cabinetry",
 ]

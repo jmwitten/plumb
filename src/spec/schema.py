@@ -20,7 +20,8 @@ silent fill here.
 from __future__ import annotations
 
 import difflib
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
+from pathlib import Path
 
 # The install-contract closed vocabularies (task INSTALL v1) are owned by the
 # leaf contract module — the spec surface names the SAME sets, imported (never
@@ -1100,6 +1101,14 @@ class SequenceSpec:
 
 
 @dataclass(frozen=True)
+class DesignReviewSpec:
+    """Opt-in binding from a production DetailSpec to its design review."""
+
+    record: str
+    selected_concept: str
+
+
+@dataclass(frozen=True)
 class DetailSpecDoc:
     """A whole DetailSpec: metadata, the param/derived dimension blocks, the
     placed components, the declared connections, and the escape-hatch
@@ -1166,8 +1175,24 @@ class DetailSpecDoc:
     # unchanged. Plumbing only here — no event graph, no axis-3 semantics;
     # this is the parsed+validated authoring surface the next task consumes.
     sequence: SequenceSpec = field(default_factory=SequenceSpec)
+    # Optional pre-model design-selection governance. ``InitVar`` keeps the new
+    # binding out of legacy dataclass/asdict projections; ``__post_init__``
+    # retains the typed value for the compiler and explicit serializer.
+    design_review: InitVar[DesignReviewSpec | None] = None
+    # Loader context uses the same non-projected mechanism so dataclass
+    # ``replace`` preserves the sidecar base directory without changing legacy
+    # content hashes.
+    source_path: InitVar[Path | None] = None
     # Whether ``units`` was omitted (defaulted to ``in``) — a provenance flag the
     # compiler records as an inferred fact (P1: a silent default that scales
     # every length 25.4x is exactly the kind of assumption the log must surface).
     # Excluded from equality so a spec round-trips identically either way.
     units_defaulted: bool = field(default=False, compare=False)
+
+    def __post_init__(
+        self,
+        design_review: DesignReviewSpec | None,
+        source_path: Path | None,
+    ) -> None:
+        object.__setattr__(self, "design_review", design_review)
+        object.__setattr__(self, "source_path", source_path)

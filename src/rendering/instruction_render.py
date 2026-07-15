@@ -145,7 +145,7 @@ def _fmt_dimension(mm: float) -> str:
 def _stations_for_overlay(panel) -> tuple[tuple, tuple]:
     """Return every station that must be marked and dimensioned in the image."""
     dimensions = tuple(panel.stations)
-    markers = dimensions if panel.action == "fasten" else ()
+    markers = dimensions if panel.action in ("bond", "fasten") else ()
     return markers, dimensions
 
 

@@ -7,10 +7,10 @@ support/bearing verdicts). It exists so a reviewer can watch a non-zipline desig
 exercise the same machinery, and so the progression harness (``scripts/
 smoke_progression.py``) has a committed spec to re-run at each FAB milestone.
 
-The design (see ``details/armchair_caddy.spec.yaml``): a three-board saddle that
-straddles a sofa arm. One flat top board caps the arm; two side boards drop down
-its sides, butt-jointed under the top board and held by hidden interior
-registration rails (glued up to the top, screwed into the sides). The caddy
+The design (see ``details/armchair_caddy.spec.yaml``): a three-panel hardwood
+sleeve that straddles a sofa arm. One flat top panel caps the arm; two matching
+side panels turn down through glued 45-degree miters, each reinforced by two
+diagonal hardwood corner keys. The caddy
 fastens to NOTHING on the sofa — it BEARS on the arm top by gravity. The arm is
 an EXISTING context body (self-grounded, like the platform's trunk).
 """
@@ -25,6 +25,7 @@ import time
 from pathlib import Path
 
 import pytest
+import yaml
 
 from detailgen.spec.compiler import compile_spec_file
 from detailgen.core.process_graph import (
@@ -37,29 +38,16 @@ SPEC = _REPO / "details" / "armchair_caddy.spec.yaml"
 HARNESS = _REPO / "scripts" / "smoke_progression.py"
 VIEW_RENDERER = _REPO / "scripts" / "render_caddy_views.py"
 
-#: The fabricated members and the fabrication steps each must carry. The two 1x6
-#: side boards are crosscut to length + eased; the 5/4x6 top board is additionally
-#: BORED — the cup hole is a designed recess (CL-2 ``bore`` FEATURE), a DISTINCT
-#: step kind from a clearance ``notch`` so the cut note speaks the hole's own name
-#: ("cup hole"), never trunk-clearance language. The two full-depth 1x6 registration
-#: rails (the D1 hidden-fastener revision, deepened by the D6 stability fix) are
-#: plain crosscut blocks — no ease, no bore.
 _EXPECTED_STEPS = {
-    "side board +X": ["crosscut", "ease"],
-    "side board -X": ["crosscut", "ease"],
-    "top board": ["crosscut", "ease", "bore"],
-    "registration rail +X": ["crosscut"],
-    "registration rail -X": ["crosscut"],
+    "side panel +X": ["crosscut", "ease", "miter_crosscut"],
+    "side panel -X": ["crosscut", "ease", "miter_crosscut"],
+    "top panel": ["crosscut", "ease", "miter_crosscut", "miter_crosscut", "bore"],
 }
 
-#: Per-member stock profile (the top board is 5/4x6 decking, the sides plain 1x6,
-#: the registration rails full-depth 1x6).
 _EXPECTED_STOCK = {
-    "side board +X": "1x6",
-    "side board -X": "1x6",
-    "top board": "5/4x6 PT",
-    "registration rail +X": "1x6",
-    "registration rail -X": "1x6",
+    "side panel +X": "3/4 in hardwood panel, 5 1/2 in wide",
+    "side panel -X": "3/4 in hardwood panel, 5 1/2 in wide",
+    "top panel": "3/4 in hardwood panel, 5 1/2 in wide",
 }
 
 
@@ -72,45 +60,26 @@ def caddy():
 
 
 def test_compiles_and_validates_with_declared_bench_staging(caddy):
-    """compile_spec_file -> validate runs the full sweep with an HONEST
-    verdict. The rail->top joints are hardware-free glued bonds (nothing
-    for the installability checks to judge); the side joints author
-    joint-geometry embedment minimums. The eight side-screw corridors meet
-    the sofa arm in final geometry but clear in the authored whole-detail
-    bench frame. Because the arm is connection-free context, every clear
-    carries the stronger DECLARED TRUST/P1 ceiling."""
+    """The hardware-free keyed miters validate without invented screw checks."""
     detail, report = caddy
-    from collections import Counter
     assert report.failures == []
     access = [f for f in report.findings if f.check == "install_access"]
-    assert Counter(f.verdict for f in access) == Counter({"PASS": 8})
-    assert all("sofa arm" in f.detail
-               and "[staging]" in f.detail
-               and "DECLARED TRUST" in f.detail
-               and "insertion travel is not analyzed" in f.detail
-               and f.declared_order and f.declared_trust
-               for f in access)
-    # termination is green on merit: 8 GEOMETRY-PROVEN side bites at the
-    # authored minimum. The glued rail->top bonds contribute NO install
-    # verdicts at all (no hardware — the type's explicit empty contract),
-    # and their connectivity is the derived bonded_to edges.
+    assert access == []
     terms = [f for f in report.findings if f.check == "install_termination"]
-    assert len(terms) == 8 and all(f.passed for f in terms)
-    assert sum("declared minimum [authored_override]" in f.detail
-               for f in terms) == 8
+    assert terms == []
     bonded = [e for e in detail._connection_checks.edges
               if e.kind == "bonded_to"]
     assert len(bonded) == 2
+    keyed = [e for e in detail._connection_checks.edges if e.kind == "keyed_by"]
+    assert len(keyed) == 2
     assert report.blocking == [] and report.ok
 
 
-def test_interior_caddy_screw_heads_are_authored_flush_not_proud(caddy):
+def test_reinforced_miters_have_no_metal_install_contract(caddy):
     detail, _report = caddy
-    installs = detail._connection_checks.installs
-    assert len(installs) == 2
-    assert all(ri.contract.head == "flush_countersunk" for ri in installs)
-    assert all(ri.provenance_map["head"] == "authored_override"
-               for ri in installs)
+    assert detail._connection_checks.installs == []
+    assert not [part for part in detail.assembly.parts
+                if "screw" in part.name.lower() or "bracket" in part.name.lower()]
 
 
 def test_every_board_has_expected_fabrication_record(caddy):
@@ -129,8 +98,8 @@ def test_every_board_has_expected_fabrication_record(caddy):
 
     assert steps_by_name == _EXPECTED_STEPS
 
-    # The screws and the existing arm are purchased-as-is: no fabrication record.
-    for name in ("rail-side screw +X upper 0", "rail-side screw -X lower 1", "sofa arm"):
+    # The dowels and existing arm are purchased-as-is: no fabrication record.
+    for name in ("corner key +X front", "corner key -X back", "sofa arm"):
         assert _fabrication_record_of(by_name[name].component) is None
 
     # Each board's stock is a real linear stick of the expected profile.
@@ -150,47 +119,29 @@ def test_fabrication_fold_invariant_holds(caddy):
 
 
 def test_bom_rows_and_cut_lengths(caddy):
-    """The BOM is derived from the fabrication records, so the cut lengths it
-    reports are the crosscut lengths, not an independently-declared number: two
-    7in 1x6 side boards, one 9.5in 5/4x6 top board, two 5.5in 1x6 registration
-    rails (the D6 fix — same nominal as the sides but a shorter cut, so a separate
-    row), and eight rail-side screws (the rail->top joints are glued — no
-    hardware, and wood glue is a shop consumable, never a billed row). The
-    existing arm is tagged 'existing', never billed as purchased stock."""
+    """The BOM derives the two panel lengths and four flush dowel keys."""
     detail, _report = caddy
     bom = detail.bom_table()
 
     def in_len(r):
         return round(r["length_mm"] / 25.4, 2)
 
-    # Both the sides and the rails are 1x6, but at different cut lengths, so they
-    # bill as two distinct rows (bom_group keys on nominal + length). Cut lengths
-    # read straight off the crosscut step (retro R28: one source).
-    rows_1x6 = [r for r in bom if r["item"] == "1x6 lumber"]
-    assert len(rows_1x6) == 2
-    side_row = next(r for r in rows_1x6 if in_len(r) == 7.0)   # the two side boards
-    rail_row = next(r for r in rows_1x6 if in_len(r) == 5.5)   # the two D6 rails
+    panels = [r for r in bom if r["item"] == "3/4 in hardwood panel"]
+    assert len(panels) == 2
+    side_row = next(r for r in panels if in_len(r) == 7.75)
+    top_row = next(r for r in panels if in_len(r) == 8.0)
     assert side_row["qty"] == 2
-    assert rail_row["qty"] == 2
-
-    top_row = next(r for r in bom if "5/4x6" in r["item"])
     assert top_row["qty"] == 1
-    assert in_len(top_row) == 9.5
-
-    # No 1x2 stock remains — the shallow cleats were deepened into 1x6 rails.
-    assert not [r for r in bom if r["item"] == "1x2 lumber"]
-
-    # Eight rail-side screws total (two pairs per rail), one length row — the
-    # rail->top joints are glued and bill no hardware.
-    screw_rows = [r for r in bom if "Screw" in r["item"]]
-    assert len(screw_rows) == 1
-    assert sum(r["qty"] for r in screw_rows) == 8
+    dowel_row = next(r for r in bom if r["item"] == "3/8 in hardwood dowel")
+    assert dowel_row["qty"] == 4 and in_len(dowel_row) == 1.06
+    assert not [r for r in bom if "screw" in r["item"].lower()
+                or "rail" in r["item"].lower()]
 
     # The sofa arm is EXISTING context, not purchased lumber — it must not be
     # billed as stock, and its row is honestly marked existing.
     arm_ids = {"boulder-0"}
     assert not any(arm_ids & set(r["ids"]) for r in bom
-                   if r["item"] == "1x6 lumber" or "5/4x6" in r["item"])
+                   if r["item"] == "3/4 in hardwood panel")
     arm_row = next(r for r in bom if "existing" in r["item"].lower())
     assert arm_row["qty"] == 1
 
@@ -211,8 +162,8 @@ def test_bearing_on_arm_is_represented_capacity_absent(caddy):
     assert arm_bearings[0].passed
     assert arm_bearings[0].verdict == "PASS"
 
-    # The side boards do NOT bear on the arm (clearance) — no such bearing exists.
-    assert not any(f.check == "bearing" and "side board" in f.subject
+    # The side panels do NOT bear on the arm (clearance) — no such bearing exists.
+    assert not any(f.check == "bearing" and "side panel" in f.subject
                    and "sofa arm" in f.subject for f in report.findings)
 
     # No support-obligation finding: nothing is declared a walking_surface, so the
@@ -260,15 +211,15 @@ def test_raster_builder_captions_avoid_x_coordinate_part_names():
     assert captions
     assert not [caption for caption in captions
                 if "+X" in caption or "-X" in caption]
-    assert "END: arm length, side-board 7in drop" in captions
-    assert any("ZOOM registration-rail corner" in caption
+    assert "END: arm length and removable waterfall sleeve" in captions
+    assert any("ZOOM reinforced miter" in caption
                for caption in captions)
 
     for machine_name in (
-        "side board +X",
-        "side board -X",
-        "registration rail +X",
-        "registration rail -X",
+        "side panel +X",
+        "side panel -X",
+        "corner key +X front",
+        "corner key -X back",
     ):
         assert f'"{machine_name}":' in source
     assert 'hide=("sofa arm",)' in source
@@ -335,10 +286,11 @@ def test_progression_harness_matches_the_tree_it_runs_on(caddy):
     for section in ("validation verdicts", "bill of materials",
                     "process records", "derived cut list", "evidence walkback"):
         assert section in block, section
-    # The declared off-sofa bench frame resolves all eight access questions.
+    # The keyed glue joints need no metal-fastener access corridors.
     assert "failures: 0" in block and "blocking: 0" in block
-    assert "1x6 lumber" in block and '7.00"' in block and '9.50"' in block
-    assert '5.50"' in block                              # the D6 1x6 registration rails
+    assert "3/4 in hardwood panel" in block
+    assert '7.75"' in block and '8.00"' in block
+    assert "3/8 in hardwood dowel" in block
 
     # FAB-1 is present in every era at/after the caddy's base: the process-record
     # section names the real steps, including the top board's cup-hole bore.
@@ -383,10 +335,15 @@ def test_progression_harness_matches_the_tree_it_runs_on(caddy):
 # ---------------------------------------------------------------------------- #
 # task 8: doc render through the real entry path, visual review, view coverage.
 # ---------------------------------------------------------------------------- #
-def test_certifying_render_accepts_declared_staging(caddy, tmp_path):
-    """With no blocking verdict left, both the certifying and documentation
-    entry paths render. The trust ceiling remains visible in their reports."""
-    detail, _report = caddy
+def test_certifying_render_accepts_declared_staging(tmp_path):
+    """Legacy ungoverned details retain both historical render entry paths."""
+    raw = yaml.safe_load(SPEC.read_text())
+    raw.pop("design_review")
+    legacy_spec = tmp_path / SPEC.name
+    legacy_spec.write_text(yaml.safe_dump(raw, sort_keys=False))
+    detail = compile_spec_file(legacy_spec)
+    detail.validate()
+
     certified = detail.render(tmp_path / "certified")
     assert certified.exists()
     assert "DECLARED TRUST" in (certified / "validation_report.md").read_text()
@@ -423,17 +380,14 @@ def test_doc_renders_through_render_documentation(caddy, tmp_path):
     assert "**set whole detail in place**" in text
     assert "authored staging claim" in text
     # +process provenance is not hidden behind the per-connection sample cap.
-    assert "Glued.process_events" in text
-    assert "sequence.after" in text
+    assert "DowelReinforcedMiter.process_events" in text
     assert "[inferred] event order" in text
-    assert "[official] event order" in text
-    assert "Bond/install before process cure" in text
-    assert "Authored process point constraints" in text
-    assert "rail +X -> top underside (glued)" in text
-    assert "rail +X -> side +X inner face" in text
+    assert "event order drive(top -> side" in text
+    assert "top -> side +X (dowel-reinforced miter)" in text
+    assert "keyed_by" in text
 
 
-def test_build_sequence_derives_cat_k_cures_before_side_screws_and_join(caddy):
+def test_build_sequence_derives_each_miter_cure_before_final_join(caddy):
     from detailgen.assemblies.event_graph import Event
     from detailgen.validation.build_sequence import (
         build_sequence_model, render_build_sequence_md)
@@ -445,172 +399,55 @@ def test_build_sequence_derives_cat_k_cures_before_side_screws_and_join(caddy):
     assert "set whole detail in place" in titles
     assert titles.index("bench whole detail") < \
         titles.index("set whole detail in place")
-    # The staging defense names only the frame/context claim. Process order is
-    # owned separately by typed process facts + sequence.after.
     why = steps[0]["why"]
-    assert "assembled off the sofa" in why and "DECLARED TRUST" in why
-    assert "then drive" not in why and "cure" not in why.lower()
+    assert "finished off the sofa" in why and "DECLARED TRUST" in why
     assert steps[0]["claim"] == "staging"
     assert steps[titles.index("set whole detail in place")]["joins"] == \
         ("whole detail",)
     assert "sofa arm" not in loose
 
     graph = detail._connection_checks.event_graph
-    sources = (
-        "rail +X -> top underside (glued)",
-        "rail -X -> top underside (glued)",
-    )
-    targets = (
-        "rail +X -> side +X inner face (screwed, face grain, upper + lower pairs)",
-        "rail -X -> side -X inner face (screwed, face grain, upper + lower pairs)",
+    joints = (
+        "top -> side +X (dowel-reinforced miter)",
+        "top -> side -X (dowel-reinforced miter)",
     )
     process_steps = [step for step in steps if step["process"] is not None]
     assert len(process_steps) == 2
     assert all(step["process"]["fact"].provenance ==
                "authored_process_fact" for step in process_steps)
-    for source in sources:
-        bond = Event("drive", source, "")
-        cure = Event("process", source, "cure")
+    join = graph.join_of["whole detail"]
+    for joint in joints:
+        bond = Event("drive", joint, "")
+        cure = Event("process", joint, "cure")
         assert graph.precedes(bond, cure)
+        assert graph.precedes(cure, join)
         cure_step = next(step for step in process_steps
                          if step["process"]["event"] == cure)
-        assert {claim["target"] for claim in cure_step["order_claims"]} == \
-            set(targets)
-        assert all(claim["role"] == "source"
-                   for claim in cure_step["order_claims"])
-        for target in targets:
-            (screws,) = graph.drives_of[target]
-            assert graph.precedes(cure, screws)
+        assert cure_step["order_claims"] == ()
 
-    join = graph.join_of["whole detail"]
-    for target in targets:
-        (screws,) = graph.drives_of[target]
-        assert graph.precedes(screws, join)
-        target_step = next(step for step in steps
-                           if target in step["connections"])
-        assert {claim["source"] for claim in target_step["order_claims"]} == \
-            set(sources)
-        assert all(claim["role"] == "target"
-                   for claim in target_step["order_claims"])
-        assert all("not a universal" in claim["why"]
-                   for claim in target_step["order_claims"])
-
-    # The rendered content is byte-stable and each authored why appears at
-    # both ends of its point constraint.
     first = render_build_sequence_md(detail)
     assert first == render_build_sequence_md(detail)
-    for why in {claim.why for claim in detail.resolved_after()}:
-        expected = 2 * sum(
-            len(claim.after) for claim in detail.resolved_after()
-            if claim.why == why)
-        assert first.count(why) == expected
+    assert detail.resolved_after() == ()
+    assert first.count("Insert both corner keys") == 2
     assert "No generic duration is represented" in first
 
 
-def test_cat_k_reversion_removes_one_target_and_its_two_cure_dependencies(caddy):
-    import html
-    from types import SimpleNamespace
-
-    from detailgen.assemblies import compile_connections
-    from detailgen.assemblies.event_graph import FAMILY_AUTHORED, FAMILY_NECESSITY
-    from detailgen.validation.build_sequence import (
-        build_sequence_model, render_build_sequence_md)
-    from detailgen.validation.install import epistemic_contract_rows
-
-    if str(_REPO / "scripts") not in sys.path:
-        sys.path.insert(0, str(_REPO / "scripts"))
-    import single_detail_report as SDR
+def test_miter_process_order_has_one_authoritative_owner(caddy):
+    from detailgen.assemblies.event_graph import FAMILY_NECESSITY
 
     detail, _report = caddy
-    claims = detail.resolved_after()
-    assert len(claims) == 2
-    surviving_claim, removed_claim = claims
-    full_checks = detail._connection_checks
-    full = full_checks.event_graph
-    reverted_checks = compile_connections(
-        detail.assembly, detail.connections(), after=claims[:1],
-        staging=detail.resolved_staging())
-    reverted = reverted_checks.event_graph
-    reverted_detail = SimpleNamespace(
-        assembly=detail.assembly, _connection_checks=reverted_checks)
-
-    def process_pairs(graph, family):
-        return {(edge.a, edge.b) for edge in graph.edges
-                if edge.family == family
-                and (edge.a.kind == "process" or edge.b.kind == "process")}
-
-    # Reverting one target claim removes both of that target's cross-cure
-    # dependencies at the graph boundary. The two independently derived
-    # bond->cure facts survive.
-    assert full.constraints == claims
-    assert reverted.constraints == (surviving_claim,)
-    assert removed_claim not in reverted.constraints
-    assert process_pairs(full, FAMILY_NECESSITY) == \
-        process_pairs(reverted, FAMILY_NECESSITY)
-    assert len(process_pairs(reverted, FAMILY_NECESSITY)) == 2
-    removed = process_pairs(full, FAMILY_AUTHORED) - \
-        process_pairs(reverted, FAMILY_AUTHORED)
-    assert len(removed) == 2
-    assert {source.subject for source, _target in removed} == {
-        "rail +X -> top underside (glued)",
-        "rail -X -> top underside (glued)",
-    }
-    assert all(target.subject.startswith("rail -X -> side -X inner face")
-               for _source, target in removed)
-    assert process_pairs(reverted, FAMILY_AUTHORED) <= \
-        process_pairs(full, FAMILY_AUTHORED)
-
-    # The same removal must propagate through every authoritative and reader
-    # projection; no stale second owner may preserve the deleted -X claim.
-    def authoritative_after_connections(checks):
-        facts = [fact for fact in checks.derived
-                 if fact.rule == "sequence.after"]
-        assert all(fact.source_type == "authoritative"
-                   and fact.confidence == "official" for fact in facts)
-        return [fact.connection for fact in facts]
-
-    assert authoritative_after_connections(full_checks).count(
-        surviving_claim.connection) == 2
-    assert authoritative_after_connections(full_checks).count(
-        removed_claim.connection) == 2
-    assert authoritative_after_connections(reverted_checks) == [
-        surviving_claim.connection, surviving_claim.connection]
-
-    full_rows = "\n".join(" | ".join(row)
-                          for row in epistemic_contract_rows(full_checks))
-    reverted_rows = "\n".join(
-        " | ".join(row) for row in epistemic_contract_rows(reverted_checks))
-    surviving_target = f"-> '{surviving_claim.connection}'"
-    removed_target = f"-> '{removed_claim.connection}'"
-    assert surviving_target in full_rows and removed_target in full_rows
-    assert surviving_target in reverted_rows and removed_target not in reverted_rows
-
-    reverted_model = build_sequence_model(reverted_detail)
-    assert reverted_model is not None
-    model_pairs = {
-        (order_claim["source"], order_claim["target"])
-        for step in reverted_model[0]
-        for order_claim in step["order_claims"]
-    }
-    assert model_pairs == {
-        (after.connection, surviving_claim.connection)
-        for after in surviving_claim.after
-    }
-
-    markdown = render_build_sequence_md(reverted_detail)
-    assert markdown.count(surviving_claim.why) == 4
-    assert (f"before installing {removed_claim.connection} — authored_sequence"
-            not in markdown)
-    assert (f"do not install {removed_claim.connection} until"
-            not in markdown)
-
-    html_section = html.unescape(
-        SDR._render_build_sequence_section(reverted_detail))
-    assert html_section.count(surviving_claim.why) == 4
-    assert (f"before installing {removed_claim.connection} — authored_sequence"
-            not in html_section)
-    assert (f"do not install {removed_claim.connection} until"
-            not in html_section)
+    graph = detail._connection_checks.event_graph
+    process_edges = [edge for edge in graph.edges
+                     if edge.family == FAMILY_NECESSITY
+                     and edge.b.kind == "process"]
+    assert len(process_edges) == 2
+    assert all(edge.a.kind == "drive" and edge.b.group == "cure"
+               for edge in process_edges)
+    facts = [fact for fact in detail._connection_checks.derived
+             if fact.rule == "DowelReinforcedMiter.process_events"]
+    assert len(facts) == 2
+    assert not [fact for fact in detail._connection_checks.derived
+                if fact.rule == "sequence.after"]
 
 
 def test_cat_k_sequence_prose_exists_only_in_typed_authoring_surfaces():
@@ -716,7 +553,7 @@ def test_view_coverage_table_audited_both_directions():
         assert a.get("rationale", "").strip(), a["area"]
     # the deliberately-mirrored -X joint is a recorded why-not, not a second
     # identical zoom (the over-generation guard the directive names).
-    mirror = next(a for a in areas if "-X butt joint" in a["area"])
+    mirror = next(a for a in areas if "-X reinforced miter" in a["area"])
     assert mirror["decision"] == "WHY-NOT" and "mirror" in mirror["rationale"].lower()
 
 
@@ -788,40 +625,26 @@ def test_single_detail_html_build_document(tmp_path):
         assert cid in html
     assert 'id="detail-glb-' in html and "Explore in 3D" in html  # 3D viewer + GLB
 
-    # BOM/labels asserted against the VISIBLE text (F5): every caddy part is in the
-    # reader-facing buy list — including BOTH 1x6 side boards (bug F3) — and the arm
-    # is the spec's "sofa arm", not the "boulder" primitive it is modeled on (F4).
+    # BOM/labels asserted against visible text: panels, keys, and context all read
+    # as the builder-facing objects rather than their implementation primitives.
     vis = _visible_text(html)
-    assert "1x6 lumber" in vis and "5/4x6 decking" in vis
-    assert "structural screw" in vis.lower()
+    assert "3/4 in hardwood panel" in vis
+    assert "3/8 in hardwood dowel" in vis
     assert "Sofa arm (existing)" in vis and "Boulder (existing)" not in vis
     low = vis.lower()
-    assert "five-piece saddle" in low
-    assert "flush with the top-board ends" in low
-    assert "inner face sits 1in outside" in low
-    assert "top cut formula" in low and "9.5in" in low
-    assert "rail layout" in low and "6.5in apart" in low
-    assert "screw stations" in low and "2.15in" in low and "3.35in" in low
-    assert "0.75in and 4in below" in low
-    assert "tools:" in low and "3.5in opening" in low and "hole saw" in low
-    assert "drill/driver" in low
-    assert "consumables:" in low and "water-resistant finish" in low
-    assert "intended cup" in low and "fit template" in low
-    assert "drill press" in low and "side handle" in low and "jigsaw" in low
-    assert "workpiece clamped" in low
-    assert "head=flush_countersunk" in low and "head=proud" not in low
-    assert "longitudinal sliding is not analyzed" in low
+    assert "three-panel hardwood sleeve" in low
+    assert "reinforced-miter waterfall" in low
+    assert "panel cuts" in low and "8in long point" in low and "7.75in long point" in low
+    assert "corner-key layout" in low and "1.1875in" in low
+    assert "doweling jig" in low and "clamp square" in low
+    assert "water-resistant finish" in low
+    assert "intended cup" in low and "fit templates" in low
+    assert "no rail or metal fastener remains" in low
+    assert "sliding resistance" in low
     assert "authored_process_fact" in low
     assert "selected adhesive label's full-cure/full-strength condition" in low
     assert "actual shop conditions" in low
     assert "no generic duration is represented" in low
-    assert "bond/install before process cure" in low
-    assert "authored process point constraints" in low
-    assert "authored_sequence" in low
-    import html as _html
-    visible_text = _html.unescape(vis)
-    for claim in compile_spec_file(SPEC).resolved_after():
-        assert visible_text.count(claim.why) >= 3  # table + both affected steps
     # Hidden viewer metadata is reader-visible on hover and must use the
     # domain part, not the rectangular primitive used to approximate it.
     raw = html.lower()
@@ -866,14 +689,10 @@ def test_caddy_doc_carries_no_zipline_content(tmp_path):
     assert "kids" not in vis and "4 parametric models" not in vis
 
 
-def test_caddy_doc_prose_describes_the_current_rail_joint(tmp_path):
+def test_caddy_doc_prose_describes_the_current_reinforced_miter(tmp_path):
     """Guard against retro R24 (hand-authored consumer prose drifting out of sync
-    with the model across design revisions). The reader-facing prose must describe
-    the CURRENT top<->side joint — hidden 1x6 registration rails, face-grain
-    fastening — and must NOT carry the pre-D1 top-face-screw narrative. Positive +
-    targeted-negative, both on the VISIBLE text (low-brittleness: the negatives are
-    phrases that ONLY ever described the retired straight-down-into-end-grain joint;
-    'end grain' itself is NOT banned — the top's end-grain BEARING is still true)."""
+    with the model across revisions). The visible prose must describe the current
+    keyed miters and omit every retired rail, bracket, and screw architecture."""
     if str(_REPO / "scripts") not in sys.path:
         sys.path.insert(0, str(_REPO / "scripts"))
     import single_detail_report as SDR
@@ -882,15 +701,12 @@ def test_caddy_doc_prose_describes_the_current_rail_joint(tmp_path):
                        spec_path=_REPO / "details" / "armchair_caddy.spec.yaml")
     vis = _visible_text((tmp_path / "d.html").read_text()).lower()
 
-    # POSITIVE: the current joint is described — registration rails, face grain.
-    assert "registration rail" in vis
-    assert "face grain" in vis
-    # NEGATIVE: the retired pre-D1 joint narrative is gone. These phrases described
-    # ONLY the top board screwed straight down into the side's end grain on the show
-    # face — impossible for the hidden-rail joint, so their presence = stale prose.
-    for stale in ("screwed straight down", "top-face screw stations",
+    assert "45-degree glued miters" in vis
+    assert "hardwood corner keys" in vis
+    assert "two 3/8in hardwood keys" in vis
+    for stale in ("registration rail", "structural screw", "cleat_screwed",
                   "screws per joint"):
-        assert stale not in vis, f"stale pre-D1 joint prose in caddy doc: {stale!r}"
+        assert stale not in vis, f"stale retired-joint prose in caddy doc: {stale!r}"
 
 
 # ---------------------------------------------------------------------------- #
@@ -898,11 +714,7 @@ def test_caddy_doc_prose_describes_the_current_rail_joint(tmp_path):
 # ---------------------------------------------------------------------------- #
 def test_design_findings_store_statuses_per_ruling():
     """The design-review store (D1-D6) loads through the REAL loader with the
-    statuses set by the 2026-07-08 rulings and the revisions that followed: D1
-    fixed-by-revision (the hidden-cleat revision), D6 fixed-by-revision (those
-    cleats deepened into 1x6 registration rails — the stability fix), D2
-    accepted-with-rationale (hardwood; species vocabulary = CL v2), D3/D4/D5 open.
-    The fix + rationale live in each finding, never lost."""
+    current reinforced-miter resolutions while D3/D4/D5 remain honest follow-ups."""
     from detailgen.review import load_findings_file
 
     store = _REPO / "reviews" / "visual" / "caddy-design-findings.yaml"
@@ -911,23 +723,17 @@ def test_design_findings_store_statuses_per_ruling():
     assert set(by) == {"D1", "D2", "D3", "D4", "D5", "D6"}
     assert len(s.open_findings()) == 3                  # D1/D2/D6 resolved; D3/D4/D5 open
 
-    # D1: FIXED by the revision — resolved under the first-class fixed-by-revision
-    # state (a real defect removed by a spec revision), its note recording the
-    # cleat_screwed type + the deleted show-face screws.
     assert not by["D1"].is_open
     assert by["D1"].resolution.status == "fixed-by-revision"
     d1note = by["D1"].resolution.note.lower()
-    assert "fixed" in d1note and "cleat_screwed" in d1note
-    assert "deleted" in d1note and "face grain" in d1note
-    # D6: FIXED by the rail revision — the cleats deepened into 1x6 rails, note
-    # citing the rail fix + the restored registration depth.
+    assert "fixed" in d1note and "reinforced-miter" in d1note
+    assert "deleted" in d1note and "hardwood dowels" in d1note
     assert not by["D6"].is_open
     assert by["D6"].resolution.status == "fixed-by-revision"
     d6note = by["D6"].resolution.note.lower()
-    assert "fixed" in d6note and "rail" in d6note and "5.5" in d6note
-    # D2: accepted-with-rationale, deferred to species vocabulary (CL v2).
+    assert "fixed" in d6note and "eliminated" in d6note
     assert not by["D2"].is_open
-    assert by["D2"].resolution.status == "documented-assumption-or-unknown"
+    assert by["D2"].resolution.status == "fixed-by-revision"
     assert "species" in by["D2"].resolution.note.lower()
 
 
@@ -954,14 +760,8 @@ def test_design_review_block_disclosed_in_caddy_doc(tmp_path):
     assert not [t for t in _ZIPLINE_TOKENS if t in vis.lower()]
 
 
-def test_rail_revision_hides_fasteners_and_registers_deep():
-    """The D6 revision (2026-07-08), joints as shipped today: two full-depth 1x6
-    registration rails (dropping 5.5in down the arm side), each GLUED up to the
-    top board's underside and screwed into its side board with an upper + lower
-    side-screw pair. No fastener lands on the top show face; the deep rail
-    restores lateral registration (rock ~2.6deg vs the shallow cleat's 9.5deg);
-    and the top<->side end-grain bearing is unchanged (a rail registers, it is
-    not the gravity seat)."""
+def test_reinforced_miter_revision_uses_three_panels_and_four_keys():
+    """The selected architecture has no hidden catch-up parts or metal hardware."""
     from detailgen.core.units import IN
 
     detail = compile_spec_file(SPEC)
@@ -970,34 +770,18 @@ def test_rail_revision_hides_fasteners_and_registers_deep():
     by = {p.name: p for p in parts}
     names = list(by)
 
-    # Two interior registration rails; no top-face 'joint screw' parts, no 1x2 cleat.
-    rails = [p for p in parts if p.name.startswith("registration rail")]
-    assert len(rails) == 2
-    assert not any("joint screw" in n for n in names)
+    panels = [p for p in parts if p.reader_name in ("Top panel", "Side panel")]
+    keys = [p for p in parts if p.reader_name == "Corner key"]
+    assert len(panels) == 3 and len(keys) == 4
+    assert not any("rail" in n or "screw" in n or "bracket" in n for n in names)
 
-    # Each rail registers DEEP: its inner face is 0.25in off the arm (reveal
-    # preserved) and it drops ~5.5in below the arm-top pivot (Z=0), vs the 1x2
-    # cleat's 1.5in — the D6 stability restoration.
-    for rail in rails:
-        bb = rail.world_solid().val().BoundingBox()
-        assert round((0 - bb.zmin) / IN, 2) == 5.5      # registration depth below pivot
-    # arm reveal: rail inner face 0.25in off the arm side at X=3.0in (=arm_w/2).
-    rp = by["registration rail +X"].world_solid().val().BoundingBox()
-    assert round((rp.xmin / IN) - 3.0, 2) == 0.25
+    top = by["top panel"].world_solid().val().BoundingBox()
+    sides = [by["side panel +X"].world_solid().val().BoundingBox(),
+             by["side panel -X"].world_solid().val().BoundingBox()]
+    assert round((top.xmax - top.xmin) / IN, 2) == 8.0
+    assert round((sides[0].xmin - sides[1].xmax) / IN, 2) == 6.5
+    assert all(round(p.component.diameter / IN, 3) == 0.375 for p in keys)
 
-    # Eight rail-side screws (two pairs per rail; the rail->top joints are glued,
-    # no hardware), NONE on the show face: every screw's top stays below the top
-    # board's show face.
-    screws = [p for p in parts if "screw" in p.name]
-    assert len(screws) == 8
-    show_face_z = 1.0 * IN                              # top board top face (deck_thk)
-    for s in screws:
-        zmax = s.world_solid().val().BoundingBox().zmax
-        assert zmax < show_face_z - 1e-3, f"{s.name} breaches the top show face"
-
-    # The top-on-side end-grain gravity seat stays a declared, passing bearing pair
-    # (the rails register/hold parts together; they are NOT the seat).
     report = detail.validate()
-    side_bearings = [f for f in report.findings if f.check == "bearing"
-                     and "top board" in f.subject and "side board" in f.subject]
-    assert len(side_bearings) == 2 and all(f.passed for f in side_bearings)
+    bearings = [f for f in report.findings if f.check == "bearing"]
+    assert len(bearings) == 1 and bearings[0].passed

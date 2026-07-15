@@ -28,10 +28,13 @@ name, so two runs over one model produce byte-identical vectors):
        to ~0 instead of picking one beam to drive into.
     3. If |N| > EPS the direction is N normalized: every summed normal points
        away from a neighbor, so their sum can never point INTO the assembly.
-       Otherwise fall back to the radial direction center(P) - center(assembly)
-       (outward by construction); if that too is ~0 (a part at the centroid),
-       +Z.
-    4. Magnitude = BASE_STEP + GAIN * |radial displacement of P projected onto
+       Otherwise, if the component declares an ``axis`` datum, transform that
+       datum's +Z into world space and sign it away from the assembly centroid.
+       This withdraws an embedded connector along its physical axis.
+    4. If neither semantic source resolves a direction, fall back to the radial
+       direction center(P) - center(assembly) (outward by construction); if
+       that too is ~0 (a part at the centroid), +Z.
+    5. Magnitude = BASE_STEP + GAIN * |radial displacement of P projected onto
        the chosen direction| — a floor so even a near-central part separates,
        plus a term that fans nested parts out proportionally to how far out
        they already sit.
@@ -73,10 +76,29 @@ def _center(placed) -> tuple[float, float, float]:
 
 
 def _unit(v):
+    if not all(math.isfinite(c) for c in v):
+        return None
     n = math.sqrt(sum(c * c for c in v))
     if n < _EPS:
         return None
     return tuple(c / n for c in v)
+
+
+def _datum_axis_direction(placed, radial):
+    datum = placed.component.datums.get("axis")
+    if datum is None:
+        return None
+    direction = _unit(
+        placed.world_frame.transform_direction(datum.z_axis)
+    )
+    if direction is None:
+        return None
+    projection = sum(
+        radial[index] * direction[index] for index in range(3)
+    )
+    if projection < -_EPS:
+        direction = tuple(-value for value in direction)
+    return direction
 
 
 def _sum_unit(normals):
@@ -159,7 +181,12 @@ def derive_explode_vectors(assembly, contacts: dict | None = None) -> dict:
             continue
         c = centers[name]
         radial = tuple(c[k] - asm_c[k] for k in range(3))
-        direction = _sum_unit(normals[name]) or _unit(radial) or (0.0, 0.0, 1.0)
+        direction = (
+            _sum_unit(normals[name])
+            or _datum_axis_direction(p, radial)
+            or _unit(radial)
+            or (0.0, 0.0, 1.0)
+        )
         proj = abs(sum(radial[k] * direction[k] for k in range(3)))
         mag = BASE_STEP + GAIN * proj
         out[name] = tuple(mag * direction[k] for k in range(3))

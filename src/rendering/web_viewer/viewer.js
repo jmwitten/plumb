@@ -366,6 +366,7 @@
     var pinned = null; // partName pinned open
     var pinnedPoint = null; // slot-local point retained while a pin is hidden
     var currentPanel = 1;
+    var explodeAmount = 0;
     var arrivalNames = {};
 
     function objectIsVisible(object) {
@@ -382,7 +383,6 @@
       var row = payload.parts[partName];
       var entry = partNodes[partName];
       if (!row || !entry) return false;
-      if (row.first_panel && row.first_panel > currentPanel) return false;
       return entry.tops.some(objectIsVisible);
     }
 
@@ -534,7 +534,7 @@
       assembly.min = "1";
       assembly.max = String(payload.instruction_panels.length);
       assembly.step = "1";
-      assembly.value = "1";
+      assembly.value = String(payload.instruction_panels.length);
       assemblyWrap.appendChild(assembly);
       assemblyCurrent = document.createElement("span");
       assemblyCurrent.className = "v-assembly-current";
@@ -544,7 +544,7 @@
 
     var hint = document.createElement("span");
     hint.className = "v-hint";
-    hint.textContent = "Drag to orbit · scroll to zoom · hover a part";
+    hint.textContent = "Drag to orbit · Explode reveals all parts · hover a part";
     controlsEl.appendChild(hint);
 
     var closeBtn = document.createElement("button");
@@ -559,8 +559,21 @@
     var tmp = new THREE.Vector3();
     var q = new THREE.Quaternion();
 
+    function applyPartVisibility() {
+      if (!assembly) return;
+      var revealAll = explodeAmount > 0;
+      Object.keys(partNodes).forEach(function (name) {
+        var entry = partNodes[name];
+        var first_panel = payload.parts[name].first_panel;
+        var visible = revealAll || first_panel <= currentPanel;
+        entry.tops.forEach(function (node) { node.visible = visible; });
+      });
+    }
+
     function applyExplode() {
-      var t = parseFloat(explode.value);
+      explodeAmount = parseFloat(explode.value) || 0;
+      applyPartVisibility();
+      var t = explodeAmount;
       Object.keys(partNodes).forEach(function (name) {
         var entry = partNodes[name];
         var v = payload.parts[name] && payload.parts[name].explode;
@@ -592,11 +605,8 @@
         "Panel " + currentPanel + " · " + panel.action;
       arrivalNames = {};
       panel.arrivals.forEach(function (name) { arrivalNames[name] = true; });
+      applyPartVisibility();
       Object.keys(partNodes).forEach(function (name) {
-        var entry = partNodes[name];
-        var first_panel = payload.parts[name].first_panel;
-        var visible = first_panel <= currentPanel;
-        entry.tops.forEach(function (node) { node.visible = visible; });
         refreshPartEmissive(name);
       });
       if (hovered && !isPartVisible(hovered)) {
@@ -615,7 +625,7 @@
       assembly.addEventListener("input", function () {
         applyAssemblyPanel(assembly.value);
       });
-      applyAssemblyPanel(1);
+      applyAssemblyPanel(assembly.value);
     }
 
     // --- theme sync (highlight + dim line colors follow the sheet) ----------

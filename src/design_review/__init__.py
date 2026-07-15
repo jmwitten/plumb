@@ -1,0 +1,82 @@
+"""Precedent-first product-design selection and lifecycle governance."""
+
+from .loader import load_design_review_file, load_design_review_text
+from .fingerprint import (
+    model_fingerprint,
+    selection_fingerprint,
+    selection_payload,
+)
+from .gate import (
+    DesignGovernance,
+    DesignReviewGateError,
+    governance_for_review,
+)
+from .report import render_design_review_html
+from .schema import (
+    APPLICATION_STATES,
+    ASSESSMENTS,
+    CRITERIA,
+    SCHEMA_ID,
+    SIGNATURE_FIELDS,
+    SOURCE_KINDS,
+    Approval,
+    ArchitectureSignature,
+    ComparisonCell,
+    Concept,
+    ConceptFeature,
+    Constraint,
+    Decision,
+    DeliveryConfirmation,
+    DesignBrief,
+    DesignReviewDoc,
+    DesignReviewSchemaError,
+    Deviation,
+    NoveltyException,
+    PartPurpose,
+    Precedent,
+    Requirement,
+)
+from .validation import (
+    DesignReviewFinding,
+    DesignReviewResult,
+    DesignReviewValidationError,
+    validate_design_review,
+)
+
+__all__ = [
+    "APPLICATION_STATES",
+    "ASSESSMENTS",
+    "CRITERIA",
+    "SCHEMA_ID",
+    "SIGNATURE_FIELDS",
+    "SOURCE_KINDS",
+    "Approval",
+    "ArchitectureSignature",
+    "ComparisonCell",
+    "Concept",
+    "ConceptFeature",
+    "Constraint",
+    "Decision",
+    "DeliveryConfirmation",
+    "DesignBrief",
+    "DesignReviewDoc",
+    "DesignReviewSchemaError",
+    "Deviation",
+    "NoveltyException",
+    "PartPurpose",
+    "Precedent",
+    "Requirement",
+    "DesignReviewFinding",
+    "DesignGovernance",
+    "DesignReviewGateError",
+    "DesignReviewResult",
+    "DesignReviewValidationError",
+    "load_design_review_file",
+    "load_design_review_text",
+    "model_fingerprint",
+    "selection_fingerprint",
+    "selection_payload",
+    "governance_for_review",
+    "render_design_review_html",
+    "validate_design_review",
+]
