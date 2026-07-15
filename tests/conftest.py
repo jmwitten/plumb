@@ -71,6 +71,11 @@ def _detail_gate_selection(items, slug):
                 raise pytest.UsageError(
                     f"{item.nodeid}: detail_gate contracts must be non-empty"
                 )
+            if not all(isinstance(contract, str) for contract in declared):
+                raise pytest.UsageError(
+                    f"{item.nodeid}: detail_gate contracts must contain "
+                    "only strings"
+                )
             unknown = set(declared) - REQUIRED_DETAIL_CONTRACTS
             if unknown:
                 raise pytest.UsageError(

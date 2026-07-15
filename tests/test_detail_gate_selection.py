@@ -100,6 +100,10 @@ def test_complete_contract_is_accepted():
             "contracts must be non-empty",
         ),
         (
+            _marker("armchair_caddy", contracts=("compile", 7)),
+            "contracts must contain only strings",
+        ),
+        (
             _marker("armchair_caddy", contracts=("compile", "magic")),
             "unknown detail-gate contracts.*magic",
         ),
