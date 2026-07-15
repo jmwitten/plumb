@@ -8,6 +8,7 @@ procedural texture node is seeded.
 """
 
 import inspect
+import json
 import math
 import re
 import subprocess
@@ -233,6 +234,17 @@ def test_export_manifest_rejects_reserved_build_key(tmp_path):
     detail.add(Lumber("2x4", length=2 * IN, name="a"))
     with pytest.raises(ValueError, match="build"):
         export_manifest(detail, tmp_path / "guard.manifest.json", extra={"build": "clobber"})
+
+
+def test_export_manifest_carries_registered_rgba(tmp_path):
+    detail = DetailAssembly("material-color-manifest")
+    placed = detail.add(Lumber("2x4", length=2 * IN, name="color probe"))
+
+    path = export_manifest(detail, tmp_path / "detail.manifest.json")
+    part = json.loads(path.read_text())["parts"][0]
+
+    assert part["material"] == placed.component.material_key
+    assert part["rgba"] == list(placed.component.material.rgba)
 
 
 #: ShaderNodeTex* types known to need no seed: ShaderNodeTexCoord emits

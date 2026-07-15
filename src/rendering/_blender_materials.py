@@ -60,7 +60,7 @@ def resolve_material_builder(tag: str):
     if builder is None:
         print(
             f"WARNING: unknown material tag {tag!r} — no shader registered "
-            f"for it; falling back to flat gray. Known tags: "
+            f"for it; falling back to the registered manifest color. Known tags: "
             f"{known_material_tags()}",
             file=sys.stderr,
         )
@@ -163,7 +163,15 @@ def _mat_epoxy(nt):
     _principled(nt, (0.80, 0.45, 0.20), 0.35)
 
 
-def default_material(nt) -> None:
-    """Flat-gray fallback for an unrecognized tag. Never called silently —
-    see :func:`resolve_material_builder`."""
-    _principled(nt, (0.7, 0.7, 0.7), 0.6)
+def default_material(nt, base=(0.7, 0.7, 0.7)) -> None:
+    """Flat-color fallback for an unrecognized procedural material tag."""
+    _principled(nt, tuple(base[:3]), 0.6)
+
+
+def apply_material(nt, tag, rgba) -> None:
+    """Apply a known procedural shader or the registered manifest color."""
+    builder = resolve_material_builder(tag)
+    if builder is None:
+        default_material(nt, base=tuple(rgba[:3]))
+    else:
+        builder(nt)

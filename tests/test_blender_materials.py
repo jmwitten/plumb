@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 
 from detailgen.rendering._blender_materials import (
+    apply_material,
     known_material_tags,
     register_material_tag,
     resolve_material_builder,
@@ -50,3 +51,36 @@ def test_resolve_unknown_tag_warning_lists_known_tags(capsys):
 def test_registering_a_duplicate_tag_is_a_hard_error():
     with pytest.raises(ValueError):
         register_material_tag("steel_galv")(lambda nt: None)  # already registered
+
+
+def test_unknown_procedural_tag_uses_registered_manifest_color(
+    monkeypatch, capsys
+):
+    from detailgen.rendering import _blender_materials as bm
+
+    calls = []
+    monkeypatch.setattr(
+        bm,
+        "_principled",
+        lambda nt, base, rough, metal=0.0: calls.append(
+            (nt, base, rough, metal)
+        ),
+    )
+    nt = object()
+    apply_material(nt, "mahogany_probe", (0.31, 0.12, 0.07, 1.0))
+
+    assert calls == [(nt, (0.31, 0.12, 0.07), 0.6, 0.0)]
+    assert "unknown material tag" in capsys.readouterr().err
+
+
+def test_known_procedural_tag_uses_registered_builder(monkeypatch, capsys):
+    from detailgen.rendering import _blender_materials as bm
+
+    calls = []
+    monkeypatch.setitem(bm._MATERIAL_BUILDERS, "known_probe", calls.append)
+
+    nt = object()
+    apply_material(nt, "known_probe", (0.31, 0.12, 0.07, 1.0))
+
+    assert calls == [nt]
+    assert capsys.readouterr().err == ""

@@ -25,7 +25,7 @@ from pathlib import Path
 # rather than relying on Blender's `--python <script>` invocation to have
 # already put it there.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _blender_materials import resolve_material_builder, default_material  # noqa: E402
+from _blender_materials import apply_material  # noqa: E402
 
 import bpy
 import bmesh
@@ -78,15 +78,11 @@ def import_glb(path):
 # if/elif chain through a registry" means a LOCAL mirror of
 # `detailgen.core.registry.Registry` here rather than importing the real
 # thing (cross-process: this script runs inside Blender's own Python).
-def make_material(tag):
+def make_material(tag, rgba):
     m = bpy.data.materials.new(tag)
     m.use_nodes = True
     nt = m.node_tree
-    builder = resolve_material_builder(tag)
-    if builder is None:
-        default_material(nt)
-    else:
-        builder(nt)
+    apply_material(nt, tag, rgba)
     return m
 
 
@@ -97,10 +93,12 @@ def assign_materials(meshes, manifest):
         if not obj:
             continue
         tag = part["material"]
-        if tag not in cache:
-            cache[tag] = make_material(tag)
+        rgba = tuple(part["rgba"])
+        key = (tag, rgba)
+        if key not in cache:
+            cache[key] = make_material(tag, rgba)
         obj.data.materials.clear()
-        obj.data.materials.append(cache[tag])
+        obj.data.materials.append(cache[key])
 
 
 def prep_smooth(meshes):
