@@ -170,6 +170,17 @@ def test_product_geometry_hold_never_leaks_visible_fabrication_release():
     assert "released parts" not in joined
     assert "CONDITIONAL FABRICATION RELEASE" not in joined
     assert 'data-cut-list-row="' not in fabrication
+    joined_lower = joined.lower()
+    for leak in (
+        "conditional fabrication release",
+        "conditionally released",
+        "released cabinet and drawer cuts",
+        "released cabinet and drawer inventory",
+        "released box",
+        "released u void",
+        "released parts",
+    ):
+        assert leak not in joined_lower
 
 
 def test_fabrication_labels_every_assumption_as_unverified_owner_input():
@@ -184,6 +195,27 @@ def test_fabrication_labels_every_assumption_as_unverified_owner_input():
     assumptions = html[html.index("Joinery and finish assumptions"):]
     assert "owner_assumed" in assumptions
     assert "not field verified" in assumptions
+
+
+def test_package_has_no_unlabelled_assumption_claims():
+    for html in _documents().values():
+        paragraphs = re.findall(r"<p(?: [^>]*)?>.*?</p>", html, flags=re.S)
+        for paragraph in paragraphs:
+            if re.search(r"\bassumption\b", paragraph, flags=re.I):
+                assert "owner_assumed" in paragraph
+                assert "not field verified" in paragraph
+    assert "by assumption" not in "\n".join(_documents().values()).lower()
+
+
+def test_validation_routes_evidence_without_claiming_approval_authority():
+    html = _documents()["dv72_validation_sources.html"]
+    lower = html.lower()
+
+    assert "routes evidence requests only" in lower
+    assert "coordination routing only" in lower
+    assert "approval and release authority is established outside this renderer" in lower
+    assert "responsible for closing" not in lower
+    assert "authority remains with the named responsible parties" not in lower
 
 
 def test_validation_gate_language_preserves_conditional_cabinet_cut_authority():

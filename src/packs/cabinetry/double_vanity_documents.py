@@ -383,7 +383,7 @@ def _all_findings(project) -> str:
             f'<td><code>{study._e(finding.rule)}</code></td><td class="{study._e(finding.verdict.lower())}">{study._e(finding.verdict)}</td>'
             f'<td>{study._e(party)}</td><td>{study._e(phase)}</td><td>{study._e(finding.message)}</td></tr>'
         )
-    return '<section><h2>Validation findings, responsible parties, and blocking phases</h2><p>Routing identifies the party responsible for closing each finding and the phase it controls; PASS does not override a separate UNKNOWN hold.</p><div class="table-wrap"><table><thead><tr><th>Rule</th><th>Verdict</th><th>Responsible party</th><th>Blocking phase</th><th>Scope</th></tr></thead><tbody>' + "".join(rows) + '</tbody></table></div></section>'
+    return '<section><h2>Validation findings and evidence-request routing</h2><p><b>Coordination routing only.</b> This table routes evidence requests only; approval and release authority is established outside this renderer. PASS does not override a separate UNKNOWN hold.</p><div class="table-wrap"><table><thead><tr><th>Rule</th><th>Verdict</th><th>Evidence request route</th><th>Blocking phase</th><th>Scope</th></tr></thead><tbody>' + "".join(rows) + '</tbody></table></div></section>'
 
 
 def _product_evidence(project) -> str:
@@ -419,6 +419,19 @@ def _phased_release_gates(project) -> str:
         )
     postinstall = ""
     preinstall_count = len(preinstall)
+    fabrication_released, _ = _fabrication_status(project)
+    if fabrication_released:
+        gate_scope = (
+            "These UNKNOWN gates block installation, stone, runner machining, "
+            "trade work, and use as applicable. They do not revoke the "
+            "conditionally released cabinet and drawer cuts."
+        )
+    else:
+        gate_scope = (
+            "These UNKNOWN gates include cabinet and drawer product geometry "
+            "and block fabrication, installation, stone, runner machining, "
+            "trade work, and use as applicable. No cut authority is issued."
+        )
     if commissioning is not None:
         postinstall = (
             '<section class="release-gates"><h2>Post-install commissioning hold</h2>'
@@ -430,7 +443,7 @@ def _phased_release_gates(project) -> str:
         )
     return (
         f'<section class="release-gates"><h2>{preinstall_count} pre-install release gates</h2>'
-        '<p>These UNKNOWN gates block installation, stone, runner machining, trade work, and use as applicable. They do not revoke the conditionally released cabinet and drawer cuts.</p>'
+        f'<p>{gate_scope}</p>'
         '<div class="table-wrap"><table><thead><tr><th>Rule</th><th>Verdict</th><th>Evidence still required</th></tr></thead><tbody>'
         + "".join(preinstall) + '</tbody></table></div></section>' + postinstall
     )
@@ -447,7 +460,7 @@ def build_double_vanity_validation_html(project) -> str:
         "Finding trace and evidence for held installation, stone, runner-machining, trade, and use scopes; cabinet/drawer cut authority remains separately stated.",
         project.model.release.trade_status,
         "TRADE HOLD — RESPONSIBLE APPROVAL",
-        "Plumbing, countertop, structural, commissioning, and installation authority remains with the named responsible parties and blocking phases.",
+        "Evidence requests are coordination-routed to named parties and phases. Approval and release authority is established outside this renderer.",
         body,
     )
 

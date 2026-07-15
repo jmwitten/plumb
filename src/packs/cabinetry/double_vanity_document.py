@@ -259,7 +259,7 @@ def _facts_tables(project) -> str:
 </tbody></table></div>
 <p>Primary profile sources: <a href="{_e(code.source_url)}">fixture spacing and access</a>; <a href="{_e(code.trap_source_url)}">trap topology and distances</a>.</p>
 <p>Topology: <b>two independent P-traps</b>, one per lavatory; no S-trap or double-trap is emitted.</p>
-<p><b>Alternative studied, not selected:</b> manufacturer-integrated <a href="https://www.geberit.com/en/insights/new-design-possibilities-at-the-washplace/">Geberit ONE</a> space-saving drain systems can eliminate a conventional trap cutout and preserve more drawer volume. They are a coupled fixture/drain system and are not interchangeable with the selected Kohler basin by assumption.</p></section>"""
+<p><b>Alternative studied, not selected:</b> manufacturer-integrated <a href="https://www.geberit.com/en/insights/new-design-possibilities-at-the-washplace/">Geberit ONE</a> space-saving drain systems can eliminate a conventional trap cutout and preserve more drawer volume. They are a different coupled fixture/drain system and are not interchangeable with the selected Kohler basin.</p></section>"""
 
 
 def _release_gates(project) -> str:
