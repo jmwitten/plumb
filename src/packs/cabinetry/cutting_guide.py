@@ -13,7 +13,11 @@ the alternate copy.
 
 from __future__ import annotations
 
-from ...rendering.action_frames import FrameSpec, project_action_frames
+from ...rendering.action_frames import (
+    FrameSpec,
+    project_action_frames,
+    validate_caption,
+)
 from ...rendering.consumer_pages import (
     ConsumerManual,
     compose_consumer_manual,
@@ -32,7 +36,6 @@ from .instruction_manual import (
     _machining,
     _mark,
     _reader_len,
-    _toe_attachment_diagram,
 )
 
 _KIT_GATE = (
@@ -40,9 +43,13 @@ _KIT_GATE = (
     "groove, hole, and edge band, ending at the signed release record. "
     "Wood list sizes are pre-band blanks; a size written with ≈ is "
     "not on a tape mark, so cut to the exact millimeter value printed "
-    "beside it. Hardware to buy stays on the assembly manual's kit card. "
-    "The linked fabrication packet is the same content in exact "
-    "millimeters for a machine shop."
+    "beside it. Sheet count and cutting layout are not calculated — plan "
+    "your own nesting from the wood list before buying. Buy the hardware "
+    "kit from the assembly manual's kit card FIRST: the drilling and "
+    "cutting steps below use the makers' templates, the matching stepped "
+    "bit, and the stabilizer rack and rod stock from that kit. The linked "
+    "fabrication packet is the same content in exact millimeters for a "
+    "machine shop — an alternate copy, not required here."
 )
 
 _COVER_CAPTION = (
@@ -116,39 +123,42 @@ def _axis_mapping(rows):
     systems it cannot read — a new convention must fail loudly, never plot
     garbage.
     """
-    systems = {row.coordinate_system for row in rows}
-    if len(systems) != 1:
-        raise ValueError(
-            "one plan diagram cannot mix machining coordinate systems: "
-            f"{sorted(systems)!r}")
-    system = systems.pop()
-    clauses = {}
-    for clause in system.split(";"):
-        clause = clause.strip()
-        if clause.startswith("+X="):
-            clauses["X"] = clause
-        elif clause.startswith("+Y="):
-            clauses["Y"] = clause
-    if "X" not in clauses or "Y" not in clauses:
-        raise ValueError(
-            f"machining coordinate system {system!r} does not declare the "
-            "+X/+Y axes the plan diagram needs")
+    def resolve(system: str):
+        clauses = {}
+        for clause in system.split(";"):
+            clause = clause.strip()
+            if clause.startswith("+X="):
+                clauses["X"] = clause
+            elif clause.startswith("+Y="):
+                clauses["Y"] = clause
+        if "X" not in clauses or "Y" not in clauses:
+            raise ValueError(
+                f"machining coordinate system {system!r} does not declare "
+                "the +X/+Y axes the plan diagram needs")
 
-    def blank_dim(clause: str) -> str:
-        if "cut-list length" in clause:
-            return "length"
-        if "cut-list width" in clause:
-            return "width"
-        raise ValueError(
-            f"axis clause {clause!r} does not name a cut-list dimension")
+        def blank_dim(clause: str) -> str:
+            if "cut-list length" in clause:
+                return "length"
+            if "cut-list width" in clause:
+                return "width"
+            raise ValueError(
+                f"axis clause {clause!r} does not name a cut-list dimension")
 
-    x_dim = blank_dim(clauses["X"])
-    y_dim = blank_dim(clauses["Y"])
-    if x_dim == y_dim:
+        x_dim = blank_dim(clauses["X"])
+        y_dim = blank_dim(clauses["Y"])
+        if x_dim == y_dim:
+            raise ValueError(
+                f"coordinate system {system!r} maps both axes to the blank "
+                f"{x_dim}; the plan diagram cannot orient it")
+        return x_dim, y_dim, "up" in clauses["X"]
+
+    mappings = {resolve(system) for system in
+                {row.coordinate_system for row in rows}}
+    if len(mappings) != 1:
         raise ValueError(
-            f"coordinate system {system!r} maps both axes to the blank "
-            f"{x_dim}; the plan diagram cannot orient it")
-    return x_dim, y_dim, "up" in clauses["X"]
+            "one plan diagram cannot mix machining rows whose coordinate "
+            f"systems resolve to different plot mappings: {sorted(mappings)!r}")
+    return mappings.pop()
 
 
 def _machining_plan_diagram(
@@ -161,6 +171,7 @@ def _machining_plan_diagram(
     kinds: tuple[str, ...],
     outline_label: str,
     notes: tuple[str, ...] = (),
+    allowed_numbers: frozenset[str] = frozenset(),
 ) -> OperationDiagram:
     """Plot one blank's machining rows: grooves, bores, and corner notches.
 
@@ -172,6 +183,17 @@ def _machining_plan_diagram(
     convention mismatch fails the build instead of drawing off the part.
     ``notes`` are caller-typed dimension rows printed under the box.
     """
+    # The diagram title and caption are reader-visible prose exactly like
+    # frame captions, so they pass the same honesty contract: every digit
+    # must arrive as an interpolated typed value, and machine identifiers
+    # are forbidden. (The dense dimension NOTES under the box are layout
+    # data by the owner's dense-coordinate rule and stay outside the word
+    # audit — their values are interpolated from machining rows above.)
+    forbidden = consumer_forbidden_tokens(project)
+    for text in (title, caption):
+        validate_caption(text, allowed_numbers=allowed_numbers,
+                         forbidden_tokens=forbidden)
+
     item = _cut_items(project)[part_id]
     rows = tuple(row for row in project.model.machining
                  if row.part_id == part_id and row.kind in kinds)
@@ -203,9 +225,12 @@ def _machining_plan_diagram(
                 "coordinate system does not match the plan mapping")
 
     pad, top = 8.0, 12.0
+    # Reserve real room for every note row so nothing clips below the
+    # canvas: the drawn box shrinks before a note line ever would.
+    notes_h = 9.0 + 5.2 * max(len(notes), 1) + 2.0
     box_w = 100.0 - 2.0 * pad
     box_h = box_w * v_extent / h_extent
-    max_h = 100.0 - top - 26.0  # room for note rows under the box
+    max_h = 100.0 - top - notes_h
     if box_h > max_h:
         box_w *= max_h / box_h
         box_h = max_h
@@ -228,7 +253,7 @@ def _machining_plan_diagram(
     primitives = [
         _mark("rect", pad, top, box_w, box_h, role="prior",
               label=outline_label),
-        _mark("text", 50.0, top + box_h + 4.5, role="datum",
+        _mark("text", 50.0, top + box_h + 4.5, role="note",
               label="MEASURE FROM THE LOWER-LEFT CORNER"),
     ]
     source_refs = []
@@ -248,9 +273,16 @@ def _machining_plan_diagram(
                 fact_ref=row.feature_id,
             ))
         elif row.width_mm > 0 and row.diameter_mm == 0:
-            # Corner notch on the bottom edge of the blank.
-            x0, y0 = row.location_mm[0], 0.0
-            x1, y1 = x0 + row.width_mm, row.depth_mm
+            # Corner notch cut into the blank's bottom edge. The drawn rect
+            # assumes the notch starts AT that edge; a row that floats
+            # above it is a different feature and must not be mis-drawn.
+            if row.location_mm[1] != 0.0:
+                raise ValueError(
+                    f"notch row {row.feature_id!r} does not start at the "
+                    "blank's bottom edge; the plan diagram cannot draw it "
+                    "as an edge notch")
+            x0, y0 = row.location_mm[0], row.location_mm[1]
+            x1, y1 = x0 + row.width_mm, y0 + row.depth_mm
             check_bounds(x0, y0, row.feature_id)
             check_bounds(x1, y1, row.feature_id)
             primitives.append(_mark(
@@ -261,7 +293,14 @@ def _machining_plan_diagram(
             ))
         else:
             # Bore stations: location plus pitched repeats along an axis.
-            for index in range(max(row.count, 1)):
+            # A row is only drawable if the schedule says it has stations;
+            # inventing a mark for count=0 would draw a hole that does not
+            # exist.
+            if row.count < 1:
+                raise ValueError(
+                    f"machining row {row.feature_id!r} has count "
+                    f"{row.count}; the plan diagram cannot plot it")
+            for index in range(row.count):
                 offset = index * row.pitch_mm
                 point = (
                     row.location_mm[0] + (offset if row.pitch_axis == "X"
@@ -280,16 +319,15 @@ def _machining_plan_diagram(
                 ))
     for index, note in enumerate(notes):
         primitives.append(_mark(
-            "text", 50.0, top + box_h + 9.0 + 4.5 * index, role="datum",
+            "text", 50.0, top + box_h + 9.0 + 5.2 * index, role="note",
             label=note))
-    view_height = top + box_h + 9.0 + 4.5 * max(len(notes), 1) + 2.0
     return OperationDiagram(
         diagram_id=diagram_id,
         title=title,
         caption=caption,
         primitives=tuple(primitives),
         source_refs=tuple(dict.fromkeys(source_refs)),
-        view_height=min(view_height, 100.0),
+        view_height=min(top + box_h + notes_h, 100.0),
     )
 
 
@@ -307,27 +345,77 @@ def _back_groove_diagram(project) -> OperationDiagram:
                      what="captured-back groove width")
     depth = _uniform((row.depth_mm for row in rows),
                      what="captured-back groove depth")
-    part_id = _model_part_id(project, "left_end")
-    row = next(r for r in rows if r.part_id == part_id)
+    names = _reader_names(project)
+    start_of = {names[row.part_id].upper(): row.location_mm[1]
+                for row in rows}
+    if len(start_of) != len(rows):
+        raise ValueError(
+            "captured-back groove rows share a reader name; the per-part "
+            "position list would be ambiguous")
+    starts = sorted(start_of.items())
     return _machining_plan_diagram(
         project,
         diagram_id="cut-back-grooves",
-        title=f"Captured-back groove — cabinet end panel ({len(rows)} "
-              "grooved parts)",
+        title=f"Captured-back groove — {len(rows)} grooved parts, "
+              "positions printed below",
         caption=(
             f"One straight groove, {_reader_len(width)} wide by "
             f"{_reader_len(depth)} deep, on each of the {len(rows)} grooved "
-            "parts. This end panel's groove runs "
-            f"{_reader_len(row.location_mm[1])} from its rear edge; the "
-            "other three positions are in the printed row under each box "
-            "and in the fabrication packet. Cut all four with one saw or "
-            "router setup."),
-        part_id=part_id,
+            "parts — same blade width and depth. The box shows the left "
+            "cabinet side; every part's own band position, measured up "
+            "from its lower-left corner as drawn, is printed below."),
+        allowed_numbers=_nums(len(rows), _reader_len(width),
+                              _reader_len(depth)),
+        part_id=_model_part_id(project, "left_end"),
         kinds=("captured_back_groove",),
-        outline_label="Cabinet end panel — inside face up",
+        outline_label="Left cabinet side — inside face up",
         notes=(
             f"GROOVE {_reader_len(width)} WIDE x {_reader_len(depth)} DEEP",
-            f"STARTS {_reader_len(row.location_mm[1])} FROM REAR EDGE",
+            "BAND POSITION, UP AS DRAWN (mm):",
+            " - ".join(f"{name} {start:g}" for name, start in starts[:2]),
+            " - ".join(f"{name} {start:g}" for name, start in starts[2:]),
+        ),
+    )
+
+
+def _toe_centers_diagram(project) -> OperationDiagram:
+    part_id = _model_part_id(project, "bottom")
+    rows = tuple(row for row in _machining(project, "toe_attachment_station")
+                 if row.part_id == part_id)
+    centers = sorted({
+        round(row.location_mm[0] + index * row.pitch_mm, 3)
+        for row in rows for index in range(row.count)})
+    row_of = {}
+    for row in rows:
+        rail = ("FRONT" if row.receiving_part_id.endswith("toe_front")
+                else "REAR")
+        row_of[rail] = row.location_mm[1]
+    if set(row_of) != {"FRONT", "REAR"}:
+        raise ValueError(
+            "toe-center diagram expects one front and one rear toe-rail "
+            f"row; the machining schedule provides {sorted(row_of)!r}")
+    total = sum(row.count for row in rows)
+    return _machining_plan_diagram(
+        project,
+        diagram_id="cut-toe-centers",
+        title=f"{total} bottom-to-toe screw centers — cabinet bottom, "
+              "plan view",
+        caption=(
+            f"Mark all {total} centers on the cabinet bottom from its "
+            "lower-left corner as drawn, using the printed values. The "
+            "black band is the captured-back groove: no screw may enter "
+            "it. Layout centers only — pilot size, torque, and connection "
+            "capacity remain unclaimed."),
+        allowed_numbers=_nums(total),
+        part_id=part_id,
+        kinds=("toe_attachment_station", "captured_back_groove"),
+        outline_label="Cabinet bottom — plan view",
+        notes=(
+            f"{len(centers)} CENTERS PER ROW, FROM LEFT (mm):",
+            " / ".join(f"{center:g}" for center in centers),
+            f"FRONT ROW {row_of['FRONT']:g} mm UP - "
+            f"REAR ROW {row_of['REAR']:g} mm UP",
+            "BLACK BAND = BACK GROOVE - NO SCREWS",
         ),
     )
 
@@ -351,6 +439,8 @@ def _drawer_bottom_groove_diagram(project) -> OperationDiagram:
             f"{_reader_len(depth)} deep, starting {_reader_len(recess)} up "
             f"from the bottom edge. One fence setting cuts all {len(rows)} "
             "parts, so opposing parts agree."),
+        allowed_numbers=_nums(len(rows), _reader_len(width),
+                              _reader_len(depth), _reader_len(recess)),
         part_id=_model_part_id(project, "drawer_top_side_left"),
         kinds=("drawer_bottom_groove",),
         outline_label="Drawer side — inside face up",
@@ -370,6 +460,8 @@ def _box_joinery_diagram(project) -> OperationDiagram:
             f"column of holes; got X positions {inset_by_end!r}")
     first_height = _uniform((row.location_mm[1] for row in rows),
                             what="drawer joinery first-hole height")
+    per_column = _uniform((row.count for row in rows),
+                          what="drawer joinery holes per column")
     per_drawer = {}
     for row in rows:
         drawer = row.part_id.rsplit("_side_", 1)[0].rsplit(".", 1)[-1]
@@ -387,13 +479,15 @@ def _box_joinery_diagram(project) -> OperationDiagram:
     return _machining_plan_diagram(
         project,
         diagram_id="cut-drawer-side-joinery",
-        title="Drawer-side screw holes — two near each end of every side",
+        title=f"Drawer-side screw holes — {per_column} near each end of "
+              "every side",
         caption=(
-            "Step-drill two holes near the front end and two near the rear "
-            "end of every drawer side, in the printed columns. The box "
-            "shows the shallowest drawer; the second hole sits higher on "
-            "the deeper drawers, per the printed rows. Drill a clamped "
-            "scrap coupon first and reject any splitting."),
+            f"Step-drill {per_column} holes near each end of every drawer "
+            "side, from the outside face, at the printed columns and "
+            "heights — both columns share the same heights, and the deeper "
+            "drawers' second hole sits higher, per the printed rows. Drill "
+            "a clamped scrap coupon first and reject any splitting."),
+        allowed_numbers=_nums(per_column),
         part_id=_model_part_id(project, "drawer_top_side_left"),
         kinds=("drawer_box_confirmat_step_drill",),
         outline_label="Drawer side — outside face up",
@@ -415,16 +509,27 @@ def _rear_prep_diagram(project) -> OperationDiagram:
     bore_up = _uniform((row.location_mm[1] for row in bores),
                        what="hook bore height")
     inset = min(row.location_mm[0] for row in bores)
+
+    def _per_back(rows, what):
+        counts = {}
+        for row in rows:
+            counts[row.part_id] = counts.get(row.part_id, 0) + 1
+        return _uniform(counts.values(), what=what)
+
+    notches_per_back = _per_back(notches, "notches per drawer back")
+    holes_per_back = _per_back(bores, "hook holes per drawer back")
+    backs = len({row.part_id for row in notches})
     return _machining_plan_diagram(
         project,
         diagram_id="cut-drawer-back-prep",
         title="Drawer back — corner notches and hook holes (every drawer)",
         caption=(
-            "On each drawer back only — never the sides — cut the two "
-            "lower-corner notches and drill the two runner hook holes at "
-            "the printed positions, measured from the lower-left corner of "
-            "the back's rear face. All three drawer backs use the same "
-            "values."),
+            f"On each of the {backs} drawer backs only — never the sides — "
+            f"cut the {notches_per_back} lower-corner notches and drill "
+            f"the {holes_per_back} runner hook holes at the printed "
+            "positions, measured from the lower-left corner of the back's "
+            f"rear face. All {backs} backs use the same values."),
+        allowed_numbers=_nums(backs, notches_per_back, holes_per_back),
         part_id=_model_part_id(project, "drawer_top_back"),
         kinds=("runner_rear_notch", "runner_hook_bore"),
         outline_label="Drawer back — rear face up",
@@ -464,15 +569,17 @@ def _runner_stations_diagram(project) -> OperationDiagram:
             "corner; both ends use exactly the same numbers. Drill a "
             f"{diameter:g} mm pilot at every mark. Row heights and station "
             "distances are printed under the box in millimeters."),
+        allowed_numbers=_nums(len(stations[left]), len(ys), len(xs),
+                              diameter),
         part_id=left,
         kinds=("runner_fixing_station",),
         outline_label="Cabinet end panel — inside face up",
         notes=(
-            "STATIONS FROM FRONT EDGE (mm): "
-            + "/".join(f"{x:g}" for x in xs),
-            "ROW HEIGHTS FROM BOTTOM EDGE (mm): "
-            + "/".join(f"{y:g}" for y in ys),
-            f"PILOT {diameter:g} mm DIA — SAME ON BOTH END PANELS",
+            "STATIONS FROM FRONT EDGE (mm):",
+            " / ".join(f"{x:g}" for x in xs),
+            "ROW HEIGHTS FROM BOTTOM EDGE (mm):",
+            " / ".join(f"{y:g}" for y in ys),
+            f"PILOT {diameter:g} mm DIA - SAME ON BOTH ENDS",
         ),
     )
 
@@ -483,26 +590,49 @@ def _box_front_holes_diagram(project) -> OperationDiagram:
     mine = [row for row in rows if row.part_id == part_id]
     diameter = _uniform((row.diameter_mm for row in rows),
                         what="front attachment hole diameter")
-    xs = sorted({round(row.location_mm[0], 3) for row in mine})
-    ys = sorted({round(row.location_mm[1], 3) for row in mine})
+    length = float(_cut_items(project)[part_id].length_mm)
+    insets = sorted({round(row.location_mm[0], 3) for row in mine})
+    if (len(insets) != 2
+            or abs((length - insets[1]) - insets[0]) > 1e-6):
+        raise ValueError(
+            "box-front attachment columns are not symmetric about the "
+            f"blank; got X positions {insets!r} on a {length:g} mm front")
+    per_front_counts = {}
+    for row in rows:
+        per_front_counts[row.part_id] = (
+            per_front_counts.get(row.part_id, 0) + 1)
+    per_front = _uniform(per_front_counts.values(),
+                         what="attachment holes per box front")
+    names = _reader_names(project)
+    heights = {}
+    for row in rows:
+        heights.setdefault(
+            names[row.part_id].upper(), set()).add(
+                round(row.location_mm[1], 3))
+    height_notes = [
+        f"{name}: " + " / ".join(f"{y:g}" for y in sorted(ys)) + " UP"
+        for name, ys in sorted(heights.items())
+    ]
     return _machining_plan_diagram(
         project,
         diagram_id="cut-box-front-holes",
-        title=(f"Applied-front screw holes — {len(mine)} through holes per "
+        title=(f"Applied-front screw holes — {per_front} through holes per "
                "box front"),
         caption=(
-            f"Drill {len(mine)} clearance holes straight through each "
+            f"Drill {per_front} clearance holes straight through each "
             "drawer-box front, working from its inside face. The shallowest "
-            "box front is shown; hole heights repeat on the deeper fronts "
-            "per the fabrication rows. Never drill these through the "
+            "box front is shown; every box front's own hole heights are "
+            "printed below in millimeters. Never drill these through the "
             "decorative applied front."),
+        allowed_numbers=_nums(per_front),
         part_id=part_id,
         kinds=("applied_front_attachment",),
         outline_label="Drawer-box front — inside face up",
         notes=(
             f"HOLES {diameter:g} mm DIA, THROUGH",
-            "FROM EACH END (mm): " + "/".join(f"{x:g}" for x in xs),
-            "UP FROM BOTTOM (mm): " + "/".join(f"{y:g}" for y in ys),
+            f"COLUMNS {insets[0]:g} mm IN FROM EACH END",
+            "HOLE HEIGHTS UP FROM BOTTOM (mm):",
+            *height_notes,
         ),
     )
 
@@ -519,22 +649,44 @@ def _pull_bore_diagram(project) -> OperationDiagram:
         raise ValueError(
             "pull bores on the applied front do not match the catalog "
             f"hole spacing {spacing!r}; got X positions {xs!r}")
+    per_front_counts = {}
+    for row in rows:
+        per_front_counts[row.part_id] = (
+            per_front_counts.get(row.part_id, 0) + 1)
+    per_front = _uniform(per_front_counts.values(),
+                         what="pull holes per decorative front")
+    names = _reader_names(project)
+    heights = {}
+    for row in rows:
+        heights.setdefault(
+            names[row.part_id].upper(), set()).add(
+                round(row.location_mm[1], 3))
+    height_notes = [
+        f"{name}: "
+        + " / ".join(f"{y:g}" for y in sorted(ys))
+        + " mm UP"
+        for name, ys in sorted(heights.items())
+    ]
     return _machining_plan_diagram(
         project,
         diagram_id="cut-pull-bores",
-        title="Pull holes — two per applied front, centered",
+        title=f"Pull holes — {per_front} per decorative front, positions "
+              "printed",
         caption=(
-            f"Drill both {diameter:g} mm pull holes straight through each "
-            f"applied front at exactly {spacing:g} mm center to center, "
-            "centered on the front, with a backer board clamped behind the "
-            "finished face. The top front is shown; each front's hole "
-            "height is in its fabrication row."),
+            f"Drill the {per_front} pull holes, {diameter:g} mm, straight "
+            f"through each decorative front at exactly {spacing:g} mm "
+            f"center to center, {xs[0]:g} mm in from the left edge as "
+            "drawn, with a backer board clamped behind the finished face. "
+            "Every front's own hole height is printed below."),
+        allowed_numbers=_nums(per_front, diameter, spacing, xs[0]),
         part_id=part_id,
         kinds=("pull_bore",),
-        outline_label="Applied front — show face up",
+        outline_label="Decorative front — show face up",
         notes=(
             f"HOLES {diameter:g} mm DIA, {spacing:g} mm APART",
-            f"HOLE HEIGHT THIS FRONT: {mine[0].location_mm[1]:g} mm UP",
+            f"LEFT HOLE {xs[0]:g} mm FROM LEFT EDGE",
+            "HOLE HEIGHT PER FRONT:",
+            *height_notes,
         ),
     )
 
@@ -555,6 +707,32 @@ def _end_panel_joinery_diagram(project) -> OperationDiagram:
             "cutting guide claims one step-drill pattern for both end "
             "panels, but the compiled rows differ between ends")
     holes = sum(row.count for row in rows if row.part_id == left)
+    labels = {
+        "bottom": "BOTTOM ROW",
+        "front_stretcher": "FRONT PAIR",
+        "rear_stretcher": "REAR PAIR",
+        "anchor_strip": "ANCHOR PAIR",
+    }
+    notes = ["ALL VALUES mm; UP + FROM FRONT EDGE:"]
+    for row in sorted((row for row in rows if row.part_id == left),
+                      key=lambda row: row.location_mm[0]):
+        suffix = row.receiving_part_id.rsplit(".", 1)[-1]
+        label = labels.get(suffix)
+        if label is None:
+            raise ValueError(
+                f"end-panel step-drill row receives {suffix!r}, which has "
+                "no printed label in the cutting guide")
+        series = [row.location_mm[0] + index * row.pitch_mm
+                  if row.pitch_axis == "X" else row.location_mm[0]
+                  for index in range(row.count)]
+        depths = [row.location_mm[1] + index * row.pitch_mm
+                  if row.pitch_axis == "Y" else row.location_mm[1]
+                  for index in range(row.count)]
+        ups = " / ".join(f"{value:g}" for value in
+                         sorted(dict.fromkeys(series)))
+        fronts = " / ".join(f"{value:g}" for value in
+                            sorted(dict.fromkeys(depths)))
+        notes.append(f"{label}: {ups} UP - {fronts} FROM FRONT")
     return _machining_plan_diagram(
         project,
         diagram_id="cut-end-panel-joinery",
@@ -562,16 +740,15 @@ def _end_panel_joinery_diagram(project) -> OperationDiagram:
                "identical on both ends"),
         caption=(
             f"Step-drill all {holes} holes in each cabinet end panel at "
-            "the plotted centers, working from the outside face: a row "
-            "along the bottom edge, pairs at the front and rear stretcher "
-            "corners, and a pair for the anchor strip. Both end panels use "
-            "exactly the same pattern."),
+            "the plotted centers, working from the outside face — along "
+            "the bottom edge, at the front and rear stretcher corners, and "
+            "at the anchor strip. Both end panels use exactly the same "
+            "printed values."),
+        allowed_numbers=_nums(holes),
         part_id=left,
         kinds=("confirmat_step_drill",),
         outline_label="Cabinet end panel — outside face up",
-        notes=(
-            "EXACT CENTERS (mm) ARE IN THE FABRICATION PACKET",
-        ),
+        notes=tuple(notes),
     )
 
 
@@ -591,6 +768,20 @@ def _toe_rail_joinery_diagram(project) -> OperationDiagram:
             "rails, but the compiled rows differ between rails")
     front = _model_part_id(project, "toe_front")
     holes = sum(row.count for row in rows if row.part_id == front)
+    front_rows = [row for row in rows if row.part_id == front]
+    length = float(_cut_items(project)[front].length_mm)
+    insets = sorted(row.location_mm[0] for row in front_rows)
+    if len(insets) != 2 or abs((length - insets[1]) - insets[0]) > 1e-6:
+        raise ValueError(
+            "toe-rail step-drill pairs are not symmetric about the rail; "
+            f"got X positions {insets!r} on a {length:g} mm rail")
+    heights = sorted({
+        round(row.location_mm[1] + index * row.pitch_mm, 3)
+        for row in front_rows
+        for index in range(row.count)
+        if row.pitch_axis == "Y"})
+    per_end = _uniform((row.count for row in front_rows),
+                       what="toe-rail holes per rail end")
     return _machining_plan_diagram(
         project,
         diagram_id="cut-toe-rail-joinery",
@@ -598,14 +789,17 @@ def _toe_rail_joinery_diagram(project) -> OperationDiagram:
                "rail, both rails alike"),
         caption=(
             f"Step-drill {holes} holes in each toe rail at the plotted "
-            "centers — a vertical pair near each rail end, where the short "
-            "toe returns land. The front and rear rails use exactly the "
-            "same pattern."),
+            f"centers — {per_end} near each rail end, where the short toe "
+            "returns land. The front and rear rails use exactly the same "
+            "printed values."),
+        allowed_numbers=_nums(holes, per_end),
         part_id=front,
         kinds=("confirmat_step_drill",),
         outline_label="Toe rail — outside face up",
         notes=(
-            "EXACT CENTERS (mm) ARE IN THE FABRICATION PACKET",
+            f"PAIRS {insets[0]:g} mm IN FROM EACH RAIL END",
+            "HOLE HEIGHTS UP FROM BOTTOM (mm): "
+            + " / ".join(f"{value:g}" for value in heights),
         ),
     )
 
@@ -635,7 +829,7 @@ _STEP_TITLES = {
 def _step_diagrams(project) -> dict[str, tuple[OperationDiagram, ...]]:
     return {
         "fab.shell_back_grooves": (_back_groove_diagram(project),),
-        "fab.toe_attachment": (_toe_attachment_diagram(project),),
+        "fab.toe_attachment": (_toe_centers_diagram(project),),
         "fab.drawer_bottom_grooves": (_drawer_bottom_groove_diagram(project),),
         "fab.drawer_box_joinery": (_box_joinery_diagram(project),),
         "fab.drawer_rear_preparation": (_rear_prep_diagram(project),),
@@ -779,6 +973,20 @@ def cutting_kit_groups(project):
     """
     names = _reader_names(project)
     ids = _assembly_ids(project)
+    banded: dict[str, list[str]] = {}
+    for band in project.artifacts.edge_banding:
+        banded.setdefault(band.part_id, []).append(band.edge)
+
+    def _band_text(part_id: str) -> str:
+        edges = banded.get(part_id)
+        if not edges:
+            return ""
+        if len(edges) == 4:
+            return " — band all 4 edges"
+        listed = ", ".join(sorted(dict.fromkeys(edges)))
+        noun = "edge" if len(edges) == 1 else "edges"
+        return f" — band {listed} {noun}"
+
     groups: dict[tuple[float, str], list] = {}
     for item in project.artifacts.cut_list:
         key = (round(item.thickness_mm, 2), _material_heading(item.material))
@@ -790,7 +998,8 @@ def cutting_kit_groups(project):
                 "part",
                 (f"{item.quantity} × {names[item.part_id]} — "
                  f"{_reader_len(item.length_mm)} × "
-                 f"{_reader_len(item.width_mm)}"),
+                 f"{_reader_len(item.width_mm)}"
+                 f"{_band_text(item.part_id)}"),
                 count=item.quantity,
                 source_part_ids=(ids[item.part_id],),
             )
@@ -852,10 +1061,18 @@ def cutting_action_frames(
     toe_stations = sum(row.count for row in
                        _machining(project, "toe_attachment_station"))
     bottom_grooves = len(_machining(project, "drawer_bottom_groove"))
+    def _per_part_total(rows, what: str) -> int:
+        # "each of the N parts gets K" is a uniformity claim: prove K is
+        # the same on every part, never read it off one representative.
+        totals: dict[str, int] = {}
+        for row in rows:
+            totals[row.part_id] = totals.get(row.part_id, 0) + max(
+                row.count, 1)
+        return _uniform(totals.values(), what=what)
+
     box_rows = _machining(project, "drawer_box_confirmat_step_drill")
-    box_holes_per_side = sum(
-        row.count for row in box_rows
-        if row.part_id == _model_part_id(project, "drawer_top_side_left"))
+    box_holes_per_side = _per_part_total(
+        box_rows, "step-drilled holes per drawer side")
     drawer_sides = len({row.part_id for row in box_rows})
     notches = _machining(project, "runner_rear_notch")
     hook_bores = _machining(project, "runner_hook_bore")
@@ -882,15 +1099,13 @@ def cutting_action_frames(
             f"rack {rack_len!r}, rod {rod_len!r}")
     drawers = len(bank.cells)
     front_holes = _machining(project, "applied_front_attachment")
-    top_front = _model_part_id(project, "drawer_top_front")
-    holes_per_box_front = len([row for row in front_holes
-                               if row.part_id == top_front])
+    holes_per_box_front = _per_part_total(
+        front_holes, "clearance holes per box front")
     box_fronts = len({row.part_id for row in front_holes})
     pull_rows = _machining(project, "pull_bore")
     fronts = len({row.part_id for row in pull_rows})
-    pulls_per_front = len([row for row in pull_rows
-                           if row.part_id ==
-                           _model_part_id(project, "drawer_front_top")])
+    pulls_per_front = _per_part_total(
+        pull_rows, "pull holes per decorative front")
     carcass_rows = _machining(project, "confirmat_step_drill")
     end_holes = sum(row.count for row in carcass_rows
                     if row.part_id == left_end)
@@ -946,7 +1161,8 @@ def cutting_action_frames(
             caption=(
                 f"Cut the {back_grooves} captured-back grooves — both "
                 "cabinet ends, the cabinet bottom, and the rear stretcher "
-                "— with one setup, then dry-fit the thin back panel in its "
+                "— with the same blade width and depth, at each part's "
+                "printed position. Dry-fit the thin back panel in its "
                 "grooves before anything is glued."),
             source_step_ids=("fab.shell_back_grooves",),
             owned_event_keys=(),
@@ -956,13 +1172,13 @@ def cutting_action_frames(
         FrameSpec(
             frame_id="cut.toe_attachment.frame",
             panel_index=panel_of["fab.toe_attachment"],
-            detail_diagram_ids=("toe-attachment-pattern",),
+            detail_diagram_ids=("cut-toe-centers",),
             caption=(
                 f"Mark all {toe_stations} toe screw centers on the cabinet "
-                "bottom from its front-left corner, over the two toe-rail "
-                "centerlines in the diagram. Marking only — these are "
-                "driven during assembly, and no screw path may enter the "
-                "rear groove band."),
+                "bottom at the diagram's printed values, over the two "
+                "toe-rail rows. Marking only — these are driven during "
+                "assembly, and no screw path may enter the rear groove "
+                "band."),
             source_step_ids=("fab.toe_attachment",),
             owned_event_keys=(),
             tool="Tape measure, square, and awl",
@@ -1106,10 +1322,9 @@ def cutting_action_frames(
             detail_diagram_ids=("cut-end-panel-joinery",),
             caption=(
                 f"Step-drill the {end_holes} cabinet screw holes in each "
-                "end panel from its outside face at the diagram centers, "
-                "with the same stepped bit as the drawer screws. Both ends "
-                "share one pattern; exact centers stay in the fabrication "
-                "packet."),
+                "end panel from its outside face at the diagram's printed "
+                "values, with the same stepped bit as the drawer screws. "
+                "Both ends share one pattern."),
             source_step_ids=("fab.joinery_step_drill",),
             owned_event_keys=(),
             tool="Drill with the screw maker's stepped bit",
@@ -1133,12 +1348,11 @@ def cutting_action_frames(
             frame_id="cut.edge_band.frame",
             panel_index=panel_of["fab.edge_band"],
             caption=(
-                f"Apply the {band_thickness:g} mm edge band to every "
-                f"scheduled edge on the {banded_parts} banded parts, "
-                f"including all {front_band_edges} edges of the decorative "
-                "fronts, then trim and inspect. Never band a grooved edge. "
-                "Confirm every part keeps its label and finish the release "
-                "record on the last page."),
+                f"Apply the {band_thickness:g} mm edge band to the "
+                f"{banded_parts} banded parts — each one's banded edges "
+                "are named on its wood-list row — then trim and inspect. "
+                "Never band a grooved edge. Confirm every part keeps its "
+                "label and finish the release record on the last page."),
             source_step_ids=("fab.edge_band",),
             owned_event_keys=(),
             tool="Iron or edge-band trimmer",

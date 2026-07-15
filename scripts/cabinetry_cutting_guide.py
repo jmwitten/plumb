@@ -113,11 +113,15 @@ def build_cabinetry_cutting_document(
             output_path.read_bytes()).hexdigest(),
         "page_count": len(guide.pages),
         "frame_count": sum(len(page.frames) for page in guide.pages),
+        # Diagram titles and captions are reader-visible prose, so both
+        # count; the dense dimension notes are layout data and do not.
         "visible_instructional_words": visible_instructional_words(
             guide,
             extra_texts=tuple(
-                diagrams_by_id[d].caption
-                for frame in frames for d in frame.detail_diagram_ids)),
+                text
+                for frame in frames for d in frame.detail_diagram_ids
+                for text in (diagrams_by_id[d].title,
+                             diagrams_by_id[d].caption))),
         "kit_groups": [
             f"{heading}: {len(rows)} rows" for heading, rows in kit_groups],
         "frame_images": sorted(str(path) for path in image_paths.values()),

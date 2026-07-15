@@ -325,6 +325,8 @@ ul.tools li::before { content: "\\2022"; margin-right: 0.4rem; }
   stroke-width: 1; }
 text.diagram-mark, .diagram-mark.role-datum { fill: var(--ink);
   stroke: none; font-size: 3px; font-weight: 800; }
+text.diagram-mark.role-note { fill: var(--ink); stroke: none;
+  font-size: 4.2px; font-weight: 800; }
 text.diagram-mark.role-hold { fill: var(--ink); stroke: none; }
 .op-diagram marker path { fill: var(--ink); }
 .inset-note { font-size: 0.8rem; color: var(--line); }

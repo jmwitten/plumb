@@ -78,13 +78,17 @@ class TestBudgets:
 
     def test_at_most_1500_visible_instructional_words(self, guide,
                                                       panels_manual):
+        # Diagram titles and captions are reader-visible prose and count;
+        # the dense dimension notes are layout data and are excluded.
         diagrams = cutting_guide_diagrams(panels_manual)
         words = visible_instructional_words(
             guide,
             extra_texts=tuple(
-                diagrams[diagram_id].caption
+                text
                 for frame in _frames(guide)
-                for diagram_id in frame.detail_diagram_ids))
+                for diagram_id in frame.detail_diagram_ids
+                for text in (diagrams[diagram_id].title,
+                             diagrams[diagram_id].caption)))
         assert words <= 1500
 
 
@@ -249,26 +253,133 @@ class TestDiagramHonesty:
             cutting_panels_manual(_proxy(project, machining=tuple(mutated)))
 
 
+class TestSelfContainment:
+    """Every machining number the builder needs is printed in the guide.
+
+    Round 1 of the naive-builder read failed because six operations
+    deferred their centers to the fabrication packet; these tests keep
+    that regression from returning.
+    """
+
+    def _all_notes(self, panels_manual) -> str:
+        diagrams = cutting_guide_diagrams(panels_manual)
+        return " | ".join(
+            mark.label for diagram in diagrams.values()
+            for mark in diagram.primitives if mark.kind == "text")
+
+    def test_no_step_defers_to_the_fabrication_packet(self, guide,
+                                                      panels_manual):
+        for frame in _frames(guide):
+            assert "packet" not in frame.caption.lower()
+        diagrams = cutting_guide_diagrams(panels_manual)
+        for diagram in diagrams.values():
+            assert "packet" not in diagram.caption.lower()
+        assert "PACKET" not in self._all_notes(panels_manual)
+
+    def test_back_groove_positions_printed_for_all_parts(self, project,
+                                                         panels_manual):
+        notes = self._all_notes(panels_manual)
+        for row in project.model.machining:
+            if row.kind == "captured_back_groove":
+                assert f"{row.location_mm[1]:g}" in notes
+
+    def test_end_panel_centers_printed(self, panels_manual):
+        notes = self._all_notes(panels_manual)
+        assert "BOTTOM ROW" in notes and "ANCHOR PAIR" in notes
+        assert "290.512" in notes and "565.1" in notes
+
+    def test_pull_heights_printed_for_every_front(self, project,
+                                                  panels_manual):
+        notes = self._all_notes(panels_manual)
+        for row in project.model.machining:
+            if row.kind == "pull_bore":
+                assert f"{round(row.location_mm[1], 3):g}" in notes
+
+    def test_toe_rail_and_toe_center_values_printed(self, panels_manual):
+        notes = self._all_notes(panels_manual)
+        assert "30.48 / 71.12" in notes
+        assert "244.475 / 488.95 / 733.425" in notes
+
+    def test_band_edges_named_on_the_wood_list(self, project):
+        labels = [row.label for _heading, rows in cutting_kit_groups(project)
+                  for row in rows]
+        assert any("band all 4 edges" in label for label in labels)
+        assert any("band top edge" in label for label in labels)
+        assert any("band front edge" in label for label in labels)
+
+
 class TestMutation:
     def test_caption_counts_follow_mutated_machining(self, project):
-        kept = [False]
+        mutated = tuple(
+            replace(row, count=2)
+            if row.kind == "toe_attachment_station" else row
+            for row in project.model.machining)
+        proxy = _proxy(project, machining=mutated)
+        manual = cutting_panels_manual(proxy)
+        frames = cutting_action_frames(manual, proxy)
+        toe = next(frame for frame in frames
+                   if frame.frame_id == "cut.toe_attachment.frame")
+        assert "all 4 toe screw centers" in toe.caption
 
-        def drop_one_toe_row(rows):
+    def test_diagram_titles_follow_mutated_machining(self, project):
+        # Review C1: diagram titles/captions are reader prose; their counts
+        # must move with the model exactly like frame captions.
+        mutated = tuple(
+            replace(row, count=2)
+            if row.kind == "toe_attachment_station" else row
+            for row in project.model.machining)
+        manual = cutting_panels_manual(_proxy(project, machining=mutated))
+        diagrams = cutting_guide_diagrams(manual)
+        toe = diagrams["cut-toe-centers"]
+        assert toe.title.startswith("4 bottom-to-toe")
+        assert "all 4 centers" in toe.caption
+
+    def test_zero_count_machining_row_fails_loudly(self, project):
+        mutated = tuple(
+            replace(row, count=0)
+            if row.kind == "toe_attachment_station"
+            and row.receiving_part_id.endswith("toe_front") else row
+            for row in project.model.machining)
+        with pytest.raises(ValueError, match="count"):
+            cutting_panels_manual(_proxy(project, machining=mutated))
+
+    def test_floating_notch_fails_loudly(self, project):
+        mutated = tuple(
+            replace(row, location_mm=(row.location_mm[0], 5.0))
+            if row.kind == "runner_rear_notch"
+            and row.location_mm[0] == 0.0 else row
+            for row in project.model.machining)
+        with pytest.raises(ValueError, match="bottom edge"):
+            cutting_panels_manual(_proxy(project, machining=mutated))
+
+    def test_per_part_uniformity_guard_fires_on_divergent_counts(
+            self, project):
+        # Review I1: "each of the N fronts gets K holes" must fail loudly
+        # when one part diverges, not keep quoting the representative.
+        dropped = [False]
+
+        def drop_one_pull(rows):
             out = []
             for row in rows:
-                if row.kind == "toe_attachment_station" and not kept[0]:
-                    kept[0] = True
+                if (row.kind == "pull_bore" and not dropped[0]
+                        and row.part_id.endswith("drawer_front_bottom")):
+                    dropped[0] = True
                     continue
                 out.append(row)
             return tuple(out)
 
         proxy = _proxy(project,
-                       machining=drop_one_toe_row(project.model.machining))
-        manual = cutting_panels_manual(proxy)
-        frames = cutting_action_frames(manual, proxy)
-        toe = next(frame for frame in frames
-                   if frame.frame_id == "cut.toe_attachment.frame")
-        assert "all 3 toe screw centers" in toe.caption
+                       machining=drop_one_pull(project.model.machining))
+        with pytest.raises(ValueError, match="disagree"):
+            cutting_panels_manual(proxy)
+
+    def test_toe_diagram_fails_loudly_without_both_rail_rows(self, project):
+        mutated = tuple(
+            row for row in project.model.machining
+            if not (row.kind == "toe_attachment_station"
+                    and row.receiving_part_id.endswith("toe_front")))
+        with pytest.raises(ValueError, match="front and one rear"):
+            cutting_panels_manual(_proxy(project, machining=mutated))
 
     def test_stale_hand_written_count_would_fail_loudly(self, project,
                                                         panels_manual):
