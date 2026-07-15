@@ -225,11 +225,15 @@ def test_dv72_expands_to_two_independent_service_bays_and_four_drawers():
         assert upper.runner.family_id.startswith("blum_movento")
         assert upper.runner.minimum_drawer_length_mm == pytest.approx(457.0)
         assert upper.runner.minimum_inside_depth_mm == pytest.approx(477.0)
-        assert upper.box_depth_mm >= upper.runner.minimum_drawer_length_mm
+        assert upper.box_depth_mm == pytest.approx(
+            upper.runner.required_box_length_mm
+        )
         assert lower.runner.family_id.startswith("blum_movento")
         assert lower.runner.minimum_drawer_length_mm == pytest.approx(305.0)
         assert lower.runner.minimum_inside_depth_mm == pytest.approx(325.0)
-        assert lower.box_depth_mm >= lower.runner.minimum_drawer_length_mm
+        assert lower.box_depth_mm == pytest.approx(
+            lower.runner.required_box_length_mm
+        )
 
 
 def test_geometry_contains_four_physical_boxes_fronts_and_no_toe_kick():
@@ -372,6 +376,109 @@ def test_lower_drawers_use_selected_12_in_movento():
         assert runner.selected_sku == "763.3050S"
         assert runner.minimum_drawer_length_mm == pytest.approx(305.0)
         assert runner.minimum_inside_depth_mm == pytest.approx(325.0)
+
+
+def test_movento_contract_drives_box_width_stock_and_length_by_role():
+    model = _project().model
+    bay_width = model.section.vanity.width_mm / 2
+    case_clear_width = bay_width - 2 * model.profile.carcass_thickness_mm
+
+    for bay in ("left", "right"):
+        for level, nominal in (("upper", 457.0), ("lower", 305.0)):
+            drawer = model.drawer(bay, level)
+            runner = drawer.runner
+            left = model.part(f"drawer_{bay}_{level}_side_left")
+            right = model.part(f"drawer_{bay}_{level}_side_right")
+
+            assert runner.required_total_lateral_clearance_mm == pytest.approx(42.0)
+            assert runner.maximum_drawer_side_thickness_mm == pytest.approx(16.0)
+            assert runner.minimum_drawer_length_mm == pytest.approx(nominal)
+            assert runner.drawer_length_deduction_mm == pytest.approx(10.0)
+            assert drawer.box_depth_mm == pytest.approx(nominal - 10.0)
+            assert drawer.box_width_mm == pytest.approx(case_clear_width - 42.0)
+            assert right.at_mm[0] + right.thickness_mm - left.at_mm[0] \
+                == pytest.approx(drawer.box_width_mm)
+            assert max(left.thickness_mm, right.thickness_mm) <= (
+                runner.maximum_drawer_side_thickness_mm
+            )
+            assert runner.mounting_authority == (
+                "WITHHELD_MANUFACTURER_TEMPLATE_CONTROLLED"
+            )
+            assert runner.machining_authority == (
+                "WITHHELD_MANUFACTURER_TEMPLATE_CONTROLLED"
+            )
+    assert model.machining == ()
+    assert _project().artifacts.machining_schedule == ()
+
+
+def _cut_roles_for_mutated_model(model):
+    from detailgen.packs.cabinetry.double_vanity import (
+        build_double_vanity_artifacts,
+        validate_double_vanity_model,
+    )
+
+    report = validate_double_vanity_model(model)
+    artifacts = build_double_vanity_artifacts(model, report)
+    return report, {item.role for item in artifacts.cut_list}
+
+
+def test_wrong_runner_lateral_clearance_withdraws_drawer_cut_authority():
+    model = _project().model
+    mutated = replace(
+        model,
+        drawers=tuple(
+            replace(
+                drawer,
+                runner=replace(
+                    drawer.runner,
+                    required_total_lateral_clearance_mm=50.0,
+                ),
+            )
+            for drawer in model.drawers
+        ),
+    )
+
+    report, roles = _cut_roles_for_mutated_model(mutated)
+    assert report.by_rule(
+        "double_vanity.drawer.runner_applicability"
+    ).verdict == "FAIL"
+    assert not any(role.startswith("drawer_") for role in roles)
+
+
+def test_oversize_modeled_drawer_side_withdraws_drawer_cut_authority():
+    model = _project().model
+    mutated = replace(
+        model,
+        parts=tuple(
+            replace(part, thickness_mm=17.0)
+            if part.role == "drawer_left_upper_side_left" else part
+            for part in model.parts
+        ),
+    )
+
+    report, roles = _cut_roles_for_mutated_model(mutated)
+    assert report.by_rule(
+        "double_vanity.drawer.runner_applicability"
+    ).verdict == "FAIL"
+    assert not any(role.startswith("drawer_") for role in roles)
+
+
+def test_wrong_modeled_drawer_length_withdraws_drawer_cut_authority():
+    model = _project().model
+    mutated = replace(
+        model,
+        parts=tuple(
+            replace(part, length_mm=part.length_mm + 1.0)
+            if part.role == "drawer_right_lower_side_right" else part
+            for part in model.parts
+        ),
+    )
+
+    report, roles = _cut_roles_for_mutated_model(mutated)
+    assert report.by_rule(
+        "double_vanity.drawer.runner_applicability"
+    ).verdict == "FAIL"
+    assert not any(role.startswith("drawer_") for role in roles)
 
 
 def test_product_and_assumed_rough_in_dimensions_drive_path_envelopes():
@@ -853,10 +960,13 @@ def test_30_mm_countertop_keeps_finished_height():
 
     assert model.countertop.structural_thickness_mm == pytest.approx(30.0)
     assert model.countertop.visual_edge_height_mm == pytest.approx(38.0)
+    assert model.section.vanity.countertop_thickness_mm == pytest.approx(
+        model.countertop.structural_thickness_mm
+    )
     total = (
         model.section.vanity.bottom_elevation_mm
         + model.section.vanity.body_height_mm
-        + 30.0
+        + model.section.vanity.countertop_thickness_mm
     )
     assert total == pytest.approx(34.5 * 25.4)
 
@@ -887,14 +997,11 @@ def test_trap_beyond_case_depth_withdraws_drawer_dimensions_or_fails_loudly(
         "K8998",
         replace(dv.K8998, overall_length_mm=1000.0),
     )
-    try:
-        project = _project()
-    except ProjectSchemaError:
-        return
-
-    roles = {item.role for item in project.artifacts.cut_list}
-    assert not any(role.startswith("drawer_") for role in roles)
-    assert project.model.release.fabrication_status == "HOLD_PRODUCT_GEOMETRY"
+    with pytest.raises(
+        ProjectSchemaError,
+        match="left K-8998 trap depth exceeds the vanity case depth",
+    ):
+        _project()
 
 
 def test_missing_sink_template_withholds_stone_without_invalidating_cabinet(
@@ -914,6 +1021,20 @@ def test_missing_sink_template_withholds_stone_without_invalidating_cabinet(
     assert "countertop" not in roles
     assert "left_end" in roles
     assert "drawer_left_upper_bottom_bridge" in roles
+
+
+def test_conditional_fabrication_instruction_is_scoped_and_not_contradictory():
+    project = _project()
+    instruction = " ".join(
+        step.instruction for step in project.artifacts.fabrication_steps
+    )
+
+    assert "CABINET/DRAWER FABRICATION ONLY" in instruction
+    assert "named cut-list parts" in instruction
+    assert "stone" in instruction.lower()
+    assert "wall drilling" in instruction.lower()
+    assert "installation" in instruction.lower()
+    assert "do not purchase, cut, drill, fabricate, or install" not in instruction
 
 
 def test_nyc_and_ipc_profiles_pin_deliberate_vertical_trap_difference():

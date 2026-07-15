@@ -457,6 +457,20 @@ class StudyRunner:
     source_url: str
     minimum_drawer_length_mm: float | None
     minimum_inside_depth_mm: float | None
+    required_total_lateral_clearance_mm: float | None
+    maximum_drawer_side_thickness_mm: float | None
+    drawer_length_deduction_mm: float | None
+    mounting_authority: str
+    machining_authority: str
+
+    @property
+    def required_box_length_mm(self) -> float | None:
+        if (
+            self.minimum_drawer_length_mm is None
+            or self.drawer_length_deduction_mm is None
+        ):
+            return None
+        return self.minimum_drawer_length_mm - self.drawer_length_deduction_mm
 
 
 @dataclass(frozen=True)
@@ -910,10 +924,8 @@ def build_double_vanity_model(
     front_y = wall_y - vanity.body_depth_mm
     z0 = vanity.bottom_elevation_mm
     bay_width = vanity.width_mm / 2
-    drawer_clear_width = bay_width - 2 * t - 42.0
     drawer_side_t = 15.0
     box_front_y = front_y + 22.0
-    upper_depth = 18 * IN
     upper_height = 5 * IN
     lower_height = 6 * IN
     upper_base_z = z0 + vanity.body_height_mm / 2 + 25.0
@@ -932,6 +944,11 @@ def build_double_vanity_model(
         ),
         minimum_drawer_length_mm=457.0,
         minimum_inside_depth_mm=477.0,
+        required_total_lateral_clearance_mm=42.0,
+        maximum_drawer_side_thickness_mm=16.0,
+        drawer_length_deduction_mm=10.0,
+        mounting_authority="WITHHELD_MANUFACTURER_TEMPLATE_CONTROLLED",
+        machining_authority="WITHHELD_MANUFACTURER_TEMPLATE_CONTROLLED",
     )
     lower_runner = StudyRunner(
         family_id="blum_movento_763_3050s@2026.1",
@@ -944,7 +961,24 @@ def build_double_vanity_model(
         ),
         minimum_drawer_length_mm=305.0,
         minimum_inside_depth_mm=325.0,
+        required_total_lateral_clearance_mm=42.0,
+        maximum_drawer_side_thickness_mm=16.0,
+        drawer_length_deduction_mm=10.0,
+        mounting_authority="WITHHELD_MANUFACTURER_TEMPLATE_CONTROLLED",
+        machining_authority="WITHHELD_MANUFACTURER_TEMPLATE_CONTROLLED",
     )
+    assert upper_runner.required_total_lateral_clearance_mm is not None
+    assert lower_runner.required_total_lateral_clearance_mm is not None
+    assert upper_runner.required_box_length_mm is not None
+    assert lower_runner.required_box_length_mm is not None
+    upper_box_width = (
+        bay_width - 2 * t - upper_runner.required_total_lateral_clearance_mm
+    )
+    lower_box_width = (
+        bay_width - 2 * t - lower_runner.required_total_lateral_clearance_mm
+    )
+    upper_depth = upper_runner.required_box_length_mm
+    lower_depth = lower_runner.required_box_length_mm
     rough_ins_by_bay = _rough_ins_by_bay(section.assumed_site)
     if rough_ins_by_bay is None:
         raise ProjectSchemaError(
@@ -1023,6 +1057,11 @@ def build_double_vanity_model(
                 "with_cleanout_service_allowance"
             ),
         )
+        if p_trap.y0_mm < front_y:
+            raise ProjectSchemaError(
+                f"{bay_id} K-8998 trap depth exceeds the vanity case depth; "
+                "drawer cut authority cannot be established"
+            )
         trap_arm_radius = K8998.outlet_od_mm / 2
         trap_arm = envelope(
             "trap_arm", waste.x_mm - trap_arm_radius,
@@ -1082,7 +1121,7 @@ def build_double_vanity_model(
         )
         u_width = service.width_mm
         u_depth = upper_box_rear - service.y0_mm
-        interior_width = drawer_clear_width - 2 * drawer_side_t
+        interior_width = upper_box_width - 2 * drawer_side_t
         wing = (interior_width - u_width) / 2
         bridge_depth = upper_depth - u_depth
         if wing <= drawer_side_t or bridge_depth <= drawer_side_t:
@@ -1102,8 +1141,6 @@ def build_double_vanity_model(
             if lower_obstacles else
             vanity.body_depth_mm - 22.0 - study_clearance
         )
-        lower_depth = lower_runner.minimum_drawer_length_mm
-        assert lower_depth is not None
         if lower_depth > lower_available_depth:
             raise ProjectSchemaError(
                 f"{bay_id} plumbing envelope cannot fit the selected lower runner"
@@ -1117,13 +1154,13 @@ def build_double_vanity_model(
         drawers.extend((
             DrawerStudy(
                 f"{bay_id}.upper", bay_id, "upper", "upper_u_service",
-                drawer_clear_width, upper_depth, upper_height,
+                upper_box_width, upper_depth, upper_height,
                 u_width, u_depth, True, upper_runner,
                 study_clearance, None, None, False,
             ),
             DrawerStudy(
                 f"{bay_id}.lower", bay_id, "lower", "lower_short_service",
-                drawer_clear_width, lower_depth, lower_height,
+                lower_box_width, lower_depth, lower_height,
                 0.0, 0.0, True, lower_runner,
                 study_clearance, None, None, False,
             ),
@@ -1650,6 +1687,91 @@ def _physical_lower_box_bounds(
     return (left.at_mm[2], left.at_mm[2] + left.width_mm, rear_y)
 
 
+_WITHHELD_RUNNER_TEMPLATE_AUTHORITY = (
+    "WITHHELD_MANUFACTURER_TEMPLATE_CONTROLLED"
+)
+
+
+def _runner_cut_applicability(
+    model: DoubleVanityModel,
+    drawer: DrawerStudy,
+    *,
+    wall_y_mm: float,
+) -> str:
+    """Return cut-only runner applicability without granting machining authority."""
+
+    runner = drawer.runner
+    numeric_authority = (
+        runner.minimum_drawer_length_mm,
+        runner.minimum_inside_depth_mm,
+        runner.required_total_lateral_clearance_mm,
+        runner.maximum_drawer_side_thickness_mm,
+        runner.drawer_length_deduction_mm,
+        runner.required_box_length_mm,
+    )
+    if (
+        not all((
+            runner.family_id,
+            runner.selected_sku,
+            runner.source_url,
+            runner.mounting_authority,
+            runner.machining_authority,
+        ))
+        or any(value is None for value in numeric_authority)
+    ):
+        return "UNKNOWN"
+    assert runner.required_total_lateral_clearance_mm is not None
+    assert runner.maximum_drawer_side_thickness_mm is not None
+    assert runner.required_box_length_mm is not None
+    if (
+        (runner.family_id, runner.selected_sku)
+        != _REQUIRED_RUNNERS[drawer.level]
+        or runner.mounting_authority != _WITHHELD_RUNNER_TEMPLATE_AUTHORITY
+        or runner.machining_authority != _WITHHELD_RUNNER_TEMPLATE_AUTHORITY
+        or model.machining
+    ):
+        return "FAIL"
+    try:
+        left = model.part(
+            f"drawer_{drawer.bay_id}_{drawer.level}_side_left"
+        )
+        right = model.part(
+            f"drawer_{drawer.bay_id}_{drawer.level}_side_right"
+        )
+        front = model.part(f"drawer_{drawer.bay_id}_{drawer.level}_front")
+    except KeyError:
+        return "FAIL"
+    expected_box_width = (
+        model.section.vanity.width_mm / 2
+        - 2 * model.profile.carcass_thickness_mm
+        - runner.required_total_lateral_clearance_mm
+    )
+    modeled_external_width = (
+        right.at_mm[0] + right.thickness_mm - left.at_mm[0]
+    )
+    maximum_side_thickness = max(left.thickness_mm, right.thickness_mm)
+    usable_inside_depth = wall_y_mm - left.at_mm[1]
+    tolerance = 1e-6
+    compatible = (
+        expected_box_width > 0
+        and runner.required_box_length_mm > 0
+        and abs(drawer.box_width_mm - expected_box_width) <= tolerance
+        and abs(modeled_external_width - expected_box_width) <= tolerance
+        and abs(
+            front.length_mm + left.thickness_mm + right.thickness_mm
+            - expected_box_width
+        ) <= tolerance
+        and maximum_side_thickness
+        <= runner.maximum_drawer_side_thickness_mm + tolerance
+        and abs(drawer.box_depth_mm - runner.required_box_length_mm)
+        <= tolerance
+        and abs(left.length_mm - runner.required_box_length_mm) <= tolerance
+        and abs(right.length_mm - runner.required_box_length_mm) <= tolerance
+        and usable_inside_depth + tolerance >= runner.minimum_inside_depth_mm
+    )
+    return "PASS" if compatible else "FAIL"
+
+
 def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
     findings: list[CabinetFinding] = []
     evidence: list[EvidenceRecord] = []
@@ -1917,40 +2039,18 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
             )
         product_geometry_ok = product_geometry_ok and physical_matches
 
-    runners_authoritative = True
-    runners_fit = True
-    for drawer in model.drawers:
-        runner = drawer.runner
-        if not all((
-            runner.family_id,
-            runner.selected_sku,
-            runner.source_url,
-        )) or (
-            runner.minimum_drawer_length_mm is None
-            or runner.minimum_inside_depth_mm is None
-        ):
-            runners_authoritative = False
-            continue
-        if (
-            (runner.family_id, runner.selected_sku)
-            != _REQUIRED_RUNNERS[drawer.level]
-        ):
-            runners_fit = False
-            continue
-        try:
-            drawer_front_y = model.part(
-                f"drawer_{drawer.bay_id}_{drawer.level}_side_left"
-            ).at_mm[1]
-        except KeyError:
-            runners_fit = False
-            continue
-        usable_inside_depth = wall_y - drawer_front_y
-        if (
-            drawer.box_depth_mm + tolerance < runner.minimum_drawer_length_mm
-            or usable_inside_depth + tolerance
-            < runner.minimum_inside_depth_mm
-        ):
-            runners_fit = False
+    runner_statuses = {
+        drawer.drawer_id: _runner_cut_applicability(
+            model, drawer, wall_y_mm=wall_y,
+        )
+        for drawer in model.drawers
+    }
+    runners_authoritative = all(
+        status != "UNKNOWN" for status in runner_statuses.values()
+    )
+    runners_fit = all(
+        status != "FAIL" for status in runner_statuses.values()
+    )
     product_authority_complete = (
         product_authority_complete and runners_authoritative
     )
@@ -1977,36 +2077,14 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
         "calculated" if coordination_verdict != "UNKNOWN" else "unknown",
     )
 
-    incompatible_runners = []
-    unknown_runners = []
-    for drawer in model.drawers:
-        runner = drawer.runner
-        if (
-            runner.family_id.startswith("unselected_")
-            or runner.minimum_drawer_length_mm is None
-            or runner.minimum_inside_depth_mm is None
-        ):
-            unknown_runners.append(drawer.drawer_id)
-            continue
-        if (
-            (runner.family_id, runner.selected_sku)
-            != _REQUIRED_RUNNERS[drawer.level]
-        ):
-            incompatible_runners.append(drawer.drawer_id)
-            continue
-        try:
-            drawer_front_y = model.part(
-                f"drawer_{drawer.bay_id}_{drawer.level}_side_left"
-            ).at_mm[1]
-        except KeyError:
-            incompatible_runners.append(drawer.drawer_id)
-            continue
-        usable_inside_depth = wall_y - drawer_front_y
-        if (
-            drawer.box_depth_mm < runner.minimum_drawer_length_mm
-            or usable_inside_depth < runner.minimum_inside_depth_mm
-        ):
-            incompatible_runners.append(drawer.drawer_id)
+    incompatible_runners = [
+        drawer_id for drawer_id, status in runner_statuses.items()
+        if status == "FAIL"
+    ]
+    unknown_runners = [
+        drawer_id for drawer_id, status in runner_statuses.items()
+        if status == "UNKNOWN"
+    ]
     runner_verdict = (
         "FAIL" if incompatible_runners else
         "UNKNOWN" if unknown_runners else "PASS"
@@ -2017,7 +2095,9 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
         f"Incompatible runner studies: {incompatible_runners}; unselected "
         f"runner families: {unknown_runners}. The selected 18-inch and 12-inch "
         "MOVENTO full-extension soft-close runners fit the modeled upper and "
-        "lower drawer depths; dynamic travel and removal remain gated.",
+        "lower external widths, side stock, nominal-minus-10-mm box lengths, "
+        "and usable inside depths. Mounting, machining, dynamic travel, and "
+        "removal remain template-controlled or gated.",
         "calculated" if runner_verdict != "UNKNOWN" else "unknown",
         source=model.drawer("left", "upper").runner.source_url,
     )
@@ -2132,6 +2212,18 @@ def build_double_vanity_artifacts(
         surface_class=part.surface_class,
         source_rule=model.source_map[part.part_id].rule,
     ) for part in sorted(fabricated, key=lambda item: item.part_id))
+    fabrication_instruction = (
+        "CABINET/DRAWER FABRICATION ONLY — fabricate only the named cut-list "
+        "parts under the stated owner-assumed site basis and selected K-20000, "
+        "K-7124-A, K-8998, and MOVENTO product conditions. Stone cutting, "
+        "runner mounting or machining, wall drilling, structural loading, trade "
+        "work, and installation remain held."
+        if drawer_cut_authority else
+        "CABINET CASE CUTS ONLY — drawer dimensions are withdrawn because the "
+        "product/runner cut-applicability checks do not pass. Stone cutting, "
+        "runner mounting or machining, wall drilling, structural loading, trade "
+        "work, and installation remain held."
+    )
     return CabinetArtifacts(
         schema="detailgen/double-vanity-study-artifacts/v1",
         project=model.project_name,
@@ -2144,10 +2236,9 @@ def build_double_vanity_artifacts(
         hardware_schedule=(),
         machining_schedule=(),
         fabrication_steps=(WorkStep(
-            10, "study.no_fabrication",
-            "DESIGN STUDY ONLY — do not purchase, cut, drill, fabricate, or install "
-            "from these provisional dimensions while any release gate is UNKNOWN.",
-            evidence="unknown",
+            10, "fabrication.conditional_scope",
+            fabrication_instruction,
+            evidence="calculated" if drawer_cut_authority else "unknown",
         ),),
         assembly_steps=(
             WorkStep(
