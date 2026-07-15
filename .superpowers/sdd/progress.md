@@ -45,6 +45,11 @@ release decision and `pytest --detail-gate <slug> -q -n 4` for the build-owned
 inner loop. Shared platform or certification changes still require the full
 repository suite before integration.
 
+The frozen final tree collected 1,852 tests and passed the complete unfiltered
+gate: **1,848 passed / 3 skipped / 1 xfailed** in 1,780.68 seconds (1,780.90
+seconds wall). This preserves every unrelated platform regression while the
+caddy-owned inner loop remains 33.62 seconds at its slower fresh run.
+
 ## Superseded semantic-gate result (2026-07-15 — CADDY GATE 94.82% FASTER)
 
 The final reinforced-miter caddy session paid 1,290.34 seconds for the full

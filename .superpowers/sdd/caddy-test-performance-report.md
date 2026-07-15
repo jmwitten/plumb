@@ -81,6 +81,7 @@ the recorded times are conservative rather than idle-machine best cases.
 | Previous committed full regression | `pytest -q -n 4` | 1,027.31 s | 1,027.54 s | 1,839 passed, 3 skipped, 1 xfailed |
 | Generic gate 1 | `--detail-gate armchair_caddy` | 33.51 s | 33.62 s | 9 passed |
 | Generic gate 2 | same, fresh process | 33.36 s | 33.53 s | 9 passed |
+| Final generic full regression | `pytest -q -n 4` | 1,780.68 s | 1,780.90 s | 1,848 passed, 3 skipped, 1 xfailed |
 
 The full-suite duration table showed that unrelated products dominated the
 cost: trebuchet prose truthfulness took 218 seconds; blocked-platform document
@@ -167,5 +168,10 @@ pack, cache, certification-engine, or adapter changes.
 
 The earlier semantic gate deleted no tests; the subsequent generic migration
 removed only after the equivalence ledger and migration audit established the
-replacement. The final full-platform regression is recorded after the frozen
-tree passes it.
+replacement.
+
+The frozen final tree collected 1,852 nodes and passed the full unfiltered
+repository gate: **1,848 passed, 3 skipped, 1 xfailed** in 1,780.68 seconds
+(1,780.90 seconds process wall). The full gate intentionally includes every
+unrelated product and shared framework regression; its runtime is integration
+evidence, not the build-owned inner-loop measurement.
