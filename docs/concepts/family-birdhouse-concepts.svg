@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="620" viewBox="0 0 1500 620" role="img" aria-labelledby="title desc">
+  <title id="title">Family birdhouse concept comparison</title>
+  <desc id="desc">Three simplified cedar birdhouse concepts compare pivot-side, hinged-roof, and removable-front cleanout access.</desc>
+  <rect width="1500" height="620" fill="#f6f2e8"/>
+  <text x="60" y="62" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#23322b">Family birdhouse — governed concept comparison</text>
+  <text x="60" y="96" font-family="Arial, sans-serif" font-size="18" fill="#53635b">Comparable schematic views only · final geometry comes from the approved Plumb model</text>
+
+  <g transform="translate(55 135)">
+    <rect width="430" height="410" rx="18" fill="#ffffff" stroke="#2c6e49" stroke-width="5"/>
+    <text x="28" y="44" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f3d2d">A · Pivot-side classic</text>
+    <text x="28" y="72" font-family="Arial, sans-serif" font-size="17" fill="#2c6e49">SELECTED</text>
+    <polygon points="95,145 285,115 350,155 160,185" fill="#5f7e61" stroke="#23322b" stroke-width="3"/>
+    <polygon points="110,180 275,154 275,330 110,355" fill="#b9824f" stroke="#23322b" stroke-width="3"/>
+    <polygon points="275,154 335,186 335,342 275,330" fill="#d0a16f" stroke="#23322b" stroke-width="3"/>
+    <circle cx="189" cy="235" r="22" fill="#24312b"/>
+    <line x1="292" y1="202" x2="292" y2="314" stroke="#174f36" stroke-width="5" stroke-dasharray="9 8"/>
+    <path d="M 328 260 A 55 55 0 0 1 355 310" fill="none" stroke="#174f36" stroke-width="5"/>
+    <polygon points="353,305 362,322 344,319" fill="#174f36"/>
+    <text x="28" y="382" font-family="Arial, sans-serif" font-size="17" fill="#23322b">Side pivots down; roof stays fixed.</text>
+  </g>
+
+  <g transform="translate(535 135)">
+    <rect width="430" height="410" rx="18" fill="#ffffff" stroke="#8e846d" stroke-width="3"/>
+    <text x="28" y="44" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#3e3a31">B · Hinged-roof access</text>
+    <text x="28" y="72" font-family="Arial, sans-serif" font-size="17" fill="#6d6554">ALTERNATE</text>
+    <polygon points="108,200 274,175 334,206 168,232" fill="#b9824f" stroke="#23322b" stroke-width="3"/>
+    <polygon points="108,200 274,175 274,344 108,368" fill="#b9824f" stroke="#23322b" stroke-width="3"/>
+    <polygon points="274,175 334,206 334,356 274,344" fill="#d0a16f" stroke="#23322b" stroke-width="3"/>
+    <circle cx="186" cy="260" r="22" fill="#24312b"/>
+    <polygon points="93,147 284,117 351,151 160,183" fill="#5f7e61" stroke="#23322b" stroke-width="3" transform="rotate(-13 275 172)"/>
+    <line x1="287" y1="154" x2="319" y2="170" stroke="#174f36" stroke-width="6"/>
+    <path d="M 323 156 A 58 58 0 0 0 301 115" fill="none" stroke="#174f36" stroke-width="5"/>
+    <polygon points="298,116 300,97 314,109" fill="#174f36"/>
+    <text x="28" y="382" font-family="Arial, sans-serif" font-size="17" fill="#23322b">Roof lifts; all wall panels stay fixed.</text>
+  </g>
+
+  <g transform="translate(1015 135)">
+    <rect width="430" height="410" rx="18" fill="#ffffff" stroke="#8e846d" stroke-width="3"/>
+    <text x="28" y="44" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#3e3a31">C · Removable front</text>
+    <text x="28" y="72" font-family="Arial, sans-serif" font-size="17" fill="#6d6554">ALTERNATE</text>
+    <polygon points="105,145 295,115 357,150 167,180" fill="#5f7e61" stroke="#23322b" stroke-width="3"/>
+    <polygon points="120,180 285,155 285,332 120,356" fill="#b9824f" stroke="#23322b" stroke-width="3" opacity="0.45"/>
+    <polygon points="285,155 345,187 345,344 285,332" fill="#d0a16f" stroke="#23322b" stroke-width="3"/>
+    <polygon points="73,205 228,181 228,340 73,364" fill="#b9824f" stroke="#23322b" stroke-width="3"/>
+    <circle cx="150" cy="247" r="22" fill="#24312b"/>
+    <line x1="244" y1="263" x2="281" y2="257" stroke="#174f36" stroke-width="5"/>
+    <polygon points="278,248 298,254 282,267" fill="#174f36"/>
+    <text x="28" y="382" font-family="Arial, sans-serif" font-size="17" fill="#23322b">Entrance face pulls forward for service.</text>
+  </g>
+
+  <text x="60" y="585" font-family="Arial, sans-serif" font-size="16" fill="#53635b">Evidence basis: Cornell NestWatch/Minnesota DNR plans, Texas Parks &amp; Wildlife guidance, JCS Wildlife and Nature's Way products · accessed 2026-07-15</text>
+</svg>
