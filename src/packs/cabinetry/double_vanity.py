@@ -9,6 +9,8 @@ nine project facts that a photograph or generic catalog cannot establish.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
+import hashlib
+import json
 import re
 
 from ...core.units import IN
@@ -25,7 +27,7 @@ from ...spec.schema import (
     ValidationSpec,
 )
 from ..project import PackedProject, ProjectSchemaError
-from .artifacts import CabinetArtifacts, CutListItem, WorkStep
+from .artifacts import CabinetArtifacts, CutListItem, EdgeBandItem, WorkStep
 from .catalogs import get_wall_anchor_product
 from .evidence import EvidenceRecord
 from .profiles import get_profile
@@ -534,6 +536,92 @@ class CountertopStudy:
 
 
 @dataclass(frozen=True)
+class FabricationBasis:
+    """Versioned, digestible source of every cabinet-fabrication selection."""
+
+    basis_id: str
+    version: str
+    provenance: str
+    case_material: str
+    case_thickness_mm: float
+    drawer_material: str
+    drawer_thickness_mm: float
+    bottom_material: str
+    bottom_thickness_mm: float
+    veneer: str
+    grain_sequence: str
+    edge_band_material: str
+    edge_band_thickness_mm: float
+    finish: str
+    joinery: str
+    cabinet_fastener: str
+    net_blank_convention: str
+    part_tolerance_mm: float
+    case_tolerance_mm: float
+    diagonal_tolerance_mm: float
+    countertop_material: str
+    countertop_structural_thickness_mm: float
+    countertop_visual_edge_mm: float
+    sink_support_zones_mm: tuple[float, float, float, float, float]
+    sink_support_basis: str
+
+    def digest(self) -> str:
+        payload = json.dumps(
+            asdict(self), sort_keys=True, separators=(",", ":"),
+        ).encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()
+
+    def material_for_thickness(self, thickness_mm: float) -> str:
+        if abs(thickness_mm - self.bottom_thickness_mm) <= 1e-6:
+            return self.bottom_material
+        if abs(thickness_mm - self.drawer_thickness_mm) <= 1e-6:
+            return self.drawer_material
+        if abs(thickness_mm - self.case_thickness_mm) <= 0.1:
+            return self.case_material
+        raise ProjectSchemaError(
+            f"fabrication basis has no material for {thickness_mm:.3f} mm stock"
+        )
+
+    def shop_schedule(self) -> tuple[str, ...]:
+        zones = self.sink_support_zones_mm
+        return (
+            f"{self.case_thickness_mm:.2f} mm {self.case_material}",
+            f"{self.drawer_thickness_mm:.1f} mm {self.drawer_material}",
+            f"{self.bottom_thickness_mm:.1f} mm {self.bottom_material}",
+            f"{self.veneer}; {self.grain_sequence}",
+            f"{self.edge_band_thickness_mm:.1f} mm {self.edge_band_material}",
+            self.finish,
+            self.joinery,
+            self.cabinet_fastener,
+            self.net_blank_convention,
+            f"±{self.part_tolerance_mm:.1f} mm part-size tolerance; "
+            f"±{self.case_tolerance_mm:.1f} mm assembled-case size; "
+            f"diagonals within {self.diagonal_tolerance_mm:.1f} mm",
+            "gross sink support zones left/inter-sink/right/front/rear: "
+            + "/".join(f"{value:.1f} mm" for value in zones)
+            + f"; {self.sink_support_basis}",
+        )
+
+
+@dataclass(frozen=True)
+class FabricationAcceptance:
+    status: str
+    accepted_by: str = ""
+    accepted_on: str = ""
+    basis_digest: str = ""
+    evidence_revision: str = ""
+
+    def complete_for(self, basis: FabricationBasis) -> bool:
+        return (
+            self.status == "ACCEPTED"
+            and bool(self.accepted_by.strip())
+            and bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", self.accepted_on))
+            and self.basis_digest == basis.digest()
+            and bool(self.evidence_revision.strip())
+        )
+
+
+@dataclass(frozen=True)
 class ConditionalRelease:
     fabrication_status: str
     installation_status: str
@@ -668,6 +756,8 @@ class DoubleVanityModel:
     anchor_stud_ids: tuple[str, ...]
     catalog_assets: tuple[CatalogAssetRef, ...]
     countertop: CountertopStudy
+    fabrication_basis: FabricationBasis
+    fabrication_acceptance: FabricationAcceptance
     release: ConditionalRelease
     support_layout: SupportLayout
     load_case: LoadCase
@@ -699,6 +789,7 @@ class DoubleVanityModel:
             "comparative_mount": self.mount_reference.adapter_id,
         }
 
+
     def catalog_source_manifest(self) -> dict[str, str]:
         return {
             "sink": self.sink.specification_url,
@@ -712,6 +803,7 @@ class DoubleVanityModel:
             "plumbing_traps": self.code_profile.trap_source_url,
             "comparative_mount": self.mount_reference.specification_url,
         }
+
 
     def catalog_asset_manifest(self) -> list[dict]:
         return [asset.manifest() for asset in self.catalog_assets]
@@ -780,6 +872,51 @@ class DoubleVanityModel:
                 for drawer in self.drawers
             },
         }
+
+
+def apply_fabrication_acceptance(
+    model: DoubleVanityModel,
+    acceptance: FabricationAcceptance,
+) -> DoubleVanityModel:
+    """Return the only model variant allowed to activate production cuts."""
+
+    if acceptance.status != "ACCEPTED" or not acceptance.complete_for(
+        model.fabrication_basis
+    ):
+        raise ProjectSchemaError(
+            "fabrication acceptance must be ACCEPTED with signer, ISO date, "
+            "evidence revision, and the exact fabrication-basis digest"
+        )
+    return replace(
+        model,
+        fabrication_acceptance=acceptance,
+        release=replace(
+            model.release,
+            fabrication_status="CONDITIONAL_FABRICATION_RELEASE",
+        ),
+    )
+
+
+def _vertical_panel_x_bounds(part: PartModel) -> tuple[float, float]:
+    if part.rotate == (("Y", -90.0),):
+        return part.at_mm[0] - part.thickness_mm, part.at_mm[0]
+    return part.at_mm[0], part.at_mm[0] + part.thickness_mm
+
+
+def _case_opening_x_bounds(
+    parts: tuple[PartModel, ...] | list[PartModel], bay_id: str,
+) -> tuple[float, float]:
+    by_role = {part.role: part for part in parts}
+    left_role, right_role = (
+        ("left_end", "center_divider") if bay_id == "left"
+        else ("center_divider", "right_end")
+    )
+    left_bounds = _vertical_panel_x_bounds(by_role[left_role])
+    right_bounds = _vertical_panel_x_bounds(by_role[right_role])
+    opening = left_bounds[1], right_bounds[0]
+    if opening[1] <= opening[0]:
+        raise ProjectSchemaError(f"{bay_id} case opening has no positive width")
+    return opening
 
 
 def _rough_ins_by_bay(
@@ -1376,9 +1513,7 @@ def build_double_vanity_model(
     # void with two bottom wings, a front bridge, and two inner return walls;
     # lower boxes are conventional five-piece shallow-depth boxes.
     for index, bay_id in enumerate(("left", "right")):
-        opening_left = (
-            vanity.x0_mm + index * bay_width - (t / 2 if index else 0.0)
-        )
+        opening_left, opening_right = _case_opening_x_bounds(parts, bay_id)
         upper = next(d for d in drawers if d.bay_id == bay_id and d.level == "upper")
         lower = next(d for d in drawers if d.bay_id == bay_id and d.level == "lower")
         for level, drawer, base_z in (
@@ -1392,6 +1527,12 @@ def build_double_vanity_model(
                 drawer.runner.inside_drawer_width_deduction_mm - 2 * side_t
             ) / 2
             bay_left = opening_left + outside_clearance
+            expected_right = opening_right - outside_clearance
+            if abs(bay_left + drawer.box_width_mm - expected_right) > 1e-6:
+                raise ProjectSchemaError(
+                    f"{bay_id} {level} drawer does not preserve the selected "
+                    "runner clearance at both physical case faces"
+                )
             box_front_y = front_y + 22.0
             for side, x in (
                 ("left", bay_left),
@@ -1558,6 +1699,48 @@ def build_double_vanity_model(
     )
     load_case = _derive_primary_mount_load_case(vanity, parts)
 
+    left_fixture = paths[0].fixture_envelope
+    right_fixture = paths[1].fixture_envelope
+    fabrication_basis = FabricationBasis(
+        basis_id="dv72.fabrication-basis", version="1.0.0",
+        provenance="owner_assumed",
+        case_material="veneer-core plywood",
+        case_thickness_mm=t,
+        drawer_material="veneer-core plywood",
+        drawer_thickness_mm=15.0,
+        bottom_material="plywood",
+        bottom_thickness_mm=9.0,
+        veneer="matching figured-walnut veneer",
+        grain_sequence="continuous grain sequence across four slab fronts",
+        edge_band_material="matching walnut veneer edge band",
+        edge_band_thickness_mm=1.0,
+        finish="clear low-sheen conversion-varnish finish over approved samples",
+        joinery="glued doweled butt joints at finished extents",
+        cabinet_fastener=(
+            "#8 x 38 mm flat-head cabinet screws, predrilled and concealed"
+        ),
+        net_blank_convention=(
+            "finished net part sizes after trimming and edge banding; shop-cut "
+            "blank process allowances are fabricator-selected and not released"
+        ),
+        part_tolerance_mm=0.5, case_tolerance_mm=1.0,
+        diagonal_tolerance_mm=1.5,
+        countertop_material="quartz selected by countertop fabricator",
+        countertop_structural_thickness_mm=30.0,
+        countertop_visual_edge_mm=38.0,
+        sink_support_zones_mm=(
+            left_fixture.x0_mm - vanity.x0_mm,
+            right_fixture.x0_mm - left_fixture.x1_mm,
+            vanity.x0_mm + vanity.width_mm - right_fixture.x1_mm,
+            left_fixture.y0_mm - front_y,
+            wall_y - left_fixture.y1_mm,
+        ),
+        sink_support_basis=(
+            "gross fixture-envelope coordination only; not cutout, clamp, "
+            "reinforcement, or structural authority"
+        ),
+    )
+
     return DoubleVanityModel(
         project_name, section.mode, profile, section, section.assumed_site,
         K20000, K7124_A, K8998,
@@ -1566,16 +1749,20 @@ def build_double_vanity_model(
         tuple(parts), (), (), (), source_map,
         tuple(stud.stud_id for stud in anchor_studs), _catalog_assets(),
         CountertopStudy(
-            material="stone selected by countertop fabricator",
-            structural_thickness_mm=30.0,
-            visual_edge_height_mm=38.0,
+            material=fabrication_basis.countertop_material,
+            structural_thickness_mm=(
+                fabrication_basis.countertop_structural_thickness_mm
+            ),
+            visual_edge_height_mm=fabrication_basis.countertop_visual_edge_mm,
             cutout_template_id=K20000.cutout_template_id,
             stone_cut_authority=(
                 "WITHHELD_UNTIL_FABRICATOR_ACCEPTS_K-20000_TEMPLATE"
             ),
         ),
+        fabrication_basis,
+        FabricationAcceptance(status="PENDING"),
         ConditionalRelease(
-            fabrication_status="CONDITIONAL_FABRICATION_RELEASE",
+            fabrication_status="HOLD_FABRICATOR_ACCEPTANCE",
             installation_status="HOLD_FIELD_VERIFY",
             trade_status="HOLD_RESPONSIBLE_TRADE_APPROVAL",
             commissioning_status="HOLD_COMMISSIONING",
@@ -1918,6 +2105,13 @@ def _runner_cut_applicability(
     modeled_external_width = (
         right.at_mm[0] + right.thickness_mm - left.at_mm[0]
     )
+    opening_left, opening_right = _case_opening_x_bounds(
+        model.parts, drawer.bay_id,
+    )
+    selected_outside_clearance = (
+        runner.inside_drawer_width_deduction_mm
+        - left.thickness_mm - right.thickness_mm
+    ) / 2
     maximum_side_thickness = max(left.thickness_mm, right.thickness_mm)
     expected_inside_width = (
         opening_width - runner.inside_drawer_width_deduction_mm
@@ -1933,6 +2127,12 @@ def _runner_cut_applicability(
         and expected_inside_width > 0
         and abs(drawer.box_width_mm - expected_box_width) <= tolerance
         and abs(modeled_external_width - expected_box_width) <= tolerance
+        and abs(left.at_mm[0] - opening_left - selected_outside_clearance)
+        <= tolerance
+        and abs(
+            opening_right - (right.at_mm[0] + right.thickness_mm)
+            - selected_outside_clearance
+        ) <= tolerance
         and abs(front.length_mm - expected_inside_width) <= tolerance
         and maximum_side_thickness
         <= runner.maximum_drawer_side_thickness_mm + tolerance
@@ -2338,10 +2538,6 @@ def validate_double_vanity_model(model: DoubleVanityModel) -> CabinetReport:
     )
     supports = model.support_layout.supports
     support_count = len(supports)
-    per_support_demand_lb = (
-        model.load_case.factored_total_lb / support_count
-        if support_count else float("inf")
-    )
     expected_support_axes = {
         role: model.part(role).at_mm[0] + model.part(role).thickness_mm / 2
         for role in ("left_end", "center_divider", "right_end")
@@ -2460,6 +2656,17 @@ def build_double_vanity_artifacts(
             "double_vanity.drawer.runner_applicability",
         )
     )
+    acceptance = model.fabrication_acceptance
+    if acceptance.status not in {"PENDING", "ACCEPTED"}:
+        raise ProjectSchemaError(
+            f"unsupported fabrication acceptance status {acceptance.status!r}"
+        )
+    fabrication_authorized = acceptance.complete_for(model.fabrication_basis)
+    if acceptance.status == "ACCEPTED" and not fabrication_authorized:
+        raise ProjectSchemaError(
+            "accepted fabrication evidence is incomplete or does not match "
+            "the fabrication-basis digest"
+        )
     fabricated = tuple(
         part for part in model.parts
         if part.component_type == "plywood_panel"
@@ -2472,21 +2679,47 @@ def build_double_vanity_artifacts(
     cut_list = tuple(CutListItem(
         part_id=part.part_id,
         role=part.role,
-        description=part.name,
+        description=(
+            f"{part.name}; "
+            f"{model.fabrication_basis.material_for_thickness(part.thickness_mm)}"
+        ),
         quantity=1,
         length_mm=part.length_mm,
         width_mm=part.width_mm,
         thickness_mm=part.thickness_mm,
-        material="study plywood; product, finish, grain, and nesting unresolved",
+        material=model.fabrication_basis.material_for_thickness(part.thickness_mm),
         surface_class=part.surface_class,
         source_rule=model.source_map[part.part_id].rule,
     ) for part in sorted(fabricated, key=lambda item: item.part_id))
+    edge_banding = tuple(
+        EdgeBandItem(
+            part_id=part.part_id,
+            edge=edge,
+            operation="apply selected veneer edge band",
+            length_mm=(
+                part.width_mm if edge in {"left", "right", "front"}
+                else part.length_mm
+            ),
+            material=model.fabrication_basis.edge_band_material,
+            source_rule=model.source_map[part.part_id].rule,
+            thickness_mm=model.fabrication_basis.edge_band_thickness_mm,
+            cut_size_basis=model.fabrication_basis.net_blank_convention,
+        )
+        for part in sorted(fabricated, key=lambda item: item.part_id)
+        for edge in part.edge_bands
+    )
     fabrication_instruction = (
-        "CABINET/DRAWER FABRICATION ONLY — fabricate only the named cut-list "
+        "CABINET/DRAWER PRODUCTION AUTHORIZED — fabricate only the named cut-list "
         "parts under the stated owner-assumed site basis and selected K-20000, "
         "K-7124-A, K-8998, and MOVENTO product conditions. Stone cutting, "
         "runner mounting or machining, wall drilling, structural loading, trade "
         "work, and installation remain held."
+        if drawer_cut_authority and fabrication_authorized else
+        "PREPARED CABINET/DRAWER CUT SCHEDULE — NON-PRODUCTION. Static model "
+        "geometry is available for fabricator review, but fabrication remains "
+        "held until complete signed acceptance of the exact fabrication-basis "
+        "digest. Stone, runner machining, wall drilling, trade work, and installation "
+        "remain held."
         if drawer_cut_authority else
         "CABINET CASE CUTS ONLY — drawer dimensions are withdrawn because the "
         "product/runner cut-applicability checks do not pass. Stone cutting, "
@@ -2500,8 +2733,12 @@ def build_double_vanity_artifacts(
         profile=model.profile.profile_id,
         mode=model.mode,
         release_ready=False,
+        fabrication_ready=(drawer_cut_authority and fabrication_authorized),
+        installation_use_ready=False,
+        release_scope="split",
+        release_contract="typed_fabrication_acceptance/v1",
         cut_list=cut_list,
-        edge_banding=(),
+        edge_banding=edge_banding,
         hardware_schedule=(),
         machining_schedule=(),
         fabrication_steps=(WorkStep(

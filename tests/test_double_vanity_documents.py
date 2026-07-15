@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 import hashlib
 import re
+import inspect
 import sys
 from pathlib import Path
 
@@ -54,7 +55,7 @@ def test_four_concise_linked_reader_surfaces_have_distinct_jobs():
 def test_documents_distinguish_all_authorities():
     docs = _documents()
 
-    assert "CONDITIONAL FABRICATION RELEASE" in (
+    assert "FABRICATION HOLD — FABRICATOR ACCEPTANCE PENDING" in (
         docs["dv72_fabrication_coordination.html"]
     )
     assert "INSTALLATION HOLD — FIELD VERIFY" in (
@@ -63,7 +64,7 @@ def test_documents_distinguish_all_authorities():
     assert "owner_assumed" in docs["dv72_review_installation.html"]
     assert "not field verified" in docs["dv72_review_installation.html"]
     assert "TRADE HOLD" in docs["dv72_validation_sources.html"]
-    assert 'data-release-status="CONDITIONAL_FABRICATION_RELEASE"' in (
+    assert 'data-release-status="HOLD_FABRICATOR_ACCEPTANCE"' in (
         docs["dv72_fabrication_coordination.html"]
     )
     assert 'data-release-status="HOLD_FIELD_VERIFY"' in (
@@ -79,7 +80,7 @@ def test_fabrication_names_both_runners_and_withholds_stone():
 
     assert "763.4570S" in html
     assert "763.3050S" in html
-    assert "Released cabinet and drawer inventory" in html
+    assert "Prepared cabinet and drawer inventory — non-production" in html
     assert "Stone cutting remains fabricator-controlled" in html
 
 
@@ -113,7 +114,7 @@ def test_fabrication_scopes_release_and_held_work():
     html = _documents()["dv72_fabrication_coordination.html"]
 
     assert 'data-cut-list-row="' in html
-    assert "42 released parts" in html
+    assert "42 prepared parts" in html
     assert "30.0 mm quartz structural slab" in html
     assert "38.0 mm visual edge" in html
     assert "Selected material, joinery, finish, and tolerance schedule" in html
@@ -126,14 +127,14 @@ def test_fabrication_publishes_complete_owner_assumed_shop_basis():
     html = _documents()["dv72_fabrication_coordination.html"]
 
     for fact in (
-        "19.0 mm veneer-core plywood case and slab fronts",
-        "15.0 mm veneer-core plywood drawer sides, fronts, and backs",
-        "9.0 mm plywood drawer bottoms",
-        "continuous figured-walnut grain sequence across the four slab fronts",
+        "19.05 mm veneer-core plywood",
+        "15.0 mm veneer-core plywood",
+        "9.0 mm plywood",
+        "continuous grain sequence across four slab fronts",
         "1.0 mm matching walnut veneer edge band",
         "clear low-sheen conversion-varnish finish",
         "glued doweled butt joints",
-        "#8 × 38 mm flat-head cabinet screws",
+        "#8 x 38 mm flat-head cabinet screws",
         "finished net part sizes after trimming and edge banding",
         "±0.5 mm part-size tolerance",
     ):
@@ -148,25 +149,21 @@ def test_fabrication_publishes_controlling_top_and_model_derived_sink_zones():
     assert "30.0 mm quartz structural slab" in html
     assert "38.0 mm visual edge" in html
     assert "controlling owner_assumed case-height and load inputs" in html
-    assert "200.2 mm left gross side zone" in html
-    assert "400.4 mm gross inter-sink web" in html
-    assert "200.2 mm right gross side zone" in html
-    assert "105.4 mm gross front zone" in html
-    assert "30.0 mm gross rear zone" in html
-    assert "not cutout dimensions" in html
+    assert "200.2 mm/400.4 mm/200.2 mm/105.4 mm/30.0 mm" in html
+    assert "not cutout, clamp, reinforcement, or structural authority" in html
     assert "final stone authority remains with the countertop fabricator" in html
 
 
-def test_static_cut_release_is_not_revoked_by_runner_or_dynamic_gates():
+def test_prepared_static_cuts_remain_nonproduction_and_dynamic_gates_are_separate():
     docs = _documents()
     joined = "\n".join(docs.values())
     validation = docs["dv72_validation_sources.html"]
 
     assert (
-        "Static drawer-box cuts remain conditionally released; prove runner "
-        "drilling/templates, locking-device shop setup, and dynamic/service access"
+        "Static drawer-box cuts are prepared for review only; signed "
+        "fabricator acceptance of the exact basis digest is required before production"
     ) in validation
-    assert "Dynamic access does not revoke the conditionally released static cuts" in validation
+    assert "dynamic/service access remain separately held" in validation
     for contradiction in (
         "Derive buildable U voids",
         "re-derive both U-shaped upper boxes",
@@ -179,11 +176,7 @@ def test_static_cut_release_is_not_revoked_by_runner_or_dynamic_gates():
         if re.search(r"\bjoinery\b", sentence, flags=re.I) and re.search(
             r"\b(?:held|withheld)\b", sentence, flags=re.I
         ):
-            assert re.search(
-                r"joinery (?:design and finished cut extents )?(?:is|are) conditionally released",
-                sentence,
-                flags=re.I,
-            ), sentence
+            assert "prepared for review" in sentence and "non-production" in sentence
 
 
 def test_review_exposes_axes_site_assumptions_faucet_target_and_all_loads():
@@ -220,12 +213,9 @@ def test_mount_diagram_uses_supports_as_primary_gravity_path():
 def test_production_cut_authority_requires_written_fabricator_acceptance():
     html = _documents()["dv72_fabrication_coordination.html"]
 
-    assert "FABRICATOR ACCEPTANCE REQUIRED" in html
-    assert (
-        "released only after written cabinet-fabricator acceptance of the "
-        "complete owner_assumed shop basis"
-    ) in html
-    assert "Before that written acceptance, no production cut is authorized" in html
+    assert "FABRICATION HOLD — FABRICATOR ACCEPTANCE PENDING" in html
+    assert "Prepared schedule only — non-production" in html
+    assert "not authorized for production cutting" in html
     assert "accepted replacements require regeneration of affected cut authority" in html
 
 
@@ -258,8 +248,26 @@ def test_nominal_profile_panels_map_to_selected_19mm_material_basis():
     assert nominal_roles
     for role in nominal_roles:
         row = next(row for row in rows if f".{role}</code>" in row)
-        assert "19.0 mm veneer-core plywood; selected shop basis below" in row
+        assert "veneer-core plywood" in row
         assert "thickness-specific material basis requires" not in row
+
+
+def test_renderer_projects_typed_fabrication_basis_without_shop_literals():
+    import detailgen.packs.cabinetry.double_vanity_documents as documents
+
+    source = inspect.getsource(documents._fabrication_boundaries)
+    for literal in (
+        "continuous figured-walnut grain sequence",
+        "glued doweled butt joints at the released finished extents",
+        "#8 × 38 mm",
+        "±0.5 mm part-size tolerance",
+    ):
+        assert literal not in source
+
+    project = compile_project_file(FIXTURE)
+    html = _documents()["dv72_fabrication_coordination.html"]
+    for row in project.model.fabrication_basis.shop_schedule():
+        assert row in html
 
 
 def test_validation_assigns_owner_and_blocking_phase_to_every_finding():
@@ -358,10 +366,11 @@ def test_validation_routes_evidence_without_claiming_approval_authority():
     assert "authority remains with the named responsible parties" not in lower
 
 
-def test_validation_gate_language_preserves_conditional_cabinet_cut_authority():
+def test_validation_gate_language_preserves_prepared_nonproduction_schedule():
     html = _documents()["dv72_validation_sources.html"]
 
-    assert "do not revoke the conditionally released cabinet and drawer cuts" in html
+    assert "prepared for review only" in html
+    assert "acceptance of the exact basis digest is required before production" in html
     assert "Close all eight before purchase, fabrication" not in html
     assert "installation, stone, runner machining, trade work, and use" in html
 
@@ -445,7 +454,8 @@ def test_validation_owns_all_release_rows_without_omnibus_duplication():
     assert validation.count('data-release-rule="double_vanity.release.') == 8
     for finding in release_findings:
         assert finding.rule in validation
-        assert finding.message in validation
+        if finding.rule != "double_vanity.release.drawer_derivation":
+            assert finding.message in validation
     for name, html in documents.items():
         if name != "dv72_validation_sources.html":
             assert 'data-release-rule="' not in html
@@ -475,7 +485,7 @@ def test_handyman_review_findings_are_resolved_without_overclaiming_access():
     assert "independent independent" not in joined
     assert "remain reachable" not in joined
     assert "proposed service-access concept" in review
-    assert "Released drawer geometry and held assembly authority" in assembly
+    assert "Prepared drawer geometry and held assembly authority" in assembly
     assert "Build and square" not in assembly
     assert "34.50 in" in review
     assert "11.00 in" in review

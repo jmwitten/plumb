@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 
 import pytest
@@ -1182,7 +1182,7 @@ def test_30_mm_countertop_keeps_finished_height():
     assert total == pytest.approx(34.5 * 25.4)
 
 
-def test_conditional_release_emits_drawers_but_withholds_stone():
+def test_pending_acceptance_emits_prepared_drawers_but_withholds_production_and_stone():
     project = _project()
     roles = {item.role for item in project.artifacts.cut_list}
 
@@ -1190,8 +1190,10 @@ def test_conditional_release_emits_drawers_but_withholds_stone():
     assert "drawer_right_lower_bottom" in roles
     assert "countertop" not in roles
     assert project.model.release.fabrication_status == (
-        "CONDITIONAL_FABRICATION_RELEASE"
+        "HOLD_FABRICATOR_ACCEPTANCE"
     )
+    assert project.model.fabrication_acceptance.status == "PENDING"
+    assert not project.artifacts.fabrication_ready
     assert project.model.release.installation_status == "HOLD_FIELD_VERIFY"
     assert project.model.countertop.stone_cut_authority == (
         "WITHHELD_UNTIL_FABRICATOR_ACCEPTS_K-20000_TEMPLATE"
@@ -1234,18 +1236,104 @@ def test_missing_sink_template_withholds_stone_without_invalidating_cabinet(
     assert "drawer_left_upper_bottom_bridge" in roles
 
 
-def test_conditional_fabrication_instruction_is_scoped_and_not_contradictory():
+def test_pending_fabrication_instruction_is_prepared_nonproduction_and_scoped():
     project = _project()
     instruction = " ".join(
         step.instruction for step in project.artifacts.fabrication_steps
     )
 
-    assert "CABINET/DRAWER FABRICATION ONLY" in instruction
-    assert "named cut-list parts" in instruction
+    assert "PREPARED CABINET/DRAWER CUT SCHEDULE" in instruction
+    assert "NON-PRODUCTION" in instruction
+    assert "fabrication remains held" in instruction
     assert "stone" in instruction.lower()
     assert "wall drilling" in instruction.lower()
     assert "installation" in instruction.lower()
     assert "do not purchase, cut, drill, fabricate, or install" not in instruction
+
+
+def test_physical_drawer_boxes_have_exact_six_mm_clearance_at_case_faces():
+    project = _project()
+    assembly = project.build()
+    placed = {item.reader_name: item for item in assembly.parts}
+
+    def bounds(name):
+        box = placed[name].world_solid().val().BoundingBox()
+        return box.xmin, box.xmax
+
+    case = {
+        role: bounds(f"DV72 {role.replace('_', ' ')}")
+        for role in ("left_end", "center_divider", "right_end")
+    }
+    openings = {
+        "left": (case["left_end"][1], case["center_divider"][0]),
+        "right": (case["center_divider"][1], case["right_end"][0]),
+    }
+    for bay in ("left", "right"):
+        for level in ("upper", "lower"):
+            names = [
+                item.reader_name for item in assembly.parts
+                if item.reader_name.startswith(f"DV72 drawer {bay} {level} ")
+            ]
+            part_bounds = [bounds(name) for name in names]
+            outer = min(value[0] for value in part_bounds), max(
+                value[1] for value in part_bounds
+            )
+            assert outer[0] == pytest.approx(openings[bay][0] + 6.0)
+            assert outer[1] == pytest.approx(openings[bay][1] - 6.0)
+            assert all(
+                openings[bay][0] <= x0 <= x1 <= openings[bay][1]
+                for x0, x1 in part_bounds
+            )
+
+
+def test_lateral_drawer_mutation_fails_runner_applicability_loudly():
+    from detailgen.packs.cabinetry.double_vanity import validate_double_vanity_model
+
+    model = _project().model
+    mutated = replace(
+        model,
+        parts=tuple(
+            replace(part, at_mm=(part.at_mm[0] - 1, *part.at_mm[1:]))
+            if part.role == "drawer_left_upper_side_left" else part
+            for part in model.parts
+        ),
+    )
+    assert validate_double_vanity_model(mutated).by_rule(
+        "double_vanity.drawer.runner_applicability"
+    ).verdict == "FAIL"
+
+
+def test_typed_fabrication_basis_and_acceptance_gate_production():
+    from detailgen.packs.cabinetry.double_vanity import (
+        FabricationAcceptance,
+        apply_fabrication_acceptance,
+        build_double_vanity_artifacts,
+        validate_double_vanity_model,
+    )
+
+    model = _project().model
+    with pytest.raises(FrozenInstanceError):
+        model.fabrication_basis.version = "2"  # type: ignore[misc]
+    assert len(model.fabrication_basis.digest()) == 64
+    assert all("study plywood" not in item.material for item in _project().artifacts.cut_list)
+    assert _project().artifacts.edge_banding
+    accepted = apply_fabrication_acceptance(model, FabricationAcceptance(
+        status="ACCEPTED", accepted_by="Example Cabinet Fabricator",
+        accepted_on="2026-07-15",
+        basis_digest=model.fabrication_basis.digest(),
+        evidence_revision="signed-shop-basis-r1",
+    ))
+    artifacts = build_double_vanity_artifacts(
+        accepted, validate_double_vanity_model(accepted),
+    )
+    assert artifacts.fabrication_ready
+    assert "PRODUCTION AUTHORIZED" in artifacts.fabrication_steps[0].instruction
+    with pytest.raises(ProjectSchemaError, match="exact fabrication-basis digest"):
+        apply_fabrication_acceptance(model, FabricationAcceptance(
+            status="ACCEPTED", accepted_by="Example Cabinet Fabricator",
+            accepted_on="2026-07-15", basis_digest="0" * 64,
+            evidence_revision="signed-shop-basis-r1",
+        ))
 
 
 def test_nyc_and_ipc_profiles_pin_deliberate_vertical_trap_difference():

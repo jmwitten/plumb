@@ -120,6 +120,8 @@ def _fabrication_status(project) -> tuple[bool, str]:
         )
     if status == "HOLD_PRODUCT_GEOMETRY":
         return False, "FABRICATION HOLD — PRODUCT GEOMETRY"
+    if status == "HOLD_FABRICATOR_ACCEPTANCE":
+        return False, "FABRICATION HOLD — FABRICATOR ACCEPTANCE PENDING"
     raise ValueError(f"unsupported DV72 fabrication status {status!r}")
 
 
@@ -139,10 +141,16 @@ def _system_section(project) -> str:
             "facts; accepted field rough-ins remain required before runner "
             "machining, stone work, trade work, or installation."
         )
-    else:
+    elif project.model.release.fabrication_status == "HOLD_PRODUCT_GEOMETRY":
         dimension_scope = (
             "Product geometry is held; displayed coordination geometry does "
             "not authorize cabinet, drawer, runner, or stone fabrication."
+        )
+    else:
+        dimension_scope = (
+            "Cabinet and drawer dimensions are a prepared non-production "
+            "schedule; signed acceptance of the exact fabrication-basis digest "
+            "is required before any production cut."
         )
     return f"""
 <section><h2>Sink, plumbing, drawers, counter, and wall mount</h2>
@@ -302,7 +310,7 @@ def build_double_vanity_assembly_html(project) -> str:
             "machining, plumbing assembly, field drilling, loading, and "
             "installation remain held."
         )
-    else:
+    elif project.model.release.fabrication_status == "HOLD_PRODUCT_GEOMETRY":
         drawer_section = (
             '<section><h2>Withheld drawer geometry and assembly authority</h2>'
             '<p>Product geometry is held. Cabinet and drawer cut dimensions, '
@@ -312,6 +320,22 @@ def build_double_vanity_assembly_html(project) -> str:
         status_content = (
             "Product geometry, runner machining, plumbing assembly, field "
             "drilling, loading, and installation remain held."
+        )
+    else:
+        drawer_section = (
+            '<section><h2>Prepared drawer geometry and held assembly authority</h2>'
+            '<p>This non-production schedule is available for fabricator review. '
+            'Fabricator acceptance is PENDING; production cuts, runner machining, '
+            'plumbing assembly, field drilling, loading, and installation remain held.</p>'
+            '<div class="table-wrap"><table><thead><tr><th>Drawer</th><th>Runner</th>'
+            '<th>Prepared box W × D × H</th><th>Prepared U void W × D</th>'
+            '<th>Machining authority</th></tr></thead><tbody>' + drawers
+            + '</tbody></table></div><p><b>Runner machining remains withheld</b> '
+            'under the manufacturer-template-controlled authority stored on each drawer.</p></section>'
+        )
+        status_content = (
+            "Prepared non-production drawer geometry awaits fabricator acceptance; "
+            "runner machining, assembly, drilling, loading, and installation remain held."
         )
     body = "".join((
         drawer_section,
@@ -334,37 +358,30 @@ def build_double_vanity_assembly_html(project) -> str:
 
 def _fabrication_inventory(project) -> str:
     fabrication_released, _ = _fabrication_status(project)
-    if not fabrication_released:
+    product_geometry_held = (
+        project.model.release.fabrication_status == "HOLD_PRODUCT_GEOMETRY"
+    )
+    if product_geometry_held:
         return (
             '<section><h2>Withheld cabinet and drawer inventory</h2>'
             '<p>Product geometry is held. No cabinet or drawer dimensions are '
             'published for fabrication use.</p></section>'
         )
-    def material_basis(item) -> str:
-        nominal_profile_tolerance_mm = 0.1
-        if (
-            abs(item.thickness_mm - project.model.profile.carcass_thickness_mm)
-            <= nominal_profile_tolerance_mm
-            or abs(item.thickness_mm - project.model.profile.door_thickness_mm)
-            <= nominal_profile_tolerance_mm
-        ):
-            return "19.0 mm veneer-core plywood; selected shop basis below"
-        if abs(item.thickness_mm - 15.0) <= 1e-6:
-            return "15.0 mm veneer-core plywood; selected shop basis below"
-        if abs(item.thickness_mm - 9.0) <= 1e-6:
-            return "9.0 mm plywood; selected shop basis below"
-        return "thickness-specific material basis requires fabricator acceptance"
-
     rows = "".join(
         f'<tr data-cut-list-row="{study._e(item.part_id)}"><td><code>{study._e(item.part_id)}</code></td>'
         f'<td>{study._e(item.description)}</td><td>{study._mm(item.length_mm)} × {study._mm(item.width_mm)} × {study._mm(item.thickness_mm)}</td>'
-        f'<td>{material_basis(item)}; <code>owner_assumed</code>; not field verified</td></tr>'
+        f'<td>{study._e(item.material)}; <code>{study._e(project.model.fabrication_basis.provenance)}</code>; not field verified</td></tr>'
         for item in project.artifacts.cut_list
     )
     return (
-        '<section><h2>Released cabinet and drawer inventory — written acceptance required</h2>'
-        f'<p><b>{len(project.artifacts.cut_list)} released parts after written acceptance.</b> Before written cabinet-fabricator acceptance of the complete owner_assumed shop basis, these exact model outputs are not authorized for production cutting. Runner drilling/templates, locking-device setup, stone cutting, procurement, wall work, loading, trade work, and installation remain outside this release.</p>'
-        '<div class="table-wrap"><table><thead><tr><th>Part id</th><th>Canonical name</th><th>Released size</th><th>Material assumption</th></tr></thead><tbody>'
+        '<section><h2>' + (
+            'Accepted cabinet and drawer production inventory' if fabrication_released
+            else 'Prepared cabinet and drawer inventory — non-production'
+        ) + '</h2>'
+        f'<p><b>{len(project.artifacts.cut_list)} prepared parts.</b> '
+        + ('' if fabrication_released else 'Fabricator acceptance is PENDING; these model outputs are not authorized for production cutting. ')
+        + 'Runner drilling/templates, locking-device setup, stone cutting, procurement, wall work, loading, trade work, and installation remain outside this scope.</p>'
+        '<div class="table-wrap"><table><thead><tr><th>Part id</th><th>Canonical name</th><th>Prepared size</th><th>Material assumption</th></tr></thead><tbody>'
         + rows + '</tbody></table></div></section>'
     )
 
@@ -372,34 +389,14 @@ def _fabrication_inventory(project) -> str:
 def _fabrication_boundaries(project) -> str:
     model = project.model
     fabrication_released, _ = _fabrication_status(project)
-    if not fabrication_released:
+    if model.release.fabrication_status == "HOLD_PRODUCT_GEOMETRY":
         return """
 <section><h2>Held fabrication boundaries</h2>
 <p>Cabinet/drawer product geometry, stone cutting, runner mounting and machining, wall drilling, loading, trade work, and installation remain held. Material, joinery, and finish inputs are <code>owner_assumed</code> and not field verified.</p></section>"""
     upper = model.drawer("left", "upper")
     lower = model.drawer("left", "lower")
     vanity = model.section.vanity
-    left_fixture = model.plumbing_paths[0].fixture_envelope
-    right_fixture = model.plumbing_paths[1].fixture_envelope
-    wall_y = model.section.site.wall.plane_origin_mm[1]
-    front_y = wall_y - vanity.body_depth_mm
-    left_zone = left_fixture.x0_mm - vanity.x0_mm
-    middle_zone = right_fixture.x0_mm - left_fixture.x1_mm
-    right_zone = vanity.x0_mm + vanity.width_mm - right_fixture.x1_mm
-    front_zone = left_fixture.y0_mm - front_y
-    rear_zone = wall_y - left_fixture.y1_mm
-    shop_rows = (
-        "19.0 mm veneer-core plywood case and slab fronts",
-        "15.0 mm veneer-core plywood drawer sides, fronts, and backs",
-        "9.0 mm plywood drawer bottoms",
-        "continuous figured-walnut grain sequence across the four slab fronts",
-        "1.0 mm matching walnut veneer edge band on every exposed plywood edge",
-        "clear low-sheen conversion-varnish finish over approved samples",
-        "glued doweled butt joints at the released finished extents",
-        "#8 × 38 mm flat-head cabinet screws, predrilled and concealed, for cabinet joinery",
-        "finished net part sizes after trimming and edge banding; shop-cut blanks include fabricator-selected process allowance and are not released dimensions",
-        "±0.5 mm part-size tolerance; ±1.0 mm assembled-case size; diagonals within 1.5 mm",
-    )
+    shop_rows = model.fabrication_basis.shop_schedule()
     shop_schedule = "".join(
         f'<tr><td>{value}</td><td>owner_assumed; not field verified</td></tr>'
         for value in shop_rows
@@ -407,12 +404,12 @@ def _fabrication_boundaries(project) -> str:
     return f"""
 <section><h2>Release boundaries and assumptions</h2>
 <div class="table-wrap"><table><thead><tr><th>Scope</th><th>Model fact</th><th>Authority</th></tr></thead><tbody>
-<tr><td>Upper runner</td><td>{study._e(upper.runner.selected_sku)}; released {study._mm(upper.box_depth_mm)} box depth</td><td><code>{study._e(upper.runner.machining_authority)}</code></td></tr>
-<tr><td>Lower runner</td><td>{study._e(lower.runner.selected_sku)}; released {study._mm(lower.box_depth_mm)} box depth</td><td><code>{study._e(lower.runner.machining_authority)}</code></td></tr>
+<tr><td>Upper runner</td><td>{study._e(upper.runner.selected_sku)}; prepared {study._mm(upper.box_depth_mm)} box depth</td><td><code>{study._e(upper.runner.machining_authority)}</code></td></tr>
+<tr><td>Lower runner</td><td>{study._e(lower.runner.selected_sku)}; prepared {study._mm(lower.box_depth_mm)} box depth</td><td><code>{study._e(lower.runner.machining_authority)}</code></td></tr>
 <tr><td>Countertop</td><td>{model.countertop.structural_thickness_mm:.1f} mm quartz structural slab and {model.countertop.visual_edge_height_mm:.1f} mm visual edge are controlling owner_assumed case-height and load inputs; the fabricator must accept or replace them before stone cut. K-20000 template {study._e(model.countertop.cutout_template_id)} remains controlling for future cutout work.</td><td><code>{study._e(model.countertop.stone_cut_authority)}</code>; not field verified</td></tr>
 </tbody></table></div>
 <h3>Selected material, joinery, finish, and tolerance schedule</h3><p>Every row is an explicit shop-basis selection, not a product record. The fabricator must accept or replace the complete basis before use; accepted replacements require regeneration of affected cut authority.</p><div class="table-wrap"><table><thead><tr><th>Selected shop basis</th><th>Provenance</th></tr></thead><tbody>{shop_schedule}</tbody></table></div>
-<h3>Model-derived sink web and support-zone coordination</h3><p>The two gross K-20000 fixture envelopes leave {left_zone:.1f} mm left gross side zone, {middle_zone:.1f} mm gross inter-sink web, {right_zone:.1f} mm right gross side zone, {front_zone:.1f} mm gross front zone, and {rear_zone:.1f} mm gross rear zone. These are model-derived gross-envelope coordination values, not cutout dimensions, clamp clearances, reinforcement dimensions, or structural proof. The current template and final stone authority remains with the countertop fabricator.</p>
+<h3>Model-derived sink web and support-zone coordination</h3><p>{study._e(model.fabrication_basis.shop_schedule()[-1])}. The current template and final stone authority remains with the countertop fabricator.</p>
 <p><b>Stone cutting remains fabricator-controlled.</b> Runner mounting and machining remain manufacturer-template-controlled. Wall drilling, loading, trade work, and installation remain held.</p></section>"""
 
 
@@ -421,9 +418,12 @@ def build_double_vanity_fabrication_html(project) -> str:
     if fabrication_released:
         authority = '<section><h2>Fabrication authority</h2><p><b>Cabinet and drawer finished-cut extents are released only after written cabinet-fabricator acceptance of the complete owner_assumed shop basis.</b> Before that written acceptance, no production cut is authorized. Stone, runner machining, wall work, loading, trade work, and installation are outside this release.</p></section>'
         status_content = "Finished-cut extents become usable only after written cabinet-fabricator acceptance of the complete owner_assumed shop basis. Before acceptance, no production cut is authorized. Stone cutting, runner machining, wall drilling, loading, trade work, and installation remain held."
-    else:
+    elif project.model.release.fabrication_status == "HOLD_PRODUCT_GEOMETRY":
         authority = '<section><h2>Fabrication authority</h2><p><b>Product geometry is held.</b> No cabinet, drawer, stone, runner-machining, wall-work, loading, trade-work, or installation authority is issued.</p></section>'
         status_content = "Product geometry is held. Cabinet, drawer, stone, runner machining, wall drilling, loading, trade work, and installation remain withheld."
+    else:
+        authority = '<section><h2>Fabrication authority</h2><p><b>Prepared schedule only — non-production.</b> Fabricator acceptance is PENDING. Production cuts require complete signed acceptance of the exact fabrication-basis digest.</p></section>'
+        status_content = "Fabricator acceptance is PENDING. The cabinet and drawer schedule is prepared for review only and is not released for production."
     body = "".join((
         authority, _fabrication_inventory(project),
         _fabrication_boundaries(project),
@@ -448,13 +448,23 @@ def _finding_routing(rule: str) -> tuple[str, str]:
 def _visible_finding_message(project, finding) -> str:
     fabrication_released, _ = _fabrication_status(project)
     if (
-        not fabrication_released
+        project.model.release.fabrication_status == "HOLD_PRODUCT_GEOMETRY"
         and finding.rule == "double_vanity.release.drawer_derivation"
     ):
         return (
             "Product geometry hold withholds static drawer-box cuts; restore "
             "the corrected product checks before separately proving runner "
             "drilling/templates, locking-device setup, and dynamic/service access."
+        )
+    if (
+        not fabrication_released
+        and finding.rule == "double_vanity.release.drawer_derivation"
+    ):
+        return (
+            "Static drawer-box cuts are prepared for review only; signed "
+            "fabricator acceptance of the exact basis digest is required before "
+            "production. Runner drilling/templates, locking-device setup, and "
+            "dynamic/service access remain separately held."
         )
     return finding.message
 
@@ -489,7 +499,7 @@ def _product_evidence(project) -> str:
             "Static lower drawer cuts are conditionally released; drilling/templates, "
             "locking-device setup, travel, removal, and service remain held."
         )
-    else:
+    elif project.model.release.fabrication_status == "HOLD_PRODUCT_GEOMETRY":
         upper_authority = (
             "Product geometry hold withholds upper drawer cuts; drilling/templates, "
             "locking-device setup, travel, removal, and service also remain held."
@@ -497,6 +507,15 @@ def _product_evidence(project) -> str:
         lower_authority = (
             "Product geometry hold withholds lower drawer cuts; drilling/templates, "
             "locking-device setup, travel, removal, and service also remain held."
+        )
+    else:
+        upper_authority = (
+            "Static upper drawer cuts are prepared, non-production, and pending "
+            "fabricator acceptance; drilling/templates and dynamic access remain held."
+        )
+        lower_authority = (
+            "Static lower drawer cuts are prepared, non-production, and pending "
+            "fabricator acceptance; drilling/templates and dynamic access remain held."
         )
     return f"""
 <section><h2>Pinned product evidence</h2><div class="table-wrap"><table>
@@ -531,11 +550,18 @@ def _phased_release_gates(project) -> str:
             "trade work, and use as applicable. They do not revoke the "
             "conditionally released cabinet and drawer cuts."
         )
-    else:
+    elif project.model.release.fabrication_status == "HOLD_PRODUCT_GEOMETRY":
         gate_scope = (
             "These UNKNOWN gates include cabinet and drawer product geometry "
             "and block fabrication, installation, stone, runner machining, "
             "trade work, and use as applicable. No cut authority is issued."
+        )
+    else:
+        gate_scope = (
+            "The cabinet and drawer schedule is prepared for review only. Signed "
+            "fabricator acceptance of the exact basis digest is required before "
+            "production; the remaining UNKNOWN gates continue to block installation, "
+            "stone, runner machining, trade work, and use."
         )
     if commissioning is not None:
         postinstall = (

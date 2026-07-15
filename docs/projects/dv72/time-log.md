@@ -6,7 +6,7 @@ Issue date: 2026-07-14. Times are EDT wall-clock checkpoints from the isolated-w
 |---|---|---:|---|
 | Worktree, environment, baseline, contract | 16:12:19–16:17:22 | 5m 03s | Platform/workflow reuse |
 | Geometry/document implementation | 16:17:22–16:25:42 | 8m 20s | Reused compiler/model/report primitives plus bespoke DV72 projections and product coordination |
-| Visual QA and first review remediation | 16:25:42–16:32:00 | 6m 18s | Shared browser/review workflow plus bespoke release, service, and height corrections |
+| Static/browser review and first review remediation | 16:25:42–16:32:00 | 6m 18s | Shared source-level/browser review workflow plus bespoke release, service, and height corrections; this window did not establish rendered desktop or 390 px viewport QA |
 | Adversarial review, correction, verification preparation | 16:32:00–16:42:00 | 10m 00s | Shared verification workflow plus bespoke plumbing-authority and fixture-datum corrections |
 | Delivery continuation: generation, browser attempt, artifact audit, focused verification | 21:11:54–21:13:38 | 1m 44s | Reused deterministic generator, browser-control, HTML/CSS/link-audit, and focused-test workflows; bespoke work was limited to DV72 banner/section/authority review and this accounting update |
 | Consolidated final-review correction wave | 21:23:31–21:42:27 | 18m 56s | Reused product-adapter, analytic-part, validation, document-projection, artifact, and test workflows; bespoke work corrected MOVENTO equations/parts, asymmetric U geometry, release routing, mount authority/diagram, fabrication assumptions, stone zones, field/load schedules, and regressions |

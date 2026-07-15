@@ -220,12 +220,19 @@ def _motion_states(project) -> str:
             "proof, field-tolerance and rough-in verification, and assembly "
             "remain held."
         )
-    else:
+    elif model.release.fabrication_status == "HOLD_PRODUCT_GEOMETRY":
         closed_authority = (
             "Product geometry hold withholds drawer and joinery cut authority; "
             "runner drilling/templates, locking-device setup, dynamic/service "
             "proof, field-tolerance and rough-in verification, and assembly also "
             "remain held."
+        )
+    else:
+        closed_authority = (
+            "Joinery design and finished cut extents are prepared for review "
+            "only and remain non-production pending signed fabricator acceptance; "
+            "runner drilling/templates, dynamic/service proof, field verification, "
+            "and assembly remain held."
         )
     states = (
         (
