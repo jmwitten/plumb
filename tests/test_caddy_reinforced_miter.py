@@ -1,9 +1,17 @@
-"""Production conformance for the selected reinforced-miter caddy."""
+"""Physical invariants that v1 generic certification cannot yet express.
+
+The generic contract owns compilation, validation, part/BOM counts,
+fabrication, connections, governance, and determinism. These tests remain
+because closed-miter fit, diagonal key axes/stations, bore placement, and two
+real geometry/joint mutations require richer spatial evidence than the v1
+selector model exposes.
+"""
 
 import math
 from pathlib import Path
 
 import pytest
+import yaml
 
 pytestmark = pytest.mark.detail_gate(
     "armchair_caddy", contracts=("geometry",),
@@ -15,7 +23,7 @@ from detailgen.design_review import (
     load_design_review_file,
     selection_fingerprint,
 )
-from detailgen.spec import compile_spec_file
+from detailgen.spec import compile_spec, compile_spec_file, load_spec_text
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +39,13 @@ def caddy():
     detail = compile_spec_file(SPEC)
     report = detail.validate()
     return detail, report
+
+
+def _mutated_caddy(mutate):
+    raw = yaml.safe_load(SPEC.read_text())
+    raw.pop("design_review", None)
+    mutate(raw)
+    return compile_spec(load_spec_text(yaml.safe_dump(raw, sort_keys=False)))
 
 
 def test_caddy_uses_three_hardwood_panels_and_four_keys_only(caddy):
@@ -154,3 +169,30 @@ def test_implemented_selection_and_model_are_owner_confirmed(caddy):
     )
     assert detail.require_modeling_approval() is detail
     assert detail.require_delivery_ready().ok
+
+
+def test_caddy_keyed_miter_rejects_extra_hardware():
+    """The selected joint cannot be silently padded with a third key."""
+    def add_third_key(raw):
+        raw["connections"][0]["hardware"].append("dowel_neg_near")
+
+    with pytest.raises(ValueError, match=r"expected 2 hardware item\(s\).+got 3"):
+        _mutated_caddy(add_third_key).validate()
+
+
+def test_caddy_synthetic_oversized_corner_keys_fail_interference():
+    """An implausibly large key must collide with the sofa-arm context."""
+    detail = _mutated_caddy(
+        lambda raw: raw["params"].update(dowel_dia=2.0)
+    )
+
+    report = detail.validate()
+
+    failures = [
+        finding
+        for finding in report.failures
+        if finding.check == "interference" and "corner key" in finding.subject
+    ]
+    assert len(failures) == 4
+    assert all("sofa arm" in finding.subject for finding in failures)
+    assert all("unexpected overlap" in finding.detail for finding in failures)
