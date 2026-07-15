@@ -22,7 +22,7 @@ def test_known_tags_cover_every_material_used_by_shipped_details():
     # by any shipped detail's material_key — see components/*.py).
     expected = {
         "steel_galv", "steel_zinc", "lumber_pt", "lumber_spf",
-        "rock", "concrete", "epoxy",
+        "cedar", "rock", "concrete", "epoxy",
     }
     assert expected <= set(known_material_tags())
 

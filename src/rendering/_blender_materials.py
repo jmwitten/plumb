@@ -138,6 +138,11 @@ def _mat_hardwood(nt):
     _principled(nt, (0.54, 0.32, 0.16), 0.52)
 
 
+@register_material_tag("cedar")
+def _mat_cedar(nt):
+    _principled(nt, (0.58, 0.31, 0.16), 0.58)
+
+
 @register_material_tag("rock")
 def _mat_rock(nt):
     bsdf, out = _principled(nt, (0.55, 0.55, 0.56), 0.9)

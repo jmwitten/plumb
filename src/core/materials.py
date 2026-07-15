@@ -40,6 +40,7 @@ MATERIALS: dict[str, Material] = {
     "lumber_pt": _material("lumber_pt", "Pressure-treated lumber", (0.55, 0.45, 0.25)),
     "lumber_spf": _material("lumber_spf", "SPF lumber", (0.82, 0.68, 0.45)),
     "hardwood": _material("hardwood", "Indoor hardwood", (0.54, 0.32, 0.16)),
+    "cedar": _material("cedar", "Untreated exterior cedar", (0.58, 0.31, 0.16)),
     "plywood": _material("plywood", "Sanded plywood", (0.87, 0.76, 0.55)),
     "concrete": _material("concrete", "Concrete", (0.62, 0.62, 0.60), alpha=0.95),
     "steel_galv": _material("steel_galv", "Galvanized steel", (0.65, 0.68, 0.72)),
