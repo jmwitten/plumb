@@ -58,11 +58,11 @@ class _RenderedVisibleText(HTMLParser):
         self.hidden_depth = 0
 
     def handle_starttag(self, tag, attrs):
-        if tag in {"style", "script", "svg"}:
+        if tag in {"style", "script"}:
             self.hidden_depth += 1
 
     def handle_endtag(self, tag):
-        if tag in {"style", "script", "svg"}:
+        if tag in {"style", "script"}:
             self.hidden_depth -= 1
 
     def handle_data(self, data):
@@ -100,6 +100,7 @@ def test_actual_rendered_guide_is_at_most_1500_visible_words(project):
     )
     words = re.findall(r"\b[\w’'-]+\b", _rendered_visible_text(html))
 
+    assert "EMPTY CABINET MOUNTED — FOLLOW-ON WORK HELD" in _rendered_visible_text(html)
     assert len(words) <= 1500
 
 
@@ -354,11 +355,28 @@ def test_supports_project_typed_countertop_bearing_wall_and_authority(project):
     assert "countertop-underside / bracket-arm datum" in html
     assert "wall plane" in html
     assert "horizontal projection/depth" in html
-    assert "fastener locations/pattern per accepted product revision" in html
+    assert "fastening per accepted product revision" in html
     support_picture = re.search(
         r'<svg[^>]+data-support-layout="true".*?</svg>', html, re.S,
     ).group()
     assert "<circle" not in support_picture
+
+
+def test_support_svg_projects_typed_load_path_without_capacity(project):
+    html = build_double_vanity_installation_guide(
+        project, related_documents=(),
+    )
+    support_picture = re.search(
+        r'<svg[^>]+data-support-layout="true".*?</svg>', html, re.S,
+    ).group()
+
+    assert 'data-load-path="countertop-arm-diagonal-wall"' in support_picture
+    assert 'class="load-arrow"' in support_picture
+    assert "countertop support load" in support_picture
+    assert "diagonal" in support_picture
+    assert "wall fasteners / framing receive forces" in support_picture
+    for forbidden in ("capacity", "reaction distribution", "hole pattern"):
+        assert forbidden not in support_picture.lower()
 
 
 def test_load_path_and_handling_copy_does_not_claim_bottom_bearing(project):
@@ -553,8 +571,16 @@ def test_release_and_record_field_text_is_readable_and_print_not_clipped_by_css(
 
 
 def test_local_chrome_mobile_metrics_and_letter_pdf(project, tmp_path):
-    chrome = Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
-    if not chrome.exists():
+    chrome_candidates = (
+        Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+        *(
+            Path(path)
+            for name in ("google-chrome", "chromium", "chromium-browser")
+            if (path := shutil.which(name))
+        ),
+    )
+    chrome = next((path for path in chrome_candidates if path.exists()), None)
+    if chrome is None:
         pytest.skip("local Google Chrome is unavailable")
 
     def run_chrome(*args):

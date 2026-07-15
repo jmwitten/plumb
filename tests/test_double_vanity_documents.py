@@ -128,8 +128,18 @@ def test_package_semantic_audit_rejects_guide_builder_bypass(
         "build_double_vanity_installation_guide",
     ),
 )
+@pytest.mark.parametrize(
+    "forbidden_phrase",
+    (
+        "STRUCTURAL PASS",
+        "WALL MOUNT APPROVED",
+        "INSTALLATION AUTHORIZED",
+        "LOAD AUTHORITY APPROVED",
+    ),
+)
+@pytest.mark.parametrize("case_variant", ("exact", "lower"))
 def test_package_semantic_audit_rejects_unconditional_authority_in_every_doc(
-    monkeypatch, builder_name,
+    monkeypatch, builder_name, forbidden_phrase, case_variant,
 ):
     import detailgen.packs.cabinetry.double_vanity_documents as documents
 
@@ -138,7 +148,13 @@ def test_package_semantic_audit_rejects_unconditional_authority_in_every_doc(
 
     def corrupted_builder(*args, **kwargs):
         html = real_builder(*args, **kwargs)
-        return html.replace("</body>", "<p>INSTALLATION PASS</p></body>")
+        rendered_phrase = (
+            forbidden_phrase if case_variant == "exact"
+            else forbidden_phrase.lower()
+        )
+        return html.replace(
+            "</body>", f"<p>{rendered_phrase}</p></body>",
+        )
 
     monkeypatch.setattr(documents, builder_name, corrupted_builder)
     with pytest.raises(ValueError, match="unconditional authority"):

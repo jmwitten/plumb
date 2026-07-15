@@ -679,7 +679,9 @@ def _audit_document_set(project, documents: dict[str, str]) -> None:
         raise ValueError("DV72 semantic audit requires the ordered five-file package")
 
     forbidden_authority = (
-        r"\bINSTALLATION\s+(?:PASS|APPROVED)\b",
+        r"\b(?:STRUCTURAL|WALL\s+MOUNT|INSTALLATION)\s+"
+        r"(?:PASS|APPROVED|AUTHORIZED)\b",
+        r"\bLOAD\s+AUTHORITY\s+(?:PASS|APPROVED|AUTHORIZED)\b",
         r"\bINSTALLATION\s+RELEASED(?!\s+BY\b)",
         r"\bUNCONDITIONAL.{0,30}(?:LOAD|INSTALLATION|STRUCTURAL).{0,20}AUTHORITY\b",
         r"\b(?:LOAD|INSTALLATION|STRUCTURAL).{0,20}AUTHORITY.{0,20}UNCONDITIONAL\b",

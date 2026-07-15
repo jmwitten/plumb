@@ -450,16 +450,19 @@ def _supports_svg(project) -> str:
         f'data-authority="{escape(support.authority, quote=True)}">'
         '<line x1="15" y1="15" x2="15" y2="175" class="bracket"/>'
         '<line x1="15" y1="35" x2="120" y2="35" class="bracket"/>'
-        '<line x1="15" y1="150" x2="120" y2="35" class="bracket diagonal"/>'
+        '<path d="M75 3 V31" class="load-arrow" data-load-path="countertop-arm-diagonal-wall"/>'
+        '<line x1="15" y1="150" x2="120" y2="35" class="bracket diagonal" data-load-transfer="arm-to-diagonal-to-wall-leg"/>'
         f'<text x="68" y="198" text-anchor="middle">{escape(support.alignment_role.replace("_", " "))}</text></g>'
         for index, support in enumerate(project.model.support_layout.supports)
     )
     support = project.model.support_layout.supports[0]
     return (
-        '<svg viewBox="0 0 520 245" role="img" data-action-illustration="true" data-support-layout="true">'
+        '<svg viewBox="0 0 520 270" role="img" data-action-illustration="true" data-support-layout="true">'
         '<title>Rakks nominal envelopes at typed countertop underside and wall plane</title>'
-        f'{groups}<text x="260" y="214" text-anchor="middle">arm datum {_field_dual(support.bearing_z_mm)} AFF · wall plane {_field_dual(support.wall_y_mm)}</text>'
-        f'<text x="260" y="231" text-anchor="middle">horizontal projection/depth {_field_dual(support.horizontal_leg_mm)} · fastener locations/pattern per accepted product revision + structural schedule</text></svg>'
+        f'{groups}<text x="260" y="214" text-anchor="middle">countertop support load ↓ arm · transfer along diagonal to wall leg</text>'
+        '<text x="260" y="231" text-anchor="middle">wall fasteners / framing receive forces · accepted structural record governs</text>'
+        f'<text x="260" y="248" text-anchor="middle">arm datum {_field_dual(support.bearing_z_mm)} AFF · wall plane {_field_dual(support.wall_y_mm)}</text>'
+        f'<text x="260" y="265" text-anchor="middle">horizontal projection/depth {_field_dual(support.horizontal_leg_mm)} · fastening per accepted product revision + structural schedule</text></svg>'
     )
 
 
