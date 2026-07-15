@@ -99,8 +99,8 @@ def test_assembly_projects_exact_drawer_and_runner_facts_without_install_steps()
 
     assert "763.4570S" in html
     assert "763.3050S" in html
-    assert "447.0 mm" in html
-    assert "295.0 mm" in html
+    assert "873.8 mm × 457.0 mm" in html
+    assert "873.8 mm × 305.0 mm" in html
     assert "Exact owner-assumed rough-ins" in html
     assert "left_waste" in html
     assert "1066.8 mm" in html
@@ -114,12 +114,96 @@ def test_fabrication_scopes_release_and_held_work():
 
     assert 'data-cut-list-row="' in html
     assert "42 released parts" in html
-    assert "30.0 mm structural thickness" in html
+    assert "30.0 mm quartz structural slab" in html
     assert "38.0 mm visual edge" in html
-    assert "Joinery and finish assumptions" in html
+    assert "Selected material, joinery, finish, and tolerance schedule" in html
     assert "Wall drilling" in html
     assert "loading" in html
     assert "installation" in html
+
+
+def test_fabrication_publishes_complete_owner_assumed_shop_basis():
+    html = _documents()["dv72_fabrication_coordination.html"]
+
+    for fact in (
+        "19.0 mm veneer-core plywood case and slab fronts",
+        "15.0 mm veneer-core plywood drawer sides, fronts, and backs",
+        "9.0 mm plywood drawer bottoms",
+        "continuous figured-walnut grain sequence across the four slab fronts",
+        "1.0 mm matching walnut veneer edge band",
+        "clear low-sheen conversion-varnish finish",
+        "glued doweled butt joints",
+        "#8 × 38 mm flat-head cabinet screws",
+        "finished net part sizes after trimming and edge banding",
+        "±0.5 mm part-size tolerance",
+    ):
+        assert fact in html
+    assert html.count("owner_assumed; not field verified") >= 10
+    assert "remain fabricator-controlled coordination items" not in html
+
+
+def test_fabrication_publishes_controlling_top_and_model_derived_sink_zones():
+    html = _documents()["dv72_fabrication_coordination.html"]
+
+    assert "30.0 mm quartz structural slab" in html
+    assert "38.0 mm visual edge" in html
+    assert "controlling owner_assumed case-height and load inputs" in html
+    assert "200.2 mm left gross side zone" in html
+    assert "400.4 mm gross inter-sink web" in html
+    assert "200.2 mm right gross side zone" in html
+    assert "105.4 mm gross front zone" in html
+    assert "30.0 mm gross rear zone" in html
+    assert "not cutout dimensions" in html
+    assert "final stone authority remains with the countertop fabricator" in html
+
+
+def test_static_cut_release_is_not_revoked_by_runner_or_dynamic_gates():
+    docs = _documents()
+    joined = "\n".join(docs.values())
+    validation = docs["dv72_validation_sources.html"]
+
+    assert (
+        "Static drawer-box cuts remain conditionally released; prove runner "
+        "drilling/templates, locking-device shop setup, and dynamic/service access"
+    ) in validation
+    assert "Dynamic access does not revoke the conditionally released static cuts" in validation
+    for contradiction in (
+        "Derive buildable U voids",
+        "re-derive both U-shaped upper boxes",
+        "drawer joinery remains held",
+        "joinery remains withheld",
+    ):
+        assert contradiction not in joined
+
+
+def test_review_exposes_axes_site_assumptions_faucet_target_and_all_loads():
+    html = _documents()["dv72_review_installation.html"]
+    project = compile_project_file(FIXTURE)
+
+    assert "x increases right along the wall" in html
+    assert "y = 0 at the project datum" in html
+    assert "y increases toward the wall" in html
+    assert "z increases above the floor datum" in html
+    assert "straight, flat, and plumb wall" in html
+    assert "4.50 in above the finished counter" in html
+    assert "21.00 in clear room depth in front" in html
+    for name, value in project.model.load_case.component_weights_lb().items():
+        assert name.replace("_", " ") in html
+        assert f"{value:.1f} lb" in html
+    assert f"{project.model.load_case.unfactored_total_lb:.1f} lb" in html
+    assert f"{project.model.load_case.factored_total_lb:.1f} lb" in html
+
+
+def test_mount_diagram_uses_supports_as_primary_gravity_path():
+    html = _documents()["dv72_review_installation.html"]
+
+    assert "study-declared/owner_assumed framing" in html
+    assert "Rakks supports are the primary gravity path" in html
+    assert "continuous rail is positioning/lateral only with zero gravity credit" in html
+    assert 'data-load-path="primary-support"' in html
+    assert 'data-load-path="top-to-rail"' not in html
+    assert "surveyed framing" not in html
+    assert "top/fixtures/contents → case → continuous rail" not in html
 
 
 def test_validation_assigns_owner_and_blocking_phase_to_every_finding():
@@ -192,7 +276,7 @@ def test_fabrication_labels_every_assumption_as_unverified_owner_input():
     for row in inventory_rows:
         assert "owner_assumed" in row
         assert "not field verified" in row
-    assumptions = html[html.index("Joinery and finish assumptions"):]
+    assumptions = html[html.index("Selected material, joinery, finish, and tolerance schedule"):]
     assert "owner_assumed" in assumptions
     assert "not field verified" in assumptions
 

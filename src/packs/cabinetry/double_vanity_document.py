@@ -128,7 +128,7 @@ def _bay_section(project) -> str:
 <text x="350" y="132">product-driven U topology · runner machining held</text>
 <rect x="145" y="280" width="300" height="82" class="drawer"/><rect x="445" y="280" width="110" height="82" class="service"/>
 <text x="295" y="330">lower box stops ahead of services</text><text x="500" y="330">rear chase</text>
-<rect x="610" y="80" width="18" height="282" class="wall"/><path d="M610 150H520" class="load-path"/>
+<rect x="610" y="80" width="18" height="282" class="wall"/><path data-path-role="positioning-lateral-only" d="M610 150H520" stroke="#5a4232" stroke-width="4" stroke-dasharray="6 4"/>
 </svg></figure>"""
 
 
@@ -143,14 +143,16 @@ def _bay_interaction(project, bay_id: str) -> str:
             f"Conditionally released {upper.box_width_mm:.1f} × "
             f"{upper.box_depth_mm:.1f} × {upper.box_height_mm:.1f} mm box with "
             f"{upper.u_void_width_mm:.1f} × {upper.u_void_depth_mm:.1f} mm U "
-            f"void and selected {upper.runner.selected_sku} runner. Runner "
-            "machining and joinery remain held."
+            f"void and selected {upper.runner.selected_sku} runner. Selected "
+            "shop-basis joinery is conditionally released; runner drilling, "
+            "templates, and locking-device setup remain held."
         )
         lower_fact = (
             f"Conditionally released {lower.box_width_mm:.1f} × "
             f"{lower.box_depth_mm:.1f} × {lower.box_height_mm:.1f} mm box with "
-            f"selected {lower.runner.selected_sku} runner. Runner machining "
-            "and joinery remain held."
+            f"selected {lower.runner.selected_sku} runner. Selected shop-basis "
+            "joinery is conditionally released; runner drilling, templates, "
+            "and locking-device setup remain held."
         )
     else:
         upper_fact = (
@@ -183,16 +185,26 @@ def _wall_load_path(project) -> str:
         anchor = model.part(f"wall_anchor_{stud_id}")
         x = 110 + (anchor.at_mm[0] - vanity.x0_mm) / vanity.width_mm * 540
         anchor_marks.append(
-            f'<path d="M{x:.2f} 40V103" class="load-path"/>'
+            f'<path data-path-role="candidate-fastener" d="M{x:.2f} 40V103" '
+            'stroke="#8e2d24" stroke-width="3" stroke-dasharray="5 4"/>'
             f'<circle data-anchor-stud="{_e(stud_id)}" cx="{x:.2f}" '
             'cy="103" r="7" class="anchor"/>'
         )
+    support_marks = []
+    for support in model.support_layout.supports:
+        x = 110 + (support.x_axis_mm - vanity.x0_mm) / vanity.width_mm * 540
+        support_marks.append(
+            f'<path data-load-path="primary-support" d="M{x:.2f} 45V225" '
+            'class="load-path"/>'
+            f'<path d="M{x - 20:.2f} 225H{x + 20:.2f}L{x:.2f} 255z" '
+            'fill="#8e2d24"/>'
+        )
     return f"""
 <figure class="diagram" data-diagram="wall-load-path">
-<figcaption><b>Wall-mount representation—not capacity.</b> Candidate path: top/fixtures/contents → case → continuous rail → candidate fastener axes → surveyed framing. Study targets: {_e(anchors)}.</figcaption>
+<figcaption><b>Wall-mount representation—not capacity.</b> Rakks supports are the primary gravity path beneath the case; the continuous rail is positioning/lateral only with zero gravity credit. Candidate fastener axes terminate at study-declared/owner_assumed framing: {_e(anchors)}. Reaction distribution, attachment, and connection capacity remain UNKNOWN.</figcaption>
 <svg viewBox="0 0 860 320" role="img" aria-label="Floating vanity candidate wall load path">
-<rect x="80" y="55" width="600" height="170" class="case"/><rect x="110" y="80" width="540" height="45" class="rail"/><rect x="700" y="25" width="35" height="245" class="wall"/>
-<path d="M110 103H735" class="load-path"/>{''.join(anchor_marks)}
+<rect x="80" y="55" width="600" height="170" class="case"/><rect data-system="positioning-lateral-rail" x="110" y="80" width="540" height="45" class="rail"/><rect x="700" y="25" width="35" height="245" class="wall"/>
+{''.join(support_marks)}{''.join(anchor_marks)}
 <text x="380" y="300">{_mm(model.section.vanity.width_mm)} floating span · capacity UNKNOWN</text>
 </svg></figure>"""
 
@@ -292,7 +304,7 @@ def _mount_and_workflow() -> str:
 <ol>
 <li>Survey the finished wall/floor datums, framing/backing, room clearances, and both waste/supply locations.</li>
 <li>Coordinate the two fixture templates, wall-faucet valves, top geometry, trap families, shutoffs, and service envelopes.</li>
-<li>Re-derive both U-shaped upper boxes, both shortened lower boxes, runners, and removal/tool clearances from the accepted rough-in.</li>
+<li>Compare accepted rough-ins to the conditionally released static boxes; then prove runner drilling/templates, locking-device setup, removal, and tool clearances without revoking static cuts.</li>
 <li>Release the case, rear rail, joinery, backing, fasteners, and temporary-support method through project-specific structural review.</li>
 <li>Mount the empty body; verify rail engagement, level, plumb, anchor installation, and the accepted load path before installing the top.</li>
 <li>Install the approved top, basins, faucets, supplies, drains, and two independent traps under the responsible trades' instructions.</li>
@@ -312,16 +324,16 @@ def _inventory(project) -> str:
         if drawer.level == "upper":
             motion = (
                 f"MOVENTO {drawer.runner.selected_sku}; "
-                f"{drawer.runner.minimum_drawer_length_mm:.1f} mm minimum "
-                "drawer length and 477.0 mm minimum inside-depth check pass "
+                f"{drawer.runner.drawer_length_mm:.1f} mm drawer length and "
+                "477.0 mm minimum inside-depth check pass "
                 "for the analytic closed position; fixing, joinery, load, "
                 "travel, removal, and actual-service checks remain gated"
             )
         else:
             motion = (
                 f"MOVENTO {drawer.runner.selected_sku}; "
-                f"{drawer.runner.minimum_drawer_length_mm:.1f} mm minimum "
-                f"drawer length and {drawer.runner.minimum_inside_depth_mm:.1f} "
+                f"{drawer.runner.drawer_length_mm:.1f} mm drawer length and "
+                f"{drawer.runner.minimum_inside_depth_mm:.1f} "
                 "mm minimum inside-depth check pass for the analytic closed "
                 "position; mounting, machining, dynamic travel, removal, and "
                 "actual-service checks remain gated"
@@ -330,7 +342,8 @@ def _inventory(project) -> str:
             f'<li data-drawer-id="{_e(drawer.drawer_id)}"><b>{_e(drawer.drawer_id)}'
             f'</b>: {_e(drawer.kind)}, removable; {_e(motion)}. Cut dimensions '
             'are published only in the linked conditional fabrication package; '
-            'joinery remains withheld.</li>'
+            'selected shop-basis joinery is published there; runner drilling '
+            'and locking-device setup remain withheld.</li>'
         )
     drawers = "".join(drawer_rows)
     return (

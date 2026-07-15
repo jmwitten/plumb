@@ -112,7 +112,7 @@ def test_real_drain_trap_runner_and_mount_references_are_pinned_without_capacity
 
     upper = model.drawer("left", "upper").runner
     assert upper.selected_sku == "763.4570S"
-    assert upper.minimum_drawer_length_mm == pytest.approx(457.0)
+    assert upper.drawer_length_mm == pytest.approx(457.0)
     assert upper.minimum_inside_depth_mm == pytest.approx(477.0)
 
     assert catalog["comparative_mount"] == "rakks_eh_1818_lv@2022.1.0"
@@ -140,11 +140,13 @@ def test_three_supports_carry_gravity_without_rail_credit():
     )
 
 
-def test_mount_layout_passes_but_installation_waits_for_real_backing():
+def test_mount_layout_never_passes_unproved_reaction_distribution():
     project = _project()
     findings = {finding.rule: finding for finding in project.report.findings}
 
-    assert findings["double_vanity.mount.layout"].verdict == "PASS"
+    assert findings["double_vanity.mount.layout"].verdict == "UNKNOWN"
+    assert "reaction distribution" in findings["double_vanity.mount.layout"].message
+    assert "equal-share" not in findings["double_vanity.mount.layout"].message
     assert findings["double_vanity.release.wall_mount"].verdict == "UNKNOWN"
     assert not project.model.assumed_site.field_verified
 
@@ -429,16 +431,16 @@ def test_dv72_expands_to_two_independent_service_bays_and_four_drawers():
         upper = model.drawer(bay, "upper")
         lower = model.drawer(bay, "lower")
         assert upper.runner.family_id.startswith("blum_movento")
-        assert upper.runner.minimum_drawer_length_mm == pytest.approx(457.0)
+        assert upper.runner.drawer_length_mm == pytest.approx(457.0)
         assert upper.runner.minimum_inside_depth_mm == pytest.approx(477.0)
         assert upper.box_depth_mm == pytest.approx(
-            upper.runner.required_box_length_mm
+            upper.runner.drawer_length_mm
         )
         assert lower.runner.family_id.startswith("blum_movento")
-        assert lower.runner.minimum_drawer_length_mm == pytest.approx(305.0)
+        assert lower.runner.drawer_length_mm == pytest.approx(305.0)
         assert lower.runner.minimum_inside_depth_mm == pytest.approx(325.0)
         assert lower.box_depth_mm == pytest.approx(
-            lower.runner.required_box_length_mm
+            lower.runner.drawer_length_mm
         )
 
 
@@ -580,14 +582,13 @@ def test_lower_drawers_use_selected_12_in_movento():
     for bay in ("left", "right"):
         runner = model.drawer(bay, "lower").runner
         assert runner.selected_sku == "763.3050S"
-        assert runner.minimum_drawer_length_mm == pytest.approx(305.0)
+        assert runner.drawer_length_mm == pytest.approx(305.0)
         assert runner.minimum_inside_depth_mm == pytest.approx(325.0)
 
 
 def test_movento_contract_drives_box_width_stock_and_length_by_role():
     model = _project().model
-    bay_width = model.section.vanity.width_mm / 2
-    case_clear_width = bay_width - 2 * model.profile.carcass_thickness_mm
+    cabinet_opening_width = model.sink_bays[0].clear_opening_width_mm
 
     for bay in ("left", "right"):
         for level, nominal in (("upper", 457.0), ("lower", 305.0)):
@@ -596,12 +597,16 @@ def test_movento_contract_drives_box_width_stock_and_length_by_role():
             left = model.part(f"drawer_{bay}_{level}_side_left")
             right = model.part(f"drawer_{bay}_{level}_side_right")
 
-            assert runner.required_total_lateral_clearance_mm == pytest.approx(42.0)
+            assert runner.inside_drawer_width_deduction_mm == pytest.approx(42.0)
             assert runner.maximum_drawer_side_thickness_mm == pytest.approx(16.0)
-            assert runner.minimum_drawer_length_mm == pytest.approx(nominal)
-            assert runner.drawer_length_deduction_mm == pytest.approx(10.0)
-            assert drawer.box_depth_mm == pytest.approx(nominal - 10.0)
-            assert drawer.box_width_mm == pytest.approx(case_clear_width - 42.0)
+            assert runner.drawer_length_mm == pytest.approx(nominal)
+            assert drawer.box_depth_mm == pytest.approx(nominal)
+            assert drawer.box_width_mm == pytest.approx(
+                cabinet_opening_width - 12.0
+            )
+            assert drawer.box_width_mm - 2 * left.thickness_mm == pytest.approx(
+                cabinet_opening_width - 42.0
+            )
             assert right.at_mm[0] + right.thickness_mm - left.at_mm[0] \
                 == pytest.approx(drawer.box_width_mm)
             assert max(left.thickness_mm, right.thickness_mm) <= (
@@ -637,7 +642,7 @@ def test_wrong_runner_lateral_clearance_withdraws_drawer_cut_authority():
                 drawer,
                 runner=replace(
                     drawer.runner,
-                    required_total_lateral_clearance_mm=50.0,
+                    inside_drawer_width_deduction_mm=50.0,
                 ),
             )
             for drawer in model.drawers
@@ -1279,11 +1284,13 @@ def test_all_nine_study_release_gates_are_required_unknown_and_block_release():
     assert findings[
         "double_vanity.drawer.runner_applicability"
     ].severity == "advisory"
-    assert len(project.report.blocking) == 9
+    assert len(project.report.blocking) == 10
     assert findings[
         "double_vanity.geometry.fixture_plumbing_drawer"
     ].verdict == "PASS"
-    assert {finding.rule for finding in project.report.blocking} == expected
+    assert {finding.rule for finding in project.report.blocking} == (
+        expected | {"double_vanity.mount.layout"}
+    )
     assert not project.report.fabrication_ready
     with pytest.raises(ProjectReleaseError, match="fixture_template"):
         project.require_release()

@@ -161,6 +161,7 @@ def _system_section(project) -> str:
 
 def _assumption_schedule(project) -> str:
     assumed = project.model.assumed_site
+    code = project.model.code_profile
     rows = [
         ("wall_length", assumed.wall_length_mm, "site wall run"),
         ("wall_height", assumed.wall_height_mm, "site wall height"),
@@ -177,6 +178,17 @@ def _assumption_schedule(project) -> str:
         '<tr><td><code>backing</code></td>'
         f'<td colspan="2">{study._e(assumed.backing)}</td>'
         f'<td><code>{study._e(assumed.provenance)}</code>; not field verified</td></tr>'
+    )
+    qualitative_rows = (
+        ("coordinate_axes", "x increases right along the wall; y = 0 at the project datum and y increases toward the wall; z increases above the floor datum", "field-coordinate convention"),
+        ("wall_geometry", "straight, flat, and plumb wall", "case-fit basis"),
+        ("faucet_target", "4.50 in above the finished counter", "spout-center height target"),
+        ("room_clearance", f"{code.front_clearance_mm / 25.4:.2f} in clear room depth in front", "selected-code-profile coordination target"),
+    )
+    schedule += "".join(
+        f'<tr><td><code>{name}</code></td><td>{value}</td><td>{scope}</td>'
+        f'<td><code>owner_assumed</code>; not field verified</td></tr>'
+        for name, value, scope in qualitative_rows
     )
     for point in assumed.wastes + assumed.supplies:
         schedule += (
@@ -207,10 +219,16 @@ def _support_and_load_hold(project) -> str:
         f'{support.support_id} at x {_dual(support.x_axis_mm)} ({support.alignment_role})'
         for support in layout.supports
     )
+    load_rows = "".join(
+        f'<tr data-load-component="{study._e(name)}"><td>{study._e(name.replace("_", " "))}</td>'
+        f'<td>{value:.1f} lb</td><td>model-derived allowance</td></tr>'
+        for name, value in load.component_weights_lb().items()
+    )
     return f"""
 <section><h2>Held support and loading basis</h2>
 <p>{len(layout.supports)} provisional support envelopes: {supports}. Authority: <code>{study._e(layout.supports[0].authority)}</code>. Backing: <code>{study._e(layout.backing_authority)}</code>; <code>owner_assumed</code>; not field verified.</p>
-<p>Modeled load case: {load.unfactored_total_lb:.1f} lb unfactored; {load.factored_total_lb:.1f} lb at the model's {load.load_factor:.2f} factor. Rear-rail gravity credit: {layout.rear_rail_gravity_credit_lb:.1f} lb. Fastener connection capacity is unassigned.</p>
+<div class="table-wrap"><table><thead><tr><th>Load component</th><th>Model value</th><th>Basis</th></tr></thead><tbody>{load_rows}<tr><th>Unfactored total</th><th>{load.unfactored_total_lb:.1f} lb</th><th>sum of seven model-derived components</th></tr><tr><th>Factored total</th><th>{load.factored_total_lb:.1f} lb</th><th>{load.load_factor:.2f} model factor; reaction distribution unproved</th></tr></tbody></table></div>
+<p>Rear-rail gravity credit: {layout.rear_rail_gravity_credit_lb:.1f} lb. Fastener connection capacity is unassigned.</p>
 <p><b>Wall drilling, cabinet loading, installation, and use remain held</b> pending field verification, current-product acceptance, fastener/connection design, cabinet-to-support attachment, and structural approval.</p></section>"""
 
 
@@ -309,15 +327,24 @@ def _fabrication_inventory(project) -> str:
             '<p>Product geometry is held. No cabinet or drawer dimensions are '
             'published for fabrication use.</p></section>'
         )
+    def material_basis(item) -> str:
+        if abs(item.thickness_mm - 19.0) <= 1e-6:
+            return "19.0 mm veneer-core plywood; selected shop basis below"
+        if abs(item.thickness_mm - 15.0) <= 1e-6:
+            return "15.0 mm veneer-core plywood; selected shop basis below"
+        if abs(item.thickness_mm - 9.0) <= 1e-6:
+            return "9.0 mm plywood; selected shop basis below"
+        return "thickness-specific material basis requires fabricator acceptance"
+
     rows = "".join(
         f'<tr data-cut-list-row="{study._e(item.part_id)}"><td><code>{study._e(item.part_id)}</code></td>'
         f'<td>{study._e(item.description)}</td><td>{study._mm(item.length_mm)} × {study._mm(item.width_mm)} × {study._mm(item.thickness_mm)}</td>'
-        f'<td>{study._e(item.material)}; <code>owner_assumed</code>; not field verified</td></tr>'
+        f'<td>{material_basis(item)}; <code>owner_assumed</code>; not field verified</td></tr>'
         for item in project.artifacts.cut_list
     )
     return (
         '<section><h2>Released cabinet and drawer inventory</h2>'
-        f'<p><b>{len(project.artifacts.cut_list)} released parts.</b> Dimensions are exact model outputs. No additional tolerance, machining, joinery, finish, nesting, procurement, wall-work, or stone authority is implied.</p>'
+        f'<p><b>{len(project.artifacts.cut_list)} released parts.</b> Dimensions are exact model outputs governed by the selected owner-assumed shop basis below. Runner drilling/templates, locking-device setup, stone cutting, procurement, wall work, loading, trade work, and installation remain outside this release.</p>'
         '<div class="table-wrap"><table><thead><tr><th>Part id</th><th>Canonical name</th><th>Released size</th><th>Material assumption</th></tr></thead><tbody>'
         + rows + '</tbody></table></div></section>'
     )
@@ -332,15 +359,41 @@ def _fabrication_boundaries(project) -> str:
 <p>Cabinet/drawer product geometry, stone cutting, runner mounting and machining, wall drilling, loading, trade work, and installation remain held. Material, joinery, and finish inputs are <code>owner_assumed</code> and not field verified.</p></section>"""
     upper = model.drawer("left", "upper")
     lower = model.drawer("left", "lower")
+    vanity = model.section.vanity
+    left_fixture = model.plumbing_paths[0].fixture_envelope
+    right_fixture = model.plumbing_paths[1].fixture_envelope
+    wall_y = model.section.site.wall.plane_origin_mm[1]
+    front_y = wall_y - vanity.body_depth_mm
+    left_zone = left_fixture.x0_mm - vanity.x0_mm
+    middle_zone = right_fixture.x0_mm - left_fixture.x1_mm
+    right_zone = vanity.x0_mm + vanity.width_mm - right_fixture.x1_mm
+    front_zone = left_fixture.y0_mm - front_y
+    rear_zone = wall_y - left_fixture.y1_mm
+    shop_rows = (
+        "19.0 mm veneer-core plywood case and slab fronts",
+        "15.0 mm veneer-core plywood drawer sides, fronts, and backs",
+        "9.0 mm plywood drawer bottoms",
+        "continuous figured-walnut grain sequence across the four slab fronts",
+        "1.0 mm matching walnut veneer edge band on every exposed plywood edge",
+        "clear low-sheen conversion-varnish finish over approved samples",
+        "glued doweled butt joints at the released finished extents",
+        "#8 × 38 mm flat-head cabinet screws, predrilled and concealed, for cabinet joinery",
+        "finished net part sizes after trimming and edge banding; shop-cut blanks include fabricator-selected process allowance and are not released dimensions",
+        "±0.5 mm part-size tolerance; ±1.0 mm assembled-case size; diagonals within 1.5 mm",
+    )
+    shop_schedule = "".join(
+        f'<tr><td>{value}</td><td>owner_assumed; not field verified</td></tr>'
+        for value in shop_rows
+    )
     return f"""
 <section><h2>Release boundaries and assumptions</h2>
 <div class="table-wrap"><table><thead><tr><th>Scope</th><th>Model fact</th><th>Authority</th></tr></thead><tbody>
 <tr><td>Upper runner</td><td>{study._e(upper.runner.selected_sku)}; released {study._mm(upper.box_depth_mm)} box depth</td><td><code>{study._e(upper.runner.machining_authority)}</code></td></tr>
 <tr><td>Lower runner</td><td>{study._e(lower.runner.selected_sku)}; released {study._mm(lower.box_depth_mm)} box depth</td><td><code>{study._e(lower.runner.machining_authority)}</code></td></tr>
-<tr><td>Countertop</td><td>{model.countertop.structural_thickness_mm:.1f} mm structural thickness; {model.countertop.visual_edge_height_mm:.1f} mm visual edge; K-20000 template {study._e(model.countertop.cutout_template_id)}</td><td><code>{study._e(model.countertop.stone_cut_authority)}</code></td></tr>
-<tr><td>Tolerances</td><td>Released values are deterministic model dimensions; field-fit and manufacturing tolerances are not supplied by the model.</td><td>Fabricator-controlled acceptance; no silent dimensional adjustment.</td></tr>
+<tr><td>Countertop</td><td>{model.countertop.structural_thickness_mm:.1f} mm quartz structural slab and {model.countertop.visual_edge_height_mm:.1f} mm visual edge are controlling owner_assumed case-height and load inputs; the fabricator must accept or replace them before stone cut. K-20000 template {study._e(model.countertop.cutout_template_id)} remains controlling for future cutout work.</td><td><code>{study._e(model.countertop.stone_cut_authority)}</code>; not field verified</td></tr>
 </tbody></table></div>
-<h3>Joinery and finish assumptions</h3><p><code>owner_assumed</code>; not field verified. Sheet product, face veneer, grain sequence, edge band, exposed-face selection, finish system, adhesives, joint details, hardware fixing, and nesting remain fabricator-controlled coordination items. Their absence does not broaden the conditional part-dimension release.</p>
+<h3>Selected material, joinery, finish, and tolerance schedule</h3><p>Every row is an explicit shop-basis selection, not a product record. The fabricator must accept or replace the complete basis before use; accepted replacements require regeneration of affected cut authority.</p><div class="table-wrap"><table><thead><tr><th>Selected shop basis</th><th>Provenance</th></tr></thead><tbody>{shop_schedule}</tbody></table></div>
+<h3>Model-derived sink web and support-zone coordination</h3><p>The two gross K-20000 fixture envelopes leave {left_zone:.1f} mm left gross side zone, {middle_zone:.1f} mm gross inter-sink web, {right_zone:.1f} mm right gross side zone, {front_zone:.1f} mm gross front zone, and {rear_zone:.1f} mm gross rear zone. These are model-derived gross-envelope coordination values, not cutout dimensions, clamp clearances, reinforcement dimensions, or structural proof. The current template and final stone authority remains with the countertop fabricator.</p>
 <p><b>Stone cutting remains fabricator-controlled.</b> Runner mounting and machining remain manufacturer-template-controlled. Wall drilling, loading, trade work, and installation remain held.</p></section>"""
 
 
@@ -373,6 +426,20 @@ def _finding_routing(rule: str) -> tuple[str, str]:
         raise ValueError(f"unmapped DV72 finding rule {rule!r}") from None
 
 
+def _visible_finding_message(project, finding) -> str:
+    fabrication_released, _ = _fabrication_status(project)
+    if (
+        not fabrication_released
+        and finding.rule == "double_vanity.release.drawer_derivation"
+    ):
+        return (
+            "Product geometry hold withholds static drawer-box cuts; restore "
+            "the corrected product checks before separately proving runner "
+            "drilling/templates, locking-device setup, and dynamic/service access."
+        )
+    return finding.message
+
+
 def _all_findings(project) -> str:
     rows = []
     for finding in project.report.findings:
@@ -381,7 +448,7 @@ def _all_findings(project) -> str:
             f'<tr data-finding-rule="{study._e(finding.rule)}" '
             f'data-responsible-party="{study._e(party)}" data-blocking-phase="{study._e(phase)}">'
             f'<td><code>{study._e(finding.rule)}</code></td><td class="{study._e(finding.verdict.lower())}">{study._e(finding.verdict)}</td>'
-            f'<td>{study._e(party)}</td><td>{study._e(phase)}</td><td>{study._e(finding.message)}</td></tr>'
+            f'<td>{study._e(party)}</td><td>{study._e(phase)}</td><td>{study._e(_visible_finding_message(project, finding))}</td></tr>'
         )
     return '<section><h2>Validation findings and evidence-request routing</h2><p><b>Coordination routing only.</b> This table routes evidence requests only; approval and release authority is established outside this renderer. PASS does not override a separate UNKNOWN hold.</p><div class="table-wrap"><table><thead><tr><th>Rule</th><th>Verdict</th><th>Evidence request route</th><th>Blocking phase</th><th>Scope</th></tr></thead><tbody>' + "".join(rows) + '</tbody></table></div></section>'
 
@@ -393,13 +460,32 @@ def _product_evidence(project) -> str:
     upper_runner = model.drawer("left", "upper").runner
     lower_runner = model.drawer("left", "lower").runner
     mount = model.mount_reference
+    fabrication_released, _ = _fabrication_status(project)
+    if fabrication_released:
+        upper_authority = (
+            "Static upper drawer cuts are conditionally released; drilling/templates, "
+            "locking-device setup, travel, removal, and service remain held."
+        )
+        lower_authority = (
+            "Static lower drawer cuts are conditionally released; drilling/templates, "
+            "locking-device setup, travel, removal, and service remain held."
+        )
+    else:
+        upper_authority = (
+            "Product geometry hold withholds upper drawer cuts; drilling/templates, "
+            "locking-device setup, travel, removal, and service also remain held."
+        )
+        lower_authority = (
+            "Product geometry hold withholds lower drawer cuts; drilling/templates, "
+            "locking-device setup, travel, removal, and service also remain held."
+        )
     return f"""
 <section><h2>Pinned product evidence</h2><div class="table-wrap"><table>
 <thead><tr><th>System</th><th>Verified manufacturer fact</th><th>Authority in DV72</th><th>Source</th></tr></thead><tbody>
 <tr><td>Kohler {study._e(drain.sku)}</td><td>1-1/4 in overflow drain; {drain.body_height_mm:.1f} mm nominal body below flange</td><td>Product dimensions; final finish, availability, and installation still coordinated with fixture and trap.</td><td><a href="{study._e(drain.specification_url)}">Kohler specification</a></td></tr>
 <tr><td>Kohler {study._e(trap.sku)}</td><td>{trap.overall_length_mm:.1f} × {trap.overall_height_mm:.1f} mm gross; 1-1/4 in inlet/outlet; slip joint and cleanout</td><td>Envelope and service candidate. Licensed-plumber layout and installed code compliance remain UNKNOWN.</td><td><a href="{study._e(trap.specification_url)}">Kohler product/CAD record</a></td></tr>
-<tr><td>Blum MOVENTO {study._e(upper_runner.selected_sku)}</td><td>18-in full-extension BLUMOTION; {upper_runner.minimum_drawer_length_mm:.1f} mm nominal and {upper_runner.minimum_inside_depth_mm:.1f} mm inside-depth checks</td><td>Upper drawer geometry; mounting, machining, travel, removal, and service remain held.</td><td><a href="{study._e(upper_runner.source_url)}">Blum 2026 planning data</a></td></tr>
-<tr><td>Blum MOVENTO {study._e(lower_runner.selected_sku)}</td><td>12-in full-extension BLUMOTION; {lower_runner.minimum_drawer_length_mm:.1f} mm nominal and {lower_runner.minimum_inside_depth_mm:.1f} mm inside-depth checks</td><td>Lower drawer geometry; mounting, machining, travel, removal, and service remain held.</td><td><a href="{study._e(lower_runner.source_url)}">Blum 2026 planning data</a></td></tr>
+<tr><td>Blum MOVENTO {study._e(upper_runner.selected_sku)}</td><td>18-in full-extension BLUMOTION; {upper_runner.drawer_length_mm:.1f} mm drawer length, opening minus {upper_runner.inside_drawer_width_deduction_mm:.1f} mm inside drawer width, and {upper_runner.minimum_inside_depth_mm:.1f} mm minimum inside-depth check</td><td>{upper_authority}</td><td><a href="{study._e(upper_runner.source_url)}">Blum 2026 planning data, page 15</a></td></tr>
+<tr><td>Blum MOVENTO {study._e(lower_runner.selected_sku)}</td><td>12-in full-extension BLUMOTION; {lower_runner.drawer_length_mm:.1f} mm drawer length, opening minus {lower_runner.inside_drawer_width_deduction_mm:.1f} mm inside drawer width, and {lower_runner.minimum_inside_depth_mm:.1f} mm minimum inside-depth check</td><td>{lower_authority}</td><td><a href="{study._e(lower_runner.source_url)}">Blum 2026 planning data, page 15</a></td></tr>
 <tr><td>Rakks {study._e(mount.sku)}</td><td>{mount.static_capacity_lb:.0f} lb evenly distributed static load; four secured screws per bracket, up to 48 in spacing under the guide conditions</td><td>comparative reference only; it does not establish DV72 capacity and is not silently combined with the modeled rail/GRK candidate path.</td><td><a href="{study._e(mount.specification_url)}">Rakks installation guide</a></td></tr>
 </tbody></table></div></section>"""
 
@@ -415,7 +501,7 @@ def _phased_release_gates(project) -> str:
             continue
         preinstall.append(
             f'<tr data-release-rule="{study._e(finding.rule)}"><td><code>{study._e(finding.rule)}</code></td>'
-            f'<td class="unknown">{study._e(finding.verdict)}</td><td>{study._e(finding.message)}</td></tr>'
+            f'<td class="unknown">{study._e(finding.verdict)}</td><td>{study._e(_visible_finding_message(project, finding))}</td></tr>'
         )
     postinstall = ""
     preinstall_count = len(preinstall)
