@@ -307,6 +307,44 @@ def test_governance_intent_is_checked(contract, clean_snapshot):
     assert "governance is absent" in finding.detail
 
 
+def test_validation_finding_intent_can_require_presence_and_absence(
+    contract, clean_snapshot
+):
+    bearing = ValidationFindingEvidence(
+        check="bearing",
+        subject="top panel bears on sofa arm",
+        verdict="PASS",
+        detail="contact represented",
+        passed=True,
+        blocking=False,
+    )
+    observed = replace(
+        clean_snapshot,
+        validation=ValidationEvidence(True, (bearing,), ()),
+    )
+    intended = replace(
+        contract,
+        intent=IntentContract(
+            validation=(
+                CountIntent(
+                    IntentSelector(
+                        check="bearing",
+                        verdict="PASS",
+                        subject_contains="sofa arm",
+                    ),
+                    exactly=1,
+                ),
+                CountIntent(IntentSelector(check="capacity"), exactly=0),
+            )
+        ),
+    )
+
+    result = _certify(intended, observed)
+
+    finding = next(row for row in result.findings if row.rule_id == "intent.matches")
+    assert finding.state is FindingState.PASS
+
+
 def test_invalid_geometry_and_fabrication_drift_fail(contract, clean_snapshot):
     invalid = replace(
         clean_snapshot,

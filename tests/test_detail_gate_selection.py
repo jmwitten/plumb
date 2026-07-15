@@ -87,6 +87,20 @@ def test_complete_contract_is_accepted():
     )
 
 
+def test_optional_documents_contract_is_allowed_but_not_required():
+    selected, _deselected, contracts = _detail_gate_selection(
+        [_item("armchair_caddy", contracts=("documents",))],
+        "armchair_caddy",
+    )
+
+    assert len(selected) == 1
+    assert contracts == {"documents"}
+    with pytest.raises(pytest.UsageError, match="missing contracts"):
+        _require_complete_detail_gate(
+            "armchair_caddy", selected, contracts
+        )
+
+
 @pytest.mark.parametrize(
     ("marker", "message"),
     (

@@ -255,7 +255,9 @@ class GovernanceReadyRule:
 
 
 def _matches(row, selector: IntentSelector) -> bool:
-    for field in ("component", "material", "role", "name", "kind"):
+    for field in (
+        "component", "material", "role", "name", "kind", "check", "verdict",
+    ):
         expected = getattr(selector, field)
         if expected is None:
             continue
@@ -268,6 +270,10 @@ def _matches(row, selector: IntentSelector) -> bool:
     if selector.name_contains is not None:
         name = getattr(row, "name", "")
         if selector.name_contains.casefold() not in name.casefold():
+            return False
+    if selector.subject_contains is not None:
+        subject = getattr(row, "subject", "")
+        if selector.subject_contains.casefold() not in subject.casefold():
             return False
     return True
 
@@ -302,6 +308,14 @@ class IntentRule:
                 )
         for index, row in enumerate(intent.connections):
             error = _count_error(snapshot.connections, row, f"connections[{index}]")
+            if error:
+                problems.append(error)
+        for index, row in enumerate(intent.validation):
+            error = _count_error(
+                snapshot.validation.findings,
+                row,
+                f"validation[{index}]",
+            )
             if error:
                 problems.append(error)
         fabrication_by_id = {row.part_id: row.steps for row in snapshot.fabrication}
@@ -407,4 +421,3 @@ DEFAULT_RULES: tuple[CertificationRule, ...] = (
     IntentRule(),
     DeterministicEvidenceRule(),
 )
-

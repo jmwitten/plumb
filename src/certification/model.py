@@ -45,6 +45,9 @@ class IntentSelector:
     name: str | None = None
     name_contains: str | None = None
     kind: str | None = None
+    check: str | None = None
+    verdict: str | None = None
+    subject_contains: str | None = None
 
 
 @dataclass(frozen=True)
@@ -86,6 +89,7 @@ class IntentContract:
     counts: tuple[CountIntent, ...] = ()
     forbidden: tuple[IntentSelector, ...] = ()
     connections: tuple[CountIntent, ...] = ()
+    validation: tuple[CountIntent, ...] = ()
     fabrication: tuple[FabricationIntent, ...] = ()
     bom: tuple[BomIntent, ...] = ()
     governance: GovernanceIntent = field(default_factory=GovernanceIntent)

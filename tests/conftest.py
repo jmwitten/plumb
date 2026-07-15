@@ -51,6 +51,7 @@ REQUIRED_DETAIL_CONTRACTS = frozenset({
     "intent",
     "determinism",
 })
+ALLOWED_DETAIL_CONTRACTS = REQUIRED_DETAIL_CONTRACTS | {"documents"}
 
 
 def _detail_gate_selection(items, slug):
@@ -79,7 +80,7 @@ def _detail_gate_selection(items, slug):
                     f"{item.nodeid}: detail_gate contracts must contain "
                     "only strings"
                 )
-            unknown = set(declared) - REQUIRED_DETAIL_CONTRACTS
+            unknown = set(declared) - ALLOWED_DETAIL_CONTRACTS
             if unknown:
                 raise pytest.UsageError(
                     f"{item.nodeid}: unknown detail-gate contracts "

@@ -114,6 +114,16 @@ def test_typed_intent_and_decision_are_loaded(tmp_path):
         "connections": [
             {"selector": {"kind": "bonded_to"}, "exactly": 2}
         ],
+        "validation": [
+            {
+                "selector": {
+                    "check": "bearing",
+                    "verdict": "PASS",
+                    "subject_contains": "sofa arm",
+                },
+                "exactly": 1,
+            }
+        ],
         "fabrication": [
             {
                 "selector": {"name": "top panel"},
@@ -147,6 +157,8 @@ def test_typed_intent_and_decision_are_loaded(tmp_path):
 
     assert contract.intent.counts[0].selector.component == "HardwoodPanel"
     assert contract.intent.counts[0].exactly == 3
+    assert contract.intent.validation[0].selector.check == "bearing"
+    assert contract.intent.validation[0].selector.subject_contains == "sofa arm"
     assert contract.intent.fabrication[0].steps == ("crosscut", "bore")
     assert contract.intent.bom[0].length_mm.minimum == 190.0
     assert contract.intent.governance.delivery_ready is True

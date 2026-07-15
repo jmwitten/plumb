@@ -25,6 +25,7 @@ from .model import (
 _SLUG = re.compile(r"^[a-z][a-z0-9_]*$")
 _SELECTOR_FIELDS = {
     "component", "material", "role", "name", "name_contains", "kind",
+    "check", "verdict", "subject_contains",
 }
 
 
@@ -132,7 +133,10 @@ def _numeric_range(value: Any, path: str) -> NumericRange:
 
 def _intent(value: Any, path: str) -> IntentContract:
     raw = _mapping(value, path)
-    allowed = {"counts", "forbidden", "connections", "fabrication", "bom", "governance"}
+    allowed = {
+        "counts", "forbidden", "connections", "validation",
+        "fabrication", "bom", "governance",
+    }
     _keys(raw, optional=allowed, path=path)
 
     counts = tuple(
@@ -154,6 +158,12 @@ def _intent(value: Any, path: str) -> IntentContract:
             _list(raw.get("connections", []), f"{path}.connections")
         )
     )
+    validation = tuple(
+        _count_intent(item, f"{path}.validation[{index}]")
+        for index, item in enumerate(
+            _list(raw.get("validation", []), f"{path}.validation")
+        )
+    )
     fabrication = tuple(
         _fabrication_intent(item, f"{path}.fabrication[{index}]")
         for index, item in enumerate(
@@ -169,6 +179,7 @@ def _intent(value: Any, path: str) -> IntentContract:
         counts=counts,
         forbidden=forbidden,
         connections=connections,
+        validation=validation,
         fabrication=fabrication,
         bom=bom,
         governance=governance,
@@ -333,4 +344,3 @@ def discover_contracts(
             )
         by_slug[contract.slug] = contract.source_path
     return tuple(sorted(contracts, key=lambda item: item.slug))
-

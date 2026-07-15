@@ -227,6 +227,9 @@ all 53 current gate nodes. Each row records exactly one disposition:
 - replaced by a typed fact in `armchair_caddy.cert.yaml`;
 - retained as a named bespoke invariant with a reason;
 - removed as duplicate coverage, naming the equivalent surviving row.
+- retired by the owner's approved policy that documentation/presentation is
+  not a certification deliverable, naming that policy rather than claiming an
+  accuracy replacement.
 
 No row may be classified only as "covered elsewhere." The map names the rule,
 contract path, or surviving test.
