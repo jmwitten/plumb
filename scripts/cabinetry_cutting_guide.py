@@ -20,8 +20,6 @@ if str(_REPO / "src") not in sys.path:
 if str(_REPO / "scripts") not in sys.path:
     sys.path.insert(0, str(_REPO / "scripts"))
 
-import cabinetry_project_report as CPR  # noqa: E402
-
 from detailgen.packs import compile_project_file  # noqa: E402
 from detailgen.packs.cabinetry.cutting_guide import (  # noqa: E402
     build_cabinetry_cutting_guide,
@@ -95,15 +93,9 @@ def build_cabinetry_cutting_document(
     diagrams_by_id = cutting_guide_diagrams(panels_manual)
     kit_groups = cutting_kit_groups(project)
 
-    viewer_assets = CPR.render_shared_product_assets(
-        project, out_dir / "cutting_viewer",
-        instruction_manual=panels_manual)
-    viewer = {
-        "payload": viewer_assets.viewer_payload,
-        "glb_b64": CPR._glb_b64(viewer_assets.glb_bytes),
-        "isometric": viewer_assets.images["isometric"],
-    }
-
+    # No embedded 3D viewer here: its explode/milestone semantics describe
+    # assembly arrivals, and every cutting-guide part exists from breakdown
+    # onward. The linked assembly manual carries the interactive model.
     output_path.write_text(
         render_consumer_manual_html(
             project.detail, guide, image_paths,
@@ -111,7 +103,6 @@ def build_cabinetry_cutting_document(
             inventory_groups=kit_groups,
             parts_heading="Wood list — pre-band cut sizes",
             diagrams=diagrams_by_id,
-            viewer=viewer,
         ),
         encoding="utf-8",
     )
