@@ -289,21 +289,25 @@ def _inventory(project) -> str:
             )
         else:
             motion = (
-                "full-extension/soft-close performance required, but the lower "
-                "runner family itself remains unselected because this short "
-                "study envelope is below MOVENTO applicability"
+                f"MOVENTO {drawer.runner.selected_sku}; "
+                f"{drawer.runner.minimum_drawer_length_mm:.1f} mm minimum "
+                f"drawer length and {drawer.runner.minimum_inside_depth_mm:.1f} "
+                "mm minimum inside-depth check pass for the analytic closed "
+                "position; mounting, machining, dynamic travel, removal, and "
+                "actual-service checks remain gated"
             )
         drawer_rows.append(
             f'<li data-drawer-id="{_e(drawer.drawer_id)}"><b>{_e(drawer.drawer_id)}'
             f'</b>: {_e(drawer.kind)}, removable; {_e(motion)}. Cut dimensions '
-            'and joinery withheld.</li>'
+            'are published only in the linked conditional fabrication package; '
+            'joinery remains withheld.</li>'
         )
     drawers = "".join(drawer_rows)
     return (
         '<section><h2>Model inventory and unresolved procurement</h2>'
-        '<p>MOVENTO 763.4570S applies only to the upper U drawers. Lower '
-        'hardware remains a performance requirement, not a selected catalog '
-        'claim.</p><ul>' + drawers
+        '<p>MOVENTO 763.4570S applies only to the upper U drawers. MOVENTO '
+        '763.3050S applies to the lower shortened drawers. Runner machining '
+        'and installation remain withheld.</p><ul>' + drawers
         + '</ul><p>Four half-moon brass pulls, four runner/locking-device sets, drawer joinery, sheet product/SKU, veneer sequence, edge band, finish, top, sinks, clamps, faucet/valves, traps, supplies, shutoffs, sealants, backing, and structural fasteners remain procurement or coordination items. No quantity here authorizes purchase.</p>'
         + '<div class="table-wrap"><table><thead><tr><th>Model id</th><th>Canonical name</th><th>Provisional study size</th><th>Status</th></tr></thead><tbody>'
         + rows + '</tbody></table></div></section>'

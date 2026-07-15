@@ -35,14 +35,22 @@ def _nav(current: str) -> str:
     ) + "</nav>"
 
 
-def _shell(title: str, current: str, purpose: str, body: str) -> str:
+def _shell(
+    title: str,
+    current: str,
+    purpose: str,
+    release_status: str,
+    status: str,
+    status_content: str,
+    body: str,
+) -> str:
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,">
 <title>DV72 — {title}</title><style>{_CSS}</style></head><body><main class="sheet">
 <header><div><div class="eyebrow">DV72 · vanity.double_sink@1</div><h1>{title}</h1><p>{purpose}</p></div>
-<div class="hold"><b>DESIGN HOLD</b><p>Coordination geometry only. Do not purchase, cut, drill, fabricate, load, or install until the named release gates are closed.</p></div></header>
+<div class="hold" data-release-status="{study._e(release_status)}"><b>{status}</b><p>{status_content}</p></div></header>
 {_nav(current)}{body}{_nav(current)}<footer>One analytic model; four reader projections. UNKNOWN is a release hold, never a concealed approval.</footer>
-<p class="metric">Issue date: 2026-07-14 · Revision: 1 · Status: DESIGN HOLD · Model: vanity.double_sink@1.0.0</p>
+<p class="metric">Issue date: 2026-07-14 · Revision: 1 · Status: {status} · Model: vanity.double_sink@1.0.0</p>
 </main></body></html>"""
 
 
@@ -62,7 +70,7 @@ def _system_section(project) -> str:
     return f"""
 <section><h2>Sink, plumbing, drawers, counter, and wall mount</h2>
 <p>Representative section through one of two symmetric bays. Yellow is the removable service envelope, not storage. Dimensions are model facts; the accepted field rough-in must re-derive the drawer voids before fabrication.</p>
-<p><b>Field vertical targets—not release dimensions:</b> cabinet bottom {_dual(vanity.bottom_elevation_mm)} AFF; counter top {_dual(counter_top)} AFF. The site-wall zero datum is the left end of the surveyed wall run; verify it, the floor datum, wall flatness, framing, and every plumbing centerline before release.</p>
+<p><b>Field vertical targets—not release dimensions:</b> cabinet bottom {_dual(vanity.bottom_elevation_mm)} AFF; counter top {_dual(counter_top)} AFF. Release requires a recorded comparison of the site-wall zero datum, floor datum, wall flatness, framing, and every plumbing centerline.</p>
 <figure class="diagram"><figcaption>Bay section · counter top {_dual(counter_top)} AFF · upper box {study._mm(upper.box_depth_mm)} deep · lower box {study._mm(lower.box_depth_mm)} deep · rear service chase {study._mm(model.service_chase_depth_mm)}</figcaption>
 <svg viewBox="0 0 900 520" role="img" aria-label="Section through sink, drain, trap, drawers, counter, rear rail, wall and anchors">
 <rect data-section-system="wall" x="790" y="25" width="55" height="455" class="wall"/><rect data-section-system="rear-rail" x="730" y="178" width="60" height="42" class="rail"/>
@@ -72,29 +80,113 @@ def _system_section(project) -> str:
 <path data-section-system="upper-drawer" d="M110 248h205v145h420v-42H355V248z" class="drawer"/><rect data-section-system="lower-drawer" x="110" y="402" width="430" height="68" class="drawer"/>
 <circle data-section-system="candidate-anchor" cx="807" cy="199" r="8" fill="#8e2d24"/><text x="450" y="505">proposed service-access concept; hand and tool paths remain unverified.</text>
 </svg></figure></section>
-<section><h2>Drawer-removal service sequence</h2><p><b>Proposed sequence—conditional on runner validation.</b> This is not a current service instruction.</p><ol><li>If runner validation proves the removal motion and locking-device access, empty and remove the upper U drawer.</li><li>If the selected lower runner proves removable, remove the lower drawer when rear-wall, rail, or anchor access is required.</li><li>Place a pan below each independent P-trap; service the cleanout/slip joints and both shutoffs only after field verification proves the proposed hand and tool paths.</li><li>Leak-test supplies, overflow drain, tailpiece, trap, and trap arm before either drawer returns.</li><li>Reinstall only under the validated hardware procedure, adjust reveals, cycle closed/full-extension/removal states, and record commissioning.</li></ol></section>
+<section><h2>Held service sequence</h2><p><b>Sequence concept only—installation and service remain held.</b> This is not an installation instruction.</p><ol><li>Future validated runner procedure: upper U-drawer emptying, release, and removal.</li><li>Future validated runner procedure: lower-drawer release and removal for rear-wall, rail, or anchor access.</li><li>Future plumbing procedure: pan placement and access to each independent P-trap, cleanout/slip joint, and shutoff.</li><li>Future commissioning record: supply, overflow drain, tailpiece, trap, and trap-arm leak tests.</li><li>Future closeout record: drawer return, reveal adjustment, closed/full-extension/removal cycles, and commissioning sign-off.</li></ol></section>
 """
+
+
+def _assumption_schedule(project) -> str:
+    assumed = project.model.assumed_site
+    rows = [
+        ("wall_length", assumed.wall_length_mm, "site wall run"),
+        ("wall_height", assumed.wall_height_mm, "site wall height"),
+        ("vanity_left", assumed.vanity_left_mm, "vanity-left datum"),
+        ("floor_elevation", assumed.floor_elevation_mm, "floor datum"),
+        ("finish_thickness", assumed.finish_thickness_mm, "wall finish"),
+    ]
+    schedule = "".join(
+        f'<tr><td><code>{name}</code></td><td>{_dual(value)}</td>'
+        f'<td>{label}</td><td><code>{study._e(assumed.provenance)}</code>; not field verified</td></tr>'
+        for name, value, label in rows
+    )
+    schedule += (
+        '<tr><td><code>backing</code></td>'
+        f'<td colspan="2">{study._e(assumed.backing)}</td>'
+        f'<td><code>{study._e(assumed.provenance)}</code>; not field verified</td></tr>'
+    )
+    for point in assumed.wastes + assumed.supplies:
+        schedule += (
+            f'<tr data-rough-in="{study._e(point.point_id)}"><td><code>{study._e(point.point_id)}</code></td>'
+            f'<td>x {_dual(point.x_mm)}; y {_dual(point.y_mm)}; z {_dual(point.z_mm)}</td>'
+            f'<td>{study._e(point.kind)}</td><td><code>{study._e(point.provenance)}</code>; not field verified</td></tr>'
+        )
+    return (
+        '<section><h2>Owner-assumed site and rough-in schedule</h2>'
+        '<p>Every value below has <code>owner_assumed</code> provenance and is <b>not field verified</b>. It supports coordination only and confers no drilling, loading, trade, or installation authority.</p>'
+        '<div class="table-wrap"><table><thead><tr><th>Assumption</th><th>Model value</th><th>Scope</th><th>Provenance</th></tr></thead><tbody>'
+        + schedule + '</tbody></table></div></section>'
+        '<section><h2>Field comparison checklist</h2>'
+        '<p>Required acceptance record before installation release:</p><ul>'
+        '<li>Wall and floor datums, vanity span, wall finish, flatness, and front clearance compared with the schedule.</li>'
+        '<li>Backing extent and each support axis exposed or otherwise verified by the responsible reviewer.</li>'
+        '<li>Waste, hot, and cold centerlines compared point-by-point with the six owner-assumed coordinates.</li>'
+        '<li>Obstructions, shutoffs, fitting envelopes, hand/tool paths, and drawer sweeps recorded for both bays.</li>'
+        '</ul><p><b>Do not install, drill, load, or connect trades from the owner-assumed schedule.</b></p></section>'
+    )
+
+
+def _support_and_load_hold(project) -> str:
+    layout = project.model.support_layout
+    load = project.model.load_case
+    supports = ", ".join(
+        f'{support.support_id} at x {_dual(support.x_axis_mm)} ({support.alignment_role})'
+        for support in layout.supports
+    )
+    return f"""
+<section><h2>Held support and loading basis</h2>
+<p>Three provisional support envelopes: {supports}. Authority: <code>{study._e(layout.supports[0].authority)}</code>. Backing: <code>{study._e(layout.backing_authority)}</code>; not field verified.</p>
+<p>Modeled load case: {load.unfactored_total_lb:.1f} lb unfactored; {load.factored_total_lb:.1f} lb at the model's {load.load_factor:.2f} factor. Rear-rail gravity credit: {layout.rear_rail_gravity_credit_lb:.1f} lb. Fastener connection capacity is unassigned.</p>
+<p><b>Wall drilling, cabinet loading, installation, and use remain held</b> pending field verification, current-product acceptance, fastener/connection design, cabinet-to-support attachment, and structural approval.</p></section>"""
+
+
+def _rough_in_section(project) -> str:
+    assumed = project.model.assumed_site
+    rows = "".join(
+        f'<tr data-rough-in="{study._e(point.point_id)}"><td><code>{study._e(point.point_id)}</code></td>'
+        f'<td>{study._e(point.kind)}</td><td>x {_dual(point.x_mm)}; y {_dual(point.y_mm)}; z {_dual(point.z_mm)}</td>'
+        f'<td><code>{study._e(point.provenance)}</code>; not field verified</td></tr>'
+        for point in assumed.wastes + assumed.supplies
+    )
+    return (
+        '<section><h2>Exact owner-assumed rough-ins</h2>'
+        '<p>These product-driving endpoints are model inputs, not field observations. Every row remains not field verified.</p>'
+        '<div class="table-wrap"><table><thead><tr><th>Point</th><th>Kind</th><th>Project coordinates</th><th>Provenance</th></tr></thead><tbody>'
+        + rows + '</tbody></table></div></section>'
+    )
 
 
 def build_double_vanity_review_html(project) -> str:
     body = "".join((
         '<section><h2>Reference-image intent</h2><p><code>IMG_7670.HEIC</code> controls visual intent only: warm figured wood, four flush slab fronts with dark reveals, brass half-moon pulls, a pale substantial counter, broad rectangular sinks, and a clean floating shadow line. It has no dimensional, structural, plumbing, or fabrication authority.</p></section>',
+        _assumption_schedule(project),
         _system_section(project),
         '<section><h2>Overall review geometry</h2><div class="diagram-grid">',
         study._overall_elevation(project), study._overall_plan(project),
         study._wall_load_path(project), "</div></section>",
-        study._mount_and_workflow(),
+        _support_and_load_hold(project),
     ))
     return _shell(
         "Review & installation", FILENAMES[0],
         "Primary fit, serviceability, field-survey, and unloaded installation review.",
+        project.model.release.installation_status,
+        "INSTALLATION HOLD — FIELD VERIFY",
+        "Owner-assumed conditions are not field verified. Do not install, drill, load, or connect trades until the named reviewers accept the comparison record.",
         body,
     )
 
 
 def build_double_vanity_assembly_html(project) -> str:
+    drawers = "".join(
+        f'<tr data-drawer-study="{study._e(drawer.drawer_id)}"><td>{study._e(drawer.drawer_id)}</td>'
+        f'<td>{study._e(drawer.runner.selected_sku)}</td><td>{study._mm(drawer.box_width_mm)} × '
+        f'{study._mm(drawer.box_depth_mm)} × {study._mm(drawer.box_height_mm)}</td>'
+        f'<td>{study._mm(drawer.u_void_width_mm)} × {study._mm(drawer.u_void_depth_mm)}</td>'
+        f'<td><code>{study._e(drawer.runner.machining_authority)}</code></td></tr>'
+        for drawer in project.model.drawers
+    )
     body = "".join((
-        '<section><h2>Proposed shell assembly</h2><p>After fabrication release, square the two-bay shell around the center divider and continuous rear rail. Drawer dimensions remain coordination targets until the accepted trap, rough-in, runner SKU, and service sweeps close their gates.</p></section>',
+        '<section><h2>Released drawer geometry and held assembly authority</h2><p>The conditional fabrication release covers the modeled cabinet and drawer inventory. Runner mounting and machining, plumbing assembly, field drilling, loading, and installation remain held.</p><div class="table-wrap"><table><thead><tr><th>Drawer</th><th>Runner</th><th>Released box W × D × H</th><th>Released U void W × D</th><th>Machining authority</th></tr></thead><tbody>',
+        drawers, '</tbody></table></div><p><b>Runner machining remains withheld</b> under the manufacturer-template-controlled authority stored on each drawer.</p></section>',
+        _rough_in_section(project),
         '<section><h2>Bay-by-bay plumbing and drawer interaction</h2><div class="diagram-grid">',
         study._bay_interaction(project, "left"),
         study._bay_interaction(project, "right"), "</div></section>",
@@ -104,44 +196,114 @@ def build_double_vanity_assembly_html(project) -> str:
     return _shell(
         "Assembly & service", FILENAMES[1],
         "Removable-drawer, independent-plumbing, and future-service sequence.",
+        project.model.release.installation_status,
+        "ASSEMBLY HOLD — MACHINING & INSTALLATION",
+        "Cabinet and drawer parts are conditionally released; runner machining, plumbing assembly, field drilling, loading, and installation remain held.",
         body,
     )
+
+
+def _released_inventory(project) -> str:
+    rows = "".join(
+        f'<tr data-cut-list-row="{study._e(item.part_id)}"><td><code>{study._e(item.part_id)}</code></td>'
+        f'<td>{study._e(item.description)}</td><td>{study._mm(item.length_mm)} × {study._mm(item.width_mm)} × {study._mm(item.thickness_mm)}</td>'
+        f'<td>{study._e(item.material)}</td></tr>'
+        for item in project.artifacts.cut_list
+    )
+    return (
+        '<section><h2>Released cabinet and drawer inventory</h2>'
+        f'<p><b>{len(project.artifacts.cut_list)} released parts.</b> Dimensions are exact model outputs. No additional tolerance, machining, joinery, finish, nesting, procurement, wall-work, or stone authority is implied.</p>'
+        '<div class="table-wrap"><table><thead><tr><th>Part id</th><th>Canonical name</th><th>Released size</th><th>Material assumption</th></tr></thead><tbody>'
+        + rows + '</tbody></table></div></section>'
+    )
+
+
+def _fabrication_boundaries(project) -> str:
+    model = project.model
+    upper = model.drawer("left", "upper")
+    lower = model.drawer("left", "lower")
+    return f"""
+<section><h2>Release boundaries and assumptions</h2>
+<div class="table-wrap"><table><thead><tr><th>Scope</th><th>Model fact</th><th>Authority</th></tr></thead><tbody>
+<tr><td>Upper runner</td><td>{study._e(upper.runner.selected_sku)}; released {study._mm(upper.box_depth_mm)} box depth</td><td><code>{study._e(upper.runner.machining_authority)}</code></td></tr>
+<tr><td>Lower runner</td><td>{study._e(lower.runner.selected_sku)}; released {study._mm(lower.box_depth_mm)} box depth</td><td><code>{study._e(lower.runner.machining_authority)}</code></td></tr>
+<tr><td>Countertop</td><td>{model.countertop.structural_thickness_mm:.1f} mm structural thickness; {model.countertop.visual_edge_height_mm:.1f} mm visual edge; K-20000 template {study._e(model.countertop.cutout_template_id)}</td><td><code>{study._e(model.countertop.stone_cut_authority)}</code></td></tr>
+<tr><td>Tolerances</td><td>Released values are deterministic model dimensions; field-fit and manufacturing tolerances are not supplied by the model.</td><td>Fabricator-controlled acceptance; no silent dimensional adjustment.</td></tr>
+</tbody></table></div>
+<h3>Joinery and finish assumptions</h3><p>Sheet product, face veneer, grain sequence, edge band, exposed-face selection, finish system, adhesives, joint details, hardware fixing, and nesting remain fabricator-controlled coordination items. Their absence does not broaden the conditional part-dimension release.</p>
+<p><b>Stone cutting remains fabricator-controlled.</b> Runner mounting and machining remain manufacturer-template-controlled. Wall drilling, loading, trade work, and installation remain held.</p></section>"""
 
 
 def build_double_vanity_fabrication_html(project) -> str:
     body = "".join((
-        '<section><h2>Fabrication authority</h2><p><b>No cut authorization is issued.</b> The case inventory is useful for stock, grain, finish, and joinery coordination; drawer cut dimensions and machining remain withheld until the accepted plumbing and hardware derivation is replayed.</p></section>',
-        study._inventory(project),
-        '<section><h2>Fabrication prerequisites</h2><ol><li>Approve sheet product, face veneer, grain sequence, edge band, finish, adhesives, and joinery.</li><li>Accept current sink templates and countertop web/reinforcement details.</li><li>Accept both trap/rough-in layouts, runner SKUs, U-void geometry, dynamic travel, and service sweeps.</li><li>Release the rear rail, case joinery, backing, anchors, and temporary support through project-specific structural review.</li></ol></section>',
+        '<section><h2>Fabrication authority</h2><p><b>Conditional cut authorization covers only the listed cabinet and drawer parts at their model dimensions.</b> Stone, runner machining, wall work, loading, trade work, and installation are outside this release.</p></section>',
+        _released_inventory(project),
+        _fabrication_boundaries(project),
     ))
     return _shell(
         "Fabrication coordination", FILENAMES[2],
         "Model inventory and the exact evidence required before a shop cut list can be released.",
+        project.model.release.fabrication_status,
+        "CONDITIONAL FABRICATION RELEASE",
+        "Cabinet and drawer part dimensions are released. Stone cutting, runner machining, wall drilling, loading, trade work, and installation remain held.",
         body,
     )
 
 
+def _finding_routing(rule: str) -> tuple[str, str]:
+    if rule == "double_vanity.release.commissioning":
+        return "General contractor and responsible trades", "commissioning"
+    if rule in {
+        "double_vanity.release.countertop_fabricator",
+        "double_vanity.release.fixture_template",
+    }:
+        return "Countertop fabricator", "stone fabrication"
+    if rule in {
+        "double_vanity.release.plumbing_approval",
+        "double_vanity.release.faucet",
+    }:
+        return "Licensed Master Plumber", "trade coordination"
+    if rule == "double_vanity.release.site_survey":
+        return "Field surveyor", "field verification"
+    if rule == "double_vanity.release.wall_mount" or ".mount." in rule:
+        return "Structural reviewer", "wall drilling and loading"
+    if rule in {
+        "double_vanity.release.drawer_derivation",
+        "double_vanity.release.dynamic_access",
+    } or ".drawer." in rule or ".service_openings" in rule:
+        return "Cabinet fabricator", "runner machining and assembly"
+    if ".plumbing." in rule:
+        return "Licensed Master Plumber", "trade coordination"
+    return "Design coordinator", "design validation"
+
+
 def _all_findings(project) -> str:
-    rows = "".join(
-        f'<tr><td><code>{study._e(f.rule)}</code></td><td class="{study._e(f.verdict.lower())}">{study._e(f.verdict)}</td><td>{study._e(f.message)}</td></tr>'
-        for f in project.report.findings
-        if not f.rule.startswith("double_vanity.release.")
-    )
-    return '<section><h2>Analyzed invariants</h2><div class="table-wrap"><table><thead><tr><th>Rule</th><th>Verdict</th><th>Scope</th></tr></thead><tbody>' + rows + '</tbody></table></div></section>'
+    rows = []
+    for finding in project.report.findings:
+        party, phase = _finding_routing(finding.rule)
+        rows.append(
+            f'<tr data-finding-rule="{study._e(finding.rule)}" '
+            f'data-responsible-party="{study._e(party)}" data-blocking-phase="{study._e(phase)}">'
+            f'<td><code>{study._e(finding.rule)}</code></td><td class="{study._e(finding.verdict.lower())}">{study._e(finding.verdict)}</td>'
+            f'<td>{study._e(party)}</td><td>{study._e(phase)}</td><td>{study._e(finding.message)}</td></tr>'
+        )
+    return '<section><h2>Validation findings, responsible parties, and blocking phases</h2><p>Routing identifies the party responsible for closing each finding and the phase it controls; PASS does not override a separate UNKNOWN hold.</p><div class="table-wrap"><table><thead><tr><th>Rule</th><th>Verdict</th><th>Responsible party</th><th>Blocking phase</th><th>Scope</th></tr></thead><tbody>' + "".join(rows) + '</tbody></table></div></section>'
 
 
 def _product_evidence(project) -> str:
     model = project.model
     drain = model.drain
     trap = model.trap
-    runner = model.drawer("left", "upper").runner
+    upper_runner = model.drawer("left", "upper").runner
+    lower_runner = model.drawer("left", "lower").runner
     mount = model.mount_reference
     return f"""
 <section><h2>Pinned product evidence</h2><div class="table-wrap"><table>
 <thead><tr><th>System</th><th>Verified manufacturer fact</th><th>Authority in DV72</th><th>Source</th></tr></thead><tbody>
 <tr><td>Kohler {study._e(drain.sku)}</td><td>1-1/4 in overflow drain; {drain.body_height_mm:.1f} mm nominal body below flange</td><td>Product dimensions; final finish, availability, and installation still coordinated with fixture and trap.</td><td><a href="{study._e(drain.specification_url)}">Kohler specification</a></td></tr>
 <tr><td>Kohler {study._e(trap.sku)}</td><td>{trap.overall_length_mm:.1f} × {trap.overall_height_mm:.1f} mm gross; 1-1/4 in inlet/outlet; slip joint and cleanout</td><td>Envelope and service candidate. Licensed-plumber layout and installed code compliance remain UNKNOWN.</td><td><a href="{study._e(trap.specification_url)}">Kohler product/CAD record</a></td></tr>
-<tr><td>Blum MOVENTO {study._e(runner.selected_sku)}</td><td>18-in full-extension BLUMOTION candidate; {runner.minimum_drawer_length_mm:.1f} mm box and {runner.minimum_inside_depth_mm:.1f} mm inside-depth checks</td><td>Upper drawers only; actual fixing, locking devices, loads, travel, removal, and service sweeps remain gated.</td><td><a href="{study._e(runner.source_url)}">Blum 2026 planning data</a></td></tr>
+<tr><td>Blum MOVENTO {study._e(upper_runner.selected_sku)}</td><td>18-in full-extension BLUMOTION; {upper_runner.minimum_drawer_length_mm:.1f} mm nominal and {upper_runner.minimum_inside_depth_mm:.1f} mm inside-depth checks</td><td>Upper drawer geometry; mounting, machining, travel, removal, and service remain held.</td><td><a href="{study._e(upper_runner.source_url)}">Blum 2026 planning data</a></td></tr>
+<tr><td>Blum MOVENTO {study._e(lower_runner.selected_sku)}</td><td>12-in full-extension BLUMOTION; {lower_runner.minimum_drawer_length_mm:.1f} mm nominal and {lower_runner.minimum_inside_depth_mm:.1f} mm inside-depth checks</td><td>Lower drawer geometry; mounting, machining, travel, removal, and service remain held.</td><td><a href="{study._e(lower_runner.source_url)}">Blum 2026 planning data</a></td></tr>
 <tr><td>Rakks {study._e(mount.sku)}</td><td>{mount.static_capacity_lb:.0f} lb evenly distributed static load; four secured screws per bracket, up to 48 in spacing under the guide conditions</td><td>comparative reference only; it does not establish DV72 capacity and is not silently combined with the modeled rail/GRK candidate path.</td><td><a href="{study._e(mount.specification_url)}">Rakks installation guide</a></td></tr>
 </tbody></table></div></section>"""
 
@@ -186,6 +348,9 @@ def build_double_vanity_validation_html(project) -> str:
     return _shell(
         "Validation & sources", FILENAMES[3],
         "Complete finding trace, manufacturer evidence, code profile, CAD authority boundary, and release holds.",
+        project.model.release.trade_status,
+        "TRADE HOLD — RESPONSIBLE APPROVAL",
+        "Plumbing, countertop, structural, commissioning, and installation authority remains with the named responsible parties and blocking phases.",
         body,
     )
 

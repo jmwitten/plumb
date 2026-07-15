@@ -43,10 +43,89 @@ def test_four_concise_linked_reader_surfaces_have_distinct_jobs():
     for name, title in zip(documents, expected_titles):
         html = documents[name]
         assert f"<h1>{title}</h1>" in html
-        assert "DESIGN HOLD" in html
         assert "file://" not in html
         for other in documents:
             assert f'href="{other}"' in html
+
+
+def test_documents_distinguish_all_authorities():
+    docs = _documents()
+
+    assert "CONDITIONAL FABRICATION RELEASE" in (
+        docs["dv72_fabrication_coordination.html"]
+    )
+    assert "INSTALLATION HOLD — FIELD VERIFY" in (
+        docs["dv72_review_installation.html"]
+    )
+    assert "owner_assumed" in docs["dv72_review_installation.html"]
+    assert "not field verified" in docs["dv72_review_installation.html"]
+    assert "TRADE HOLD" in docs["dv72_validation_sources.html"]
+    assert 'data-release-status="CONDITIONAL_FABRICATION_RELEASE"' in (
+        docs["dv72_fabrication_coordination.html"]
+    )
+    assert 'data-release-status="HOLD_FIELD_VERIFY"' in (
+        docs["dv72_review_installation.html"]
+    )
+    assert 'data-release-status="HOLD_RESPONSIBLE_TRADE_APPROVAL"' in (
+        docs["dv72_validation_sources.html"]
+    )
+
+
+def test_fabrication_names_both_runners_and_withholds_stone():
+    html = _documents()["dv72_fabrication_coordination.html"]
+
+    assert "763.4570S" in html
+    assert "763.3050S" in html
+    assert "Released cabinet and drawer inventory" in html
+    assert "Stone cutting remains fabricator-controlled" in html
+
+
+def test_review_projects_owner_assumptions_and_field_comparison_checklist():
+    html = _documents()["dv72_review_installation.html"]
+
+    assert "Owner-assumed site and rough-in schedule" in html
+    assert "left_waste" in html
+    assert "right_cold" in html
+    assert "Field comparison checklist" in html
+    assert "Do not install" in html
+    assert "Install the" not in html
+
+
+def test_assembly_projects_exact_drawer_and_runner_facts_without_install_steps():
+    html = _documents()["dv72_assembly_service.html"]
+
+    assert "763.4570S" in html
+    assert "763.3050S" in html
+    assert "447.0 mm" in html
+    assert "295.0 mm" in html
+    assert "Exact owner-assumed rough-ins" in html
+    assert "left_waste" in html
+    assert "1066.8 mm" in html
+    assert "not field verified" in html
+    assert "Runner machining remains withheld" in html
+    assert "Install the" not in html
+
+
+def test_fabrication_scopes_release_and_held_work():
+    html = _documents()["dv72_fabrication_coordination.html"]
+
+    assert 'data-cut-list-row="' in html
+    assert "42 released parts" in html
+    assert "30.0 mm structural thickness" in html
+    assert "38.0 mm visual edge" in html
+    assert "Joinery and finish assumptions" in html
+    assert "Wall drilling" in html
+    assert "loading" in html
+    assert "installation" in html
+
+
+def test_validation_assigns_owner_and_blocking_phase_to_every_finding():
+    project = compile_project_file(FIXTURE)
+    html = _documents()["dv72_validation_sources.html"]
+
+    assert html.count('data-finding-rule="') == len(project.report.findings)
+    assert html.count('data-responsible-party="') == len(project.report.findings)
+    assert html.count('data-blocking-phase="') == len(project.report.findings)
 
 
 def test_review_owns_the_useful_sink_plumbing_drawer_mount_section():
@@ -59,7 +138,7 @@ def test_review_owns_the_useful_sink_plumbing_drawer_mount_section():
     assert 'data-section-system="lower-drawer"' in review
     assert 'data-section-system="rear-rail"' in review
     assert 'data-section-system="wall"' in review
-    assert "Drawer-removal service sequence" in review
+    assert "Held service sequence" in review
     assert "IMG_7670.HEIC" in review
     assert "warm figured wood" in review
     assert "visual intent only" in review
@@ -108,7 +187,7 @@ def test_handyman_review_findings_are_resolved_without_overclaiming_access():
     assert "independent independent" not in joined
     assert "remain reachable" not in joined
     assert "proposed service-access concept" in review
-    assert "Proposed shell assembly" in assembly
+    assert "Released drawer geometry and held assembly authority" in assembly
     assert "Build and square" not in assembly
     assert "34.50 in" in review
     assert "11.00 in" in review
@@ -117,8 +196,7 @@ def test_handyman_review_findings_are_resolved_without_overclaiming_access():
     assert validation.count('data-release-rule="double_vanity.release.') == 8
     assert 'data-commissioning-rule="double_vanity.release.commissioning"' in validation
     assert "Post-install commissioning hold" in validation
-    assert "Proposed sequence—conditional" in assembly
-    assert "If runner validation proves" in assembly
+    assert "Sequence concept only—installation and service remain held" in assembly
     assert "surveyed wall studs" not in validation
     assert "study-declared stud axes" in validation
 
