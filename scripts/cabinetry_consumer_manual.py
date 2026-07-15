@@ -87,7 +87,7 @@ def build_cabinetry_consumer_document(
         ),
     )
 
-    part_numbers = consumer_part_numbers(project)
+    part_numbers = consumer_part_numbers(project, panels_manual)
     image_dir = out_dir / "consumer_panels"
     image_paths = render_frame_images(
         project.detail, panels_manual, frames, image_dir,
@@ -113,7 +113,7 @@ def build_cabinetry_consumer_document(
         render_consumer_manual_html(
             project.detail, consumer, image_paths,
             cover_image=cover_image,
-            inventory_rows=consumer_part_rows(project),
+            inventory_rows=consumer_part_rows(project, panels_manual),
             parts_heading="Parts — cut sizes in inches",
             diagrams=diagrams_by_id,
             viewer=viewer,

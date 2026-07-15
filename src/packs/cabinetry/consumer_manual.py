@@ -566,8 +566,12 @@ def build_cabinetry_consumer_manual(
     )
 
 
-def consumer_part_rows(project):
+def consumer_part_rows(project, panels_manual=None):
     """Kit-card part rows: count × reader name plus the typed cut size.
+
+    With ``panels_manual`` supplied, rows are ordered by first use in the
+    build sequence (the panel schedule), so kit-card numbering follows the
+    instruction order — part 1 is the first part the builder touches.
 
     Cut sizes come from the released cut list (pre-band blank sizes — the
     numbers a builder would actually cut to); material, grain, and finish
@@ -605,8 +609,16 @@ def consumer_part_rows(project):
             for value in (item.length_mm, item.width_mm, item.thickness_mm))
         return f" — {dims}"
 
+    parts = list(project.detail.assembly.parts)
+    if panels_manual is not None:
+        from ...rendering.instruction_panels import panel_part_schedule
+
+        schedule = panel_part_schedule(panels_manual)
+        parts.sort(key=lambda part: (
+            schedule.get(part.id, len(panels_manual.panels) + 1),
+            project.detail.assembly.parts.index(part)))
     grouped: dict[str, list[str]] = {}
-    for part in project.detail.assembly.parts:
+    for part in parts:
         if roles.get(part.name) == "existing":
             continue
         if hasattr(part.component, "head_height"):
@@ -623,15 +635,16 @@ def consumer_part_rows(project):
     )
 
 
-def consumer_part_numbers(project) -> dict[str, int]:
+def consumer_part_numbers(project, panels_manual=None) -> dict[str, int]:
     """One global part number per kit-card row, keyed by part id.
 
-    The number order is the kit card's row order, so scene callouts,
-    picture keys, and the parts list all cite the same number for the
-    same part.
+    The number order is the kit card's row order — build order when
+    ``panels_manual`` is supplied — so scene callouts, picture keys, and
+    the parts list all cite the same number for the same part.
     """
     numbers: dict[str, int] = {}
-    for index, row in enumerate(consumer_part_rows(project), start=1):
+    rows = consumer_part_rows(project, panels_manual)
+    for index, row in enumerate(rows, start=1):
         for part_id in row.source_part_ids:
             numbers[part_id] = index
     return numbers

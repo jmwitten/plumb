@@ -457,6 +457,18 @@ class TestGlobalPartNumbers:
             for part_id in row.source_part_ids:
                 assert numbers[part_id] == index
 
+    def test_build_order_numbering_starts_with_step_one_parts(
+            self, project, panels_manual):
+        from detailgen.packs.cabinetry.consumer_manual import (
+            consumer_part_numbers,
+        )
+        numbers = consumer_part_numbers(project, panels_manual)
+        toe_ids = [p.id for p in project.detail.assembly.parts
+                   if p.name.startswith("DB40 toe")]
+        # the four toe parts are the first thing the builder touches, so
+        # they own the first kit-card numbers
+        assert sorted(numbers[p] for p in toe_ids) == [1, 2, 3, 4]
+
     def test_scene_callout_numbers_match_the_kit_card(self, project):
         from detailgen.packs.cabinetry.consumer_manual import (
             consumer_part_numbers,
