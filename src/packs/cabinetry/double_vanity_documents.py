@@ -656,7 +656,7 @@ def build_double_vanity_document_set(project) -> dict[str, str]:
     related_documents = tuple(
         RelatedDocumentLink(_LABELS[name], name) for name in FILENAMES
     )
-    return {
+    documents = {
         FILENAMES[0]: build_double_vanity_review_html(project),
         FILENAMES[1]: build_double_vanity_assembly_html(project),
         FILENAMES[2]: build_double_vanity_fabrication_html(project),
@@ -665,3 +665,74 @@ def build_double_vanity_document_set(project) -> dict[str, str]:
             project, related_documents=related_documents,
         ),
     }
+    _audit_document_set(project, documents)
+    return documents
+
+
+def _audit_document_set(project, documents: dict[str, str]) -> None:
+    """Fail closed when the five reader projections contradict typed authority."""
+
+    if tuple(documents) != FILENAMES:
+        raise ValueError("DV72 semantic audit requires the ordered five-file package")
+    guide = documents[FILENAMES[4]]
+    for support in project.model.support_layout.supports:
+        facts = (
+            f'data-support-id="{support.support_id}" '
+            f'data-axis-mm="{support.x_axis_mm:.1f}" '
+            f'data-bearing-z-mm="{support.bearing_z_mm:.1f}" '
+            f'data-wall-y-mm="{support.wall_y_mm:.1f}" '
+            f'data-authority="{support.authority}"'
+        )
+        if guide.count(facts) != 2:
+            raise ValueError("DV72 semantic audit rejected support bearing/wall facts")
+
+    release_rules = (
+        "double_vanity.release.site_survey",
+        "double_vanity.release.wall_mount",
+        "double_vanity.release.dynamic_access",
+        "double_vanity.release.plumbing_approval",
+        "double_vanity.release.drawer_derivation",
+    )
+    for rule in release_rules:
+        finding = project.report.by_rule(rule)
+        token = (
+            f'data-release-rule="{rule}" '
+            f'data-verdict="{finding.verdict}"'
+        )
+        if token not in guide:
+            raise ValueError("DV72 semantic audit rejected release verdicts")
+
+    if (
+        "rear rail: positioning / lateral only · zero gravity credit"
+        not in guide
+    ):
+        raise ValueError("DV72 semantic audit rejected rear-rail zero gravity")
+    if (
+        "not service-access approval" not in guide
+        or "dynamic access remains separately held" not in guide
+        or "Both plumbing and drawer envelopes clear" in guide
+    ):
+        raise ValueError("DV72 semantic audit rejected held service access")
+    if (
+        "EMPTY CABINET MOUNTED — FOLLOW-ON WORK HELD" not in guide
+        or "STOP BEFORE COUNTERTOP" not in guide
+        or "continuously supported at three" in guide
+    ):
+        raise ValueError("DV72 semantic audit rejected empty-cabinet endpoint scope")
+
+    fabrication_banner = (
+        "FABRICATOR ACCEPTANCE RECORDED"
+        if project.model.fabrication_acceptance.complete_for(
+            project.model.fabrication_basis
+        )
+        else "FABRICATION HOLD — FABRICATOR ACCEPTANCE PENDING"
+    )
+    banners = {
+        FILENAMES[0]: "INSTALLATION HOLD — FIELD VERIFY",
+        FILENAMES[2]: fabrication_banner,
+        FILENAMES[3]: "TRADE HOLD — RESPONSIBLE APPROVAL",
+        FILENAMES[4]: "INSTALLATION HOLD — FIELD/STRUCTURAL RELEASE REQUIRED",
+    }
+    for name, banner in banners.items():
+        if banner not in documents[name]:
+            raise ValueError("DV72 semantic audit rejected required authority banners")

@@ -73,6 +73,51 @@ def test_five_document_package_preserves_authority_and_closure_language():
     assert "STOP BEFORE COUNTERTOP" in guide
 
 
+@pytest.mark.parametrize(
+    ("old", "new", "message"),
+    (
+        (
+            'data-bearing-z-mm="846.3"',
+            'data-bearing-z-mm="999.0"',
+            "support bearing/wall facts",
+        ),
+        (
+            'data-release-rule="double_vanity.release.dynamic_access" data-verdict="UNKNOWN"',
+            'data-release-rule="double_vanity.release.dynamic_access" data-verdict="PASS"',
+            "release verdicts",
+        ),
+        (
+            "dynamic access remains separately held",
+            "dynamic access is approved",
+            "held service access",
+        ),
+        (
+            "rear rail: positioning / lateral only · zero gravity credit",
+            "rear rail carries gravity",
+            "rear-rail zero gravity",
+        ),
+    ),
+)
+def test_package_semantic_audit_rejects_guide_builder_bypass(
+    monkeypatch, old, new, message,
+):
+    import detailgen.packs.cabinetry.double_vanity_documents as documents
+
+    project = compile_project_file(FIXTURE)
+    real_builder = documents.build_double_vanity_installation_guide
+
+    def bypassed_builder(*args, **kwargs):
+        html = real_builder(*args, **kwargs)
+        assert old in html
+        return html.replace(old, new, 1)
+
+    monkeypatch.setattr(
+        documents, "build_double_vanity_installation_guide", bypassed_builder,
+    )
+    with pytest.raises(ValueError, match=message):
+        documents.build_double_vanity_document_set(project)
+
+
 def test_documents_distinguish_all_authorities():
     docs = _documents()
 
@@ -530,7 +575,9 @@ def test_validation_owns_all_release_rows_without_omnibus_duplication():
         if finding.rule != "double_vanity.release.drawer_derivation":
             assert finding.message in validation
     for name, html in documents.items():
-        if name != "dv72_validation_sources.html":
+        if name not in (
+            "dv72_validation_sources.html", "dv72_installation_guide.html",
+        ):
             assert 'data-release-rule="' not in html
 
 

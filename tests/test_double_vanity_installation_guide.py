@@ -107,7 +107,7 @@ def test_guide_does_not_invent_connection_hardware(project):
         project, related_documents=(),
     )
     assert "Structural fastener schedule: __________________" in html
-    assert "Cabinet-to-bracket detail: __________________" in html
+    assert "Cabinet case/interface detail: __________________" in html
     assert "connection capacity remains unproved" in html
 
 
@@ -183,21 +183,17 @@ def test_inspection_record_contains_every_approved_field(project):
         project, related_documents=(),
     )
     for label in (
-        "Wall construction",
-        "Framing / blocking",
-        "Utilities",
-        "Rakks product revision",
+        "FIELD RELEASE — RELEASED / REJECTED",
+        "STRUCTURAL RELEASE — RELEASED / REJECTED",
         "Structural fastener schedule",
-        "Cabinet-to-bracket detail",
-        "Responsible approvals",
+        "Cabinet interface detail",
+        "Tolerance / shim schedule",
         "Level",
         "Plumb",
         "Diagonal / square check",
-        "Three-plane support contact",
-        "Wall gaps",
-        "Fastener witness marks / counts",
-        "Cabinet restraint",
-        "Service access",
+        "Interface attachment",
+        "Fastener witness record",
+        "Handoff status",
         "Deviations",
         "Installer",
         "Reviewer",
@@ -219,21 +215,18 @@ def test_print_layout_restores_two_column_record_and_fixed_footer(project):
     assert "footer{position:absolute;margin-top:0}" in print_css
 
 
-def test_placement_projects_typed_service_and_drawer_envelopes(project):
+def test_placement_projects_owner_assumed_rough_ins_without_service_approval(project):
     html = build_double_vanity_installation_guide(
         project, related_documents=(),
     )
-    for path in project.model.plumbing_paths:
-        envelope = path.service_envelope
-        assert f'data-service-envelope="{envelope.envelope_id}"' in html
-        assert f'data-x0-mm="{envelope.x0_mm:.1f}"' in html
-        assert f'data-x1-mm="{envelope.x1_mm:.1f}"' in html
-    for drawer in project.model.drawers:
-        assert f'data-drawer-envelope="{drawer.drawer_id}"' in html
-        assert f'data-closed-clearance-mm="{drawer.closed_clearance_mm:.1f}"' in html
+    for point in project.model.assumed_site.wastes + project.model.assumed_site.supplies:
+        assert f'data-rough-in="{point.point_id}"' in html
+        assert f'data-provenance="{point.provenance}"' in html
+    assert 'data-service-envelope="' not in html
+    assert 'data-drawer-envelope="' not in html
 
 
-def test_drawer_clearance_mutation_moves_service_imagery(project):
+def test_drawer_clearance_mutation_does_not_become_service_approval(project):
     drawer = project.model.drawers[0]
     changed_drawer = replace(
         drawer, closed_clearance_mm=drawer.closed_clearance_mm + 6.0,
@@ -251,12 +244,8 @@ def test_drawer_clearance_mutation_moves_service_imagery(project):
     changed = build_double_vanity_installation_guide(
         changed_project, related_documents=(),
     )
-    pattern = re.compile(
-        rf'<path[^>]+data-drawer-envelope="{re.escape(drawer.drawer_id)}"[^>]+>'
-    )
-    assert pattern.search(baseline)
-    assert pattern.search(changed)
-    assert pattern.search(baseline).group() != pattern.search(changed).group()
+    assert baseline == changed
+    assert "dynamic access remains separately held" in changed
 
 
 def test_support_axis_mutation_fails_projection_coherence(project):
@@ -277,6 +266,189 @@ def test_support_axis_mutation_fails_projection_coherence(project):
         build_double_vanity_installation_guide(
             changed, related_documents=(),
         )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("bearing_z_mm", 25.0),
+        ("wall_y_mm", 25.0),
+        ("authority", "forged_authority"),
+    ),
+)
+def test_every_support_envelope_fact_is_consumed_or_rejected(
+    project, field, value,
+):
+    layout = project.model.support_layout
+    changed_support = replace(layout.supports[0], **{
+        field: (
+            getattr(layout.supports[0], field) + value
+            if isinstance(value, float) else value
+        ),
+    })
+    changed = replace(
+        project,
+        model=replace(
+            project.model,
+            support_layout=replace(
+                layout, supports=(changed_support,) + layout.supports[1:],
+            ),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="support envelope facts"):
+        build_double_vanity_installation_guide(
+            changed, related_documents=(),
+        )
+
+
+def test_supports_project_typed_countertop_bearing_wall_and_authority(project):
+    html = build_double_vanity_installation_guide(
+        project, related_documents=(),
+    )
+
+    for support in project.model.support_layout.supports:
+        assert f'data-bearing-z-mm="{support.bearing_z_mm:.1f}"' in html
+        assert f'data-wall-y-mm="{support.wall_y_mm:.1f}"' in html
+        assert f'data-authority="{support.authority}"' in html
+    assert "countertop-underside / bracket-arm datum" in html
+    assert "wall plane" in html
+    assert "horizontal projection/depth" in html
+    assert "fastener locations/pattern per accepted product revision" in html
+    support_picture = re.search(
+        r'<svg[^>]+data-support-layout="true".*?</svg>', html, re.S,
+    ).group()
+    assert "<circle" not in support_picture
+
+
+def test_load_path_and_handling_copy_does_not_claim_bottom_bearing(project):
+    html = build_double_vanity_installation_guide(
+        project, related_documents=(),
+    )
+    lower = html.lower()
+
+    assert "position the empty case below/around the accepted countertop-support arms" in lower
+    assert "accepted case/interface detail" in lower
+    assert "comparison basis only—not allowable cabinet/installation load" in lower
+    for forbidden in (
+        "lift the protected empty cabinet onto",
+        "seated on all three planes",
+        "continuously supported at three planes",
+        "two-person lift",
+        "temporary restraint without",
+        "three-plane support contact",
+    ):
+        assert forbidden not in lower
+
+
+def test_prework_release_is_separate_and_controls_handling(project):
+    html = build_double_vanity_installation_guide(
+        project, related_documents=(),
+    )
+    hold = re.search(
+        r'<section class="sheet hold".*?</section>', html, re.S,
+    ).group()
+    record = re.search(
+        r'<section class="sheet record".*?</section>', html, re.S,
+    ).group()
+
+    for required in (
+        "FIELD RELEASE — RELEASED / REJECTED",
+        "STRUCTURAL RELEASE — RELEASED / REJECTED",
+        "Reviewer / signature / date",
+        "Document revision / attachment IDs",
+        "Accepted product revision / document ID",
+        "Cabinet interface detail ID",
+        "Tolerance / shim schedule ID",
+        "Actual empty-case handling weight",
+        "Accepted lift / temporary-support / restraint plan",
+        "Equipment / crew",
+        "Attachment / removal / handoff criteria",
+    ):
+        assert required in hold
+    assert "FIELD RELEASE — RELEASED / REJECTED" not in record
+    assert "pre-work release record governs" in hold
+    assert "stop and obtain a superseding field and structural release" in hold
+
+
+def test_required_release_findings_and_service_limits_are_projected(project):
+    html = build_double_vanity_installation_guide(
+        project, related_documents=(),
+    )
+    rules = (
+        "site_survey", "wall_mount", "dynamic_access",
+        "plumbing_approval", "drawer_derivation",
+    )
+    for suffix in rules:
+        finding = project.report.by_rule(f"double_vanity.release.{suffix}")
+        assert f'data-release-rule="{finding.rule}"' in html
+        assert f'data-verdict="{finding.verdict}"' in html
+        assert finding.message in html
+    assert "owner-assumed rough-in conflict comparison" in html
+    assert "not service-access approval" in html
+    assert "dynamic access remains separately held" in html
+    assert "Both plumbing and drawer envelopes clear" not in html
+    assert ">Service access<" not in html
+
+
+def test_failed_required_release_finding_changes_guide(project):
+    rule = "double_vanity.release.dynamic_access"
+    findings = tuple(
+        replace(finding, verdict="FAIL", message="Dynamic access conflict found.")
+        if finding.rule == rule else finding
+        for finding in project.report.findings
+    )
+    changed = replace(project, report=replace(project.report, findings=findings))
+
+    html = build_double_vanity_installation_guide(
+        changed, related_documents=(),
+    )
+    assert f'data-release-rule="{rule}"' in html
+    assert 'data-verdict="FAIL"' in html
+    assert "Dynamic access conflict found." in html
+
+
+def test_field_datums_use_defined_origin_dual_units_and_practical_precision(project):
+    html = build_double_vanity_installation_guide(
+        project, related_documents=(),
+    )
+
+    assert "x = 0 at finished left end of assumed wall" in html
+    assert "countertop top datum" in html
+    assert "countertop-underside / bracket-arm datum" in html
+    assert "30 mm / 1 3/16 in counter thickness" in html
+    assert "619 mm / 24 3/8 in" in html
+    assert "1,524 mm / 60 in" in html
+    assert "2,429 mm / 95 5/8 in" in html
+    assert "876.3 mm" not in html
+
+
+def test_product_authority_package_handoff_and_mobile_svg_contract(project):
+    html = build_double_vanity_installation_guide(
+        project, related_documents=(),
+    )
+
+    assert "selected record: 2022.1.0" in html
+    assert "current confirmation target: 2024.1.1" in html
+    assert "manufacturer toeing concept" in html
+    assert "only if preserved by the accepted product revision" in html
+    assert "Rakks_EH_Vanity_Support_Bracket_2022.1.0.pdf" in html
+    assert "Rakks_EH_Vanity_Support_Bracket_2024.1.1.pdf" in html
+    for name in (
+        "dv72_review_installation.html",
+        "dv72_assembly_service.html",
+        "dv72_fabrication_coordination.html",
+        "dv72_validation_sources.html",
+        "dv72_installation_guide.html",
+    ):
+        assert name in html
+    assert 'class="svg-scroll"' in html
+    assert ".svg-scroll{overflow-x:auto}" in html
+    assert ".svg-scroll svg{min-width:520px}" in html
+    assert ".frame{break-inside:avoid}" in html
+    assert ".record-row" in html and "min-height:.65in" in html
+    assert ".frame.action{padding:.1in" in html
+    assert ".frame.action svg{max-height:1.65in}" in html
 
 
 @pytest.mark.parametrize(
