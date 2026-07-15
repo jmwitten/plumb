@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the linked four-file DV72 vanity coordination package."""
+"""Generate the linked five-file DV72 vanity package."""
 
 from __future__ import annotations
 

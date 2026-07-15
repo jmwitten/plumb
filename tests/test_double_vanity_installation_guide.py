@@ -206,6 +206,19 @@ def test_inspection_record_contains_every_approved_field(project):
         assert label in html
 
 
+def test_print_layout_restores_two_column_record_and_fixed_footer(project):
+    html = build_double_vanity_installation_guide(
+        project, related_documents=(),
+    )
+    mobile_rule = html.index("@media(max-width:850px)")
+    print_rule = html.index("@media print")
+    print_css = html[print_rule:html.index("</style>", print_rule)]
+
+    assert print_rule > mobile_rule
+    assert ".record-grid{grid-template-columns:1fr 1fr}" in print_css
+    assert "footer{position:absolute;margin-top:0}" in print_css
+
+
 def test_placement_projects_typed_service_and_drawer_envelopes(project):
     html = build_double_vanity_installation_guide(
         project, related_documents=(),

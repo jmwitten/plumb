@@ -29,7 +29,7 @@ def _documents():
     return build_double_vanity_document_set(compile_project_file(FIXTURE))
 
 
-def test_four_concise_linked_reader_surfaces_have_distinct_jobs():
+def test_five_concise_linked_reader_surfaces_have_distinct_jobs():
     documents = _documents()
 
     assert tuple(documents) == (
@@ -37,12 +37,14 @@ def test_four_concise_linked_reader_surfaces_have_distinct_jobs():
         "dv72_assembly_service.html",
         "dv72_fabrication_coordination.html",
         "dv72_validation_sources.html",
+        "dv72_installation_guide.html",
     )
     expected_titles = (
         "Review & installation",
         "Assembly & service",
         "Fabrication coordination",
         "Validation & sources",
+        "DV72 — Cabinet Installation Guide",
     )
     for name, title in zip(documents, expected_titles):
         html = documents[name]
@@ -50,6 +52,25 @@ def test_four_concise_linked_reader_surfaces_have_distinct_jobs():
         assert "file://" not in html
         for other in documents:
             assert f'href="{other}"' in html
+
+
+def test_five_document_package_preserves_authority_and_closure_language():
+    documents = _documents()
+
+    assert "INSTALLATION HOLD — FIELD VERIFY" in (
+        documents["dv72_review_installation.html"]
+    )
+    assert "FABRICATION HOLD — FABRICATOR ACCEPTANCE PENDING" in (
+        documents["dv72_fabrication_coordination.html"]
+    )
+    assert "TRADE HOLD — RESPONSIBLE APPROVAL" in (
+        documents["dv72_validation_sources.html"]
+    )
+    for name in tuple(documents)[:4]:
+        assert "five reader projections" in documents[name]
+    guide = documents["dv72_installation_guide.html"]
+    assert "INSTALLATION HOLD" in guide
+    assert "STOP BEFORE COUNTERTOP" in guide
 
 
 def test_documents_distinguish_all_authorities():

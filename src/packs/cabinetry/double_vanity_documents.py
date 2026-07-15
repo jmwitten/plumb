@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from ...rendering.instruction_panels import RelatedDocumentLink
 from . import double_vanity_document as study
+from .double_vanity_installation_guide import (
+    build_double_vanity_installation_guide,
+)
 
 
 FILENAMES = (
@@ -10,6 +14,7 @@ FILENAMES = (
     "dv72_assembly_service.html",
     "dv72_fabrication_coordination.html",
     "dv72_validation_sources.html",
+    "dv72_installation_guide.html",
 )
 
 _LABELS = {
@@ -17,6 +22,7 @@ _LABELS = {
     FILENAMES[1]: "Assembly & service",
     FILENAMES[2]: "Fabrication coordination",
     FILENAMES[3]: "Validation & sources",
+    FILENAMES[4]: "Cabinet installation guide",
 }
 
 _FINDING_ROUTING = {
@@ -103,7 +109,7 @@ def _shell(
 <title>DV72 — {title}</title><style>{_CSS}</style></head><body><main class="sheet">
 <header><div><div class="eyebrow">DV72 · vanity.double_sink@1</div><h1>{title}</h1><p>{purpose}</p></div>
 <div class="hold" data-release-status="{study._e(release_status)}"><b>{status}</b><p>{status_content}</p></div></header>
-{_nav(current)}{body}{_nav(current)}<footer>One analytic model; four reader projections. UNKNOWN is a release hold, never a concealed approval.</footer>
+{_nav(current)}{body}{_nav(current)}<footer>One analytic model; five reader projections. UNKNOWN is a release hold, never a concealed approval.</footer>
 <p class="metric">Issue date: 2026-07-14 · Revision: 1 · Status: {status} · Model: vanity.double_sink@1.0.0</p>
 </main></body></html>"""
 
@@ -643,13 +649,19 @@ def build_double_vanity_validation_html(project) -> str:
 
 
 def build_double_vanity_document_set(project) -> dict[str, str]:
-    """Project one compiled model into four ordered, linked documents."""
+    """Project one compiled model into five ordered, linked documents."""
 
     if project.pack_id != "vanity.double_sink":
         raise ValueError("DV72 document set requires vanity.double_sink")
+    related_documents = tuple(
+        RelatedDocumentLink(_LABELS[name], name) for name in FILENAMES
+    )
     return {
         FILENAMES[0]: build_double_vanity_review_html(project),
         FILENAMES[1]: build_double_vanity_assembly_html(project),
         FILENAMES[2]: build_double_vanity_fabrication_html(project),
         FILENAMES[3]: build_double_vanity_validation_html(project),
+        FILENAMES[4]: build_double_vanity_installation_guide(
+            project, related_documents=related_documents,
+        ),
     }
