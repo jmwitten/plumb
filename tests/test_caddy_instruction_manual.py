@@ -10,6 +10,10 @@ from pathlib import Path
 import pytest
 import yaml
 
+pytestmark = pytest.mark.detail_gate(
+    "armchair_caddy", contracts=("documents",),
+)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"

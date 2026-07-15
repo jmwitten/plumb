@@ -27,6 +27,11 @@ from pathlib import Path
 import pytest
 import yaml
 
+pytestmark = pytest.mark.detail_gate(
+    "armchair_caddy",
+    contracts=("compile", "validation", "fabrication"),
+)
+
 from detailgen.spec.compiler import compile_spec_file
 from detailgen.core.process_graph import (
     verify_assembly_fabrication,

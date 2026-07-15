@@ -5,6 +5,10 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.detail_gate(
+    "armchair_caddy", contracts=("geometry",),
+)
+
 from detailgen.components import HardwoodPanel, WoodDowel
 from detailgen.core.units import IN
 from detailgen.design_review import (

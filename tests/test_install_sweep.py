@@ -74,6 +74,9 @@ def _ungoverned_doc(text):
 # -- the caddy — keyed adhesive joints have no metal-fastener install axis -----
 
 
+@pytest.mark.detail_gate(
+    "armchair_caddy", contracts=("geometry", "validation"),
+)
 def test_caddy_glued_top_joints_carry_no_install_verdicts(swept):
     """Keyed miters derive bond/key evidence without inventing screw checks."""
     detail, report = swept["armchair_caddy"]
@@ -91,6 +94,9 @@ def test_caddy_glued_top_joints_carry_no_install_verdicts(swept):
                 if "screw" in part.name.lower()]
 
 
+@pytest.mark.detail_gate(
+    "armchair_caddy", contracts=("geometry", "validation"),
+)
 def test_cat_g_caddy_bench_frame_clears_arm_with_declared_trust(swept):
     """Bench staging stays explicit even though no tool corridors are needed."""
     detail, report = swept["armchair_caddy"]
@@ -102,6 +108,9 @@ def test_cat_g_caddy_bench_frame_clears_arm_with_declared_trust(swept):
     assert staging.context_parts == frozenset({"boulder-0"})
 
 
+@pytest.mark.detail_gate(
+    "armchair_caddy", contracts=("geometry", "validation"),
+)
 def test_caddy_has_no_install_blocker_after_declared_staging(swept):
     detail, report = swept["armchair_caddy"]
     assert not report.failures
@@ -110,6 +119,9 @@ def test_caddy_has_no_install_blocker_after_declared_staging(swept):
     detail.require_clean()
 
 
+@pytest.mark.detail_gate(
+    "armchair_caddy", contracts=("geometry", "validation"),
+)
 def test_caddy_keyed_miter_rejects_extra_hardware(swept):
     """The connection type fails closed when its two-key role is padded."""
     def add_third_key(raw):
@@ -119,6 +131,9 @@ def test_caddy_keyed_miter_rejects_extra_hardware(swept):
         _mutated_spec("armchair_caddy", add_third_key).validate()
 
 
+@pytest.mark.detail_gate(
+    "armchair_caddy", contracts=("geometry", "validation"),
+)
 def test_caddy_synthetic_oversized_corner_keys_fail_interference(swept):
     """An implausibly large key cannot hide inside the allowed joint overlap."""
     detail = _mutated_spec(

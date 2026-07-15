@@ -4,6 +4,10 @@ import sys
 import pytest
 import yaml
 
+pytestmark = pytest.mark.detail_gate(
+    "armchair_caddy", contracts=("governance",),
+)
+
 from detailgen.core.buildinfo import build_manifest
 from detailgen.design_review import (
     DesignReviewGateError,
