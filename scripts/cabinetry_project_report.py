@@ -2182,8 +2182,18 @@ def render_shared_product_assets(
     out_dir: str | Path,
     *,
     instruction_manual=None,
+    include_fastener_proxies: bool = False,
 ) -> CabinetrySharedAssets:
-    """Render the product scene, six views, payload, and GLB exactly once."""
+    """Render the product scene, six views, payload, and GLB exactly once.
+
+    ``include_fastener_proxies`` (opt-in, default off so the accepted technical
+    document pipeline is byte-identical) adds schematic connector proxy bodies
+    to the presentation scene's GLB and viewer payload, positioned at the typed
+    machining stations — see
+    :mod:`detailgen.packs.cabinetry.fastener_proxies`. The static views are
+    rendered from the base scene first, so only the interactive viewer
+    (GLB + hover payload) gains the proxies; the isometric PNG is unchanged.
+    """
 
     _require_fabrication_release(project)
     out_dir = Path(out_dir)
@@ -2191,6 +2201,12 @@ def render_shared_product_assets(
     assembly = product_view_assembly(project)
     images = _render_views(project, assembly, out_dir)
     payload = product_viewer_payload(project, assembly, instruction_manual)
+    if include_fastener_proxies:
+        from detailgen.packs.cabinetry.fastener_proxies import (
+            append_fastener_proxies,
+        )
+        proxy_rows = append_fastener_proxies(project, assembly)
+        payload = {**payload, "parts": {**payload["parts"], **proxy_rows}}
     glb_bytes = _web_glb_bytes(assembly, out_dir / "_glb")
     return CabinetrySharedAssets(assembly, images, payload, glb_bytes)
 
