@@ -352,6 +352,39 @@ brief + precedents
 as a plan step. `plumb-concept`, `plumb-review`, and `plumb-extend` can also run
 independently when their own completion condition satisfies the user's request.
 
+### Orchestration mechanics
+
+Codex skills do not call one another through a native `callSkill()` runtime.
+`plumb-design` therefore implements explicit orchestration: its `SKILL.md`
+links directly to the three sibling `SKILL.md` files, requires Codex to read the
+complete applicable sibling instructions before that stage begins, and places
+each stage in the active task plan.
+
+The required new-design order is:
+
+```text
+plumb-design preflight
+  -> plumb-concept (unless current modeling approval already exists)
+  -> model and validate
+  -> plumb-extend zero or more times when compiler vocabulary is missing
+  -> generate the complete package
+  -> plumb-review
+  -> plumb-extend and repeat review when a compiler defect is found
+  -> delivery
+```
+
+Direct invocation preserves each skill's independent completion condition:
+
+- `$plumb-concept` stops at a committed, approved modeling handoff.
+- `$plumb-review` completes the review and invokes extension when necessary;
+  it reopens concept selection when the proposed correction changes the
+  approved architecture.
+- `$plumb-extend` completes and verifies a reusable compiler increment, then
+  returns to the exact blocked step when invoked by another Plumb workflow.
+
+End-to-end evaluation must prove this explicit sequence. Skill chaining is an
+instruction-backed agent workflow, not an implicit plugin-platform behavior.
+
 ## Error Handling
 
 - Missing Plumb repository or broken environment: attempt ordinary local setup
