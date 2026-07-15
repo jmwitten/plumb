@@ -92,3 +92,13 @@ def test_generated_caddy_report_is_developer_facing_and_retains_provenance():
     assert "current_double_wall" in html
     assert "https://learn.kregtool.com/plans/sofa-arm-table/" in html
     assert "https://www.woodworkersjournal.com/project-sofa-armrest-table/" in html
+    start = html.index("<code>reinforced_miter</code>")
+    end = html.index("<code>rabbet_and_dowel</code>")
+    reinforced = html[start:end]
+    assert "View example: DIY Sofa Arm Table" in reinforced
+    assert "https://www.loveandrenovations.com/sofa-arm-table/" in reinforced
+    assert "View example: Sofa Armrest Table" in reinforced
+    assert (
+        "https://www.woodworkersjournal.com/project-sofa-armrest-table/"
+        in reinforced
+    )

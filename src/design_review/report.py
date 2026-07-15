@@ -5,7 +5,7 @@ from __future__ import annotations
 from html import escape
 
 from .gate import DesignGovernance, governance_for_review
-from .schema import CRITERIA, DesignReviewDoc
+from .schema import CRITERIA, Concept, DesignReviewDoc, Precedent
 from .validation import DesignReviewResult
 
 
@@ -15,6 +15,20 @@ def _e(value) -> str:
 
 def _status(ready: bool) -> str:
     return "READY" if ready else "BLOCKED"
+
+
+def _concept_precedents(
+    doc: DesignReviewDoc,
+    concept: Concept,
+) -> tuple[Precedent, ...]:
+    referenced = {
+        precedent_ref
+        for feature in concept.features
+        for precedent_ref in feature.precedent_refs
+    }
+    return tuple(
+        source for source in doc.precedents if source.id in referenced
+    )
 
 
 def render_design_review_html(
@@ -98,8 +112,24 @@ def render_design_review_html(
         lines.extend([
             f"<h3><code>{_e(concept.id)}</code> — {_e(concept.title)}</h3>",
             f"<p>{_e(concept.summary)}</p>",
-            "<table><tbody>",
         ])
+        lines.append("<h4>Examples</h4>")
+        examples = _concept_precedents(doc, concept)
+        if examples:
+            lines.append('<ul class="concept-examples">')
+            lines.extend(
+                f'<li><a href="{_e(source.url)}">View example: '
+                f'{_e(source.title)}</a> — {_e(source.publisher)} · '
+                f'{_e(source.kind)}</li>'
+                for source in examples
+            )
+            lines.append("</ul>")
+        else:
+            lines.append(
+                "<p>No direct precedent identified; review the "
+                "novelty/deviation basis below.</p>"
+            )
+        lines.append("<table><tbody>")
         for name, value in concept.signature.__dict__.items():
             lines.append(f"<tr><th>{_e(name)}</th><td>{_e(value)}</td></tr>")
         lines.append("</tbody></table><h4>Feature inventory</h4><ul>")

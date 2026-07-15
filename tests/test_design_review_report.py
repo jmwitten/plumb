@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 from detailgen.design_review import (
@@ -26,6 +27,9 @@ def test_report_is_deterministic_and_contains_provenance_and_decision():
     assert first == second
     assert first.startswith("<!doctype html>")
     assert "https://example.com/products/three-panel-saddle" in first
+    assert "<h4>Examples</h4>" in first
+    assert "View example: Reinforced corner build instructions" in first
+    assert "Example Woodworking · build_instruction" in first
     for concept in ("concept_a", "concept_b", "concept_c"):
         assert concept in first
     for criterion in (
@@ -37,6 +41,28 @@ def test_report_is_deterministic_and_contains_provenance_and_decision():
     assert "recommendation_only" in first
     assert "BLOCKED" in first
     assert governance.selection_digest in first
+
+
+def test_report_names_concepts_without_direct_precedent():
+    doc = load_design_review_file(FIXTURE)
+    concept = doc.concepts[0]
+    features = tuple(
+        replace(feature, precedent_refs=()) for feature in concept.features
+    )
+    concept = replace(concept, features=features)
+    changed = replace(doc, concepts=(concept,) + doc.concepts[1:])
+
+    rendered = render_design_review_html(
+        changed, validate_design_review(changed)
+    )
+    start = rendered.index("<code>concept_a</code>")
+    end = rendered.index("<code>concept_b</code>")
+    section = rendered[start:end]
+
+    assert (
+        "No direct precedent identified; review the novelty/deviation "
+        "basis below."
+    ) in section
 
 
 def test_report_surfaces_blocking_findings_for_incomplete_draft():
