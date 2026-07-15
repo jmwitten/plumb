@@ -394,6 +394,7 @@ def render_consumer_manual_html(
     viewer=None,
     part_numbers=None,
     inventory_groups=(),
+    extra_style: str = "",
 ) -> str:
     """Compose the self-contained consumer manual HTML.
 
@@ -490,5 +491,5 @@ def render_consumer_manual_html(
         '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
         '<link rel="icon" href="data:,">\n'
         f"<title>{_e(consumer.title)}</title>\n"
-        f"<style>{_STYLE}{viewer_style}</style></head>\n"
+        f"<style>{_STYLE}{viewer_style}{extra_style}</style></head>\n"
         f"<body>{''.join(sheets)}{viewer_html}{viewer_script}</body></html>")

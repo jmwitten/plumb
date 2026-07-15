@@ -103,6 +103,14 @@ def build_cabinetry_cutting_document(
             inventory_groups=kit_groups,
             parts_heading="Wood list — pre-band cut sizes",
             diagrams=diagrams_by_id,
+            # Two independent readers misread digits in exactly the three
+            # densest diagrams; enlarge those alone so lighter sheets
+            # keep their composed pagination.
+            extra_style=(
+                '.op-diagram[data-diagram-id="cut-runner-stations"] svg,'
+                '.op-diagram[data-diagram-id="cut-end-panel-joinery"] svg,'
+                '.op-diagram[data-diagram-id="cut-toe-centers"] svg'
+                " { max-height: 2in; }"),
         ),
         encoding="utf-8",
     )

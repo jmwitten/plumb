@@ -171,10 +171,21 @@ class TestKitGroups:
         assert "mm" not in strip
 
     def test_off_tape_size_carries_exact_millimeters(self, project):
-        rows = [row.label for _heading, rows in cutting_kit_groups(project)
+        rows = [row.label.replace(" ", " ")
+                for _heading, rows in cutting_kit_groups(project)
                 for row in rows]
         side = next(label for label in rows if "box — left side" in label)
         assert "≈" in side and "(533 mm)" in side
+
+    def test_size_blocks_cannot_wrap_apart(self, project):
+        # Round 3: a wrapped "(253 mm)" continuation line was attributed
+        # to the neighboring row. The L × W block must be unbreakable.
+        for _heading, rows in cutting_kit_groups(project):
+            for row in rows:
+                sizes = [segment for segment in row.label.split(" — ")
+                         if " × " in segment]
+                assert len(sizes) == 1, row.label
+                assert " " not in sizes[0], row.label
 
     def test_kit_rows_follow_a_mutated_cut_list(self, project):
         mutated = tuple(

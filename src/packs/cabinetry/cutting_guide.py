@@ -289,7 +289,11 @@ def _machining_plan_diagram(
     notes_h = 4.5 + 5.2 * len(notes) + 2.0
     box_w = 100.0 - 2.0 * pad
     box_h = box_w * v_extent / h_extent
-    max_h = 100.0 - top - notes_h
+    # A tall drawn box starves the note text of display size (two
+    # independent readers misread digits under it); the box is a locator,
+    # the numbers are the payload, so cap the box and keep the canvas
+    # short.
+    max_h = min(100.0 - top - notes_h, 24.0)
     if box_h > max_h:
         box_w *= max_h / box_h
         box_h = max_h
@@ -433,9 +437,9 @@ def _back_groove_diagram(project) -> OperationDiagram:
         caption=(
             f"One groove per part, {_reader_len(width)} wide by "
             f"{_reader_len(depth)} deep — same blade and depth for all "
-            f"{len(rows)}. Each part's band position is printed below, "
-            "measured up from its lower-left corner. Every groove hugs its "
-            "part's cabinet-rear edge: if yours lands near the opposite "
+            f"{len(rows)}. Each printed band position is measured from "
+            "its part's lower-left corner. Every groove hugs the edge "
+            "nearest the cabinet's back: if yours lands near the opposite "
             "edge, the blank is flipped."),
         allowed_numbers=_nums(len(rows), _reader_len(width),
                               _reader_len(depth)),
@@ -630,6 +634,16 @@ def _runner_stations_diagram(project) -> OperationDiagram:
                         what="runner pilot diameter")
     xs = sorted({round(row.location_mm[0], 3) for row in rows})
     ys = sorted({round(row.location_mm[1], 3) for row in rows})
+    # The caption ties "front edge" to a physical feature the builder can
+    # see — the banded edge. Prove it from the typed banding schedule
+    # before claiming it.
+    end_band_edges = {band.edge for band in project.artifacts.edge_banding
+                      if band.part_id in (left, right)}
+    if end_band_edges != {"front"}:
+        raise ValueError(
+            "runner-station caption identifies the front edge as the "
+            "banded edge, but the end panels' banding schedule says "
+            f"{sorted(end_band_edges)!r}")
     return _machining_plan_diagram(
         project,
         diagram_id="cut-runner-stations",
@@ -638,9 +652,9 @@ def _runner_stations_diagram(project) -> OperationDiagram:
         caption=(
             f"Mark {len(ys)} rows of {len(xs)} stations on the inside face "
             "of each end panel, measured from the blank's front lower "
-            "corner; both ends use exactly the same numbers. Drill a "
-            f"{diameter:g} mm pilot at every mark. Row heights and station "
-            "distances are printed under the box in millimeters."),
+            "corner — the front edge is the banded edge. Both ends use "
+            f"exactly the same numbers; drill a {diameter:g} mm pilot at "
+            "every mark. All values print below in millimeters."),
         allowed_numbers=_nums(len(stations[left]), len(ys), len(xs),
                               diameter),
         part_id=left,
@@ -1059,6 +1073,15 @@ def cutting_kit_groups(project):
         noun = "edge" if len(edges) == 1 else "edges"
         return f" — band {listed} {noun}"
 
+    def _size_block(item) -> str:
+        # The whole L × W block is bound with non-breaking spaces: round 3
+        # of the naive-builder read attributed a wrapped "(253 mm)"
+        # continuation line to the neighboring row. A size that cannot
+        # split cannot be orphaned onto an ambiguous line.
+        text = (f"{_reader_len(item.length_mm)} × "
+                f"{_reader_len(item.width_mm)}")
+        return text.replace(" ", " ")
+
     groups: dict[tuple[float, str], list] = {}
     for item in project.artifacts.cut_list:
         key = (round(item.thickness_mm, 2), _material_heading(item.material))
@@ -1069,8 +1092,7 @@ def cutting_kit_groups(project):
             DisplayRow(
                 "part",
                 (f"{item.quantity} × {names[item.part_id]} — "
-                 f"{_reader_len(item.length_mm)} × "
-                 f"{_reader_len(item.width_mm)}"
+                 f"{_size_block(item)}"
                  f"{_band_text(item.part_id)}"),
                 count=item.quantity,
                 source_part_ids=(ids[item.part_id],),
@@ -1212,11 +1234,11 @@ def cutting_action_frames(
             frame_id="cut.breakdown.frame",
             panel_index=panel_of["fab.breakdown"],
             caption=(
-                f"Cut all {part_count} parts to the wood list on the kit "
-                "page, keeping each marked show face up and its grain "
-                "direction as marked. Label every part with its wood-list "
-                "name as it comes off the saw — left and right pieces are "
-                "not interchangeable."),
+                f"Cut all {part_count} parts to the wood-list page at the "
+                "front of this guide, keeping each marked show face up and "
+                "its grain direction as marked. Label every part with its "
+                "wood-list name as it comes off the saw — left and right "
+                "pieces are not interchangeable."),
             source_step_ids=("fab.breakdown",),
             owned_event_keys=(),
             tool="Saw suitable for sheet goods, tape measure, and labels",
