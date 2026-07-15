@@ -169,7 +169,8 @@ def _cover_sheet(consumer, cover_image: Path) -> str:
 def _inventory_sheet(consumer, number: int, inventory_rows,
                      tools: tuple[str, ...],
                      parts_heading: str = "Parts",
-                     part_numbers=None) -> str:
+                     part_numbers=None,
+                     inventory_groups=()) -> str:
     kit = (f'<aside class="kit-gate" role="note"><b>Before you start</b> '
            f'<span>{_e(consumer.kit_gate)}</span></aside>')
     def _row_number(row) -> str:
@@ -179,23 +180,34 @@ def _inventory_sheet(consumer, number: int, inventory_rows,
         return (f'<span class="key-num">{num}</span>'
                 if num is not None else "")
 
-    parts = "".join(
-        f'<li>{_row_number(row)}{_icon_svg(row.icon)}'
-        f"<span>{_e(row.label)}</span></li>"
-        for row in inventory_rows)
-    letters = "".join(
-        f'<li data-letter="{_e(lt.letter)}">'
-        f'<span class="chip hardware-chip"><b>{_e(lt.letter)}</b> '
-        f"&times;{lt.quantity_total}</span>"
-        f"{_icon_svg(lt.icon)}"
-        f"<span>{_e(lt.reader_label)}<br><small>{_e(lt.size_text)}"
-        "</small></span></li>"
-        for lt in consumer.letters)
+    def _rows_html(rows) -> str:
+        return "".join(
+            f'<li>{_row_number(row)}{_icon_svg(row.icon)}'
+            f"<span>{_e(row.label)}</span></li>"
+            for row in rows)
+
+    if inventory_groups:
+        parts = f"<h2>{_e(parts_heading)}</h2>" + "".join(
+            f"<h3>{_e(heading)}</h3>"
+            f'<ul class="parts">{_rows_html(rows)}</ul>'
+            for heading, rows in inventory_groups)
+    else:
+        parts = (f"<h2>{_e(parts_heading)}</h2>"
+                 f'<ul class="parts">{_rows_html(inventory_rows)}</ul>')
+    letters = ""
+    if consumer.letters:
+        letters = "<h2>Hardware</h2><ul class=\"letters\">" + "".join(
+            f'<li data-letter="{_e(lt.letter)}">'
+            f'<span class="chip hardware-chip"><b>{_e(lt.letter)}</b> '
+            f"&times;{lt.quantity_total}</span>"
+            f"{_icon_svg(lt.icon)}"
+            f"<span>{_e(lt.reader_label)}<br><small>{_e(lt.size_text)}"
+            "</small></span></li>"
+            for lt in consumer.letters) + "</ul>"
     tool_rows = "".join(f"<li>{_e(tool)}</li>" for tool in tools)
     return (
         f'<section class="sheet inventory" data-page="{number}">'
-        f'{kit}<h2>{_e(parts_heading)}</h2><ul class="parts">{parts}</ul>'
-        f'<h2>Hardware</h2><ul class="letters">{letters}</ul>'
+        f"{kit}{parts}{letters}"
         f'<h2>Tools</h2><ul class="tools">{tool_rows}</ul>'
         "</section>")
 
@@ -241,6 +253,8 @@ h2 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
 .kit-gate b { display: block; text-transform: uppercase;
   letter-spacing: 0.06em; font-size: 0.8rem; }
 .inventory h2 { margin: 0.45rem 0 0.2rem; font-size: 1rem; }
+.inventory h3 { margin: 0.35rem 0 0.12rem; font-size: 0.82rem;
+  border-bottom: 1.5px solid var(--ink); padding-bottom: 0.08rem; }
 ul.parts, ul.letters, ul.tools { list-style: none; margin: 0.05rem 0;
   padding: 0; font-size: 0.72rem; line-height: 1.25; }
 ul.parts li, ul.letters li, ul.tools li { display: flex; gap: 0.35rem;
@@ -375,6 +389,7 @@ def render_consumer_manual_html(
     diagrams=None,
     viewer=None,
     part_numbers=None,
+    inventory_groups=(),
 ) -> str:
     """Compose the self-contained consumer manual HTML.
 
@@ -406,7 +421,8 @@ def render_consumer_manual_html(
         elif page.kind == "inventory":
             sheets.append(_inventory_sheet(
                 consumer, page.number, inventory_rows, tools,
-                parts_heading=parts_heading, part_numbers=part_numbers))
+                parts_heading=parts_heading, part_numbers=part_numbers,
+                inventory_groups=inventory_groups))
         elif page.kind == "record":
             sheets.append(_record_sheet(page))
         elif page.kind == "hold":
