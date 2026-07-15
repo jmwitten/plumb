@@ -216,12 +216,12 @@ def _record_sheet(page) -> str:
 
 
 _STYLE = """
-/* --acc themes the embedded 3D viewer's hover highlight and dimension
-   lines (viewer.js reads it; its orange fallback read as yellow on the
-   gray parts). */
-:root { --ink: #14161a; --line: #444; --paper: #fff; --acc: #2563eb;
-  --sheet: #fff; --muted: #555; --faint: #f2f2f2; --chipbg: #ececec;
-  --acc-soft: #dbeafe; --viewer-part-shade: 0.62; }
+/* The embedded 3D viewer reads its theme from these variables; the
+   values match the technical documents exactly so the model looks the
+   same in every doc. */
+:root { --ink: #14161a; --line: #444; --paper: #fff;
+  --sheet: #fff; --muted: #5e6b78; --faint: #dde3e8; --chipbg: #f3f5f6;
+  --acc: #9b3a24; --acc-soft: #f7e9e5; }
 * { box-sizing: border-box; }
 body { margin: 0; background: #d8dbe0; color: var(--ink);
   font: 15px/1.45 -apple-system, "Segoe UI", "Helvetica Neue", sans-serif; }
@@ -357,9 +357,7 @@ text.diagram-mark.role-hold { fill: var(--ink); stroke: none; }
   padding: 0.55in; background: var(--paper); box-shadow: 0 1px 8px #0003; }
 .viewer-section h2 { margin: 0 0 0.4rem; }
 .viewer-section p { font-size: 0.9rem; }
-/* Neutral mid-tone stage: white parts and explode separations stay
-   visible (owner: white-on-white was hard to use). */
-.viewer-slot { position: relative; aspect-ratio: 4/3; background: #cfd6dd;
+.viewer-slot { position: relative; aspect-ratio: 4/3; background: #f8f8f6;
   overflow: hidden; }
 .viewer-slot img { display: block; width: 100%; height: auto; }
 
