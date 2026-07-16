@@ -250,29 +250,41 @@ class WoodScrew(_AxialFastener):
         )
 
     def _build(self) -> cq.Workplane:
+        tip_len = self._tip_length()
+        shank_len = self.length - tip_len
+        if self.representation == "envelope":
+            head_radius = self.head_diameter / 2
+            shank_radius = self.diameter / 2
+            near_tip_radius = 0.02 * IN
+            profile = (
+                (0.0, self.head_height),
+                (head_radius, self.head_height),
+                (head_radius, 0.0),
+                (shank_radius, 0.0),
+                (shank_radius, -shank_len),
+                (near_tip_radius, -self.length),
+                (0.0, -self.length),
+            )
+            return (
+                cq.Workplane("XZ")
+                .polyline(profile)
+                .close()
+                .revolve(360, (0, 0), (0, 1))
+            )
+
         head = axis_cylinder(
             self.head_diameter / 2,
             self.head_height,
             (0, 0, 0),
             (0, 0, 1),
         )
-        tip_len = self._tip_length()
-        shank_len = self.length - tip_len
-        if self.representation == "represented_threads":
-            pitch = self.thread_pitch_ratio * self.diameter
-            shaft = threaded_shaft(
-                self.diameter,
-                shank_len,
-                pitch,
-                zones=[(0.0, shank_len * self.thread_fraction)],
-            ).rotate((0, 0, 0), (1, 0, 0), 180)
-        else:
-            shaft = axis_cylinder(
-                self.diameter / 2,
-                shank_len,
-                (0, 0, 0),
-                (0, 0, -1),
-            )
+        pitch = self.thread_pitch_ratio * self.diameter
+        shaft = threaded_shaft(
+            self.diameter,
+            shank_len,
+            pitch,
+            zones=[(0.0, shank_len * self.thread_fraction)],
+        ).rotate((0, 0, 0), (1, 0, 0), 180)
         return head.union(shaft).union(self._tip())
 
     def describe(self) -> str:

@@ -37,6 +37,8 @@ this by setting ``DETAILGEN_CACHE_DIR`` itself, same as any other
 ``monkeypatch.setenv`` — this fixture just supplies the default.
 """
 
+from pathlib import Path
+
 import pytest
 
 
@@ -52,6 +54,18 @@ REQUIRED_DETAIL_CONTRACTS = frozenset({
     "determinism",
 })
 ALLOWED_DETAIL_CONTRACTS = REQUIRED_DETAIL_CONTRACTS | {"documents"}
+
+
+def _is_detail_gate_candidate(path: str | Path) -> bool:
+    """Return whether a test module can declare a semantic detail gate."""
+    path = Path(path)
+    if path.suffix != ".py" or not path.name.startswith("test_"):
+        return False
+    try:
+        source = path.read_text(encoding="utf-8")
+    except OSError:
+        return True
+    return "pytest.mark.detail_gate" in source
 
 
 def _detail_gate_selection(items, slug):
@@ -114,6 +128,16 @@ def pytest_addoption(parser):
         metavar="SLUG",
         help="run the complete semantic build gate for one detail",
     )
+
+
+def pytest_ignore_collect(collection_path, config):
+    """Avoid importing unrelated test modules during a focused detail gate."""
+    if not config.getoption("detail_gate"):
+        return None
+    path = Path(str(collection_path))
+    if path.suffix != ".py" or not path.name.startswith("test_"):
+        return None
+    return not _is_detail_gate_candidate(path)
 
 
 def pytest_collection_modifyitems(config, items):

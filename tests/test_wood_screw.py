@@ -1,5 +1,7 @@
 """Reusable ordinary wood screws and capability-based wood joints."""
 
+import cadquery as cq
+
 import pytest
 
 from detailgen.assemblies import Connection, DetailAssembly, connection_types
@@ -99,6 +101,20 @@ def test_envelope_geometry_never_calls_threaded_shaft(monkeypatch):
     assert bb.zmin == pytest.approx(-screw.length)
     assert bb.zmax == pytest.approx(screw.head_height)
     assert bb.xlen == pytest.approx(screw.head_diameter)
+
+
+def test_envelope_geometry_uses_one_profile_without_boolean_unions(monkeypatch):
+    from detailgen.components import WoodScrew
+
+    monkeypatch.setattr(
+        cq.Workplane,
+        "union",
+        lambda *_args, **_kwargs: pytest.fail(
+            "envelope screw used a multi-solid boolean build"
+        ),
+    )
+
+    assert WoodScrew(0.164 * IN, 1.5 * IN)._build().val().isValid()
 
 
 def test_exterior_wrapper_preserves_represented_thread_geometry_hash():

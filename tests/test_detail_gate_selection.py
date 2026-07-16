@@ -7,6 +7,7 @@ import pytest
 from conftest import (
     REQUIRED_DETAIL_CONTRACTS,
     _detail_gate_selection,
+    _is_detail_gate_candidate,
     _require_complete_detail_gate,
 )
 
@@ -40,6 +41,16 @@ def _item(
         _marker(slug, contracts=contracts),
     )
     return _Item(name=slug or "unmarked", markers=markers)
+
+
+def test_collection_candidate_filter_skips_files_without_gate_markers(tmp_path):
+    gate = tmp_path / "test_gate.py"
+    gate.write_text('pytestmark = pytest.mark.detail_gate("probe", contracts=("compile",))')
+    unrelated = tmp_path / "test_unrelated.py"
+    unrelated.write_text("def test_unrelated(): pass")
+
+    assert _is_detail_gate_candidate(gate) is True
+    assert _is_detail_gate_candidate(unrelated) is False
 
 
 def test_selection_keeps_only_requested_slug():
