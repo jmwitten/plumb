@@ -1,5 +1,24 @@
 # Wave 1+2 progress ledger — detailgen framework roadmap
 
+## GENERIC PACKAGE TABLE CONTAINMENT (2026-07-16 — complete)
+
+The four-foot square 2x4 frame package exposed a shared presentation defect:
+the technical document's model-derived coverage table widened the whole page
+at mobile widths. The generic document renderer now wraps every non-empty
+mapping table in a keyboard-focusable, labeled horizontal scroll region,
+shows an explicit mobile scroll cue, and restores unconstrained table flow
+for print. This is a shared compiler-backend behavior; no project-specific
+renderer or generated-HTML repair was added.
+
+The public `render_technical_html` regression fails without the containment
+contract. The regenerated real-project package was browser-verified at
+390×844, 816×1056, and 1440×900: the document remains viewport-contained,
+the 356 px mobile region carries the intentional 1,806 px table scroll width,
+the cue is visible only at the mobile breakpoint, and all three tables have
+matching accessible regions. Focused renderer, package-builder, scope, and
+four-foot-frame tests passed 21 tests. Full-suite evidence is recorded with
+the project handoff.
+
 ## GENERIC FULL-PACKAGE COMPILER (2026-07-16 — core implementation complete)
 
 Public interfaces: `python -m detailgen.authoring` emits the deterministic,

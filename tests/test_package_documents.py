@@ -80,3 +80,31 @@ def test_write_package_documents_creates_fixed_generic_surface(tmp_path):
     )
     assert explicit["installation"] == tmp_path / "explicit" / "installation.html"
     assert explicit["installation"].is_file()
+
+
+def test_wide_model_tables_are_contained_and_labeled_for_mobile_readers():
+    technical, _fabrication, _installation = _document_inputs()
+    technical["coverage"] = (
+        {
+            "family": "Physical geometry",
+            "verdict": "PASS",
+            "basis": "Model-derived checks",
+            "source": "compiled assembly",
+            "declared": 4,
+            "inferred": 12,
+            "proven": 24,
+            "unknown": 0,
+        },
+    )
+
+    html = render_technical_html(technical)
+
+    assert 'class="table-scroll"' in html
+    assert 'role="region"' in html
+    assert 'aria-label="Validation coverage table"' in html
+    assert 'tabindex="0"' in html
+    assert 'class="table-scroll-cue"' in html
+    assert "Scroll sideways to see all columns." in html
+    assert ".table-scroll{overflow-x:auto" in html
+    assert "@media(max-width:640px)" in html
+    assert "@media print" in html

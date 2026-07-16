@@ -12,7 +12,7 @@ def _text(value: object) -> str:
     return escape(str(value))
 
 
-def _mapping_table(rows, *, empty: str) -> str:
+def _mapping_table(rows, *, empty: str, label: str) -> str:
     rows = tuple(rows)
     if not rows:
         return f"<p>{escape(empty)}</p>"
@@ -27,7 +27,13 @@ def _mapping_table(rows, *, empty: str) -> str:
         + "</tr>"
         for row in rows
     )
-    return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+    table = f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+    return (
+        '<p class="table-scroll-cue" aria-hidden="true">'
+        "Scroll sideways to see all columns.</p>"
+        f'<div class="table-scroll" role="region" aria-label="{_text(label)}" '
+        f'tabindex="0">{table}</div>'
+    )
 
 
 def render_technical_html(model: dict[str, object]) -> str:
@@ -42,11 +48,14 @@ def render_technical_html(model: dict[str, object]) -> str:
         f'<p class="unknown">{_text(model.get("headline", ""))}</p>'
         f"<section><h2>Standard views</h2>{views}</section>"
         "<section><h2>Validation coverage</h2>"
-        f"{_mapping_table(model.get('coverage', ()), empty='No coverage facts.')}</section>"
+        f"{_mapping_table(model.get('coverage', ()), empty='No coverage facts.', label='Validation coverage table')}"
+        "</section>"
         "<section><h2>Dimensions and callouts</h2>"
-        f"{_mapping_table(model.get('callouts', ()), empty='No callouts.')}</section>"
+        f"{_mapping_table(model.get('callouts', ()), empty='No callouts.', label='Dimensions and callouts table')}"
+        "</section>"
         "<section><h2>Bill of materials</h2>"
-        f"{_mapping_table(model.get('bom', ()), empty='No BOM rows.')}</section>"
+        f"{_mapping_table(model.get('bom', ()), empty='No BOM rows.', label='Bill of materials table')}"
+        "</section>"
     )
     return page(title, body)
 
@@ -118,6 +127,7 @@ def render_installation_html(model: dict[str, object]) -> str:
             for edge in part_edges
         ),
         empty="No modeled connection edges.",
+        label="Connection graph table",
     )
     body = (
         f"<h1>Installation</h1><section><h2>Installation contracts</h2>{contracts}</section>"

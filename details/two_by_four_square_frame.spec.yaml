@@ -1,0 +1,197 @@
+# DetailSpec — a 48 in square frame made from four nominal 2x4s laid flat.
+# The model approves geometry and a repeatable fastening layout only. Use,
+# support, mounting, loads, environment, finish, and capacity remain unknown.
+
+name: four foot square 2x4 frame
+type: two_by_four_square_frame
+units: in
+
+design_review:
+  record: two_by_four_square_frame.design-review.yaml
+  selected_concept: butt_screwed_rails_stiles
+
+params:
+  outside_size: 48.0
+  member_face: 3.5
+  member_depth: 1.5
+  opening_size: 41.0
+  rail_length: 48.0
+  stile_length: 41.0
+  screw_diameter: 0.25
+  screw_length: 5.0
+  screw_edge_offset: 0.625
+  screw_spacing: 1.125
+
+derived:
+  top_rail_z: "= outside_size - member_face"
+  right_stile_x: "= outside_size"
+  stile_start_z: "= member_face"
+  screw_x_2: "= screw_edge_offset + screw_spacing"
+  screw_x_3: "= screw_edge_offset + 2 * screw_spacing"
+  right_screw_x_1: "= outside_size - member_face + screw_edge_offset"
+  right_screw_x_2: "= outside_size - member_face + screw_x_2"
+  right_screw_x_3: "= outside_size - member_face + screw_x_3"
+  screw_y: "= member_depth / 2"
+
+components:
+  - id: bottom_rail
+    type: lumber
+    name: bottom 2x4 rail
+    reader_name: Bottom 2×4 rail — 48 in
+    params: {nominal: "2x4", length: "$rail_length"}
+    place: {raw: {at: ["0 in", "0 in", "0 in"]}}
+
+  - id: top_rail
+    type: lumber
+    name: top 2x4 rail
+    reader_name: Top 2×4 rail — 48 in
+    params: {nominal: "2x4", length: "$rail_length"}
+    place: {raw: {at: ["0 in", "0 in", "$top_rail_z"]}}
+
+  # rotate [Y,-90]: local length -> +Z and local 3.5 in face -> -X.
+  - id: left_stile
+    type: lumber
+    name: left 2x4 stile
+    reader_name: Left 2×4 stile — 41 in
+    params: {nominal: "2x4", length: "$stile_length"}
+    place: {raw: {at: ["$member_face", "0 in", "$stile_start_z"], rotate: [["Y", -90]]}}
+
+  - id: right_stile
+    type: lumber
+    name: right 2x4 stile
+    reader_name: Right 2×4 stile — 41 in
+    params: {nominal: "2x4", length: "$stile_length"}
+    place: {raw: {at: ["$right_stile_x", "0 in", "$stile_start_z"], rotate: [["Y", -90]]}}
+
+  # Bottom corner screws start on the bottom rail's outside edge and drive +Z.
+  - {id: screw_bl_1, type: structural_screw, name: bottom left screw 1, params: {diameter: "$screw_diameter", length: "$screw_length"}, place: {raw: {at: ["$screw_edge_offset", "$screw_y", "0 in"], rotate: [["X", 180]]}}}
+  - {id: screw_bl_2, type: structural_screw, name: bottom left screw 2, params: {diameter: "$screw_diameter", length: "$screw_length"}, place: {raw: {at: ["$screw_x_2", "$screw_y", "0 in"], rotate: [["X", 180]]}}}
+  - {id: screw_bl_3, type: structural_screw, name: bottom left screw 3, params: {diameter: "$screw_diameter", length: "$screw_length"}, place: {raw: {at: ["$screw_x_3", "$screw_y", "0 in"], rotate: [["X", 180]]}}}
+  - {id: screw_br_1, type: structural_screw, name: bottom right screw 1, params: {diameter: "$screw_diameter", length: "$screw_length"}, place: {raw: {at: ["$right_screw_x_1", "$screw_y", "0 in"], rotate: [["X", 180]]}}}
+  - {id: screw_br_2, type: structural_screw, name: bottom right screw 2, params: {diameter: "$screw_diameter", length: "$screw_length"}, place: {raw: {at: ["$right_screw_x_2", "$screw_y", "0 in"], rotate: [["X", 180]]}}}
+  - {id: screw_br_3, type: structural_screw, name: bottom right screw 3, params: {diameter: "$screw_diameter", length: "$screw_length"}, place: {raw: {at: ["$right_screw_x_3", "$screw_y", "0 in"], rotate: [["X", 180]]}}}
+
+  # Top corner screws start on the top rail's outside edge and drive -Z.
+  - {id: screw_tl_1, type: structural_screw, name: top left screw 1, params: {diameter: "$screw_diameter", length: "$screw_length"}, place: {raw: {at: ["$screw_edge_offset", "$screw_y", "$outside_size"]}}}
+  - {id: screw_tl_2, type: structural_screw, name: top left screw 2, params: {diameter: "$screw_diameter", length: "$screw_length"}, place: {raw: {at: ["$screw_x_2", "$screw_y", "$outside_size"]}}}
+  - {id: screw_tl_3, type: structural_screw, name: top left screw 3, params: {diameter: "$screw_diameter", length: "$screw_length"}, place: {raw: {at: ["$screw_x_3", "$screw_y", "$outside_size"]}}}
+  - {id: screw_tr_1, type: structural_screw, name: top right screw 1, params: {diameter: "$screw_diameter", length: "$screw_length"}, place: {raw: {at: ["$right_screw_x_1", "$screw_y", "$outside_size"]}}}
+  - {id: screw_tr_2, type: structural_screw, name: top right screw 2, params: {diameter: "$screw_diameter", length: "$screw_length"}, place: {raw: {at: ["$right_screw_x_2", "$screw_y", "$outside_size"]}}}
+  - {id: screw_tr_3, type: structural_screw, name: top right screw 3, params: {diameter: "$screw_diameter", length: "$screw_length"}, place: {raw: {at: ["$right_screw_x_3", "$screw_y", "$outside_size"]}}}
+
+connections:
+  - type: butt_screwed
+    label: "bottom rail -> left stile"
+    params: {n_screws: 3}
+    parts: [bottom_rail, left_stile]
+    hardware: [screw_bl_1, screw_bl_2, screw_bl_3]
+    install: {embedment: "1.5 in"}
+    assumptions: ["Five-inch screws pass through the rail's 3.5-inch width and have 1.5 inches of modeled geometric overlap with the stile end grain; connection capacity is NOT analyzed."]
+  - type: butt_screwed
+    label: "bottom rail -> right stile"
+    params: {n_screws: 3}
+    parts: [bottom_rail, right_stile]
+    hardware: [screw_br_1, screw_br_2, screw_br_3]
+    install: {embedment: "1.5 in"}
+    assumptions: ["Five-inch screws pass through the rail's 3.5-inch width and have 1.5 inches of modeled geometric overlap with the stile end grain; connection capacity is NOT analyzed."]
+  - type: butt_screwed
+    label: "top rail -> left stile"
+    params: {n_screws: 3}
+    parts: [top_rail, left_stile]
+    hardware: [screw_tl_1, screw_tl_2, screw_tl_3]
+    install: {embedment: "1.5 in"}
+    assumptions: ["Five-inch screws pass through the rail's 3.5-inch width and have 1.5 inches of modeled geometric overlap with the stile end grain; connection capacity is NOT analyzed."]
+  - type: butt_screwed
+    label: "top rail -> right stile"
+    params: {n_screws: 3}
+    parts: [top_rail, right_stile]
+    hardware: [screw_tr_1, screw_tr_2, screw_tr_3]
+    install: {embedment: "1.5 in"}
+    assumptions: ["Five-inch screws pass through the rail's 3.5-inch width and have 1.5 inches of modeled geometric overlap with the stile end grain; connection capacity is NOT analyzed."]
+
+sequence:
+  stages:
+    - name: clamp the two stiles square to the bottom rail
+      connections: ["bottom rail -> left stile", "bottom rail -> right stile"]
+      why: "Closing the bottom corners first creates a stable U-shaped assembly whose opening width can be checked before the top rail is added."
+    - name: fit and fasten the top rail after equalizing diagonals
+      connections: ["top rail -> left stile", "top rail -> right stile"]
+      why: "Equal outside diagonals before final driving control racking while the last two corners remain adjustable."
+
+validation:
+  contacts:
+    - {a: bottom_rail, b: left_stile}
+    - {a: bottom_rail, b: right_stile}
+    - {a: top_rail, b: left_stile}
+    - {a: top_rail, b: right_stile}
+  dimensions:
+    - {name: "bottom rail is 48 inches long", part: bottom_rail, measure: xlen, expected: "$outside_size", tolerance: "0.01 in"}
+    - {name: "top rail is 48 inches long", part: top_rail, measure: xlen, expected: "$outside_size", tolerance: "0.01 in"}
+    - {name: "left stile is 41 inches tall", part: left_stile, measure: zlen, expected: "$opening_size", tolerance: "0.01 in"}
+    - {name: "right stile is 41 inches tall", part: right_stile, measure: zlen, expected: "$opening_size", tolerance: "0.01 in"}
+    - {name: "left outside edge is zero", part: left_stile, measure: xmin, expected: "0 in", tolerance: "0.01 in"}
+    - {name: "right outside edge is 48 inches", part: right_stile, measure: xmax, expected: "$outside_size", tolerance: "0.01 in"}
+    - {name: "bottom outside edge is zero", part: bottom_rail, measure: zmin, expected: "0 in", tolerance: "0.01 in"}
+    - {name: "top outside edge is 48 inches", part: top_rail, measure: zmax, expected: "$outside_size", tolerance: "0.01 in"}
+    - {name: "visible border is 3.5 inches wide", part: bottom_rail, measure: zlen, expected: "$member_face", tolerance: "0.01 in"}
+    - {name: "frame depth is 1.5 inches", part: bottom_rail, measure: ylen, expected: "$member_depth", tolerance: "0.01 in"}
+
+callouts:
+  - {param: outside_size, label: "OUTSIDE {v}", p0: ["0 in", "-2 in", "-2 in"], p1: ["$outside_size", "-2 in", "-2 in"]}
+  - {param: outside_size, label: "OUTSIDE {v}", p0: ["50 in", "-2 in", "0 in"], p1: ["50 in", "-2 in", "$outside_size"]}
+  - {param: opening_size, label: "CLEAR OPENING {v}", p0: ["$member_face", "-1 in", "24 in"], p1: ["$top_rail_z", "-1 in", "24 in"]}
+  - {param: member_face, label: "FACE {v}", p0: ["0 in", "-1 in", "50 in"], p1: ["$member_face", "-1 in", "50 in"]}
+  - {param: member_depth, label: "DEPTH {v}", p0: ["50 in", "0 in", "24 in"], p1: ["50 in", "$member_depth", "24 in"]}
+
+explode:
+  - {id: bottom_rail, vector: [0, 0, -75]}
+  - {id: top_rail, vector: [0, 0, 75]}
+  - {id: left_stile, vector: [-75, 0, 0]}
+  - {id: right_stile, vector: [75, 0, 0]}
+  - {id: screw_bl_1, vector: [-40, 0, -120]}
+  - {id: screw_bl_2, vector: [-20, 0, -120]}
+  - {id: screw_bl_3, vector: [0, 0, -120]}
+  - {id: screw_br_1, vector: [0, 0, -120]}
+  - {id: screw_br_2, vector: [20, 0, -120]}
+  - {id: screw_br_3, vector: [40, 0, -120]}
+  - {id: screw_tl_1, vector: [-40, 0, 120]}
+  - {id: screw_tl_2, vector: [-20, 0, 120]}
+  - {id: screw_tl_3, vector: [0, 0, 120]}
+  - {id: screw_tr_1, vector: [0, 0, 120]}
+  - {id: screw_tr_2, vector: [20, 0, 120]}
+  - {id: screw_tr_3, vector: [40, 0, 120]}
+
+export:
+  glb_tolerance: 0.2
+  glb_angular_tolerance: 0.25
+  inject_explode: true
+
+doc:
+  sections:
+    - prose: |
+        # Four-Foot Square 2×4 Frame — Validation Report
+
+        Four nominal 2×4s lie flat in one plane. Two 48-inch rails span the full width, two 41-inch stiles fit between them, and the resulting envelope is 48 × 48 × 1½ inches with a 41-inch square opening and a 3½-inch visible border. Three ¼ × 5-inch modeled structural wood screws retain each butt corner.
+    - findings: {header: "## Four closed corner contacts", check: contact}
+    - hardware_presence: {header: "## Twelve corner screws", cap: 12}
+    - derivation_log:
+        header: "## Construction graph — derivation log"
+        preamble: "Four butt_screwed connections derive the screw-to-member overlap, corner bonds, installation order, and hardware-presence facts without claiming structural capacity:"
+        mode: per_connection
+        cap: 32
+    - findings: {header: "## Dimension checks", check: dimension}
+    - prose: "## Result: **{result_verdict}**"
+    - bom_table: {header: "## Bill of materials"}
+    - prose: |
+        ## Fabrication and assembly
+        - Select two straight 8-foot nominal 2×4s. From each, cut one 48-inch rail and one 41-inch stile; account for saw kerf and square every cut.
+        - Lay every member flat on a level work surface with the 3½-inch face visible. Clamp the two stiles between the rails.
+        - Verify the outside dimensions are 48 inches in both directions, the opening is 41 inches square, and the two outside diagonals are equal before final driving.
+        - Mark three screw centers across each stile width at ⅝, 1¾, and 2⅞ inches from the outside edge. Drill pilot holes sized for the selected product and drive from the top and bottom outside edges.
+        - Stop if lumber splits, a screw tip protrudes, a head is over-driven, a joint remains open, or the diagonals cannot be equalized.
+
+        ## Honest limits and installation hold
+        - The ¼ × 5-inch screw geometry is generic, not a selected manufacturer SKU. Confirm available product, required pilot diameter, head clearance, coating, wood compatibility, edge-distance rules, and installation instructions before fabrication.
+        - No glue is modeled. If adhesive is desired, select a product compatible with the actual wood and environment and follow its surface-preparation, open-time, clamping, and cure instructions.
+        - Use, supported load, species, grade, moisture, exposure, finish, hanging hardware, anchorage, tip restraint, structural capacity, and code compliance remain UNKNOWN — NOT ANALYZED.
+        - This package therefore ends at a fabricated loose frame. Do not hang, climb, support weight from, or expose it outdoors until a use-specific mounting and capacity review resolves those holds.
