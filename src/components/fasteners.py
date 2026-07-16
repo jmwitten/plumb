@@ -173,6 +173,84 @@ class StructuralScrew(LagScrew):
 
     material_key = "steel_galv"
 
+    def __init__(
+        self,
+        diameter: float | None = None,
+        length: float | None = None,
+        name: str | None = None,
+        catalog_ref: str | None = None,
+    ):
+        if catalog_ref is not None:
+            if diameter is not None or length is not None:
+                raise ValueError(
+                    "structural screw accepts either catalog_ref or explicit "
+                    "diameter and length, not both"
+                )
+            from ..catalogs import get_screw
+
+            entry = get_screw(catalog_ref)
+            if entry.product_class != "structural_screw":
+                raise ValueError(
+                    f"screw catalog {catalog_ref!r} is {entry.product_class!r}, "
+                    "not 'structural_screw'"
+                )
+            diameter = entry.diameter_mm
+            length = entry.length_mm
+            super().__init__(
+                diameter,
+                length,
+                name=name or f"{entry.display_size} structural screw",
+            )
+            self.catalog_ref = entry.ref
+            self.catalog_size = entry.display_size
+            self.catalog_item_label = entry.item_label
+            self.head_style = entry.head_style
+            self.drive_style = entry.drive_style
+            self.source = entry.retailer_url
+            self.existing = False
+            self.geometry_basis = entry.geometry_basis
+            return
+        if diameter is None or length is None:
+            raise ValueError(
+                "structural screw requires catalog_ref or both diameter and length"
+            )
+        super().__init__(diameter, length, name=name)
+
+    def describe(self) -> str:
+        if hasattr(self, "catalog_ref"):
+            return (
+                f"{self.catalog_size}, {self.drive_style}, {self.head_style}"
+            )
+        return super().describe()
+
+    def bom_label(self) -> str:
+        return getattr(self, "catalog_item_label", "Structural Screw")
+
+    def bom_group(self) -> str:
+        if hasattr(self, "catalog_ref"):
+            return f"StructuralScrew|catalog|{self.catalog_ref}"
+        return super().bom_group()
+
+    def reader_params(self) -> dict:
+        if not hasattr(self, "catalog_ref"):
+            return super().reader_params()
+        return {
+            "size": self.catalog_size,
+            "head style": self.head_style,
+            "drive style": self.drive_style,
+            "catalog reference": self.catalog_ref,
+        }
+
+    def assumptions(self) -> str:
+        base = super().assumptions()
+        if not hasattr(self, "catalog_ref"):
+            return base
+        return (
+            f"{base} Catalog geometry basis: {self.geometry_basis} "
+            "Retailer terminology and purchase reference do not establish "
+            "capacity, code compliance, or installation requirements."
+        )
+
 
 EXPOSURES = ("interior", "exterior")
 SCREW_REPRESENTATIONS = ("envelope", "represented_threads")

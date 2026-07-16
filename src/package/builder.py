@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import base64
 import csv
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -12,9 +14,11 @@ from ..core.timing import PhaseTimer
 from ..design_review import render_design_review_html
 from ..rendering import (
     build_instruction_manual,
+    export_glb,
     render_instruction_images,
     render_instruction_manual_html,
 )
+from ..rendering.web_viewer import build_viewer_payload
 from ..review.manifest import build_review_manifest
 from ..spec.compiler import compile_spec_file
 from .documents import write_package_documents
@@ -22,7 +26,6 @@ from .html import page
 from .model import PackageArtifact, PackageRequest, PackageResult
 from .projections import (
     fabrication_projection,
-    installation_projection,
     technical_projection,
 )
 from .views import render_standard_views
@@ -109,6 +112,25 @@ def _source(relative_path: str) -> str:
     return "compiled-detail"
 
 
+def _instruction_viewer(detail, manual, out: Path, view_paths: tuple[Path, ...]):
+    """Build the existing offline viewer bundle for the assembly document."""
+    if not view_paths:
+        return None
+    glb_path = out / "model" / "detail.glb"
+    if not glb_path.is_file():
+        glb_path = export_glb(detail.assembly, out / "model" / "detail.web.glb")
+    compressed = gzip.compress(glb_path.read_bytes(), compresslevel=9, mtime=0)
+    preferred = next(
+        (path for path in view_paths if path.stem == "iso"),
+        view_paths[0],
+    )
+    return {
+        "payload": build_viewer_payload(detail, instruction_manual=manual),
+        "glb_b64": base64.b64encode(compressed).decode("ascii"),
+        "isometric_href": preferred.relative_to(out).as_posix(),
+    }
+
+
 def _artifacts(out_dir: Path) -> tuple[PackageArtifact, ...]:
     artifacts = []
     for path in sorted(out_dir.rglob("*")):
@@ -151,14 +173,15 @@ def build_package(request: PackageRequest) -> PackageResult:
         view_paths = render_standard_views(detail, out / "views", request.views)
 
     with timer.phase("documents"):
-        technical = technical_projection(detail, view_paths)
+        technical = technical_projection(
+            detail,
+            tuple(path.relative_to(out) for path in view_paths),
+        )
         fabrication = fabrication_projection(detail)
-        installation = installation_projection(detail)
         write_package_documents(
             out,
             technical=technical,
             fabrication=fabrication,
-            installation=installation,
         )
         _write_csv(out / "bom.csv", tuple(detail.bom_table()))
         _write_csv(out / "cuts.csv", _cut_rows(fabrication))
@@ -192,6 +215,7 @@ def build_package(request: PackageRequest) -> PackageResult:
                     manual,
                     image_paths,
                     generated_at="from the compiled package model",
+                    viewer=_instruction_viewer(detail, manual, out, view_paths),
                 ),
                 encoding="utf-8",
             )

@@ -385,6 +385,9 @@ def _panel_title(detail, action, graph, steps, cohort, labels) -> str:
 
 def reader_dimensions(component) -> str:
     """Use construction fractions for headed fasteners on every manual surface."""
+    catalog_size = getattr(component, "catalog_size", "")
+    if catalog_size:
+        return str(catalog_size)
     if (hasattr(component, "diameter") and hasattr(component, "length")
             and hasattr(component, "head_height")):
         diameter = fmt_frac_in(component.diameter / 25.4)

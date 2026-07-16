@@ -10,7 +10,7 @@ def _document_inputs():
     technical = {
         "title": "Example <Assembly>",
         "headline": "Geometry PASS · Structural capacity UNKNOWN — NOT ANALYZED",
-        "views": ("iso.png",),
+        "views": ("views/iso.png",),
         "coverage": (),
         "bom": (),
         "callouts": (),
@@ -42,6 +42,7 @@ def test_generic_documents_are_standalone_escaped_and_keep_unknowns():
 
     assert "Example &lt;Assembly&gt;" in technical
     assert "UNKNOWN — NOT ANALYZED" in technical
+    assert 'src="views/iso.png"' in technical
     assert "Part A" in fabrication
     assert "No modeled installation contract" in installation
     assert all(text.startswith("<!doctype html>") for text in (
@@ -61,13 +62,21 @@ def test_write_package_documents_creates_fixed_generic_surface(tmp_path):
         tmp_path,
         technical=technical,
         fabrication=fabrication,
-        installation=installation,
     )
 
     assert paths == {
         "technical": tmp_path / "technical.html",
         "fabrication": tmp_path / "fabrication.html",
-        "installation": tmp_path / "installation.html",
     }
+    assert not (tmp_path / "installation.html").exists()
     assert all(path.read_text(encoding="utf-8").startswith("<!doctype html>")
                for path in paths.values())
+
+    explicit = write_package_documents(
+        tmp_path / "explicit",
+        technical=technical,
+        fabrication=fabrication,
+        installation=installation,
+    )
+    assert explicit["installation"] == tmp_path / "explicit" / "installation.html"
+    assert explicit["installation"].is_file()

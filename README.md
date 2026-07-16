@@ -55,11 +55,12 @@ author a `DetailSpec`, and invoke the generic full-package compiler:
 ```
 
 The compiler generates the model, standard views, technical/fabrication/
-assembly/installation documents, review evidence, CSVs, hashes, and final
-package manifest from one compiled detail. Ordinary projects require no
-source-code registration or project-specific renderer dispatch. Read framework
-source or extend a registry only when the compact manifest proves that a
-required capability is absent.
+assembly documents, review evidence, CSVs, hashes, and final package manifest
+from one compiled detail. The installation audit renderer remains available as
+an explicit internal surface but is not emitted in the default package.
+Ordinary projects require no source-code registration or project-specific
+renderer dispatch. Read framework source or extend a registry only when the
+compact manifest proves that a required capability is absent.
 
 ## Architecture
 

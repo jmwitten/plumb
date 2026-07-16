@@ -24,14 +24,29 @@ def test_builder_compiles_once_and_writes_content_addressed_manifest(
         "detailgen.package.builder.compile_spec_file",
         compile_once,
     )
-    result = build_package(
-        PackageRequest(spec, tmp_path / "out", views=("iso",))
-    )
+    out = tmp_path / "out"
+    result = build_package(PackageRequest(spec, out, views=("iso",)))
 
     assert calls["compile"] == 1
     assert result.validation_ok is True
-    assert (tmp_path / "out" / "package-manifest.json").is_file()
+    assert (out / "package-manifest.json").is_file()
     assert all(len(artifact.sha256) == 64 for artifact in result.artifacts)
+
+    technical = (out / "technical.html").read_text(encoding="utf-8")
+    assembly = (out / "assembly.html").read_text(encoding="utf-8")
+    assert 'src="views/iso.png"' in technical
+    assert 'class="viewer-section"' in assembly
+    assert 'src="views/iso.png"' in assembly
+    assert 'id="detail-data-' in assembly
+    assert 'id="detail-glb-' in assembly
+    assert "Explode" in assembly
+    assert assembly.index('class="viewer-section"') < assembly.index(
+        'class="overview"'
+    ) < assembly.index('id="panel-1"')
+    assert not (out / "installation.html").exists()
+    assert "installation.html" not in {
+        artifact.relative_path for artifact in result.artifacts
+    }
 
 
 def test_two_existing_governed_details_share_the_same_builder(tmp_path):

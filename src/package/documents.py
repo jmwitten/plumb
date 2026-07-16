@@ -1,4 +1,4 @@
-"""Generic technical, fabrication, and installation document renderers."""
+"""Generic technical, fabrication, and optional installation renderers."""
 
 from __future__ import annotations
 
@@ -132,15 +132,14 @@ def write_package_documents(
     *,
     technical: dict[str, object],
     fabrication,
-    installation: dict[str, object],
+    installation: dict[str, object] | None = None,
 ) -> dict[str, Path]:
-    """Write the fixed generic three-document contractor surface."""
+    """Write default documents and an explicitly requested installation audit."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     paths = {
         "technical": out_dir / "technical.html",
         "fabrication": out_dir / "fabrication.html",
-        "installation": out_dir / "installation.html",
     }
     paths["technical"].write_text(
         render_technical_html(technical), encoding="utf-8"
@@ -148,7 +147,9 @@ def write_package_documents(
     paths["fabrication"].write_text(
         render_fabrication_html(fabrication), encoding="utf-8"
     )
-    paths["installation"].write_text(
-        render_installation_html(installation), encoding="utf-8"
-    )
+    if installation is not None:
+        paths["installation"] = out_dir / "installation.html"
+        paths["installation"].write_text(
+            render_installation_html(installation), encoding="utf-8"
+        )
     return paths
