@@ -26,20 +26,20 @@ The exhaustive platform bbox oracle took 105.84 seconds in the baseline run.
 
 ## Scope manifest and selectors
 
-After Task 5, ordinary collection reconciles exactly to 2,324 node ids. The
+Final ordinary collection reconciles exactly to 2,325 node ids. The
 manifest has no duplicates, unclassified nodes, or retired ids.
-
-Task 4 collection boundaries before Task 5's two pure fixture tests:
 
 | Selector | Nodes | Required boundary evidence |
 |---|---:|---|
 | `--detail-gate family_birdhouse --detail-cadence inner` | 10 | Includes accepted birdhouse validation/collision fixture; excludes package tests. |
-| `--detail-gate family_birdhouse --detail-cadence release` | 21 | Inner 10 plus all 11 birdhouse package assertions. |
-| `--platform-tier integration` | 235 | Includes one real baseline regeneration; excludes bbox/affected/revision audits. |
+| `--detail-gate family_birdhouse --detail-cadence release` | 22 | Inner 10 plus all 12 birdhouse package assertions. |
+| `--platform-tier integration` | 254 | Includes one real baseline regeneration and all accepted-live-site view checks; excludes bbox/affected/revision audits. |
 | `--platform-tier audit` | 46 | Includes both exhaustive bbox oracles plus every affected-region and revision-identity node. |
 
-The birdhouse gates passed in 5.31 seconds inner and 18.07 seconds release.
-The release package fixture was generated once.
+The final birdhouse gates passed in 7.05 seconds inner and 26.47 seconds
+release. The release package fixture was generated once. The platform
+integration gate passed all 254 nodes in 477.46 seconds; the platform audit
+passed all 46 nodes in 636.43 seconds.
 
 ## Baseline integrity refactor
 
@@ -90,7 +90,46 @@ The fixture reuse assertions use call counts, not wall-clock thresholds. Every
 module-scoped CAD context owns a private `DETAILGEN_CACHE_DIR` for its complete
 lifetime.
 
+## Birdhouse render cache isolation
+
+The first unfiltered verification exposed a latent order-dependent failure:
+the custom birdhouse still renderer tessellated `part.world_solid()` directly,
+mutating the shared OCCT shape cache. A later exact wood-screw bbox assertion
+then observed a 0.00455 mm mesh artifact. The focused assertion passed in a
+fresh process, and a new co-located regression reproduced the contamination.
+
+The still renderer now consumes `DetailAssembly.isolated_world_solids()`, the
+same topology-isolation contract as the standard exporters. The regression,
+the complete birdhouse report module, and the formerly failing wood-screw test
+all pass. The second unfiltered run passed through the original failure point.
+
 ## Final verification
 
-Pending Task 6. Record final integration, audit, birdhouse, and unfiltered-suite
-results here after the refreshed JUnit run.
+```text
+pytest --detail-gate family_birdhouse --detail-cadence inner -q
+10 passed in 7.05s
+
+pytest --detail-gate family_birdhouse --detail-cadence release -q
+22 passed in 26.47s
+
+pytest --platform-tier integration -q -n 4
+254 passed in 477.46s
+
+pytest --platform-tier audit -q -n 4
+46 passed in 636.43s
+
+pytest -q -n 4 --junitxml=/tmp/plumb-test-scope-final.xml
+2320 passed, 4 skipped, 1 xfailed in 1203.91s
+```
+
+The final JUnit artifact joins exactly to all 2,325 runtime-manifest rows:
+
+| Category | Nodes | Cumulative worker time | Nodes over 10 s |
+|---|---:|---:|---:|
+| Platform | 1,907 | 3,758.633 s | 82 |
+| Document/build accuracy | 418 | 384.177 s | 10 |
+
+All 82 slow platform nodes are integration or audit; none is unit. All ten slow
+build nodes have a named owner and an inner/release cadence in the refreshed
+audit. The 7,626-pair oracle took 504.590 seconds in the final full run and is
+absent from both birdhouse gates.

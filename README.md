@@ -337,19 +337,32 @@ a different string — display only, geometry untouched).
 ## Tests
 
 ```bash
-pytest              # full platform + every detail regression
-pytest -n auto      # same suite, parallel across CPU cores (pytest-xdist)
+pytest --detail-gate family_birdhouse --detail-cadence inner -q
+pytest --detail-gate family_birdhouse --detail-cadence release -q
+pytest --platform-tier integration -q
+pytest --platform-tier audit -q
+pytest -q -n 4      # unfiltered verification across every scope
 python -m detailgen.certification details/my_build.cert.yaml
-pytest --detail-gate my_build -q -n 4  # one detail's generic build gate
 ```
 
-The suite spans the geometry primitives, the Connection library, the DetailSpec
-compiler + its equivalence oracle (the compiled `platform.spec.yaml` reproduces
-the imperative detail exactly), the coverage/UNKNOWN honesty rules, the Evidence
-Graph (completeness invariants + cross-process determinism), and each shipped
-detail. Many guards are written mutation-style — they assert both that clean
-data passes AND that corrupted data is REJECTED, so a guard can't rot into a
-tautology.
+Every collected test has an explicit owner and cadence in
+`tests/test_scope_manifest.csv`. A named detail gate applies the reusable
+accuracy contracts to that accepted model plus its owner-specific facts. The
+inner cadence includes compile, geometry, normal collision/validation,
+connections, fabrication, BOM, governance, intent, and determinism. Release
+adds that build's document/package checks.
+
+Platform integration tests exercise shared subsystems using real data. Platform
+audit tests are intentionally exhaustive or adversarial: for example, they
+alter geometry to verify invalidation, corrupt baselines to prove the guard
+detects it, or compare the bbox shortcut with exact intersection checks across
+every pair. Those checks certify the platform, not an accepted document, so
+they do not run in a named build gate.
+
+The unfiltered suite spans all of those scopes: geometry primitives, the
+Connection library, the DetailSpec compiler and equivalence oracles,
+coverage/UNKNOWN honesty rules, Evidence Graph invariants, and every shipped
+detail.
 
 `-n auto` isn't the default (no `addopts` entry) so a single debugging
 invocation — `pytest --pdb tests/test_foo.py::test_x` or `-s` for prints —
@@ -366,9 +379,7 @@ contracts leave `deliverables: []`; a requested deliverable fails closed until
 an adapter supplies typed evidence for it.
 
 Use the detail gate as the inner loop when a change is owned entirely by one
-build. Collection requires all nine accuracy contracts: compile, geometry,
-validation, connections, fabrication, BOM, governance, intent, and
-determinism. Documents are optional because their presentation is not build
+build. Documents are release-cadence evidence, not inner-cadence model
 accuracy. Each gate starts with fresh temporary caches, compiles twice, and
 never reads a result from an earlier run.
 
@@ -377,7 +388,9 @@ uncertainty can produce a visible warning; unresolved high-severity decisions
 produce exit code 2 and block release without prompting, which keeps automated
 runs autonomous and auditable.
 
-Run the full suite before integrating any change to shared compiler,
-validation, geometry, rendering, pack, or cache code. A detail gate answers
-whether one product still builds correctly; it does not claim the platform is
-unchanged.
+Run the platform integration tier for shared compiler, validation, geometry,
+rendering, pack, or cache changes. Run the audit tier when changing bbox
+prefiltering, affected-region invalidation, revision identity, or their test
+oracles. The unfiltered suite remains the final repository-wide verification.
+A detail gate answers whether one product still builds correctly; it does not
+claim the platform is unchanged.
