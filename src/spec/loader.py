@@ -85,6 +85,29 @@ from .schema import (
 )
 
 
+DETAIL_SPEC_KEYS = {
+    "name": True,
+    "type": False,
+    "units": False,
+    "params": False,
+    "derived": False,
+    "components": True,
+    "connections": False,
+    "validation": False,
+    "spatial": False,
+    "roles": False,
+    "foundations": False,
+    "retire": False,
+    "sequence": False,
+    "design_review": False,
+    "callouts": False,
+    "explode": False,
+    "doc": False,
+    "cross_check": False,
+    "export": False,
+}
+
+
 def load_spec_text(text: str, *, fmt: str = "yaml") -> DetailSpecDoc:
     """Parse spec ``text`` (``fmt`` = ``"yaml"`` or ``"json"``) into a
     :class:`DetailSpecDoc`. JSON is parsed as YAML's superset by default; pass
@@ -116,20 +139,7 @@ def load_spec_file(path: str | Path) -> DetailSpecDoc:
 
 
 def _build_doc(raw: dict) -> DetailSpecDoc:
-    f = _take(raw, {
-        "name": True, "type": False, "units": False,
-        "params": False, "derived": False,
-        "components": True, "connections": False, "validation": False,
-        "spatial": False,
-        "roles": False,  # ONTOLOGY (task ONTOLOGY): load-system role declarations
-        "foundations": False,  # FAB-3 (retire R29): foundation systems
-        "retire": False,  # CL-3 (retro R10): intentional removals with provenance
-        "sequence": False,  # SEQSCHEMA: the authored sequence: block
-        "design_review": False,
-        # -- presentation surfaces (task 4B-2) ---------------------------------
-        "callouts": False, "explode": False, "doc": False,
-        "cross_check": False, "export": False,
-    }, "detail spec")
+    f = _take(raw, DETAIL_SPEC_KEYS, "detail spec")
     components = _build_entries(_as_list(f["components"], "components"),
                                 _build_component, "components")
     connections = ([] if f["connections"] is _MISSING
