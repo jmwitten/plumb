@@ -105,6 +105,40 @@ def test_present_declared_hardware_passes():
     assert hw_findings[0].passed
 
 
+def test_allowed_intersection_derivations_are_sorted_by_part_identity():
+    assembly = DetailAssembly("deterministic overlap derivations")
+    first = assembly.add(Washer(0.5 * IN, name="first"))
+    second = assembly.add(Washer(0.5 * IN, name="second"))
+    third = assembly.add(Washer(0.5 * IN, name="third"))
+
+    class _ReverseIterationSet(set):
+        def __iter__(self):
+            return iter(tuple(reversed(sorted(
+                super().copy(), key=lambda pair: (pair[0].id, pair[1].id)
+            ))))
+
+    class _Intersections(ConnectionType):
+        def allowed_intersections(self, conn):
+            return _ReverseIterationSet({
+                (conn.parts[0], conn.parts[1]),
+                (conn.parts[0], conn.parts[2]),
+            })
+
+    checks = Connection(
+        kind=_Intersections(),
+        parts=[first, second, third],
+    ).generate_checks(assembly)
+
+    facts = [
+        fact.fact for fact in checks.derived
+        if ".allowed_intersections" in fact.rule
+    ]
+    assert facts == [
+        "allowed intersection first <-> second",
+        "allowed intersection first <-> third",
+    ]
+
+
 # -- negative test 3: install-order cycle is a hard diagnostic --------------
 
 def test_install_order_cycle_raises():
