@@ -58,4 +58,5 @@ detailgen = "src"
 testpaths = ["tests"]
 markers = [
     "detail_gate(slug, contracts, cadence): semantic per-build accuracy certification",
+    "platform_integration: real shared-system integration outside document production",
 ]

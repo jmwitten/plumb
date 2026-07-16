@@ -44,10 +44,25 @@ SITE_DIVERGENCE_DOC = (
 )
 
 
-def _compute_site_divergence(source_dir: Path) -> tuple[dict, list, list]:
-    """Compute the divergence baseline, merging human notes from the CURRENT
-    committed baseline in ``source_dir``. Returns (data, new_keys, removed_keys)."""
-    pairs = bl.site_divergence_pairs()
+def stale_baseline_names(
+    generated_dir: Path, source_dir: Path
+) -> tuple[str, ...]:
+    """Name every JSON baseline missing or byte-different on either side."""
+    generated = {path.name: path for path in Path(generated_dir).glob("*.json")}
+    committed = {path.name: path for path in Path(source_dir).glob("*.json")}
+    return tuple(
+        name
+        for name in sorted(set(generated) | set(committed))
+        if name not in generated
+        or name not in committed
+        or generated[name].read_bytes() != committed[name].read_bytes()
+    )
+
+
+def merge_site_divergence(
+    pairs: list[dict], source_dir: Path
+) -> tuple[dict, list, list]:
+    """Purely merge live finding rows with committed human annotations."""
     old_notes: dict = {}
     src = source_dir / "site_divergence.json"
     if src.exists():
@@ -67,6 +82,11 @@ def _compute_site_divergence(source_dir: Path) -> tuple[dict, list, list]:
 
     data = {"_doc": SITE_DIVERGENCE_DOC, "findings": findings}
     return data, new_keys, removed_keys
+
+
+def _compute_site_divergence(source_dir: Path) -> tuple[dict, list, list]:
+    """Load live divergence pairs, then merge committed annotations."""
+    return merge_site_divergence(bl.site_divergence_pairs(), source_dir)
 
 
 def regenerate(target_dir: Path, source_dir: Path = bl.BASELINE_DIR) -> dict:
@@ -227,12 +247,9 @@ def main(argv=None) -> int:
 
     if args.check:
         with tempfile.TemporaryDirectory() as tmp:
-            regenerate(Path(tmp), source_dir=bl.BASELINE_DIR)
-            stale = []
-            for f in sorted(Path(tmp).glob("*.json")):
-                committed = bl.BASELINE_DIR / f.name
-                if not committed.exists() or committed.read_text() != f.read_text():
-                    stale.append(f.name)
+            generated = Path(tmp)
+            regenerate(generated, source_dir=bl.BASELINE_DIR)
+            stale = stale_baseline_names(generated, bl.BASELINE_DIR)
         if stale:
             print("STALE baselines (regenerate + commit): " + ", ".join(stale),
                   file=sys.stderr)
