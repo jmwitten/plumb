@@ -1,0 +1,198 @@
+schema: detailgen/design-review/v1
+project_id: built_up_2x4
+title: Built-up 2x4 member precedent-first design selection
+status: approved_for_modeling
+brief:
+  use: Create one straight eight-foot built-up wood member from two ordinary two-by-fours fastened together along their full length.
+  loads: No project-specific load, support condition, or structural capacity is supplied; the document must not approve beam, post, guard, or life-safety use.
+  fit_range: Use two matching nominal two-by-four members at eight feet long, producing an actual assembled section approximately three inches by three and one-half inches.
+  appearance: Keep both boards flush at their ends and long edges while accepting one continuous lamination seam and visible low-profile screw heads.
+  builder_skill: Suit a homeowner who can inspect lumber, clamp two boards flush, mark a centerline, and drive structural wood screws without over-driving.
+  tools:
+    - tape measure and pencil
+    - straightedge or chalk line
+    - clamps
+    - drill or impact driver with manufacturer-specified bit
+    - eye and hearing protection
+  required_features:
+    - id: req_two_2x4s
+      text: Use exactly two full-length nominal two-by-fours placed wide face to wide face rather than substituting one solid post.
+    - id: req_spacing
+      text: Place one screw station every twelve inches along the member while retaining practical clearance from both cut ends.
+    - id: req_near_4x4
+      text: Produce a compact built-up section closer to a nominal four-by-four while stating its actual three-inch by three-and-one-half-inch size honestly.
+    - id: req_simple_document
+      text: Generate a concise model-backed fabrication and assembly document that a homeowner can follow without specialized joinery machinery.
+  constraints:
+    - id: constraint_brief_fidelity
+      text: Preserve the requested two-board dry mechanical assembly and twelve-inch longitudinal screw pattern unless a safety hold requires escalation.
+      priority: 1
+    - id: constraint_honesty
+      text: Do not infer structural capacity, code compliance, or suitability for a specific load from geometry or general manufacturer precedents.
+      priority: 2
+    - id: constraint_speed
+      text: Minimize authoring and generation overhead because this build is also an experiment measuring Plumb workflow time and waste.
+      priority: 3
+    - id: constraint_rework
+      text: Prefer an assembly that can be separated or adjusted without removing cured adhesive from both full-length board faces.
+      priority: 4
+precedents:
+  - id: simpson_swd_product
+    kind: commercial_product
+    title: Strong-Drive SWD Double-Threaded Screw
+    publisher: Simpson Strong-Tie
+    url: https://www.strongtie.com/products/go/fasteners/pro-fas-strong-drive-swd
+    accessed_on: 2026-07-15
+    construction_pattern: Simpson describes an exterior-rated double-threaded structural screw intended to secure two wood members and lists timber multi-ply assemblies among its applications.
+    lessons:
+      - The published two-and-one-half-inch length provides a directly relevant commercial fastener size for joining two one-and-one-half-inch plies without intentionally projecting through the far face.
+      - Manufacturer instructions and the selected product listing must govern driver bit, coating compatibility, installation technique, and any load-rated use.
+  - id: simpson_built_up_columns
+    kind: build_instruction
+    title: Designing Built-Up Columns
+    publisher: Simpson Strong-Tie Structural Engineering Blog
+    url: https://seblog.strongtie.com/2015/09/designing-built-up-columns/
+    accessed_on: 2026-07-15
+    construction_pattern: The technical article distinguishes mechanically laminated built-up columns from solid columns and discusses screw installation from one side or both sides of multiple nominal two-inch plies.
+    lessons:
+      - Multiple lumber plies may be mechanically laminated with screws, but fastener direction and schedule affect the structural calculation rather than serving as cosmetic details.
+      - A general built-up-column precedent does not validate this experiment's user-selected twelve-inch spacing or establish capacity for an unspecified application.
+concepts:
+  - id: alternating_mechanical_lamination
+    title: Alternating-side dry mechanical lamination
+    summary: Two eight-foot two-by-fours are clamped wide face to wide face and joined by eight structural wood screws whose heads alternate between opposite faces.
+    signature:
+      load_path: parallel_full_length_plies_with_unanalyzed_interface_transfer
+      joint_family: dry_face_lamination_with_structural_wood_screws
+      part_topology: two_full_length_two_by_four_plies
+      fastening_strategy: eight_alternating_side_screws_at_twelve_inch_centers
+      visible_seam_strategy: continuous_face_lamination_seam_with_alternating_heads
+      fit_strategy: flush_ends_and_long_edges_clamped_before_driving
+    features:
+      - id: dry_wide_face_lamination
+        description: Both full-length wide faces meet directly without adhesive, creating a compact three-inch by three-and-one-half-inch actual section.
+        precedent_refs: [simpson_built_up_columns]
+      - id: swd_two_and_half_inch_screws
+        description: Eight two-and-one-half-inch double-threaded structural wood screws mechanically draw and retain the two lumber plies together.
+        precedent_refs: [simpson_swd_product]
+      - id: twelve_inch_alternating_stations
+        description: Screw centers occur at six through ninety inches in twelve-inch increments, with consecutive heads alternating between opposite broad faces.
+        precedent_refs: []
+    parts:
+      - part_family: full-length two-by-four plies
+        purpose: The paired boards supply the entire requested built-up wood section and preserve continuous grain along the eight-foot member.
+        requirement_refs: [req_two_2x4s, req_near_4x4]
+        feature_refs: [alternating_mechanical_lamination.dry_wide_face_lamination]
+        joinery_replacement: Neither board can be removed because the brief requires two plies; a solid post would be a different concept.
+      - part_family: double-threaded structural wood screws
+        purpose: The eight screws hold the two dry mating faces together at the user-requested longitudinal stations without relying on adhesive cure.
+        requirement_refs: [req_spacing, req_simple_document]
+        feature_refs: [alternating_mechanical_lamination.swd_two_and_half_inch_screws, alternating_mechanical_lamination.twelve_inch_alternating_stations]
+        joinery_replacement: Full-face adhesive or through-bolts could replace the screws, but each would change the requested process and reversibility.
+  - id: bonded_one_side_lamination
+    title: Adhesive-bonded one-side lamination
+    summary: Two aligned two-by-fours receive a full-face construction adhesive bond and one-sided screws that clamp the layup while the selected adhesive cures.
+    signature:
+      load_path: bonded_full_face_interface_with_supplemental_screw_transfer
+      joint_family: adhesive_face_lamination_with_mechanical_clamping
+      part_topology: two_full_length_two_by_four_plies_plus_cured_bond
+      fastening_strategy: one_side_screw_row_with_full_face_adhesive
+      visible_seam_strategy: adhesive_closed_seam_with_heads_on_one_face
+      fit_strategy: wet_bond_alignment_maintained_through_label_cure
+    features:
+      - id: cured_full_face_bond
+        description: A selected construction adhesive covers the mating faces and becomes a permanent continuous bond only after its labeled cure conditions are satisfied.
+        precedent_refs: [simpson_built_up_columns]
+      - id: one_side_clamping_screws
+        description: Screws installed from one broad face draw the wet assembly together and remain as supplemental mechanical fasteners after cure.
+        precedent_refs: [simpson_swd_product, simpson_built_up_columns]
+    parts:
+      - part_family: adhesive-bonded two-by-four plies
+        purpose: The two lumber pieces create the same compact built-up envelope while the cured interface prevents later nondestructive separation.
+        requirement_refs: [req_two_2x4s, req_near_4x4]
+        feature_refs: [bonded_one_side_lamination.cured_full_face_bond]
+        joinery_replacement: A dry screw-only interface removes the adhesive, cure hold, surface preparation, and irreversible full-face bond.
+      - part_family: adhesive and clamping screws
+        purpose: Adhesive forms the continuous joint while screws maintain contact and alignment during the manufacturer-controlled cure interval.
+        requirement_refs: [req_simple_document]
+        feature_refs: [bonded_one_side_lamination.one_side_clamping_screws]
+        joinery_replacement: External clamps could absorb temporary pressure, but the permanent bond still introduces product selection and cure governance.
+  - id: solid_four_by_four
+    title: Single solid nominal four-by-four
+    summary: One standard nominal four-by-four replaces both laminations and every interface fastener, yielding a larger square actual section with no built-up seam.
+    signature:
+      load_path: single_continuous_solid_member
+      joint_family: no_lamination_joint
+      part_topology: one_full_length_four_by_four
+      fastening_strategy: no_interface_fasteners
+      visible_seam_strategy: seamless_solid_member_faces
+      fit_strategy: select_one_straight_square_stock_member
+    features:
+      - id: one_piece_square_section
+        description: A single solid nominal four-by-four provides an approximately three-and-one-half-inch square actual section without a laminated interface.
+        precedent_refs: [simpson_built_up_columns]
+      - id: fastener_free_member
+        description: Eliminating the ply interface removes all screw layout, driving, alternating-face, and future retightening operations from fabrication.
+        precedent_refs: [simpson_built_up_columns]
+    parts:
+      - part_family: solid four-by-four stock
+        purpose: One continuous timber provides the closest conventional nominal four-by-four geometry with no separate mechanical lamination components.
+        requirement_refs: [req_near_4x4, req_simple_document]
+        feature_refs: [solid_four_by_four.one_piece_square_section, solid_four_by_four.fastener_free_member]
+        joinery_replacement: The one stock member absorbs every interface function, but it directly violates the requirement to join two two-by-fours.
+comparison:
+  - {id: alternating.strength, concept: alternating_mechanical_lamination, criterion: strength, assessment: unknown, explanation: "Mechanical lamination is documented, but this exact two-ply twelve-inch schedule has no project-specific capacity analysis.", evidence_refs: [simpson_built_up_columns, constraint_honesty]}
+  - {id: alternating.part_count, concept: alternating_mechanical_lamination, criterion: part_count, assessment: neutral, explanation: "Two lumber plies and eight screws are exactly the components needed to satisfy the requested assembly.", evidence_refs: [req_two_2x4s, req_spacing]}
+  - {id: alternating.fasteners, concept: alternating_mechanical_lamination, criterion: fasteners, assessment: advantage, explanation: "The selected commercial screw length joins both plies while the eight stations remain simple to count.", evidence_refs: [simpson_swd_product, req_spacing]}
+  - {id: alternating.operations, concept: alternating_mechanical_lamination, criterion: operations, assessment: advantage, explanation: "Inspecting, aligning, clamping, marking, and driving form one short reversible fabrication sequence without cure delays.", evidence_refs: [constraint_speed, constraint_rework]}
+  - {id: alternating.tooling, concept: alternating_mechanical_lamination, criterion: tooling, assessment: advantage, explanation: "Ordinary measuring, clamping, and screw-driving tools cover every modeled fabrication operation in the selected approach.", evidence_refs: [req_simple_document]}
+  - {id: alternating.tolerances, concept: alternating_mechanical_lamination, criterion: tolerances, assessment: neutral, explanation: "Flush ends and edges require careful clamping, but no precision joinery cut controls the final envelope.", evidence_refs: [req_near_4x4, req_simple_document]}
+  - {id: alternating.material, concept: alternating_mechanical_lamination, criterion: material, assessment: advantage, explanation: "The build uses only the two requested boards and eight discrete fasteners with no adhesive consumable.", evidence_refs: [req_two_2x4s, constraint_brief_fidelity]}
+  - {id: alternating.appearance, concept: alternating_mechanical_lamination, criterion: appearance, assessment: neutral, explanation: "The laminated seam and alternating screw heads remain visible, while flush edges keep the member orderly.", evidence_refs: [req_near_4x4]}
+  - {id: alternating.builder_skill, concept: alternating_mechanical_lamination, criterion: builder_skill, assessment: advantage, explanation: "A homeowner can repeat one centerline measurement and one controlled driving action at every marked station.", evidence_refs: [req_simple_document, constraint_speed]}
+  - {id: alternating.instruction_complexity, concept: alternating_mechanical_lamination, criterion: instruction_complexity, assessment: advantage, explanation: "One dimensioned station diagram explains the complete fastener pattern without separate product cure or machining stages.", evidence_refs: [req_spacing, req_simple_document]}
+  - {id: bonded.strength, concept: bonded_one_side_lamination, criterion: strength, assessment: unknown, explanation: "A continuous cured bond may change composite behavior, but no adhesive product or structural calculation has been selected.", evidence_refs: [constraint_honesty, simpson_built_up_columns]}
+  - {id: bonded.part_count, concept: bonded_one_side_lamination, criterion: part_count, assessment: disadvantage, explanation: "Two boards and screws remain while adhesive, applicator, cleanup materials, and cure controls add process dependencies.", evidence_refs: [constraint_speed, constraint_rework]}
+  - {id: bonded.fasteners, concept: bonded_one_side_lamination, criterion: fasteners, assessment: neutral, explanation: "One-sided screws simplify access, yet their spacing and role must be reconciled with the selected adhesive system.", evidence_refs: [simpson_built_up_columns, constraint_honesty]}
+  - {id: bonded.operations, concept: bonded_one_side_lamination, criterion: operations, assessment: disadvantage, explanation: "Surface preparation, adhesive application, wet alignment, squeeze-out cleanup, clamping, driving, and labeled cure increase work substantially.", evidence_refs: [constraint_speed, constraint_rework]}
+  - {id: bonded.tooling, concept: bonded_one_side_lamination, criterion: tooling, assessment: neutral, explanation: "Basic tools still suffice, although adhesive application and protected cleanup expand the required shop setup.", evidence_refs: [req_simple_document, constraint_speed]}
+  - {id: bonded.tolerances, concept: bonded_one_side_lamination, criterion: tolerances, assessment: disadvantage, explanation: "Wet adhesive can let the long faces creep until enough uniform clamping pressure stabilizes their alignment.", evidence_refs: [req_near_4x4, constraint_speed]}
+  - {id: bonded.material, concept: bonded_one_side_lamination, criterion: material, assessment: disadvantage, explanation: "A compatible adhesive and its disposable application materials add purchases beyond the requested lumber and screws.", evidence_refs: [constraint_brief_fidelity, constraint_rework]}
+  - {id: bonded.appearance, concept: bonded_one_side_lamination, criterion: appearance, assessment: neutral, explanation: "One-sided heads reduce visible hardware, but poorly controlled squeeze-out can permanently mark the full-length seam.", evidence_refs: [req_near_4x4, constraint_speed]}
+  - {id: bonded.builder_skill, concept: bonded_one_side_lamination, criterion: builder_skill, assessment: disadvantage, explanation: "The builder must manage open time, coverage, clamping pressure, alignment, cleanup, and labeled cure conditions simultaneously.", evidence_refs: [req_simple_document, constraint_speed]}
+  - {id: bonded.instruction_complexity, concept: bonded_one_side_lamination, criterion: instruction_complexity, assessment: disadvantage, explanation: "Product selection, surface preparation, application rate, clamp state, and cure release each require additional controlled instructions.", evidence_refs: [req_simple_document, constraint_speed]}
+  - {id: solid.strength, concept: solid_four_by_four, criterion: strength, assessment: unknown, explanation: "A solid member removes interface transfer, but its grade, species, supports, loads, and capacity remain unspecified.", evidence_refs: [constraint_honesty, simpson_built_up_columns]}
+  - {id: solid.part_count, concept: solid_four_by_four, criterion: part_count, assessment: advantage, explanation: "One stock member replaces two boards and every screw, creating the smallest possible component inventory.", evidence_refs: [req_simple_document, simpson_built_up_columns]}
+  - {id: solid.fasteners, concept: solid_four_by_four, criterion: fasteners, assessment: advantage, explanation: "No interface exists, so the member needs no lamination fasteners, pilot marks, or alternating head pattern.", evidence_refs: [simpson_built_up_columns, req_simple_document]}
+  - {id: solid.operations, concept: solid_four_by_four, criterion: operations, assessment: advantage, explanation: "Selecting and cutting one straight stock member eliminates the entire alignment, clamping, and screw-driving sequence.", evidence_refs: [constraint_speed, req_simple_document]}
+  - {id: solid.tooling, concept: solid_four_by_four, criterion: tooling, assessment: advantage, explanation: "Only inspection and any final crosscut need tools because the ply-to-ply joint no longer exists.", evidence_refs: [req_simple_document, constraint_speed]}
+  - {id: solid.tolerances, concept: solid_four_by_four, criterion: tolerances, assessment: advantage, explanation: "Factory-planed stock establishes the square section without accumulated edge offset between two independently warped pieces.", evidence_refs: [req_near_4x4]}
+  - {id: solid.material, concept: solid_four_by_four, criterion: material, assessment: disadvantage, explanation: "The concept requires different lumber and discards the two-board material choice that defines the experiment.", evidence_refs: [req_two_2x4s, constraint_brief_fidelity]}
+  - {id: solid.appearance, concept: solid_four_by_four, criterion: appearance, assessment: advantage, explanation: "Four uninterrupted faces avoid both a lamination seam and all exposed interface screw heads entirely.", evidence_refs: [req_near_4x4]}
+  - {id: solid.builder_skill, concept: solid_four_by_four, criterion: builder_skill, assessment: advantage, explanation: "The builder performs no joinery beyond stock inspection and any ordinary square end trimming required.", evidence_refs: [req_simple_document, constraint_speed]}
+  - {id: solid.instruction_complexity, concept: solid_four_by_four, criterion: instruction_complexity, assessment: disadvantage, explanation: "Instructions would be shortest, but they could not truthfully document the requested two-by-four fastening experiment.", evidence_refs: [req_two_2x4s, constraint_brief_fidelity]}
+deviations:
+  - feature_ref: alternating_mechanical_lamination.twelve_inch_alternating_stations
+    forcing_requirement: req_spacing
+    exception: null
+decision:
+  selected_concept: alternating_mechanical_lamination
+  rationale: The dry alternating-side assembly is the only concept that preserves both requested two-by-fours, the twelve-inch screw pattern, reversible fabrication, ordinary homeowner tooling, and a compact near-four-by-four section.
+  decisive_cells:
+    - alternating.operations
+    - alternating.material
+    - alternating.builder_skill
+    - alternating.instruction_complexity
+  tradeoffs:
+    - The finished section measures three inches by three and one-half inches rather than the three-and-one-half-inch square section of a nominal four-by-four.
+    - The seam and alternating screw heads remain visible, and the assembly carries no structural-capacity or code-compliance approval.
+  application: implemented
+modeling_approval:
+  approved_by: Joel Witten
+  approved_on: 2026-07-15
+  selection_fingerprint: 0badb26b2bb1e1c90523a430c0b37e1b513248d26cdc10d40145c4b7d9bbdea8
+delivery_confirmation:
+  approved_by: Joel Witten
+  approved_on: 2026-07-15
+  selection_fingerprint: 0badb26b2bb1e1c90523a430c0b37e1b513248d26cdc10d40145c4b7d9bbdea8
+  model_fingerprint: 36eb70fffd81e26e139b858f71428263675ff8d0b386a40f8eec864a30302c81

@@ -804,12 +804,125 @@ TREB_DESIGN_LEDE = (
     "adopted with per-connection disclosure and filed as CL v2 vocabulary material.")
 
 
+# ------------------------------------------------------------------------------
+# Built-up 2x4 member: a deliberately small Plumb consumer used to measure the
+# workflow cost of producing a complete, governed document from a simple brief.
+# ------------------------------------------------------------------------------
+BUILT_SPEC = _REPO / "details" / "built_up_2x4.spec.yaml"
+BUILT_STORE = find_detail_store(REVIEWS_DIR, "built_up_2x4", "visual")
+BUILT_DESIGN_STORE = find_detail_store(REVIEWS_DIR, "built_up_2x4", "design")
+BUILT_VIEWS_DIR = _REPO / "outputs" / "built_up_2x4" / "views"
+BUILT_RENDER_SCRIPT = _REPO / "scripts" / "render_built_up_2x4_views.py"
+BUILT_TITLE = "Built-Up 2×4 Member — Model-Backed Fabrication Document"
+
+BUILT_TITLE_BLOCK = {
+    "eyebrow": "Shop Fabrication &middot; Built-Up Lumber",
+    "h1": "Built-Up 2×4 Member",
+    "lede": (
+        "Two straight eight-foot nominal 2×4s clamped wide-face to wide-face and "
+        "joined by eight screws at twelve-inch centers, alternating drive faces. "
+        "Every drawing and number below comes from one validated parametric model."
+    ),
+    "scale": "Dimensions govern; long member views are compressed for legibility",
+    "stock": "2x nominal 2×4 × 8ft + 8x representative 0.22in × 2.5in structural wood screws",
+}
+
+BUILT_BUY_LEDE = (
+    "Buy two straight, dry nominal 2×4s at least 96 inches long and eight compatible "
+    "2.5-inch structural wood screws near the modeled 0.22-inch diameter envelope. "
+    "Confirm the purchased screw's current manufacturer instructions, drive bit, "
+    "coating, lumber-treatment compatibility, edge distances, and permitted use."
+)
+
+BUILT_FOOTER = {
+    "byline": "Witten Dacha &middot; Built-Up 2×4 Experiment",
+    "tagline": (
+        "Drawings and numbers generated from one parametric model; geometry validation "
+        "does not establish structural capacity"
+    ),
+    "regen_cmd": ".venv/bin/python scripts/built_up_2x4_documents.py --preview",
+    "render_note": "renders: model-backed matplotlib shop views",
+}
+
+BUILT_PANEL = {
+    "letter": "A",
+    "title": "Two-Ply Built-Up 2×4",
+    "sub": "wide-face lamination with alternating screw heads",
+    "views": ["iso", "side_a", "side_b", "section", "stations"],
+    "captions": {
+        "iso": "The complete 96-inch member. The seam between plies remains visible; A/B labels identify the alternating screw-head faces.",
+        "side_a": "Face A carries heads at 6, 30, 54, and 78 inches. Dashed rings locate the intervening screws driven from face B.",
+        "side_b": "Face B carries heads at 18, 42, 66, and 90 inches. Dashed rings locate the intervening screws driven from face A.",
+        "section": "Two actual 1.5 × 3.5-inch sections create a 3 × 3.5-inch assembly — closer to, but not dimensionally equal to, a nominal 4×4.",
+        "stations": "Lay out every center from one reference end: 6-inch end offsets with seven 12-inch spaces between eight screws.",
+    },
+    "why": (
+        "WHY ALTERNATE THE DRIVE FACES?",
+        "Alternating the visible heads distributes the owner-selected mechanical fastening pattern across both broad faces and makes every consecutive station easy to audit. The pattern is a fabrication choice, not an engineered structural schedule.",
+    ),
+    "narrative": [
+        "Two nominal 2×4s finish at {member_length:g}in long × {stud_thickness:g}in thick × {stud_depth:g}in deep. Their broad faces contact to create an actual {assembly_width:g}in × {stud_depth:g}in section.",
+        "The {station_count:g} representative screws run from {first_station:g}in through {final_station:g}in at {station_spacing:g}in on center. Face A carries alternating stations beginning at the reference end; face B carries the intervening stations.",
+        "Each modeled screw is {screw_diameter:g}in diameter × {screw_length:g}in long. Through a {stud_thickness:g}in entry ply, that leaves {modeled_embedment:g}in of geometric bite in the receiving ply.",
+        "Species, grade, moisture, loads, supports, end connections, composite action, structural capacity, and code compliance are NOT ANALYZED.",
+    ],
+    "fieldnotes": [
+        ("Select and orient stock.", "Choose two straight {member_length:g}in nominal 2×4s. Reject severe twist, bow, splits, decay, or damage. Place the broad faces together and choose one common reference end."),
+        ("Mark from one datum.", "From the reference end, mark centers at {first_station:g}in and then every {station_spacing:g}in through {final_station:g}in. Carry each mark to the correct face before clamping."),
+        ("Clamp fully closed.", "Align both ends and both long edges. Clamp the mating faces closed along the length; do not use screw driving to pull a large bow or twist into alignment."),
+        ("Drive alternating faces.", "Drive the first screw from face A, then alternate A/B at each consecutive station. Seat each head on the surface per the screw manufacturer's instruction; do not countersink unless that product explicitly requires it."),
+        ("Inspect before use.", "Verify {station_count:g} seated heads, straightness, flush ends and edges, a closed seam, no split lumber, and no protruding tips. Stop: this document does not approve the member for structural use."),
+    ],
+}
+
+BUILT_VIEW_FILES = {
+    "iso": "iso.png",
+    "side_a": "side_a.png",
+    "side_b": "side_b.png",
+    "section": "section.png",
+    "stations": "stations.png",
+}
+
+BUILT_DESIGN_TITLE = "Design review &mdash; built-up-member intent register"
+BUILT_DESIGN_LEDE = (
+    "The governed concept review compared three build methods. The owner selected "
+    "two full-length 2×4 plies, no adhesive, and eight screws at 12 inches on center "
+    "with alternating drive faces. That geometry is implemented exactly; capacity "
+    "and use approval remain explicit unknowns."
+)
+
+
+def _render_compiled_built_up_2x4_views(detail, out_dir: Path) -> None:
+    from render_built_up_2x4_views import render_built_up_2x4_views
+
+    render_built_up_2x4_views(detail, out_dir)
+
+
 def _render_compiled_caddy_views(detail, out_dir: Path) -> None:
     from render_caddy_views import render_caddy_views
 
     render_caddy_views(detail, out_dir)
 
 CONSUMERS = {
+    "built_up_2x4.spec.yaml": {
+        "name": "built_up_2x4",
+        "spec": BUILT_SPEC,
+        "panel": BUILT_PANEL,
+        "views_dir": BUILT_VIEWS_DIR,
+        "view_files": BUILT_VIEW_FILES,
+        "store": BUILT_STORE,
+        "design_store": BUILT_DESIGN_STORE,
+        "design_title": BUILT_DESIGN_TITLE,
+        "design_lede": BUILT_DESIGN_LEDE,
+        "title": BUILT_TITLE,
+        "title_block": BUILT_TITLE_BLOCK,
+        "buy_lede": BUILT_BUY_LEDE,
+        "footer": BUILT_FOOTER,
+        "cut_note_context": "",
+        "render_views": _render_compiled_built_up_2x4_views,
+        "ensure_views": lambda: _ensure_views(
+            BUILT_VIEWS_DIR, BUILT_VIEW_FILES, BUILT_RENDER_SCRIPT),
+    },
     "armchair_caddy.spec.yaml": {
         "name": "armchair_caddy",
         "spec": CADDY_SPEC,
@@ -937,7 +1050,8 @@ def _relative_html_basename(value: str, field: str) -> str:
 
 
 def _title_block(detail, headline: str, tb: dict,
-                 companion_href: str | None = None) -> str:
+                 companion_href: str | None = None,
+                 companion_summary: str | None = None) -> str:
     """The document header, from the consumer's ``title_block`` dict (eyebrow / h1 /
     lede / scale / stock) — parametrized so a second detail carries its OWN identity,
     not the caddy's (the caddy dict is unchanged from the hardcoded original)."""
@@ -945,6 +1059,10 @@ def _title_block(detail, headline: str, tb: dict,
     companion = ""
     if companion_href is not None:
         href = _relative_html_basename(companion_href, "companion_href")
+        summary = companion_summary or (
+            "Model-backed assembly panels with ghosted prior work, numbered "
+            "parts, placement marks, tools, hardware, and stop gates."
+        )
         companion = f"""
       <div style="margin-top:1rem;padding:.85rem 1rem;border:2px solid #1d4ed8;
                   border-radius:8px;background:#eff6ff">
@@ -953,8 +1071,7 @@ def _title_block(detail, headline: str, tb: dict,
           Open the illustrated step-by-step assembly manual &rarr;
         </a>
         <div style="margin-top:.25rem;font-size:.9rem;color:#334155">
-          Five model-backed panels with ghosted prior work, numbered parts,
-          placement marks, tools, hardware, and stop gates.
+          {_html.escape(summary)}
         </div>
       </div>"""
     return f"""
@@ -1093,11 +1210,37 @@ def build_single_detail_html(name: str, detail, views_dir: Path, panel_cfg: dict
     headline = render_headline_line(coverage_matrix(report))
     head = CR.HEAD.replace(
         "Zipline Launch Platform — Model-Backed Build Document", title)
+    responsive_style = """
+  @media (max-width:760px){
+    body{padding:6px;}
+    .tb-title{flex:1 1 100%;border-right:none;padding:16px 14px;}
+    .tb-meta{flex:1 1 100%;}
+    .panel,.notes,.legend,.existing,.provenance{padding-left:14px;padding-right:14px;}
+    table{display:block;max-width:100%;overflow-x:auto;}
+  }
+  @media print{
+    body{padding:0;background:white;}
+    .sheet{border:0;box-shadow:none;max-width:none;}
+    .viewer-btn,.v-controls{display:none!important;}
+  }
+"""
+    head = head.replace("</style>", responsive_style + "</style>", 1)
 
     parts = [
         head,
         '<div class="sheet">',
-        _title_block(detail, headline, title_block, companion_href),
+        _title_block(
+            detail,
+            headline,
+            title_block,
+            companion_href,
+            (
+                f"{len(instruction_manual.panels)} model-backed assembly "
+                f"panel{'s' if len(instruction_manual.panels) != 1 else ''} "
+                "with ghosted prior work, numbered parts, tools, hardware, "
+                "and stop gates."
+            ) if instruction_manual is not None else None,
+        ),
         CR.render_panel(name, panel_cfg, detail, image_uris, callouts, slug),
         CR.render_coverage_section({name: detail}, {name: report}),
         _render_install_section(detail, report),

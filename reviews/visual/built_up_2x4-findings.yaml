@@ -1,0 +1,106 @@
+version: 1
+findings:
+  - id: V1
+    subject: screw heads are visually small in the full-length member view
+    suspected_issue: >-
+      Eight real screw heads occupy very little area when a 96-inch member is
+      shown in one frame, so the alternating-face pattern can be missed if the
+      axonometric view is read alone.
+    severity: LOW
+    visual_evidence: >-
+      iso.png shows all eight modeled centers but the hardware is necessarily
+      small relative to the member. side_a.png, side_b.png, and stations.png
+      separate the two drive faces and label every center from 6 through 90
+      inches.
+    renders:
+      - path: outputs/built_up_2x4/views/iso.png
+      - path: outputs/built_up_2x4/views/side_a.png
+      - path: outputs/built_up_2x4/views/side_b.png
+      - path: outputs/built_up_2x4/views/stations.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Retain the full-member view for assembly context and use the face and
+      station drawings as the fabrication authority for screw layout.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Accepted as a scale condition. The dedicated views make all eight
+        centers and both drive faces legible without enlarging the modeled
+        hardware or pretending the screws are bigger than they are.
+
+  - id: V2
+    subject: rendered geometry may look more structurally conclusive than it is
+    suspected_issue: >-
+      A closed seam and regular fastener pattern can visually suggest that the
+      built-up member has known composite strength, even though the model only
+      proves placement, overlap, contact, and basic installation geometry.
+    severity: MEDIUM
+    visual_evidence: >-
+      iso.png and section.png show a coherent 3 by 3.5-inch assembly, but no
+      render supplies species, grade, moisture, load, support, connection,
+      withdrawal, shear, or code evidence.
+    renders:
+      - path: outputs/built_up_2x4/views/iso.png
+      - path: outputs/built_up_2x4/views/section.png
+    invariant_family: Structural capacity
+    recommended_action: >-
+      Keep structural capacity and code compliance UNKNOWN — NOT ANALYZED in
+      the coverage matrix and repeat the hold in the fabrication and
+      commissioning documents.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        The model and documents consistently state the non-claim. No visual
+        observation was promoted into structural evidence.
+
+  - id: V3
+    subject: interactive 3D default camera makes the long member read as a thin line
+    suspected_issue: >-
+      The standard orbit viewer frames the entire 96-inch member in a shallow
+      hero viewport. At its real 3 by 3.5-inch section, the member is visibly
+      much thinner than the static shop drawings and is not the clearest way to
+      audit the fastener pattern.
+    severity: LOW
+    visual_evidence: >-
+      Browser review at 1280 by 720 confirmed that the GLB loads, the canvas
+      opens, five dimension labels toggle, the explode slider reaches 1, the
+      assembly slider reports panel 1, and Close restores the static view. The
+      member remains a thin line at the default camera distance.
+    renders:
+      - path: outputs/built_up_2x4/views/iso.png
+      - path: outputs/built_up_2x4/views/stations.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Treat the interactive viewer as supplemental and retain the five static
+      model-backed views as fabrication authority. A general camera-fit repair
+      for extreme-aspect-ratio details belongs in a separate presentation task.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Accepted as a presentation limitation for this narrowly scoped
+        experiment. No geometry, dimension, hardware, or control failure was
+        observed, and no fake hardware enlargement was introduced.
+
+  - id: V4
+    subject: dense evidence tables overflowed the 390-pixel mobile viewport
+    suspected_issue: >-
+      The first responsive browser pass measured a 493-pixel document width on
+      a 390-pixel viewport because three evidence tables retained their
+      intrinsic desktop width.
+    severity: LOW
+    visual_evidence: >-
+      Fresh browser measurement after the source CSS revision reports a
+      390-pixel document scroll width, zero oversized images/tables/canvases,
+      and 374-pixel title and metadata blocks.
+    renders:
+      - path: outputs/built_up_2x4/views/section.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Keep tables constrained to their section with local horizontal scrolling
+      and stack the title/meta blocks below the 760-pixel breakpoint.
+    resolution:
+      status: fixed-by-revision
+      note: >-
+        Implemented in the single-detail source stylesheet and verified after
+        source regeneration. The shared consolidated-report source was not
+        modified.

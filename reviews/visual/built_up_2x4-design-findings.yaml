@@ -1,0 +1,48 @@
+version: 1
+findings:
+  - id: DS1
+    subject: actual section is closer to a 4x4 but is not a true 4x4
+    suspected_issue: >-
+      Calling two laminated 2x4s a 4x4 can conceal the finished-size mismatch:
+      two 1.5-inch thicknesses make 3 inches, while the retained broad-face
+      dimension is 3.5 inches.
+    severity: MEDIUM
+    visual_evidence: >-
+      section.png dimensions the compiled assembly at exactly 3 inches by 3.5
+      inches and labels each 1.5 by 3.5-inch ply independently.
+    renders:
+      - path: outputs/built_up_2x4/views/section.png
+    invariant_family: UNKNOWN
+    recommended_action: >-
+      Name the result a built-up 2x4 member and publish its actual section
+      everywhere a fit or interface may depend on size.
+    resolution:
+      status: fixed-by-revision
+      note: >-
+        Implemented in the model, title block, section drawing, captions, and
+        honest-limits prose. The package never labels the section as a 4x4.
+
+  - id: DS2
+    subject: 12-inch alternating screw pattern is an owner brief, not an engineered schedule
+    suspected_issue: >-
+      A precise 6-to-90-inch station chain may be mistaken for a prescriptive
+      structural fastening schedule even though no load case or fastener design
+      calculation selected it.
+    severity: MEDIUM
+    visual_evidence: >-
+      stations.png accurately shows eight centers at 12 inches on center with
+      alternating faces; the precision proves conformance to the selected
+      concept only.
+    renders:
+      - path: outputs/built_up_2x4/views/stations.png
+    invariant_family: Structural capacity
+    recommended_action: >-
+      Preserve the exact layout while explicitly withholding structural,
+      composite-action, code, and use approval. Require separate engineering
+      for any load-bearing application.
+    resolution:
+      status: documented-assumption-or-unknown
+      note: >-
+        Implemented as a package-wide hold. The two modeled connections state
+        that the one-inch receiving-ply bite is geometric and that capacity is
+        not analyzed.
