@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime
 import hashlib
@@ -13,6 +14,7 @@ import json
 from pathlib import Path
 import shutil
 import sys
+from time import perf_counter
 
 import matplotlib
 
@@ -82,11 +84,19 @@ def _is_ordinary_wood_screw(component) -> bool:
     return "ordinary_wood_screw" in component.capability_tags()
 
 
-def _part_polys(part, offset=(0.0, 0.0, 0.0)):
+def _part_polys(part):
     vertices, triangles = part.world_solid().val().tessellate(0.12)
     values = np.array([[v.x, v.y, v.z] for v in vertices], dtype=float)
-    values += np.array(offset, dtype=float)
-    return values, [values[list(triangle)] for triangle in triangles]
+    return values, tuple(tuple(triangle) for triangle in triangles)
+
+
+@contextmanager
+def _record_phase(phases: dict[str, float], name: str):
+    started = perf_counter()
+    try:
+        yield
+    finally:
+        phases[name] = perf_counter() - started
 
 
 def _shade(base, faces, alpha=1.0):
@@ -122,6 +132,10 @@ def render_family_birdhouse_views(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     detail.build()
+    meshes = [
+        (part, *_part_polys(part))
+        for part in detail.assembly.parts
+    ]
     explode = {
         name: tuple(value * IN for value in vector)
         for name, vector in detail.explode_vectors().items()
@@ -131,9 +145,10 @@ def render_family_birdhouse_views(
     def draw(filename, elev, azim, title, *, ghost=(), exploded=False):
         parts = []
         all_vertices = []
-        for part in detail.assembly.parts:
+        for part, base_vertices, triangles in meshes:
             offset = explode.get(part.name, (0.0, 0.0, 0.0)) if exploded else (0, 0, 0)
-            vertices, faces = _part_polys(part, offset)
+            vertices = base_vertices + np.array(offset, dtype=float)
+            faces = [vertices[list(triangle)] for triangle in triangles]
             all_vertices.append(vertices)
             parts.append((part, faces))
         vertices = np.vstack(all_vertices)
@@ -454,18 +469,22 @@ def build_family_birdhouse_package(
     preview: bool = True,
 ) -> dict:
     """Build the governed package; refuse unconfirmed customer delivery."""
+    total_started = perf_counter()
+    phases: dict[str, float] = {}
     spec_path = Path(spec_path)
-    detail = compile_spec_file(spec_path)
-    report = detail.validate()
-    if preview:
-        detail.require_modeling_approval()
-    else:
-        detail.require_delivery_ready()
+    with _record_phase(phases, "compile_validate"):
+        detail = compile_spec_file(spec_path)
+        report = detail.validate()
+        if preview:
+            detail.require_modeling_approval()
+        else:
+            detail.require_delivery_ready()
 
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     model_dir = out_dir / "model"
-    detail.render_documentation(model_dir)
+    with _record_phase(phases, "documentation_export"):
+        detail.render_documentation(model_dir)
 
     _register_technical_consumer(out_dir)
     technical_path = out_dir / TECHNICAL_BASENAME
@@ -476,6 +495,10 @@ def build_family_birdhouse_package(
     bom_path = out_dir / BOM_CSV_BASENAME
     cut_path = out_dir / CUT_CSV_BASENAME
 
+    with _record_phase(phases, "still_views"):
+        render_family_birdhouse_views(detail, out_dir / "views")
+
+    phase_started = perf_counter()
     related = (
         RelatedDocumentLink("Technical model + interactive 3D", TECHNICAL_BASENAME),
         RelatedDocumentLink("Adult fabrication guide", FABRICATION_BASENAME),
@@ -515,16 +538,20 @@ def build_family_birdhouse_package(
         render_instruction_manual_html(detail, manual, image_paths),
         encoding="utf-8",
     )
+    phases["instruction_panels"] = perf_counter() - phase_started
 
-    SDR.build_document(
-        technical_path,
-        spec_path=spec_path,
-        companion_href=MANUAL_BASENAME,
-        compiled_detail=detail,
-        instruction_manual=manual,
-        document_notice=PREVIEW_NOTICE if preview else None,
-    )
+    with _record_phase(phases, "technical_document"):
+        SDR.build_document(
+            technical_path,
+            spec_path=spec_path,
+            companion_href=MANUAL_BASENAME,
+            compiled_detail=detail,
+            instruction_manual=manual,
+            document_notice=PREVIEW_NOTICE if preview else None,
+            prepared_documentation_dir=model_dir,
+        )
 
+    phase_started = perf_counter()
     governance = detail.design_governance
     selection_fp = governance.selection_digest
     model_fp = governance.model_digest
@@ -545,7 +572,9 @@ def build_family_birdhouse_package(
     )
     _write_bom_csv(detail, bom_path)
     _write_cut_csv(detail, cut_path)
+    phases["companion_documents"] = perf_counter() - phase_started
 
+    phase_started = perf_counter()
     step_path = model_dir / "family_birdhouse.step"
     glb_path = model_dir / "detail.glb"
     model_manifest_path = model_dir / "detail.manifest.json"
@@ -577,6 +606,15 @@ def build_family_birdhouse_package(
         *[image_paths[index] for index in sorted(image_paths)],
         *sorted((out_dir / "views").glob("*.png")),
     )
+    file_sha256 = {
+        str(path.relative_to(out_dir)): _sha256(path)
+        for path in hash_paths
+    }
+    phases["package_hashing"] = perf_counter() - phase_started
+    performance_seconds = {
+        **phases,
+        "total": perf_counter() - total_started,
+    }
     package_manifest = {
         "schema": "detailgen/family-birdhouse-package/v1",
         "release_state": PREVIEW_NOTICE if preview else "DELIVERY CONFIRMED",
@@ -608,10 +646,8 @@ def build_family_birdhouse_package(
             "coating suitability",
             "fastener and installation capacity",
         ],
-        "file_sha256": {
-            str(path.relative_to(out_dir)): _sha256(path)
-            for path in hash_paths
-        },
+        "performance_seconds": performance_seconds,
+        "file_sha256": file_sha256,
     }
     package_manifest_path = out_dir / PACKAGE_MANIFEST_BASENAME
     package_manifest_path.write_text(
@@ -635,6 +671,7 @@ def build_family_birdhouse_package(
         "panel_images": tuple(
             str(image_paths[index]) for index in sorted(image_paths)
         ),
+        "performance_seconds": performance_seconds,
         "preview": preview,
     }
 

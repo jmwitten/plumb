@@ -4,6 +4,7 @@ import csv
 import json
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -16,6 +17,49 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 import family_birdhouse_report as FBR
+
+
+def test_five_still_views_tessellate_each_placed_part_once(monkeypatch, tmp_path):
+    class _Component:
+        material_key = "cedar"
+
+        @staticmethod
+        def capability_tags():
+            return frozenset()
+
+    parts = [
+        SimpleNamespace(name=f"part {index}", component=_Component())
+        for index in range(3)
+    ]
+
+    class _Detail:
+        assembly = SimpleNamespace(parts=parts)
+
+        @staticmethod
+        def build():
+            return None
+
+        @staticmethod
+        def explode_vectors():
+            return {parts[-1].name: (1.0, 0.0, 0.0)}
+
+    calls = []
+
+    def fake_part_polys(part):
+        calls.append(part.name)
+        return (
+            FBR.np.array(
+                [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 1.0]]
+            ),
+            ((0, 1, 2),),
+        )
+
+    monkeypatch.setattr(FBR, "_part_polys", fake_part_polys)
+
+    written = FBR.render_family_birdhouse_views(_Detail(), tmp_path)
+
+    assert len(written) == 5
+    assert calls == [part.name for part in parts]
 
 
 @pytest.fixture(scope="module")
@@ -51,6 +95,21 @@ def test_package_contains_model_documents_data_and_model_exports(package):
     assert len(result["panel_images"]) == result["panel_count"]
     assert all(Path(path).is_file() for path in result["panel_images"])
     assert len(list((out / "views").glob("*.png"))) == 5
+    expected_phases = {
+        "compile_validate",
+        "documentation_export",
+        "still_views",
+        "instruction_panels",
+        "technical_document",
+        "companion_documents",
+        "package_hashing",
+        "total",
+    }
+    assert expected_phases == set(result["performance_seconds"])
+    assert all(
+        seconds >= 0.0
+        for seconds in result["performance_seconds"].values()
+    )
 
 
 def test_every_reader_document_is_reciprocal_offline_and_unmistakably_preview(package):
