@@ -1,0 +1,53 @@
+[
+  {
+    "ref": "home_depot_318899877",
+    "item_label": "Structural screw",
+    "display_size": "#9 × 2-1/2 in.",
+    "diameter_in": 0.177,
+    "length_in": 2.5,
+    "head_style": "washer head",
+    "drive_style": "hex/star drive",
+    "product_class": "structural_screw",
+    "manufacturer": "Grip-Rite",
+    "model_number": "GRSSHW921250E",
+    "retailer": "Home Depot",
+    "retailer_product_id": "318899877",
+    "retailer_url": "https://www.homedepot.com/p/318899877",
+    "retrieved_on": "2026-07-16",
+    "geometry_basis": "Retailer #9 trade size normalized to a 0.177 in. modeled major diameter; not a capacity claim."
+  },
+  {
+    "ref": "home_depot_204307961",
+    "item_label": "Heavy-duty wood screw",
+    "display_size": "3/16 in. × 2-1/2 in.",
+    "diameter_in": 0.1875,
+    "length_in": 2.5,
+    "head_style": "hex head",
+    "drive_style": "external hex drive",
+    "product_class": "structural_screw",
+    "manufacturer": "FastenMaster",
+    "model_number": "FMTLOK212-INDY",
+    "retailer": "Home Depot",
+    "retailer_product_id": "204307961",
+    "retailer_url": "https://www.homedepot.com/p/204307961",
+    "retrieved_on": "2026-07-16",
+    "geometry_basis": "Retailer title states the modeled 3/16 in. diameter and 2-1/2 in. length; not a capacity claim."
+  },
+  {
+    "ref": "home_depot_311953071",
+    "item_label": "Structural wood screw",
+    "display_size": "1/4 in. × 2-1/2 in.",
+    "diameter_in": 0.25,
+    "length_in": 2.5,
+    "head_style": "low-profile washer head",
+    "drive_style": "star drive",
+    "product_class": "structural_screw",
+    "manufacturer": "GRK Fasteners",
+    "model_number": "95305",
+    "retailer": "Home Depot",
+    "retailer_product_id": "311953071",
+    "retailer_url": "https://www.homedepot.com/p/311953071",
+    "retrieved_on": "2026-07-16",
+    "geometry_basis": "Retailer title states the modeled 1/4 in. diameter and 2-1/2 in. length; not a capacity claim."
+  }
+]

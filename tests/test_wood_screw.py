@@ -10,6 +10,9 @@ from detailgen.core.base import Component
 from detailgen.core.buildinfo import geometry_hash
 from detailgen.core.registry import components
 from detailgen.core.units import IN
+from detailgen.rendering.instruction_panels import reader_dimensions
+from detailgen.rendering.web_viewer import build_viewer_payload
+from detailgen.spec import compile_spec, load_spec_text
 
 
 class _CapableWoodScrew(Component):
@@ -67,6 +70,55 @@ def test_interior_wood_screw_omits_only_exterior_capability():
     ).capability_tags()
 
     assert exterior - interior == {"exterior_use"}
+
+
+def test_structural_screw_resolves_catalog_reference_from_spec():
+    detail = compile_spec(load_spec_text("""
+name: catalog screw probe
+units: in
+components:
+  - id: screw
+    type: structural_screw
+    name: joint screw
+    params: {catalog_ref: home_depot_204307961}
+"""))
+    detail.build()
+    screw = detail.assembly.parts[0].component
+
+    assert screw.diameter == pytest.approx(3 / 16 * IN)
+    assert screw.length == pytest.approx(2.5 * IN)
+    assert reader_dimensions(screw) == "3/16 in. × 2-1/2 in."
+    assert screw.describe() == (
+        "3/16 in. × 2-1/2 in., external hex drive, hex head"
+    )
+    assert "FastenMaster" not in screw.describe()
+    assert detail.bom_table()[0]["source"] == (
+        "https://www.homedepot.com/p/204307961"
+    )
+    payload = build_viewer_payload(detail)
+    viewer_part = payload["parts"]["joint screw"]
+    assert viewer_part["existing"] is False
+    assert viewer_part["specs"] == [
+        ["size", "3/16 in. \u00d7 2-1/2 in."],
+        ["head style", "hex head"],
+        ["drive style", "external hex drive"],
+        ["catalog reference", "home_depot_204307961"],
+    ]
+
+
+def test_structural_screw_catalog_inputs_fail_loudly():
+    from detailgen.components import StructuralScrew
+
+    with pytest.raises(ValueError, match="unknown screw catalog reference"):
+        StructuralScrew(catalog_ref="home_depot_missing")
+    with pytest.raises(ValueError, match="either catalog_ref or explicit"):
+        StructuralScrew(
+            3 / 16 * IN,
+            2.5 * IN,
+            catalog_ref="home_depot_204307961",
+        )
+    with pytest.raises(ValueError, match="requires catalog_ref or both"):
+        StructuralScrew()
 
 
 @pytest.mark.parametrize(

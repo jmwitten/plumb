@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import html
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -300,8 +301,13 @@ def render_instruction_manual_html(
     image_paths: dict[int, Path],
     *,
     generated_at: str | None = None,
+    viewer: dict[str, object] | None = None,
 ) -> str:
-    """Compose one offline HTML manual from typed panels and keyed PNGs."""
+    """Compose one offline HTML manual from typed panels and keyed PNGs.
+
+    ``viewer`` reuses the platform's existing interactive payload and GLB
+    contract. It is screen-only and appears before the instruction overview.
+    """
     expected = {panel.index for panel in manual.panels}
     if set(image_paths) != expected:
         raise InstructionPresentationError(
@@ -383,6 +389,35 @@ def render_instruction_manual_html(
         )
         related_document_styles = ""
 
+    viewer_html = ""
+    viewer_style = ""
+    viewer_script = ""
+    if viewer is not None:
+        from .web_viewer import vendor_js, viewer_css, viewer_js
+
+        payload = viewer["payload"]
+        slug = payload["slug"]
+        payload_json = json.dumps(
+            payload, separators=(",", ":")
+        ).replace("</", "<\\/")
+        isometric_href = str(viewer["isometric_href"])
+        viewer_html = (
+            '<section class="viewer-section" aria-label="Interactive 3D">'
+            '<div class="viewer-copy"><h2>Explore the build in 3D</h2>'
+            '<p>Use Explode to separate the compiled parts, then click any part '
+            'for its model-derived size and build information.</p></div>'
+            f'<div class="viewer-slot" data-detail="{_e(slug)}">'
+            f'<img src="{_e(isometric_href)}" alt="Interactive assembly preview">'
+            '<button type="button" class="viewer-btn">Explore in 3D</button>'
+            '</div></section>'
+            f'<script type="application/json" id="detail-data-{_e(slug)}">'
+            f'{payload_json}</script>'
+            f'<script type="text/plain" id="detail-glb-{_e(slug)}">'
+            f'{viewer["glb_b64"]}</script>'
+        )
+        viewer_style = viewer_css()
+        viewer_script = f"<script>{vendor_js()}\n{viewer_js()}</script>"
+
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -390,7 +425,8 @@ def render_instruction_manual_html(
 <title>{_e(manual.title)}</title>
 <style>
 :root{{--ink:#111827;--muted:#475569;--line:#cbd5e1;--paper:#fff;--blue:#2563eb;
---blue-soft:#eff6ff;--amber:#92400e;--amber-soft:#fffbeb;--red:#991b1b;--red-soft:#fef2f2}}
+--blue-soft:#eff6ff;--amber:#92400e;--amber-soft:#fffbeb;--red:#991b1b;--red-soft:#fef2f2;
+--sheet:var(--paper);--acc:var(--blue);--acc-soft:var(--blue-soft);--faint:var(--line);--chipbg:#f8fafc}}
 *{{box-sizing:border-box}} html{{scroll-behavior:smooth}}
 body{{margin:0;background:#e2e8f0;color:var(--ink);font:16px/1.48 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}}
 .manual{{max-width:1050px;margin:0 auto;background:var(--paper);min-height:100vh;box-shadow:0 0 30px #64748b55}}
@@ -400,6 +436,10 @@ h1{{font-size:clamp(2rem,5vw,3.25rem);line-height:1.05;margin:.35rem 0 .75rem}} 
 .lede{{max-width:760px;color:#dbeafe;font-size:1.07rem}} .manual-link{{display:inline-block;margin-top:.8rem;padding:.65rem .85rem;border:1px solid #93c5fd;border-radius:7px;color:white;font-weight:750;text-decoration:none}}
 {related_document_styles}.generated{{margin-top:1rem;font-size:.78rem;color:#94a3b8}}
 .safety-banner{{margin:0;padding:.7rem 1.2rem;background:#fff7ed;border-bottom:2px solid #c2410c;color:#7c2d12;font-weight:750}}
+.viewer-section{{padding:1.4rem 2.25rem 1.6rem;border-bottom:1px solid var(--line);background:#f8fafc}}
+.viewer-copy h2{{margin:.1rem 0 .35rem}}.viewer-copy p{{margin:.2rem 0 1rem;color:var(--muted)}}
+.viewer-slot{{aspect-ratio:4/3;overflow:hidden;background:white;border:1px solid var(--line);border-radius:8px}}
+.viewer-slot>img{{display:block;width:100%;height:100%;object-fit:contain}}
 .stop-notice{{margin:0;padding:1rem 1.2rem;background:var(--red-soft);border-bottom:4px solid #b91c1c;color:var(--red)}}
 .stop-notice h3{{margin:0 0 .25rem;font-size:1.2rem;letter-spacing:.04em}} .stop-notice p{{margin:0;font-weight:800}}
 .overview{{padding:1.4rem 2.25rem;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1.1fr 1fr;gap:1.25rem}}
@@ -458,7 +498,8 @@ text.diagram-mark.role-hold{{fill:#dc2626;stroke:none;font-size:3px}}
 .panel-nav a{{color:var(--blue);font-weight:750;text-decoration:none}} .panel-nav .disabled{{visibility:hidden}}
 .manual-foot{{padding:1.5rem 2.25rem 2rem;border-top:1px solid var(--line);background:#f8fafc}} .manual-foot a{{color:var(--blue);font-weight:800}}
 @media(max-width:700px){{.overview{{grid-template-columns:1fr}}.instruction-panel{{margin:1rem .5rem}}.manual-head,.overview{{padding-left:1rem;padding-right:1rem}}.panel-index{{grid-template-columns:repeat(3,1fr)}}.render-legend{{width:100%;margin-left:0}}.panel-controls{{grid-template-columns:auto 1fr auto}}#panel-progress{{grid-column:1/-1;text-align:center}}.diagram-coordinate-key ol{{columns:1}}}}
-@media print{{body{{background:white}}.manual{{box-shadow:none;max-width:none}}.manual-head{{padding:.65rem 1.2rem}}.manual-head h1{{font-size:1.65rem;margin:.2rem 0}}.lede{{font-size:.78rem;line-height:1.25;margin:.3rem 0}}.manual-link{{margin-top:.25rem;padding:.15rem 0;border:0;color:white}}.generated{{margin-top:.2rem}}.safety-banner{{font-size:.72rem;padding:.35rem 1rem}}.overview{{display:flex;flex-direction:column;padding:.55rem 1.2rem}}.overview>div:last-child{{order:-1;margin-bottom:.6rem}}.overview h2{{font-size:.85rem}}.inventory{{columns:2;column-gap:1rem}}.inventory{{font-size:.68rem;line-height:1.18}}.inventory li{{break-inside:avoid;margin:.25rem 0}}.inventory .resource-icon{{width:1rem;height:1rem}}.instruction-panel{{break-inside:avoid;margin:1rem 0}}.panel-nav{{display:none}}.panel-controls{{display:none}}.manual-foot{{display:none}}}}
+@media print{{body{{background:white}}.manual{{box-shadow:none;max-width:none}}.manual-head{{padding:.65rem 1.2rem}}.manual-head h1{{font-size:1.65rem;margin:.2rem 0}}.lede{{font-size:.78rem;line-height:1.25;margin:.3rem 0}}.manual-link{{margin-top:.25rem;padding:.15rem 0;border:0;color:white}}.generated{{margin-top:.2rem}}.safety-banner{{font-size:.72rem;padding:.35rem 1rem}}.viewer-section{{display:none}}.overview{{display:flex;flex-direction:column;padding:.55rem 1.2rem}}.overview>div:last-child{{order:-1;margin-bottom:.6rem}}.overview h2{{font-size:.85rem}}.inventory{{columns:2;column-gap:1rem}}.inventory{{font-size:.68rem;line-height:1.18}}.inventory li{{break-inside:avoid;margin:.25rem 0}}.inventory .resource-icon{{width:1rem;height:1rem}}.instruction-panel{{break-inside:avoid;margin:1rem 0}}.panel-nav{{display:none}}.panel-controls{{display:none}}.manual-foot{{display:none}}}}
+{viewer_style}
 </style></head><body><main class="manual">
 <header class="manual-head"><div class="eyebrow">Model-backed · illustrated assembly</div>
 <h1>{_e(manual.title)}</h1>
@@ -469,6 +510,7 @@ text.diagram-mark.role-hold{{fill:#dc2626;stroke:none;font-size:3px}}
 Wear safety glasses for cutting, drilling, routing, and powered fastening; use
 hearing protection, effective dust extraction, and material-appropriate
 respiratory protection. Follow every tool and product manufacturer instruction.</aside>
+{viewer_html}
 <section class="overview"><div><h2>Parts and required consumables</h2>{inventory}</div>
 <div><h2>{total}-panel build path</h2><nav class="panel-index">{nav}</nav></div></section>
 <nav class="panel-controls" aria-label="Assembly panel navigator">
@@ -480,4 +522,4 @@ respiratory protection. Follow every tool and product manufacturer instruction.<
 </nav>
 {panels}
 <footer class="manual-foot">{footer_documents}</footer>
-</main>{navigation_script}</body></html>"""
+</main>{navigation_script}{viewer_script}</body></html>"""

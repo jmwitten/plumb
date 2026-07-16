@@ -28,14 +28,14 @@ def fabrication_projection(detail) -> tuple[dict[str, object], ...]:
 
 
 def technical_projection(detail, view_paths: tuple[Path, ...]) -> dict[str, object]:
-    """Project the standard technical-document data from compiled facts."""
+    """Project compiled facts and document-relative standard-view paths."""
     from ..validation.coverage import coverage_matrix, render_headline_line
 
     matrix = coverage_matrix(detail.report)
     return {
         "title": detail.name,
         "headline": render_headline_line(matrix),
-        "views": tuple(Path(path).name for path in view_paths),
+        "views": tuple(Path(path).as_posix() for path in view_paths),
         "coverage": tuple(row.to_dict() for row in matrix),
         "bom": tuple(detail.bom_table()),
         "callouts": tuple(detail.rendered_callouts()),

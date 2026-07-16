@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from types import SimpleNamespace
 
 from detailgen.assemblies import Connection, DetailAssembly, connection_types
@@ -106,11 +107,11 @@ def test_generic_document_projections_reuse_validated_detail_facts(tmp_path):
     detail = _ConnectedDetail()
     detail.validate()
 
-    technical = technical_projection(detail, (tmp_path / "iso.png",))
+    technical = technical_projection(detail, (Path("views") / "iso.png",))
     installation = installation_projection(detail)
 
     assert technical["title"] == detail.name
-    assert technical["views"] == ("iso.png",)
+    assert technical["views"] == ("views/iso.png",)
     assert len(technical["coverage"]) == 9
     assert technical["bom"] == tuple(detail.bom_table())
     assert installation["installs"] == detail.resolved_installations

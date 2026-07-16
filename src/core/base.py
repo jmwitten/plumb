@@ -235,6 +235,15 @@ class Component(ABC):
             if not k.startswith("_") and k != "name"
         }
 
+    def reader_params(self) -> dict:
+        """Human-facing parameters for interactive documents.
+
+        Components whose modeled geometry uses implementation values that are
+        not normal purchasing terminology may override this without changing
+        the complete parameter record used by technical reports.
+        """
+        return self.params()
+
     def capability_tags(self) -> frozenset[str]:
         """Closed semantic roles that do not require building this component."""
         tags = frozenset(self.CAPABILITIES)

@@ -42,6 +42,9 @@ def _existing(component) -> bool:
     source metadata (the boulder — a natural feature, ``source`` stays the
     default ``"generated"``). Read from ``consolidated_report.py``, not
     imported — the two modules must not cross-import."""
+    explicit = getattr(component, "existing", None)
+    if explicit is not None:
+        return bool(explicit)
     source = getattr(component, "source", "generated")
     return source != "generated" or "(existing)" in component.bom_label()
 
@@ -176,7 +179,7 @@ def build_viewer_payload(detail, instruction_manual=None) -> dict:
         c = p.component
         part_label = labels[p.id]
         specs = []
-        for label, value in c.params().items():
+        for label, value in c.reader_params().items():
             formatted = _format_spec_value(value)
             if formatted is None:
                 continue
