@@ -102,8 +102,9 @@ def _is_ordinary_wood_screw(component) -> bool:
     return "ordinary_wood_screw" in component.capability_tags()
 
 
-def _part_polys(part):
-    vertices, triangles = part.world_solid().val().tessellate(0.12)
+def _part_polys(part, isolated_world_solid):
+    """Tessellate an isolated copy, never ``part.world_solid()``'s cache."""
+    vertices, triangles = isolated_world_solid.val().tessellate(0.12)
     values = np.array([[v.x, v.y, v.z] for v in vertices], dtype=float)
     return values, tuple(tuple(triangle) for triangle in triangles)
 
@@ -166,8 +167,10 @@ def render_family_birdhouse_views(
     out_dir.mkdir(parents=True, exist_ok=True)
     detail.build()
     meshes = [
-        (part, *_part_polys(part))
-        for part in detail.assembly.parts
+        (part, *_part_polys(part, isolated_world_solid))
+        for part, isolated_world_solid in (
+            detail.assembly.isolated_world_solids()
+        )
     ]
     explode = {
         name: tuple(value * IN for value in vector)

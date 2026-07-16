@@ -31,11 +31,25 @@ python scripts/consolidated_report.py       # the full model-backed build docume
                                             # (all 4 details -> ONE self-contained HTML,
                                             # copied to the vault; hash-gated fast reuse
                                             # of unchanged renders)
-pytest                           # ~400 tests: smoke + framework + spec + per-detail
-pytest -n auto                   # same suite, parallel — see README's Tests section
+pytest --detail-gate family_birdhouse --detail-cadence inner -q
+pytest --detail-gate family_birdhouse --detail-cadence release -q
+pytest --platform-tier integration -q
+pytest --platform-tier audit -q
+pytest -q -n 4                  # unfiltered repository-wide verification
 python -m detailgen.spec details/platform.spec.yaml   # compile a DetailSpec + print
                                             # its derivation report + compression
 ```
+
+## Test scope
+
+`tests/test_scope_manifest.csv` classifies every collected node and is checked
+fail-closed during ordinary collection. A detail's inner gate runs accepted
+model/build facts, including normal collision validation; release adds only
+that detail's document/package evidence. Platform integration covers shared
+subsystems with real data. Platform audit contains exhaustive or adversarial
+oracles such as all-pairs intersection equivalence, artificial geometry edits,
+and deliberate baseline corruption. Never put those platform self-tests in a
+document gate merely because they use a real detail as their fixture.
 
 **stdlib-shadow gotcha**: `details/platform.py` shadows the stdlib `platform`
 module that numpy imports transitively. Run detail files as scripts (they

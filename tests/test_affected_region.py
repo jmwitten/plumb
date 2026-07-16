@@ -42,6 +42,8 @@ from detailgen.incremental.revision_diff import revision_diff
 _PLATFORM = "details/platform.spec.yaml"
 _SITE = "details/site.spec.yaml"
 
+pytestmark = pytest.mark.platform_audit
+
 
 def _platform(overrides=None):
     d = compile_spec_file(_PLATFORM, overrides=overrides)
@@ -74,6 +76,31 @@ def _platform_one_sided():
 _BASE = _platform()
 _BASE_IDS = frozenset(AuthoredIdentity(_BASE).authored_ids())
 
+_SEEDED_EDIT_OVERRIDES = (
+    ("beam_len", {"beam_len": 52.0}),
+    ("bolt_dia", {"bolt_dia": 0.5}),
+    ("rail_height", {"rail_height": 40.0}),
+    ("leg_gap", {"leg_gap": 1.0}),
+    ("n_steps_add", {"n_steps": 3}),
+    ("n_steps_drop", {"n_steps": 1}),
+)
+
+
+def _compile_seeded_variants(build):
+    return {
+        name: build(overrides)
+        for name, overrides in _SEEDED_EDIT_OVERRIDES
+    }
+
+
+@pytest.fixture(scope="module")
+def seeded_variants(tmp_path_factory):
+    cache_dir = tmp_path_factory.mktemp("affected_region_variant_cache")
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setenv("DETAILGEN_CACHE_DIR", str(cache_dir))
+        monkeypatch.delenv("DETAILGEN_NO_CACHE", raising=False)
+        yield _compile_seeded_variants(_platform)
+
 
 def _direct_changed_findings(old, new):
     """The findings a whole-world recompile shows changed, computed DIRECTLY from the
@@ -101,16 +128,11 @@ def _actual_changed(diff):
 # --------------------------------------------------------------------------- #
 # SOUNDNESS — the region contains every actual change (no missed line)
 # --------------------------------------------------------------------------- #
-@pytest.mark.parametrize("overrides", [
-    {"beam_len": 52.0},   # extends the deck run — the floor case (faces_away/support)
-    {"bolt_dia": 0.5},    # fattens every leg-to-beam bolt — 36 bearing findings flip
-    {"rail_height": 40.0},
-    {"leg_gap": 1.0},
-    {"n_steps": 3},       # adds a ladder rung + hardware — appeared members
-    {"n_steps": 1},       # drops a rung + hardware — vanished members (old-graph seed)
-])
-def test_region_is_sound_against_whole_world(overrides):
-    new = _platform(overrides)
+@pytest.mark.parametrize(
+    "variant", [name for name, _overrides in _SEEDED_EDIT_OVERRIDES]
+)
+def test_region_is_sound_against_whole_world(variant, seeded_variants):
+    new = seeded_variants[variant]
     diff = revision_diff(_BASE, new)
     region = edit_region(_BASE, new, diff)
 
@@ -142,12 +164,12 @@ def test_region_is_sound_for_a_one_sided_symmetric_edit():
     assert "beam_mY" in region.seeds and "beam_pY" not in region.seeds
 
 
-def test_vanished_member_region_comes_from_the_old_graph():
+def test_vanished_member_region_comes_from_the_old_graph(seeded_variants):
     """A vanished member no longer exists in the new model, so its consequences can
     only be walked in the graph where it still existed. ``edit_region`` unions the
     old-graph region for the vanished ids — without which the removal's region would
     be silently empty (an under-claim)."""
-    new = _platform({"n_steps": 1})
+    new = seeded_variants["n_steps_drop"]
     diff = revision_diff(_BASE, new)
     assert diff.members.vanished, "expected the dropped rung + hardware to vanish"
     region = edit_region(_BASE, new, diff)
@@ -172,12 +194,12 @@ def test_single_member_region_is_a_small_fraction():
     assert _BASE_IDS - r.parts
 
 
-def test_region_size_grows_with_the_edit_but_stays_bounded():
+def test_region_size_grows_with_the_edit_but_stays_bounded(seeded_variants):
     """A broader edit (fatten every bolt) yields a larger region than a single beam,
     yet still under the whole model — the sweep it turns all-pairs into is
     touched-pairs, not no-op."""
     one = affected_region(_BASE, ["beam_pY"]).metrics()["findings"]
-    new = _platform({"bolt_dia": 0.5})
+    new = seeded_variants["bolt_dia"]
     many = edit_region(_BASE, new).metrics()["findings"]
     assert one < many < 10_719
 
@@ -225,13 +247,13 @@ def test_site_alias_seed_resolves_to_the_canonical_region():
 # --------------------------------------------------------------------------- #
 # The unattributed-findings floor
 # --------------------------------------------------------------------------- #
-def test_floor_is_load_bearing():
+def test_floor_is_load_bearing(seeded_variants):
     """Extending the deck run flips two findings the evidence graph carries no
     ``concerns`` edge for — a ``faces_away`` and a ``support`` finding. No changed
     part can reach them by any edge, so they are in the region ONLY via the floor;
     without it they would be a silent under-claim. Proven here by asserting the two
     changed findings are exactly the floor (unattributed) subset."""
-    new = _platform({"beam_len": 52.0})
+    new = seeded_variants["beam_len"]
     diff = revision_diff(_BASE, new)
     region = edit_region(_BASE, new, diff)
 
@@ -352,3 +374,30 @@ def test_region_is_deterministic_across_builds():
     a = affected_region(_platform(), ["beam_pY"])
     b = affected_region(_platform(), ["beam_pY"])
     assert a.to_dict() == b.to_dict()
+
+
+def test_seeded_variant_matrix_compiles_each_distinct_edit_once():
+    calls = []
+
+    def build(overrides):
+        calls.append(overrides)
+        return object()
+
+    variants = _compile_seeded_variants(build)
+
+    assert tuple(variants) == (
+        "beam_len",
+        "bolt_dia",
+        "rail_height",
+        "leg_gap",
+        "n_steps_add",
+        "n_steps_drop",
+    )
+    assert calls == [
+        {"beam_len": 52.0},
+        {"bolt_dia": 0.5},
+        {"rail_height": 40.0},
+        {"leg_gap": 1.0},
+        {"n_steps": 3},
+        {"n_steps": 1},
+    ]

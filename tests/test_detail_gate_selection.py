@@ -36,10 +36,12 @@ def _item(
     slug: str | None,
     *,
     contracts: tuple[str, ...] = (),
+    cadence: str | None = None,
 ) -> _Item:
-    markers = () if slug is None else (
-        _marker(slug, contracts=contracts),
-    )
+    kwargs = {"contracts": contracts}
+    if cadence is not None:
+        kwargs["cadence"] = cadence
+    markers = () if slug is None else (_marker(slug, **kwargs),)
     return _Item(name=slug or "unmarked", markers=markers)
 
 
@@ -66,6 +68,64 @@ def test_selection_keeps_only_requested_slug():
     assert [row.name for row in selected] == ["armchair_caddy"]
     assert len(deselected) == 2
     assert contracts == {"compile", "geometry"}
+
+
+def test_inner_gate_excludes_release_documents():
+    inner = _item(
+        "family_birdhouse", contracts=("compile",), cadence="inner"
+    )
+    release = _item(
+        "family_birdhouse", contracts=("documents",), cadence="release"
+    )
+
+    selected, deselected, contracts = _detail_gate_selection(
+        [inner, release], "family_birdhouse", cadence="inner"
+    )
+
+    assert selected == [inner]
+    assert deselected == [release]
+    assert contracts == {"compile"}
+
+
+def test_release_gate_includes_inner_and_requires_documents():
+    inner = _item(
+        "family_birdhouse",
+        contracts=tuple(REQUIRED_DETAIL_CONTRACTS),
+        cadence="inner",
+    )
+    documents = _item(
+        "family_birdhouse", contracts=("documents",), cadence="release"
+    )
+
+    selected, deselected, contracts = _detail_gate_selection(
+        [inner, documents], "family_birdhouse", cadence="release"
+    )
+    _require_complete_detail_gate(
+        "family_birdhouse",
+        selected,
+        contracts,
+        cadence="release",
+    )
+
+    assert selected == [inner, documents]
+    assert deselected == []
+    assert "documents" in contracts
+
+
+def test_release_gate_missing_documents_fails_closed():
+    inner = _item(
+        "family_birdhouse",
+        contracts=tuple(REQUIRED_DETAIL_CONTRACTS),
+        cadence="inner",
+    )
+
+    with pytest.raises(pytest.UsageError, match="missing contracts: documents"):
+        _require_complete_detail_gate(
+            "family_birdhouse",
+            [inner],
+            set(REQUIRED_DETAIL_CONTRACTS),
+            cadence="release",
+        )
 
 
 def test_unknown_slug_fails_collection():
@@ -118,7 +178,7 @@ def test_optional_documents_contract_is_allowed_but_not_required():
         (_marker(), "requires one string slug"),
         (
             _marker("armchair_caddy", contracts=("compile",), extra=True),
-            "accepts only contracts=",
+            "accepts only contracts= and cadence=",
         ),
         (
             _marker("armchair_caddy", contracts=()),
@@ -131,6 +191,14 @@ def test_optional_documents_contract_is_allowed_but_not_required():
         (
             _marker("armchair_caddy", contracts=("compile", "magic")),
             "unknown detail-gate contracts.*magic",
+        ),
+        (
+            _marker(
+                "armchair_caddy",
+                contracts=("compile",),
+                cadence="nightly",
+            ),
+            "unknown detail-gate cadence.*nightly",
         ),
     ),
 )

@@ -216,6 +216,7 @@ def test_multi_solid_part_near_solid_overlap_is_caught_not_hidden():
 # -- full-detail equivalence: prefilter ON (validate_assembly) vs OFF
 # (unfiltered ground truth), identical findings ------------------------------
 
+@pytest.mark.platform_audit
 def test_rock_anchor_prefilter_agrees_with_unfiltered():
     detail = compile_spec_file(DETAILS_DIR / "rock_anchor.spec.yaml")
     spec = detail.validation_spec()
@@ -235,6 +236,7 @@ def test_rock_anchor_prefilter_agrees_with_unfiltered():
     ]
 
 
+@pytest.mark.platform_audit
 def test_platform_prefilter_agrees_with_unfiltered():
     """Platform is the biggest detail (124 parts, 7626 pairs, post-RAILFASTEN
     — the 4 rail-to-post/leg RailCapScrewed Connections added 8 more screws

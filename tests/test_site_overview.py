@@ -43,13 +43,49 @@ def so(report_mod):
 
 
 @pytest.fixture(scope="module")
-def details(report_mod):
-    return report_mod.load_details()
+def details(report_mod, tmp_path_factory):
+    cache_dir = tmp_path_factory.mktemp("site_overview_detail_cache")
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setenv("DETAILGEN_CACHE_DIR", str(cache_dir))
+        monkeypatch.delenv("DETAILGEN_NO_CACHE", raising=False)
+        yield report_mod.load_details()
 
 
 @pytest.fixture(scope="module")
 def overview(so, details):
     return so.build_site_overview(details)
+
+
+class _RenderedOverviewEvidence:
+    def __init__(self, process, details):
+        self._process = process
+        self._details = details
+        self.calls = 0
+        self.result = None
+
+    def run(self):
+        self.calls += 1
+        result = self._process(self._details)
+        if self.result is None:
+            self.result = result
+        return result
+
+
+@pytest.fixture(scope="module")
+def rendered_overview(report_mod, details, tmp_path_factory):
+    renders = tmp_path_factory.mktemp("site_overview_renders")
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(report_mod, "RENDERS", renders)
+        evidence = _RenderedOverviewEvidence(
+            report_mod.process_site_overview, details
+        )
+        evidence.run()
+        yield evidence
+
+
+@pytest.fixture(scope="module")
+def reused_overview(rendered_overview):
+    return rendered_overview.run()
 
 
 # --------------------------------------------------------------------------- #
@@ -285,28 +321,30 @@ def test_y_divergence_numbers_are_computed_not_hardcoded(so, details):
 # Hash-gating + render (redirected to scratch — never touches the real
 # outputs/consolidated tree or the vault).
 # --------------------------------------------------------------------------- #
-def test_process_site_overview_hash_gates_and_renders_pngs(report_mod, details, tmp_path, monkeypatch):
-    monkeypatch.setattr(report_mod, "RENDERS", tmp_path / "renders")
-
-    overview1, manifest1, images1, reused1 = report_mod.process_site_overview(details)
+def test_process_site_overview_hash_gates_and_renders_pngs(
+    rendered_overview, reused_overview
+):
+    overview1, manifest1, images1, reused1 = rendered_overview.result
     assert reused1 is False
     assert set(images1) == {"iso", "top"}
     for uri in images1.values():
         assert uri.startswith("data:image/png;base64,")
         assert len(uri) > 1000  # a real render, not a stub
 
-    overview2, manifest2, images2, reused2 = report_mod.process_site_overview(details)
+    overview2, manifest2, images2, reused2 = reused_overview
     assert reused2 is True, "second call with unchanged geometry should hash-gate to REUSE"
     assert manifest2["assembly_hash"] == manifest1["assembly_hash"]
     assert images2 == images1
+    assert rendered_overview.calls == 2
 
 
 # --------------------------------------------------------------------------- #
 # Size budget: the two new PNGs stay small relative to the doc ceiling.
 # --------------------------------------------------------------------------- #
-def test_site_overview_pngs_are_small_relative_to_the_html_ceiling(report_mod, details, tmp_path, monkeypatch):
-    monkeypatch.setattr(report_mod, "RENDERS", tmp_path / "renders")
-    _overview, _manifest, images, _reused = report_mod.process_site_overview(details)
+def test_site_overview_pngs_are_small_relative_to_the_html_ceiling(
+    report_mod, rendered_overview
+):
+    _overview, _manifest, images, _reused = rendered_overview.result
     total_bytes = sum(len(uri) for uri in images.values())
     # Two 1200x900 PNGs of a modest scene should be well under 1/8 of the
     # 8MB HTML ceiling; this is a regression guard, not a tight budget.

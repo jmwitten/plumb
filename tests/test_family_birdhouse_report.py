@@ -18,6 +18,18 @@ if str(SCRIPTS) not in sys.path:
 
 import family_birdhouse_report as FBR
 
+from detailgen.assemblies import DetailAssembly
+from detailgen.components import WoodScrew
+from detailgen.core.base import _reset_solid_cache
+from detailgen.core.units import IN
+
+
+pytestmark = pytest.mark.detail_gate(
+    "family_birdhouse",
+    contracts=("documents",),
+    cadence="release",
+)
+
 
 def test_still_shading_is_invariant_to_tessellation_winding():
     face = FBR.np.array(
@@ -70,7 +82,12 @@ def test_five_still_views_tessellate_each_placed_part_once(monkeypatch, tmp_path
     ]
 
     class _Detail:
-        assembly = SimpleNamespace(parts=parts)
+        assembly = SimpleNamespace(
+            parts=parts,
+            isolated_world_solids=lambda: iter(
+                (part, object()) for part in parts
+            ),
+        )
 
         @staticmethod
         def build():
@@ -82,7 +99,7 @@ def test_five_still_views_tessellate_each_placed_part_once(monkeypatch, tmp_path
 
     calls = []
 
-    def fake_part_polys(part):
+    def fake_part_polys(part, _isolated_world_solid):
         calls.append(part.name)
         return (
             FBR.np.array(
@@ -97,6 +114,25 @@ def test_five_still_views_tessellate_each_placed_part_once(monkeypatch, tmp_path
 
     assert len(written) == 5
     assert calls == [part.name for part in parts]
+
+
+def test_still_tessellation_does_not_mutate_shared_component_geometry():
+    _reset_solid_cache()
+    assembly = DetailAssembly("birdhouse still isolation probe")
+    screw = WoodScrew(0.164 * IN, 1.5 * IN)
+    placed = assembly.add(screw)
+    before = screw.solid.val().BoundingBox()
+
+    _part, isolated_world_solid = next(assembly.isolated_world_solids())
+    FBR._part_polys(placed, isolated_world_solid)
+    after = screw.solid.val().BoundingBox()
+    _reset_solid_cache()
+
+    assert (after.zmin, after.zmax, after.xlen) == (
+        before.zmin,
+        before.zmax,
+        before.xlen,
+    )
 
 
 @pytest.fixture(scope="module")
