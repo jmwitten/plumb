@@ -281,7 +281,7 @@ class Component(ABC):
         their ``describe()`` output."""
         return None
 
-    def fabrication_record(self):
+    def fabrication_record(self, part_id: str = ""):
         """This part's :class:`~detailgen.core.process_graph.ProcessRecord` —
         ``stock -> ordered steps -> installed geometry`` (the Construction
         Process Graph's v1 fabrication slice). ``None`` here: the base part is
@@ -290,7 +290,8 @@ class Component(ABC):
         ``_build`` delegates to ``fold`` of it, so the record is the single
         authoritative source of their installed geometry (fab-design §5/§8).
         Purchased-as-is parts (a bolt, a joist hanger) are honestly step-empty
-        and are formalized as FAB-2/3 need them."""
+        and are formalized as FAB-2/3 need them. ``part_id`` is accepted by the
+        public capability protocol even when this default has no record."""
         return None
 
     def stub_of(self) -> dict | None:
