@@ -49,6 +49,7 @@ def _hex_af(diameter: float) -> float:
 class _AxialFastener(Component):
     """Shared geometry for headed, shanked fasteners (see module frame note)."""
 
+    CAPABILITIES = frozenset({"installation_fastener"})
     material_key = "steel_zinc"
     #: fraction of the *threaded* shank length that carries thread representation
     thread_fraction = 0.55
@@ -130,6 +131,7 @@ class LagScrew(_AxialFastener):
     """
 
     material_key = "steel_galv"
+    CAPABILITIES = _AxialFastener.CAPABILITIES | frozenset({"wood_screw"})
 
     def __init__(self, diameter: float, length: float, name: str | None = None):
         super().__init__(
@@ -182,6 +184,11 @@ class ExteriorWoodScrew(_AxialFastener):
     """
 
     material_key = "steel_galv"
+    CAPABILITIES = _AxialFastener.CAPABILITIES | frozenset({
+        "wood_screw",
+        "ordinary_wood_screw",
+        "exterior_use",
+    })
     thread_fraction = 0.72
 
     def __init__(self, diameter: float, length: float, name: str | None = None):
@@ -351,6 +358,7 @@ class ThreadedRod(Component):
     """
 
     material_key = "steel_galv"
+    CAPABILITIES = frozenset({"installation_fastener"})
     thread_pitch_ratio = 0.3   # exaggerated display pitch / diameter
 
     def __init__(self, diameter: float, length: float,
