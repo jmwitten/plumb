@@ -869,7 +869,6 @@ def merge_into_spec(assembly: DetailAssembly, hand_spec: dict, generated: Connec
 
 _HANGER = ("JoistHanger",)
 _SCREW = ("StructuralScrew",)
-_EXTERIOR_SCREW = ("ExteriorWoodScrew",)
 _BOLT = ("HexBolt",)
 _WASHER = ("Washer",)
 _NUT = ("HexNut",)
@@ -1776,15 +1775,33 @@ class ButtScrewed(ConnectionType):
         return (straight_screw_group("butt_screws", screws, face_member.id),)
 
 
-class _ServicePanelScrewed(ConnectionType):
+SERVICE_PANEL_MODES = {
+    "pivot": ("pivoted_by", "pivot_screw"),
+    "latch": ("latched_by", "latch_screw"),
+}
+
+
+@connection_types.register("service_panel_screwed")
+class ServicePanelScrewed(ConnectionType):
     """One exterior screw retaining a service panel without fixing the joint."""
 
-    edge_kind: ClassVar[str]
-    role: ClassVar[str]
+    label = "service_panel_screwed"
+
+    def __init__(self, mode: str):
+        if mode not in SERVICE_PANEL_MODES:
+            raise ValueError(
+                "service panel mode must be 'pivot' or 'latch'; "
+                f"got {mode!r}"
+            )
+        self.mode = str(mode)
+        self.edge_kind, self.role = SERVICE_PANEL_MODES[self.mode]
 
     def _unpack(self, conn: Connection):
         frame_member, service_panel = conn.parts
-        (screw,) = _require_hardware_roles(conn, [_EXTERIOR_SCREW])
+        (screw,) = _require_hardware_capabilities(
+            conn,
+            [frozenset({"ordinary_wood_screw", "exterior_use"})],
+        )
         return frame_member, service_panel, screw
 
     def allowed_intersections(self, conn: Connection):
@@ -1809,7 +1826,7 @@ class _ServicePanelScrewed(ConnectionType):
 
 
 @connection_types.register("pivot_screwed")
-class PivotScrewed(_ServicePanelScrewed):
+class PivotScrewed(ServicePanelScrewed):
     """An exterior screw acting as one pivot pin for an opening service panel.
 
     The connection intentionally has no load-transfer claim, no gravity seat,
@@ -1817,12 +1834,13 @@ class PivotScrewed(_ServicePanelScrewed):
     """
 
     label = "pivot_screwed"
-    edge_kind = "pivoted_by"
-    role = "pivot_screw"
+
+    def __init__(self):
+        super().__init__("pivot")
 
 
 @connection_types.register("service_latch_screwed")
-class ServiceLatchScrewed(_ServicePanelScrewed):
+class ServiceLatchScrewed(ServicePanelScrewed):
     """A removable exterior screw latching an otherwise operable panel.
 
     The connection represents retention and service access only, not a fixed
@@ -1830,8 +1848,9 @@ class ServiceLatchScrewed(_ServicePanelScrewed):
     """
 
     label = "service_latch_screwed"
-    edge_kind = "latched_by"
-    role = "latch_screw"
+
+    def __init__(self):
+        super().__init__("latch")
 
 
 @connection_types.register("glued")
