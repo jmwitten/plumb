@@ -7,6 +7,7 @@ from .fasteners import (
 from .connectors import JoistHanger, PostBase, AngleBracket
 from .railing import WireMesh, DeckBoard
 from .sheet import PlywoodPanel
+from .panel import FabricatedPanel
 from .hardwood import HardwoodPanel, WoodDowel
 from .cedar import CedarPanel
 from .tree import TreeTrunk, SlottedBeamEnd
@@ -20,7 +21,8 @@ __all__ = [
     "LagScrew", "HexBolt", "Washer", "StructuralScrew", "ExteriorWoodScrew",
     "HexNut", "ThreadedRod",
     "JoistHanger", "PostBase", "AngleBracket",
-    "WireMesh", "DeckBoard", "PlywoodPanel", "HardwoodPanel", "WoodDowel",
+    "WireMesh", "DeckBoard", "PlywoodPanel", "FabricatedPanel",
+    "HardwoodPanel", "WoodDowel",
     "CedarPanel",
     "TreeTrunk", "SlottedBeamEnd",
     "Cable", "TrolleyWheel", "Hanger", "GrabBar", "StrapGate", "GrabHandle",
