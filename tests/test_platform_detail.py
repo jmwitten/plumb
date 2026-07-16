@@ -28,6 +28,35 @@ from detailgen.assemblies import Connection, DetailAssembly
 SPEC = Path(__file__).resolve().parents[1] / "details" / "platform.spec.yaml"
 
 
+def _build_accepted_platform_context(build, check):
+    detail = build()
+    report = detail.validate()
+    check(report)
+    return detail, report
+
+
+def test_accepted_platform_context_builds_and_validates_once():
+    calls = {"build": 0, "validate": 0, "check": 0}
+
+    class _Detail:
+        def validate(self):
+            calls["validate"] += 1
+            return object()
+
+    def build():
+        calls["build"] += 1
+        return _Detail()
+
+    def check(_report):
+        calls["check"] += 1
+
+    detail, report = _build_accepted_platform_context(build, check)
+
+    assert isinstance(detail, _Detail)
+    assert report is not None
+    assert calls == {"build": 1, "validate": 1, "check": 1}
+
+
 def _platform(**overrides):
     """The default platform, or a param-family member when overrides are given
     (the compiled twin of the imperative ``Platform(**overrides)``)."""
@@ -48,6 +77,17 @@ def _assert_no_fail_only_honest_unknowns(report):
     assert report.failures == [], str(report)
     assert Counter(f.check for f in report.unresolved) == Counter(
         {"foundation_capacity": 3}), str(report)
+
+
+@pytest.fixture(scope="module")
+def accepted_platform(tmp_path_factory):
+    cache_dir = tmp_path_factory.mktemp("accepted_platform_cache")
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setenv("DETAILGEN_CACHE_DIR", str(cache_dir))
+        monkeypatch.delenv("DETAILGEN_NO_CACHE", raising=False)
+        yield _build_accepted_platform_context(
+            _platform, _assert_no_fail_only_honest_unknowns
+        )
 
 
 def _joist_stations(detail):
@@ -88,16 +128,15 @@ def test_wire_mesh_flags_oversized_opening():
 
 # -- default detail validates CLEAN --------------------------------------------
 
-def test_platform_default_validates_clean():
-    detail = _platform()
-    report = detail.validate()
+def test_platform_default_validates_clean(accepted_platform):
+    _detail, report = accepted_platform
     _assert_no_fail_only_honest_unknowns(report)
 
 
 # -- geometry relationship: joist layout driven by joist_oc + the trunk --------
 
-def test_joists_sit_at_exactly_joist_oc():
-    detail = _platform()
+def test_joists_sit_at_exactly_joist_oc(accepted_platform):
+    detail, _report = accepted_platform
     P = detail.params
     stations = _joist_stations(detail)
     gaps = [(stations[i + 1] - stations[i]) / IN for i in range(len(stations) - 1)]
@@ -105,10 +144,10 @@ def test_joists_sit_at_exactly_joist_oc():
     assert all(abs(g - P.joist_oc) < 1e-6 for g in gaps)
 
 
-def test_first_joist_starts_past_the_trunk():
+def test_first_joist_starts_past_the_trunk(accepted_platform):
     # the ~20" trunk (radius trunk_dia/2, centered at X=0) is the real
     # obstruction: the first joist centerline clears its launch face + bark.
-    detail = _platform()
+    detail, _report = accepted_platform
     P = detail.params
     first_in = _joist_stations(detail)[0] / IN
     assert first_in >= P.trunk_dia / 2 + P.bark_clear
@@ -116,10 +155,10 @@ def test_first_joist_starts_past_the_trunk():
     assert _joist_stations(detail)[-1] / IN <= P.joist_last + 1e-6
 
 
-def test_joist_count_is_derived_not_fixed():
+def test_joist_count_is_derived_not_fixed(accepted_platform):
     # count is NOT a fixed param: tighter O.C. fits more joists in the same
     # clear run; a fatter trunk (starting them further out) fits fewer.
-    base = int(_platform().params.n_joists)
+    base = int(accepted_platform[0].params.n_joists)
     assert int(_platform(joist_oc=8.0).params.n_joists) > base
     assert int(_platform(trunk_dia=34.0).params.n_joists) < base
     # spacing always equals the requested O.C., whatever the count
@@ -153,11 +192,11 @@ def test_variant_size_builds_and_scales():
 
 # -- full-width ladder, hung on the legs (architect items 1-2) -----------------
 
-def test_full_width_ladder_hung_on_legs():
+def test_full_width_ladder_hung_on_legs(accepted_platform):
     # architect item 1: rungs span the FULL clear opening between the launch
     # legs' inner faces (the same span the decking uses), not the prior
     # narrow ~7.5" two-post ladder tucked into the -Y half of the gate span.
-    detail = _platform()
+    detail, _report = accepted_platform
     P = detail.params
     outer_y = P.outer_y * IN                    # imperative _beam_outer_y
     rung_length = P.rung_len * IN               # imperative _rung_length()
@@ -180,9 +219,9 @@ def test_full_width_ladder_hung_on_legs():
             detail[old_part]
 
 
-def test_context_geometry_present_and_not_purchased():
+def test_context_geometry_present_and_not_purchased(accepted_platform):
     # trunk + boulder orient the model and are excluded from the buy list.
-    detail = _platform()
+    detail, _report = accepted_platform
     trunk_bb = detail["trunk"].world_solid().val().BoundingBox()
     # trunk stands at the tree origin (X=0), from the ground up
     assert abs(trunk_bb.xmin + trunk_bb.xmax) < 1e-6
@@ -201,8 +240,8 @@ def test_context_geometry_present_and_not_purchased():
 
 # -- BOM row count / quantities ------------------------------------------------
 
-def test_bom_quantities():
-    detail = _platform()
+def test_bom_quantities(accepted_platform):
+    detail, _report = accepted_platform
     P = detail.params
     n_j = int(P.n_joists)
     n_steps = int(P.n_steps)
@@ -237,13 +276,12 @@ def test_bom_quantities():
 
 # -- architect review, round 2: items 3-6 --------------------------------------
 
-def test_end_joist_clears_leg_bolts():
+def test_end_joist_clears_leg_bolts(accepted_platform):
     # architect item 3: the end/rim joist sits in the only clear gap left
     # near the launch end — between the leg's own two thru-bolts — since a
     # standard hanger's flanges don't fit flush at the true beam end.
-    detail = _platform()
+    detail, report = accepted_platform
     P = detail.params
-    report = detail.validate()
     _assert_no_fail_only_honest_unknowns(report)
     bb = detail["end joist"].world_solid().val().BoundingBox()
     center = (bb.xmin + bb.xmax) / 2
@@ -254,31 +292,30 @@ def test_end_joist_clears_leg_bolts():
     assert bb.xmax < outer_bolt
 
 
-def test_16in_oc_builds_clean_but_default_stays_12():
+def test_16in_oc_builds_clean_but_default_stays_12(accepted_platform):
     # architect item 4: 16" O.C. is analyzed (and validates clean) but is
     # NOT adopted as the default — see the platform report's sign-off flag.
     detail = _platform(joist_oc=16.0)
     report = detail.validate()
     _assert_no_fail_only_honest_unknowns(report)
-    assert _platform().params.joist_oc == 12.0
+    assert accepted_platform[0].params.joist_oc == 12.0
 
 
-def test_no_vestigial_diagonal_braces():
+def test_no_vestigial_diagonal_braces(accepted_platform):
     # architect item 6: the undimensioned, unconnected diagonal braces are
     # removed outright, not rebuilt as sized/fastened knee braces.
-    detail = _platform()
+    detail, _report = accepted_platform
     detail.build()
     for name in ("brace +Y", "brace -Y"):
         with pytest.raises(KeyError):
             detail[name]
 
 
-def test_joist_and_rung_hangers_declare_fasteners():
+def test_joist_and_rung_hangers_declare_fasteners(accepted_platform):
     # architect item 5: every hanger (joists AND ladder rungs) carries
     # explicit header-side + hung-side screws via a Connection, not just a
     # bare geometric envelope — and the hardware-presence checks prove it.
-    detail = _platform()
-    report = detail.validate()
+    detail, report = accepted_platform
     _assert_no_fail_only_honest_unknowns(report)
     hw_findings = [f for f in report.findings if f.check == "connection_hardware"]
     assert hw_findings and all(f.passed for f in hw_findings)
@@ -288,12 +325,12 @@ def test_joist_and_rung_hangers_declare_fasteners():
     detail["rung 0 hanger +Y header screw 0"]
 
 
-def test_leg_bolts_reauthored_as_bolted_clamp():
+def test_leg_bolts_reauthored_as_bolted_clamp(accepted_platform):
     # W2-6's suggestion: the leg-to-beam bolts now go through the SAME
     # BoltedClamp type the rock anchor uses, with a head washer added so the
     # joint fits the type's 4-piece hardware stack (bolt, head washer, nut
     # washer, nut) — proving the type generalizes past the rock anchor.
-    detail = _platform()
+    detail, _report = accepted_platform
     detail.build()
     for side in ("+Y", "-Y"):
         for i in range(2):
@@ -302,13 +339,13 @@ def test_leg_bolts_reauthored_as_bolted_clamp():
 
 # -- rail mirroring (user-spotted render bug: both rails overhung outboard) ----
 
-def test_top_rails_are_mirrored_and_cover_their_posts():
+def test_top_rails_are_mirrored_and_cover_their_posts(accepted_platform):
     # Both top rails must overhang 2" INBOARD, not the same world direction.
     # This is a symmetry property of the whole assembly, not just the rail
     # pair: EVERY +Y/-Y named part's world Y-extent must be the exact mirror
     # of its counterpart (negate and swap min/max) — the class of bug here
     # is a raw placement on one side that forgot to mirror.
-    detail = _platform()
+    detail, _report = accepted_platform
     detail.build()
     names = {p.name for p in detail.assembly.parts}
     checked_pairs = 0
@@ -343,14 +380,13 @@ def test_top_rails_are_mirrored_and_cover_their_posts():
 # gravity-seated only, with a proven bearing but no declared fastener
 # anywhere in the model) -------------------------------------------------
 
-def test_rail_fastening_declares_all_four_joints():
+def test_rail_fastening_declares_all_four_joints(accepted_platform):
     # each of the 2 rails crosses a tree-end post AND a launch leg (no
     # mid-span support in this revision) — 4 joints total, each its own
     # RailCapScrewed Connection with N_RAIL_SCREWS vertical screws, all
     # present and passing hardware-presence.
-    detail = _platform()
+    detail, report = accepted_platform
     n_rail_screws = int(detail.params.n_rail_screws)
-    report = detail.validate()
     _assert_no_fail_only_honest_unknowns(report)
     rail_hw = [f for f in report.findings
                if f.check == "connection_hardware"
@@ -371,14 +407,14 @@ def test_rail_fastening_declares_all_four_joints():
             detail[f"{support} rail fastener screw {i}"]
 
 
-def test_missing_rail_fastener_screw_fails_hardware_presence():
+def test_missing_rail_fastener_screw_fails_hardware_presence(accepted_platform):
     # a rail's fastening must be a REAL, present part, not just a Connection
     # declaration: hardware that isn't actually placed in this assembly (the
     # displaced/missing-screw case) must fail hardware-presence, the same
     # non-negotiable proof every other Connection-declared fastener in this
     # file gets (mirrors test_connection.py::test_missing_declared_hardware_
     # fails, scoped to RailCapScrewed).
-    detail = _platform()
+    detail, _report = accepted_platform
     asm = detail.build()
     real_conn = next(c for c in detail.connections()
                       if c.label == "rail +Y <-> leg +Y (rail cap screwed)")

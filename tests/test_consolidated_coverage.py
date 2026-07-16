@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,59 @@ import pytest
 from detailgen.validation.coverage import INVARIANT_FAMILIES, STANDING_NOTE
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+@dataclass(frozen=True)
+class _CoverageContext:
+    details: dict
+    detail_reports: dict
+    site: object
+    site_report: object
+
+
+def _build_coverage_context(report_mod):
+    details = report_mod.load_details()
+    detail_reports = {name: detail.validate() for name, detail in details.items()}
+    site = report_mod.load_site()
+    return _CoverageContext(
+        details=details,
+        detail_reports=detail_reports,
+        site=site,
+        site_report=site.validate(),
+    )
+
+
+def test_coverage_context_loads_and_validates_each_accepted_model_once():
+    calls = {"details": 0, "site": 0, "validations": []}
+
+    class _Model:
+        def __init__(self, name):
+            self.name = name
+
+        def validate(self):
+            calls["validations"].append(self.name)
+            return f"report:{self.name}"
+
+    class _ReportModule:
+        @staticmethod
+        def load_details():
+            calls["details"] += 1
+            return {"a": _Model("a"), "b": _Model("b")}
+
+        @staticmethod
+        def load_site():
+            calls["site"] += 1
+            return _Model("site")
+
+    context = _build_coverage_context(_ReportModule)
+
+    assert calls == {
+        "details": 1,
+        "site": 1,
+        "validations": ["a", "b", "site"],
+    }
+    assert context.detail_reports == {"a": "report:a", "b": "report:b"}
+    assert context.site_report == "report:site"
 
 
 def _load(modname: str, path: Path):
@@ -32,15 +86,22 @@ def report_mod():
 
 
 @pytest.fixture(scope="module")
-def coverage_html(report_mod):
-    details = report_mod.load_details()
-    # render_coverage_section now takes the per-detail verdicts as a second arg
-    # (docrebuild): the caller validates ONCE from exact geometry before the lossy
-    # web-GLB export, and each matrix renders that verdict instead of re-validating
-    # possibly-mutated solids. Here the details are freshly compiled and never
-    # exported, so validate() is the clean verdict.
-    reports = {name: d.validate() for name, d in details.items()}
-    return report_mod.render_coverage_section(details, reports)
+def coverage_context(report_mod, tmp_path_factory):
+    cache_dir = tmp_path_factory.mktemp("consolidated_coverage_cache")
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setenv("DETAILGEN_CACHE_DIR", str(cache_dir))
+        monkeypatch.delenv("DETAILGEN_NO_CACHE", raising=False)
+        yield _build_coverage_context(report_mod)
+
+
+@pytest.fixture(scope="module")
+def coverage_html(report_mod, coverage_context):
+    # The caller validates ONCE from exact geometry before the lossy web-GLB
+    # export, and each matrix renders that verdict instead of re-validating.
+    return report_mod.render_coverage_section(
+        coverage_context.details,
+        coverage_context.detail_reports,
+    )
 
 
 def test_section_names_every_family_for_every_detail(coverage_html):
@@ -67,7 +128,9 @@ def test_section_never_claims_safety(coverage_html):
     assert "REPRESENTED" in coverage_html
 
 
-def test_verdict_headline_leads_with_the_per_family_breakdown(report_mod):
+def test_verdict_headline_leads_with_the_per_family_breakdown(
+    report_mod, coverage_context
+):
     """The title-block verdict must LEAD with the per-family breakdown and demote
     "CLEAN" to an internal note (owner directive §3). HEADLINE replaced the
     prose ``_derive_status_sentence`` with ``_render_verdict_headline``, which
@@ -78,10 +141,10 @@ def test_verdict_headline_leads_with_the_per_family_breakdown(report_mod):
     the true document-level roll-up, not a stub."""
     from detailgen.validation.coverage import INVARIANT_FAMILIES
 
-    details = report_mod.load_details()
-    detail_reports = {n: d.validate() for n, d in details.items()}
-    site = report_mod.load_site()
-    status = report_mod._render_verdict_headline(detail_reports, site.validate())
+    status = report_mod._render_verdict_headline(
+        coverage_context.detail_reports,
+        coverage_context.site_report,
+    )
 
     # PRIMARY: the per-family breakdown — every invariant family named, in a
     # verdict-tagged headline list, with the honest NOT-ANALYZED families present.
