@@ -681,15 +681,14 @@ def build_instruction_manual(
         raise ValueError("title must be non-empty")
     if not isinstance(lede, str) or not lede.strip():
         raise ValueError("lede must be non-empty")
-    checks = getattr(detail, "_connection_checks", None)
-    graph = getattr(checks, "event_graph", None)
+    graph = detail.construction_event_graph
     if graph is None:
         raise InstructionPresentationError(
             "instruction manual requires a validated event graph")
 
     steps = derive_reader_steps(graph)
     installs_by_connection = {}
-    for install in checks.installs:
+    for install in detail.resolved_installations:
         installs_by_connection.setdefault(install.connection, []).append(install)
     installs_by_connection = {
         label: tuple(values) for label, values in installs_by_connection.items()}

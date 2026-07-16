@@ -488,7 +488,10 @@ class Connection:
 
         overlaps = self.kind.allowed_intersections(self)
         out.expected_overlaps |= overlaps
-        for (a, b) in overlaps:
+        for (a, b) in sorted(overlaps, key=lambda pair: (
+            pair[0].id,
+            pair[1].id,
+        )):
             out.overlap_sources[frozenset((a.id, b.id))] = self.label
             out.derived.append(DerivedFact(
                 fact=f"allowed intersection {a.name} <-> {b.name}",

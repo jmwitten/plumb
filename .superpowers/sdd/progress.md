@@ -1,5 +1,42 @@
 # Wave 1+2 progress ledger — detailgen framework roadmap
 
+## GENERIC FULL-PACKAGE COMPILER (2026-07-16 — core implementation complete)
+
+Public interfaces: `python -m detailgen.authoring` emits the deterministic,
+live component/connection/view/schema vocabulary; `python -m detailgen.package
+<spec> --out <dir> --preview|--delivery` compiles and validates once, then
+projects one detail into model exports, standard views, technical/fabrication/
+assembly/installation HTML, BOM/cut CSVs, governed design review, content-
+addressed review evidence, and `package-manifest.json`. Package generation has
+no project-name dispatch and ordinary new specs require no source registration.
+
+First public-CLI measurement on an existing governed detail, four standard
+views, with tests honestly recorded `skipped / owner-requested-experiment`:
+compile+validate 0.062s; model export 0.038s; standard views 1.505s; documents
+and four instruction panels 1.358s; review trace/hashes 0.003s; 2.966s timed
+phases, 5.73s process wall including Python/CadQuery startup, 22 hashed
+artifacts. This is evidence for the generic mechanism, not the external simple-
+project acceptance replay.
+
+Verification commands:
+
+```bash
+.venv/bin/python -m pytest tests/test_authoring_manifest.py tests/test_package_model.py tests/test_package_projections.py tests/test_package_views.py tests/test_package_documents.py tests/test_package_builder.py tests/test_package_cli.py -q
+.venv/bin/python -m pytest -q -n auto
+```
+
+Final verification: the focused compiler/export/package regression subset
+passed 66 tests in 164.74s. The complete repository suite passed with 2,324
+passed, 4 skipped, and 1 expected xfail in 933.44s. The external project
+acceptance replay remains a separate plugin-level measurement.
+
+Area of opportunity: **reading initial context**. Ordinary project routing is
+now bounded to the accepted brief, `detailgen.authoring`, and the spec being
+authored. Roadmap/progress, implementation source, unrelated specs, and prior
+manuals are loaded only for concrete framework work or a demonstrated
+capability gap. The external simple-project replay is an acceptance test and
+must not appear in production registries, recipes, templates, or dispatch.
+
 ## BRANCH RESET NOTE (2026-07-13, supersedes the push half of the rewrite note)
 
 GitHub (jmwitten/plumb) was recreated with a SINGLE-ROOT history: branch

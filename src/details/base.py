@@ -357,6 +357,20 @@ class Detail(ABC):
         return self._connection_edges
 
     @property
+    def resolved_installations(self) -> tuple:
+        """Resolved installation contracts from the last validation."""
+        if self._connection_checks is None:
+            return ()
+        return tuple(self._connection_checks.installs)
+
+    @property
+    def construction_event_graph(self):
+        """The validated construction event graph, or ``None`` if absent."""
+        if self._connection_checks is None:
+            return None
+        return self._connection_checks.event_graph
+
+    @property
     def evidence_graph(self):
         """The P4 :class:`~detailgen.validation.evidence.EvidenceGraph` for this
         detail's last validation — the queryable "why do we believe this?"

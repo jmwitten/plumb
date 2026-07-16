@@ -40,6 +40,8 @@ packages = [
     "detailgen.rendering.web_viewer",
     "detailgen.design_review",
     "detailgen.certification",
+    "detailgen.authoring",
+    "detailgen.package",
     "detailgen.packs",
     "detailgen.packs.cabinetry",
 ]

@@ -294,7 +294,13 @@ def _panel_html(detail, panel, image_path: Path, total: int) -> str:
     </article>"""
 
 
-def render_instruction_manual_html(detail, manual, image_paths: dict[int, Path]) -> str:
+def render_instruction_manual_html(
+    detail,
+    manual,
+    image_paths: dict[int, Path],
+    *,
+    generated_at: str | None = None,
+) -> str:
     """Compose one offline HTML manual from typed panels and keyed PNGs."""
     expected = {panel.index for panel in manual.panels}
     if set(image_paths) != expected:
@@ -315,10 +321,11 @@ def render_instruction_manual_html(detail, manual, image_paths: dict[int, Path])
     panels = "".join(
         _panel_html(detail, panel, Path(image_paths[panel.index]), len(manual.panels))
         for panel in manual.panels)
-    generated = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z")
+    generated = generated_at or datetime.now().astimezone().strftime(
+        "%Y-%m-%d %H:%M %Z"
+    )
     total = len(manual.panels)
-    declared_constraints = len(
-        detail._connection_checks.event_graph.constraints)
+    declared_constraints = len(detail.construction_event_graph.constraints)
     lede = manual.lede.replace(
         "{declared_constraints}", str(declared_constraints))
     navigation_script = """

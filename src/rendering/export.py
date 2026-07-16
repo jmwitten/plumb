@@ -13,6 +13,7 @@ Solids are tessellated per-part so each keeps its material color.
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 import cadquery as cq
 
@@ -45,11 +46,253 @@ def _out_path(assembly: DetailAssembly, suffix: str, path: str | Path | None) ->
     return p
 
 
+_STEP_TIMESTAMP_RE = re.compile(
+    r"(FILE_NAME\([^,]+,)'[^']*'",
+)
+_STEP_OCCURRENCE_RE = re.compile(
+    r"(NEXT_ASSEMBLY_USAGE_OCCURRENCE\(')[^']*(')",
+)
+_STEP_PRESENTATION_START_RE = re.compile(
+    r"(?m)^#(\d+)\s*=\s*"
+    r"MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION",
+)
+_STEP_ENTITY_RE = re.compile(
+    r"(?ms)^#(\d+)\s*=\s*(.*?);\s*(?=^#|^ENDSEC;)",
+)
+
+
+def _compact_step_whitespace(text: str) -> str:
+    """Remove layout-only whitespace while preserving quoted STEP strings."""
+    out = []
+    in_string = False
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char == "'":
+            out.append(char)
+            if in_string and index + 1 < len(text) and text[index + 1] == "'":
+                out.append("'")
+                index += 2
+                continue
+            in_string = not in_string
+        elif not in_string and char.isspace():
+            index += 1
+            continue
+        else:
+            out.append(char)
+        index += 1
+    if in_string:
+        raise RuntimeError("STEP export contains an unterminated quoted string")
+    return "".join(out) + "\n"
+
+
+def _canonical_step_text(text: str) -> str:
+    """Remove OCCT process noise while preserving STEP names and colors.
+
+    OCCT stamps wall time and process-global occurrence ordinals into STEP,
+    then emits the final color-presentation records in pointer-dependent order.
+    Geometry and product records are already stable. Normalize the two metadata
+    fields and rebuild only the presentation tail, ordered by its stable
+    representation/shape references with one explicit RGB record per item.
+    """
+    text, timestamp_count = _STEP_TIMESTAMP_RE.subn(
+        r"\1'1970-01-01T00:00:00'",
+        text,
+        count=1,
+    )
+    if timestamp_count != 1:
+        raise RuntimeError("STEP export lacks the expected FILE_NAME timestamp")
+
+    occurrence = 0
+
+    def normalize_occurrence(match: re.Match) -> str:
+        nonlocal occurrence
+        occurrence += 1
+        return f"{match.group(1)}{occurrence}{match.group(2)}"
+
+    text = _STEP_OCCURRENCE_RE.sub(normalize_occurrence, text)
+
+    start_match = _STEP_PRESENTATION_START_RE.search(text)
+    if start_match is None:
+        return _compact_step_whitespace(text)
+    start = start_match.start()
+    end = text.index("ENDSEC;", start)
+    tail = text[start:end]
+    entities = {
+        int(ident): body.strip()
+        for ident, body in _STEP_ENTITY_RE.findall(tail + "ENDSEC;")
+    }
+    presentation_ids = sorted(
+        ident for ident, body in entities.items()
+        if body.startswith(
+            "MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION"
+        )
+    )
+    if not presentation_ids:
+        return _compact_step_whitespace(text)
+
+    supported_prefixes = (
+        "MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION",
+        "STYLED_ITEM",
+        "PRESENTATION_STYLE_ASSIGNMENT",
+        "SURFACE_STYLE_USAGE",
+        "SURFACE_SIDE_STYLE",
+        "SURFACE_STYLE_FILL_AREA",
+        "FILL_AREA_STYLE",
+        "FILL_AREA_STYLE_COLOUR",
+        "COLOUR_RGB",
+        "SURFACE_STYLE_RENDERING_WITH_PROPERTIES",
+        "SURFACE_STYLE_TRANSPARENT",
+    )
+    if not all(body.startswith(supported_prefixes) for body in entities.values()):
+        raise RuntimeError("STEP presentation tail contains an unsupported entity")
+
+    rows = []
+    used = set()
+    for presentation_id in presentation_ids:
+        presentation = entities[presentation_id]
+        refs = [int(value) for value in re.findall(r"#(\d+)", presentation)]
+        if len(refs) < 2:
+            raise RuntimeError("STEP presentation record has no styled item")
+        styled_ids, context_id = refs[:-1], refs[-1]
+        used.add(presentation_id)
+
+        for styled_id in styled_ids:
+            styled = entities[styled_id]
+            styled_refs = [int(value) for value in re.findall(r"#(\d+)", styled)]
+            if not styled.startswith("STYLED_ITEM") or len(styled_refs) != 2:
+                raise RuntimeError("STEP styled item is not unary")
+            assignment_id, target_id = styled_refs
+
+            assignment = entities[assignment_id]
+            assignment_refs = [
+                int(value) for value in re.findall(r"#(\d+)", assignment)
+            ]
+            if (not assignment.startswith("PRESENTATION_STYLE_ASSIGNMENT")
+                    or len(assignment_refs) != 1):
+                raise RuntimeError("STEP style assignment is not unary")
+            usage_id = assignment_refs[0]
+
+            usage = entities[usage_id]
+            usage_refs = [int(value) for value in re.findall(r"#(\d+)", usage)]
+            if not usage.startswith("SURFACE_STYLE_USAGE") or len(usage_refs) != 1:
+                raise RuntimeError("STEP surface style usage is not unary")
+            side_id = usage_refs[0]
+
+            side = entities[side_id]
+            side_refs = [int(value) for value in re.findall(r"#(\d+)", side)]
+            if not side.startswith("SURFACE_SIDE_STYLE") or not side_refs:
+                raise RuntimeError("STEP surface side style has no fill")
+            fill_id, *render_ids = side_refs
+            if len(render_ids) > 1:
+                raise RuntimeError("STEP surface side style has multiple renderers")
+
+            fill = entities[fill_id]
+            fill_refs = [int(value) for value in re.findall(r"#(\d+)", fill)]
+            if not fill.startswith("SURFACE_STYLE_FILL_AREA") or len(fill_refs) != 1:
+                raise RuntimeError("STEP surface fill style is not unary")
+            area_id = fill_refs[0]
+
+            area = entities[area_id]
+            area_refs = [int(value) for value in re.findall(r"#(\d+)", area)]
+            if not area.startswith("FILL_AREA_STYLE") or len(area_refs) != 1:
+                raise RuntimeError("STEP fill area style is not unary")
+            area_color_id = area_refs[0]
+
+            area_color = entities[area_color_id]
+            color_refs = [
+                int(value) for value in re.findall(r"#(\d+)", area_color)
+            ]
+            if (not area_color.startswith("FILL_AREA_STYLE_COLOUR")
+                    or len(color_refs) != 1):
+                raise RuntimeError("STEP fill color is not unary")
+            color_id = color_refs[0]
+            color_body = entities[color_id]
+            if not color_body.startswith("COLOUR_RGB"):
+                raise RuntimeError("STEP presentation chain does not end in RGB")
+
+            render_mode = None
+            transparency_body = None
+            extra_ids = []
+            if render_ids:
+                render_id = render_ids[0]
+                render = entities[render_id]
+                render_refs = [
+                    int(value) for value in re.findall(r"#(\d+)", render)
+                ]
+                mode = re.match(
+                    r"SURFACE_STYLE_RENDERING_WITH_PROPERTIES\(([^,]+),",
+                    render,
+                )
+                if (mode is None or len(render_refs) != 2
+                        or render_refs[0] != color_id):
+                    raise RuntimeError("STEP transparent rendering is unsupported")
+                transparency_id = render_refs[1]
+                transparency_body = entities[transparency_id]
+                if not transparency_body.startswith("SURFACE_STYLE_TRANSPARENT"):
+                    raise RuntimeError("STEP renderer lacks transparency")
+                render_mode = mode.group(1)
+                extra_ids.extend((render_id, transparency_id))
+
+            used.update((
+                styled_id,
+                assignment_id,
+                usage_id,
+                side_id,
+                fill_id,
+                area_id,
+                area_color_id,
+                color_id,
+                *extra_ids,
+            ))
+            rows.append((
+                context_id,
+                target_id,
+                color_body,
+                render_mode,
+                transparency_body,
+            ))
+
+    if used != set(entities):
+        raise RuntimeError("STEP presentation tail contains unreferenced entities")
+
+    next_id = min(entities)
+    canonical = []
+    for context_id, target_id, color_body, render_mode, transparency in sorted(
+        rows,
+        key=lambda row: (row[0], row[1], row[2], row[3] or "", row[4] or ""),
+    ):
+        count = 11 if transparency is not None else 9
+        ids = tuple(range(next_id, next_id + count))
+        next_id += count
+        side_refs = f"#{ids[5]}" + (f",#{ids[9]}" if transparency else "")
+        canonical.extend((
+            f"#{ids[0]} = MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('',(#{ids[1]}),#{context_id});",
+            f"#{ids[1]} = STYLED_ITEM('color',(#{ids[2]}),#{target_id});",
+            f"#{ids[2]} = PRESENTATION_STYLE_ASSIGNMENT((#{ids[3]}));",
+            f"#{ids[3]} = SURFACE_STYLE_USAGE(.BOTH.,#{ids[4]});",
+            f"#{ids[4]} = SURFACE_SIDE_STYLE('',({side_refs}));",
+            f"#{ids[5]} = SURFACE_STYLE_FILL_AREA(#{ids[6]});",
+            f"#{ids[6]} = FILL_AREA_STYLE('',(#{ids[7]}));",
+            f"#{ids[7]} = FILL_AREA_STYLE_COLOUR('',#{ids[8]});",
+            f"#{ids[8]} = {color_body};",
+        ))
+        if transparency is not None:
+            canonical.extend((
+                f"#{ids[9]} = SURFACE_STYLE_RENDERING_WITH_PROPERTIES({render_mode},#{ids[8]},(#{ids[10]}));",
+                f"#{ids[10]} = {transparency};",
+            ))
+    return _compact_step_whitespace(
+        text[:start] + "\n".join(canonical) + "\n" + text[end:]
+    )
+
+
 @register_exporter("step")
 def export_step(assembly: DetailAssembly, path: str | Path | None = None) -> Path:
     """STEP with per-part names and colors (the CAD interchange artifact)."""
     p = _out_path(assembly, ".step", path)
     assembly.to_cq_assembly().export(str(p))
+    p.write_text(_canonical_step_text(p.read_text()), encoding="utf-8")
     return p
 
 

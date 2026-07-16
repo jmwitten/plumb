@@ -43,10 +43,23 @@ python details/deck_ledger_example.py
 That builds the reference detail (deck ledger + rim + joist hanger + lags),
 runs the validation sweep, and writes `outputs/deck_ledger_example.{step,stl}`
 plus iso/front PNG previews. It's a walkthrough of the low-level
-`DetailAssembly` + exporter-function API. **For a new detail, read
-`details/rock_anchor.py` first instead** — it's the annotated `Detail`
-subclass every new detail should copy (frozen params, `assemble()`,
-`validation_spec()`, `render()`).
+`DetailAssembly` + exporter-function API.
+
+For an ordinary new project, query the compact live authoring vocabulary,
+author a `DetailSpec`, and invoke the generic full-package compiler:
+
+```bash
+.venv/bin/python -m detailgen.authoring
+.venv/bin/python -m detailgen.package details/example.spec.yaml \
+  --out outputs/example --preview
+```
+
+The compiler generates the model, standard views, technical/fabrication/
+assembly/installation documents, review evidence, CSVs, hashes, and final
+package manifest from one compiled detail. Ordinary projects require no
+source-code registration or project-specific renderer dispatch. Read framework
+source or extend a registry only when the compact manifest proves that a
+required capability is absent.
 
 ## Architecture
 

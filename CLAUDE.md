@@ -13,6 +13,21 @@ ledger): completed waves, user directives (north star, doc voice, generation-
 speed target), and the resume brief for the next work phase. Read it before
 starting roadmap work. The roadmap itself: `docs/FRAMEWORK_ROADMAP.md`.
 
+**Ordinary-project context boundary:** first run
+`.venv/bin/python -m detailgen.authoring`, author the smallest sufficient
+`DetailSpec`, then run `.venv/bin/python -m detailgen.package <spec> --out
+<dir> --preview`. Do not read `docs/FRAMEWORK_ROADMAP.md`, the progress ledger,
+implementation source, unrelated specs, or prior project manuals for an
+ordinary project. Load roadmap/progress state only for actual framework work;
+load implementation source only after the manifest or compiler reports a
+concrete capability gap. No source registration is required for an ordinary
+new spec.
+
+**Area of opportunity — reading initial context:** keep preflight bounded to
+the authoring manifest, the accepted brief, and the spec being authored. The
+simple-project timing experiment showed that broad initial reading can cost
+more than compilation and full document generation combined.
+
 Components are **engineering-grade**, not envelopes: bent steel angles have a
 real inner bend radius + punched holes (`_geometry.angle_profile`), fasteners
 carry a thread *representation* (`_geometry.threaded_shaft`) and hex washer-face
@@ -38,6 +53,9 @@ pytest --platform-tier audit -q
 pytest -q -n 4                  # unfiltered repository-wide verification
 python -m detailgen.spec details/platform.spec.yaml   # compile a DetailSpec + print
                                             # its derivation report + compression
+.venv/bin/python -m detailgen.authoring      # compact live authoring vocabulary
+.venv/bin/python -m detailgen.package details/example.spec.yaml \
+  --out outputs/example --preview            # complete generic package
 ```
 
 ## Test scope

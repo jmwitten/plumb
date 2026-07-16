@@ -208,6 +208,22 @@ def run_detail_once(name: str, detail_cls, out_dir: Path, detail_module=None) ->
     }
 
 
+def run_package_once(spec_path: Path, out_dir: Path) -> dict:
+    """Run the public one-view package builder and return its SLA surface."""
+    from detailgen.package import PackageRequest
+    from detailgen.package import builder as builder_module
+
+    result = builder_module.build_package(
+        PackageRequest(Path(spec_path), Path(out_dir), views=("iso",))
+    )
+    timings = result.manifest()["timings_seconds"]
+    return {
+        "timings_seconds": timings,
+        "total_s": sum(timings.values()),
+        "artifact_count": len(result.artifacts),
+    }
+
+
 def _dedup_estimate(detail, timer) -> dict:
     """Lever (a) evidence: group placed components by (type, params) — a
     solid cache keyed on that tuple would build each group once instead of
