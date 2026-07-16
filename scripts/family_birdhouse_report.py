@@ -37,6 +37,8 @@ from detailgen.design_review import (
 )
 from detailgen.rendering.instruction_manual import render_instruction_manual_html
 from detailgen.rendering.instruction_panels import (
+    DisplayRow,
+    JoinPresentation,
     RelatedDocumentLink,
     build_instruction_manual,
 )
@@ -57,6 +59,22 @@ BOM_CSV_BASENAME = "family_birdhouse_bom.csv"
 CUT_CSV_BASENAME = "family_birdhouse_cut_list.csv"
 PACKAGE_MANIFEST_BASENAME = "family_birdhouse_package_manifest.json"
 PREVIEW_NOTICE = "PREVIEW — NOT APPROVED FOR DELIVERY"
+
+BIRDHOUSE_JOIN_PRESENTATION = JoinPresentation(
+    title="Bench assembly complete — field installation remains on hold",
+    instructions=(
+        "Confirm all 21 modeled screws are installed and the pivoting cleanout "
+        "side opens, closes, and latches without binding.",
+        "Stop after the bench build. An adult must resolve every hold in the "
+        "separate installation and service guide before mounting the box.",
+    ),
+    honesty=(
+        "FIELD HOLD — pole, predator baffle, clamp/U-bolt interface, soil and "
+        "foundation conditions, frost and wind, utilities, coating, and "
+        "installation fastener capacity are not selected or analyzed.",
+    ),
+    tools=(DisplayRow("fit", "Adult review of the installation hold checklist"),),
+)
 
 VIEW_FILES = {
     "iso": "iso.png",
@@ -107,7 +125,7 @@ def _shade(base, faces, alpha=1.0):
         normal = np.cross(face[1] - face[0], face[2] - face[0])
         length = np.linalg.norm(normal)
         normal = normal / length if length > 1e-9 else np.array([0, 0, 1.0])
-        strength = 0.48 + 0.52 * max(0.0, float(np.dot(normal, light)))
+        strength = 0.48 + 0.52 * abs(float(np.dot(normal, light)))
         colors.append((*[channel * strength for channel in base], alpha))
     return colors
 
@@ -122,6 +140,21 @@ def _part_color(part):
     if part.name == "pivoting cleanout side":
         return (0.86, 0.57, 0.28)
     return (0.69, 0.39, 0.19)
+
+
+def _configure_still_axis(axis, low, high, *, elev, azim, title):
+    axis.set_xlim(low[0], high[0])
+    axis.set_ylim(low[1], high[1])
+    axis.set_zlim(low[2], high[2])
+    axis.set_box_aspect(tuple(high - low))
+    axis.view_init(elev=elev, azim=azim)
+    axis.set_proj_type("ortho")
+    axis.set_axis_off()
+    axis.set_title(title, fontsize=10)
+
+
+def _still_edge_style() -> dict:
+    return {"edgecolors": "none", "linewidths": 0.0}
 
 
 def render_family_birdhouse_views(
@@ -166,19 +199,17 @@ def render_family_birdhouse_views(
                 facecolors=_shade(
                     _part_color(part), faces, 0.18 if is_ghost else 1.0
                 ),
-                edgecolors=(0, 0, 0, 0.08 if is_ghost else 0.22),
-                linewidths=0.12 if is_ghost else 0.24,
+                **_still_edge_style(),
             )
             axis.add_collection3d(collection)
-        axis.set_xlim(low[0], high[0])
-        axis.set_ylim(low[1], high[1])
-        axis.set_zlim(low[2], high[2])
-        axis.set_box_aspect(tuple(high - low))
-        axis.view_init(elev=elev, azim=azim)
-        axis.set_xlabel("X width")
-        axis.set_ylabel("Y depth")
-        axis.set_zlabel("Z up")
-        axis.set_title(title, fontsize=10)
+        _configure_still_axis(
+            axis,
+            low,
+            high,
+            elev=elev,
+            azim=azim,
+            title=title,
+        )
         figure.tight_layout()
         path = out_dir / filename
         figure.savefig(path)
@@ -232,7 +263,7 @@ h1,h2,h3{{line-height:1.18}} h1{{color:var(--cedar)}} .hold{{border:3px solid #b
 table{{width:100%;border-collapse:collapse;margin:14px 0 24px}} th,td{{border:1px solid var(--line);padding:8px;vertical-align:top;text-align:left}} th{{background:#f8fafc}}
 code{{word-break:break-all}} footer{{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted)}}
 @media(max-width:650px){{main{{padding:20px 16px}} table{{font-size:12px}}}}
-@media print{{body{{background:white}} main{{max-width:none;padding:.45in}} .preview{{position:static}} .doc-nav{{display:none}} a{{color:black}}}}
+@media print{{body{{background:white}} main{{max-width:none;padding:.45in}} .preview{{position:static}} .doc-nav{{display:none}} a{{color:black}} footer{{display:none}}}}
 </style></head><body>{notice}<main>{_document_links(current)}{body}
 <footer>Generated {datetime.now().astimezone().strftime('%Y-%m-%d %H:%M %Z')} from the governed Plumb DetailSpec. Geometry authority: compiled model and fabrication records.</footer>
 </main></body></html>"""
@@ -520,6 +551,7 @@ def build_family_birdhouse_package(
             "capacity NOT analyzed."
         ),
         related_documents=related,
+        join_presentation=BIRDHOUSE_JOIN_PRESENTATION,
     )
     if preview:
         manual = replace(

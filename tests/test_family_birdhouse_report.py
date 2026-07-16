@@ -19,6 +19,43 @@ if str(SCRIPTS) not in sys.path:
 import family_birdhouse_report as FBR
 
 
+def test_still_shading_is_invariant_to_tessellation_winding():
+    face = FBR.np.array(
+        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    )
+
+    colors = FBR._shade((0.7, 0.4, 0.2), [face, face[[0, 2, 1]]])
+
+    assert colors[0] == pytest.approx(colors[1])
+
+
+def test_still_frame_uses_clean_axis_free_orthographic_presentation():
+    calls = []
+
+    class _Axis:
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: calls.append((name, args, kwargs))
+
+    FBR._configure_still_axis(
+        _Axis(),
+        FBR.np.array([0.0, 0.0, 0.0]),
+        FBR.np.array([1.0, 2.0, 3.0]),
+        elev=20,
+        azim=-40,
+        title="Probe",
+    )
+
+    assert ("set_proj_type", ("ortho",), {}) in calls
+    assert ("set_axis_off", (), {}) in calls
+
+
+def test_still_faces_do_not_draw_internal_tessellation_edges():
+    assert FBR._still_edge_style() == {
+        "edgecolors": "none",
+        "linewidths": 0.0,
+    }
+
+
 def test_five_still_views_tessellate_each_placed_part_once(monkeypatch, tmp_path):
     class _Component:
         material_key = "cedar"
@@ -171,6 +208,34 @@ def test_guides_carry_model_facts_family_boundaries_and_field_holds(package):
         "capacity NOT analyzed",
     ):
         assert phrase.lower() in joined.lower()
+
+
+def test_family_manual_uses_birdhouse_join_and_member_neutral_fastener_copy(package):
+    _out, result = package
+    manual = Path(result["manual_path"]).read_text()
+
+    for stale in ("sofa arm", "hot-drink", "along-arm", "through the rail"):
+        assert stale not in manual.lower()
+    assert "Bench assembly complete" in manual
+    assert "field installation remains on hold" in manual
+    assert "11 × Exterior wood screw" in manual
+    assert "6 × Exterior wood screw" in manual
+    assert "15 × Exterior wood screw" in manual
+    assert "17 × fixed-side front lower screw" not in manual
+
+
+def test_reader_documents_compact_print_only_content_without_orphan_pages(package):
+    _out, result = package
+    manual = Path(result["manual_path"]).read_text()
+    fabrication = Path(result["fabrication_path"]).read_text()
+
+    assert ".overview{display:flex;flex-direction:column" in manual
+    assert ".overview>div:last-child{order:-1" in manual
+    assert ".inventory{columns:2" in manual
+    assert ".manual-head{padding:.65rem 1.2rem" in manual
+    assert ".inventory{font-size:.68rem" in manual
+    assert ".manual-foot{display:none}" in manual
+    assert "footer{display:none}" in fabrication
 
 
 def test_csvs_and_manifest_are_derived_and_fingerprint_bound(package):

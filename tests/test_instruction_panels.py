@@ -17,6 +17,8 @@ from detailgen.assemblies.event_graph import (
 from detailgen.spec.compiler import compile_spec_file
 import detailgen.rendering.instruction_panels as instruction_panels_module
 from detailgen.rendering.instruction_panels import (
+    DisplayRow,
+    JoinPresentation,
     build_instruction_manual,
     panel_part_schedule,
 )
@@ -77,6 +79,23 @@ def test_manual_identity_and_proof_copy_are_detail_configurable(caddy):
 
     with pytest.raises(ValueError, match="relative HTML basename"):
         build_instruction_manual(caddy, basename="folder/manual.html")
+
+
+def test_project_can_author_join_reader_copy_without_changing_graph(caddy):
+    presentation = JoinPresentation(
+        title="Bench work complete — stop before field placement",
+        instructions=("Review the separate field-installation holds.",),
+        honesty=("FIELD HOLD — site attachment is not represented.",),
+        tools=(DisplayRow("fit", "Adult hold-point review"),),
+    )
+
+    manual = build_instruction_manual(caddy, join_presentation=presentation)
+    join = next(panel for panel in manual.panels if panel.action == "join")
+
+    assert join.title == presentation.title
+    assert join.instructions == presentation.instructions
+    assert join.honesty == presentation.honesty
+    assert join.tools == presentation.tools
 
 
 def test_caddy_panels_cover_each_reader_step_once(caddy):
