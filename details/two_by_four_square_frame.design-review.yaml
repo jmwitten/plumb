@@ -202,9 +202,13 @@ decision:
   tradeoffs:
     - Straight corner seams and twelve screw heads remain visible on the rail faces.
     - The package approves geometry and fabrication only; use, loads, mounting, environment, finish, and structural capacity remain unknown.
-  application: recommendation_only
+  application: implemented
 modeling_approval:
   approved_by: Joel Witten
   approved_on: 2026-07-16
-  selection_fingerprint: 88451875767e6ee85c97fa37f1a82e7c6efa2c35bd34aa86452b4ac3c4c37dd2
-delivery_confirmation: null
+  selection_fingerprint: c4775c516b8d9c999aecd3f8d042f5d1f4ea63a18cf4705f1d686aba657da88c
+delivery_confirmation:
+  approved_by: Joel Witten
+  approved_on: 2026-07-16
+  selection_fingerprint: c4775c516b8d9c999aecd3f8d042f5d1f4ea63a18cf4705f1d686aba657da88c
+  model_fingerprint: a22801819c61a64be9802b114820cc99cf9177e7afe2098e84db5f0efecb825a
