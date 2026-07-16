@@ -50,6 +50,8 @@ from detailgen.incremental import scoped_regen as sr
 _PLATFORM = "details/platform.spec.yaml"
 _DETAILS = Path("details")
 
+pytestmark = pytest.mark.platform_audit
+
 
 def _platform(overrides=None):
     d = compile_spec_file(_PLATFORM, overrides=overrides)

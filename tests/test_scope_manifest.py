@@ -5,7 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from conftest import _is_ordinary_full_collection
+from conftest import (
+    _is_ordinary_full_collection,
+    _require_platform_tier,
+    _validate_scope_options,
+)
 from scope_manifest import (
     ScopeManifestError,
     ScopeRecord,
@@ -258,3 +262,19 @@ def test_only_an_unfiltered_full_collection_reconciles_every_manifest_node():
         ["tests"], detail_gate="family_birdhouse"
     ) is False
     assert _is_ordinary_full_collection(["tests"], platform_tier="audit") is False
+
+
+def test_build_and_platform_selectors_are_mutually_exclusive():
+    with pytest.raises(
+        pytest.UsageError,
+        match="cannot combine --detail-gate with --platform-tier",
+    ):
+        _validate_scope_options("family_birdhouse", "audit")
+
+    _validate_scope_options("family_birdhouse", None)
+    _validate_scope_options(None, "integration")
+
+
+def test_platform_tier_with_zero_selected_nodes_fails_closed():
+    with pytest.raises(pytest.UsageError, match="platform tier 'audit'.*no tests"):
+        _require_platform_tier("audit", [])

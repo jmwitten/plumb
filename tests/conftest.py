@@ -46,6 +46,7 @@ from scope_manifest import (
     build_nodes,
     load_scope_manifest,
     module_paths,
+    platform_nodes,
     reconcile_scope_manifest,
 )
 
@@ -85,6 +86,18 @@ def _is_ordinary_full_collection(
         return Path(raw).resolve() == TESTS_DIR
     except OSError:
         return False
+
+
+def _validate_scope_options(detail_gate, platform_tier):
+    if detail_gate and platform_tier:
+        raise pytest.UsageError(
+            "cannot combine --detail-gate with --platform-tier"
+        )
+
+
+def _require_platform_tier(tier, selected):
+    if not selected:
+        raise pytest.UsageError(f"platform tier {tier!r} selected no tests")
 
 
 def _is_detail_gate_candidate(path: str | Path) -> bool:
@@ -186,6 +199,21 @@ def pytest_addoption(parser):
         default="inner",
         help="run the fast accepted-model gate or include release documents",
     )
+    platform = parser.getgroup("platform test tiers")
+    platform.addoption(
+        "--platform-tier",
+        action="store",
+        choices=("integration", "audit"),
+        default=None,
+        help="run one explicit shared-platform integration or audit tier",
+    )
+
+
+def pytest_configure(config):
+    _validate_scope_options(
+        config.getoption("detail_gate"),
+        config.getoption("platform_tier"),
+    )
 
 
 def _scope_records(config):
@@ -204,9 +232,18 @@ def _requested_build_records(config):
     )
 
 
+def _requested_platform_records(config):
+    return platform_nodes(
+        _scope_records(config),
+        config.getoption("platform_tier"),
+    )
+
+
 def pytest_ignore_collect(collection_path, config):
-    """Avoid importing unrelated test modules during a focused detail gate."""
-    if not config.getoption("detail_gate"):
+    """Avoid importing unrelated modules during an explicit scoped gate."""
+    slug = config.getoption("detail_gate")
+    tier = config.getoption("platform_tier")
+    if not slug and not tier:
         return None
     path = Path(str(collection_path))
     if path.suffix != ".py" or not path.name.startswith("test_"):
@@ -215,15 +252,31 @@ def pytest_ignore_collect(collection_path, config):
         relative = path.resolve().relative_to(Path(str(config.rootpath)).resolve())
     except ValueError:
         return True
-    return relative.as_posix() not in set(
-        module_paths(_requested_build_records(config))
+    requested = (
+        _requested_build_records(config)
+        if slug
+        else _requested_platform_records(config)
     )
+    return relative.as_posix() not in set(module_paths(requested))
 
 
 def pytest_collection_modifyitems(config, items):
     slug = config.getoption("detail_gate")
     cadence = config.getoption("detail_cadence")
     platform_tier = config.getoption("platform_tier", default=None)
+    _validate_scope_options(slug, platform_tier)
+    if platform_tier:
+        selected_nodeids = {
+            record.nodeid for record in _requested_platform_records(config)
+        }
+        selected = [item for item in items if item.nodeid in selected_nodeids]
+        deselected = [
+            item for item in items if item.nodeid not in selected_nodeids
+        ]
+        _require_platform_tier(platform_tier, selected)
+        config.hook.pytest_deselected(items=deselected)
+        items[:] = selected
+        return
     if not slug:
         if _is_ordinary_full_collection(
             config.args,
