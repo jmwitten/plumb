@@ -18,6 +18,7 @@ def test_exterior_wood_screw_is_registered_and_truthfully_named():
     assert "exterior wood screw" in screw.describe().lower()
     assert "structural" not in screw.describe().lower()
     assert "capacity" in screw.assumptions().lower()
+    assert '2.25"' in ExteriorWoodScrew(0.164 * IN, 2.25 * IN).describe()
 
 
 def test_exterior_wood_screw_has_a_round_head_and_pointed_shank():
@@ -42,4 +43,3 @@ def test_exterior_wood_screw_is_fastener_class_hardware():
     screw = assembly.add(ExteriorWoodScrew(0.164 * IN, 1.5 * IN))
 
     assert is_fastener(screw)
-

@@ -293,9 +293,9 @@ decision:
     - The pivoting side needs controlled clearance and accurately aligned pivot pilots rather than becoming a fully fixed structural wall.
     - The exposed pivot and latch screw heads remain visible on one side in exchange for avoiding separate exterior hinge hardware.
     - Pole, baffle, clamp, soil, utility, and wind facts remain field holds until actual products and the dacha site are verified.
-  application: recommendation_only
+  application: implemented
 modeling_approval:
   approved_by: Joel Witten
   approved_on: 2026-07-15
-  selection_fingerprint: 8119fc4fa46b962e5653c25c8cdb54130a3bc5b6cfe30646afc104ba8cb8beea
+  selection_fingerprint: b7f91b653c95270ebf35968478b2d3a686cf49e356c35482f3e2c2aed4b8e1ff
 delivery_confirmation: null

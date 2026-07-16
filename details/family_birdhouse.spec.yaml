@@ -1,0 +1,290 @@
+# DetailSpec — governed family cedar birdhouse.
+#
+# The selected pivot-side concept is modeled as six primary untreated cedar
+# enclosure boards plus a separate pole-interface cleat. One cleanout side is
+# retained by two coaxial pivot screws and a lower service latch screw; it is
+# never represented as a fixed or load-bearing wall joint. The roof slopes from
+# the 8-inch front to the 8-1/2-inch back and overhangs every wall. Unknown pole,
+# baffle, clamp, soil, utility, wind, and coating facts remain field holds.
+
+name: family birdhouse
+type: family_birdhouse
+units: in
+
+design_review:
+  record: family_birdhouse.design-review.yaml
+  selected_concept: pivot_side_classic
+
+params:
+  cedar_thk: 0.75
+  body_w: 5.5
+  body_depth: 5.5
+  cavity_w: 4.0
+  wall_h: 8.0
+  back_h: 11.0
+  back_top_z: 8.5
+  floor_recess: 0.25
+  floor_w: 4.0
+  roof_len: 7.5
+  roof_slope_len: 8.25
+  roof_front_overhang: 1.5
+  roof_rise: 0.5
+  roof_angle: 5.1944
+  roof_vertical_thk: 0.7530927621
+  entrance_dia: 1.125
+  vent_dia: 0.625
+  drain_dia: 0.25
+  shell_screw_dia: 0.164
+  shell_screw_len: 1.5
+  roof_screw_len: 2.25
+  cleat_h: 2.5
+
+derived:
+  inner_x0: "$cedar_thk"
+  inner_x1: "= body_w - cedar_thk"
+  inner_y0: "$cedar_thk"
+  inner_y1: "= body_depth - cedar_thk"
+  floor_top_z: "= floor_recess + cedar_thk"
+  back_bottom_z: "= back_top_z - back_h"
+  roof_base_y: "= -roof_front_overhang"
+  roof_base_z: "= back_top_z - (roof_rise/body_depth)*(body_depth - cedar_thk + roof_front_overhang)"
+  roof_front_screw_z: "= roof_base_z + (roof_rise/body_depth)*(0.375 + roof_front_overhang) + roof_vertical_thk"
+  roof_back_screw_z: "= roof_base_z + (roof_rise/body_depth)*(5.125 + roof_front_overhang) + roof_vertical_thk"
+  roof_side_screw_z0: "= roof_base_z + (roof_rise/body_depth)*(2.0 + roof_front_overhang) + roof_vertical_thk"
+  roof_side_screw_z1: "= roof_base_z + (roof_rise/body_depth)*(3.5 + roof_front_overhang) + roof_vertical_thk"
+
+components:
+  # Six primary enclosure boards.
+  - id: front
+    type: cedar_panel
+    name: entrance front
+    reader_name: Entrance front
+    params: {length: "$body_w", width: "$wall_h", thickness: "$cedar_thk"}
+    place: {raw: {at: ["0 in", "$cedar_thk", "0 in"], rotate: [["X", 90]]}}
+    features:
+      - bore: {dia: "$entrance_dia", id: entrance, name: "1 1/8 inch entrance", at: ["= body_w/2", "5.75 in"]}
+
+  - id: back
+    type: cedar_panel
+    name: extended back
+    reader_name: Extended back
+    params: {length: "$body_w", width: "$back_h", thickness: "$cedar_thk"}
+    place: {raw: {at: ["0 in", "$body_depth", "$back_bottom_z"], rotate: [["X", 90]]}}
+
+  - id: side_fixed
+    type: cedar_panel
+    name: fixed side
+    reader_name: Fixed side
+    params: {length: "$cavity_w", width: "$wall_h", thickness: "$cedar_thk"}
+    place: {raw: {at: ["0 in", "$inner_y0", "0 in"], rotate: [["X", 90], ["Z", 90]]}}
+    features:
+      - bore: {dia: "$vent_dia", id: vent_fixed_front, name: "fixed-side front vent", at: ["1.25 in", "7.25 in"]}
+      - bore: {dia: "$vent_dia", id: vent_fixed_rear, name: "fixed-side rear vent", at: ["2.75 in", "7.25 in"]}
+
+  - id: side_cleanout
+    type: cedar_panel
+    name: pivoting cleanout side
+    reader_name: Pivoting cleanout side
+    params: {length: "$cavity_w", width: "$wall_h", thickness: "$cedar_thk"}
+    place: {raw: {at: ["$inner_x1", "$inner_y0", "0 in"], rotate: [["X", 90], ["Z", 90]]}}
+    features:
+      - bore: {dia: "$vent_dia", id: vent_cleanout_front, name: "cleanout-side front vent", at: ["1.25 in", "7.25 in"]}
+      - bore: {dia: "$vent_dia", id: vent_cleanout_rear, name: "cleanout-side rear vent", at: ["2.75 in", "7.25 in"]}
+
+  - id: floor
+    type: cedar_panel
+    name: recessed floor
+    reader_name: Recessed floor
+    params: {length: "$floor_w", width: "$floor_w", thickness: "$cedar_thk"}
+    place: {raw: {at: ["$inner_x0", "$inner_y0", "$floor_recess"]}}
+    features:
+      - bore: {dia: "$drain_dia", id: drain_front_left, name: "front-left drain", at: ["0.5 in", "0.5 in"]}
+      - bore: {dia: "$drain_dia", id: drain_front_right, name: "front-right drain", at: ["3.5 in", "0.5 in"]}
+      - bore: {dia: "$drain_dia", id: drain_rear_left, name: "rear-left drain", at: ["0.5 in", "3.5 in"]}
+      - bore: {dia: "$drain_dia", id: drain_rear_right, name: "rear-right drain", at: ["3.5 in", "3.5 in"]}
+
+  - id: roof
+    type: cedar_panel
+    name: sloped oversized roof
+    reader_name: Sloped oversized roof
+    params: {length: "$roof_len", width: "$roof_slope_len", thickness: "$cedar_thk"}
+    place: {raw: {at: ["-1 in", "$roof_base_y", "$roof_base_z"], rotate: [["X", 5.1944]]}}
+
+  # The cleat is the modeled handoff to unknown field-selected pole hardware.
+  - id: mount_cleat
+    type: cedar_panel
+    name: pole mounting cleat
+    reader_name: Pole mounting cleat
+    params: {length: "$body_w", width: "$cleat_h", thickness: "$cedar_thk"}
+    place: {raw: {at: ["0 in", "= body_depth + cedar_thk", "2.75 in"], rotate: [["X", 90]]}}
+
+  # Fixed-side shell screws through front/back faces into the side edge.
+  - {id: fixed_front_low, type: exterior_wood_screw, name: fixed-side front lower screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0.375 in", "0 in", "2.5 in"], rotate: [["X", 90]]}}}
+  - {id: fixed_front_high, type: exterior_wood_screw, name: fixed-side front upper screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0.375 in", "0 in", "5.5 in"], rotate: [["X", 90]]}}}
+  - {id: fixed_back_low, type: exterior_wood_screw, name: fixed-side back lower screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0.375 in", "$body_depth", "2.5 in"], rotate: [["X", -90]]}}}
+  - {id: fixed_back_high, type: exterior_wood_screw, name: fixed-side back upper screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0.375 in", "$body_depth", "5.5 in"], rotate: [["X", -90]]}}}
+
+  # Recessed-floor screws: front, back, and fixed side only.
+  - {id: floor_front_left, type: exterior_wood_screw, name: floor front left screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["1.5 in", "0 in", "0.625 in"], rotate: [["X", 90]]}}}
+  - {id: floor_front_right, type: exterior_wood_screw, name: floor front right screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["4 in", "0 in", "0.625 in"], rotate: [["X", 90]]}}}
+  - {id: floor_back_left, type: exterior_wood_screw, name: floor back left screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["1.5 in", "$body_depth", "0.625 in"], rotate: [["X", -90]]}}}
+  - {id: floor_back_right, type: exterior_wood_screw, name: floor back right screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["4 in", "$body_depth", "0.625 in"], rotate: [["X", -90]]}}}
+  - {id: floor_side_front, type: exterior_wood_screw, name: floor fixed-side front screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0 in", "1.75 in", "0.625 in"], rotate: [["Y", -90]]}}}
+  - {id: floor_side_rear, type: exterior_wood_screw, name: floor fixed-side rear screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0 in", "3.75 in", "0.625 in"], rotate: [["Y", -90]]}}}
+
+  # Roof screws are vertical through the sloped cedar face. Their head stations
+  # lie on the computed top plane; the 2-1/4-inch length spans roof, wedge, and
+  # adequate wall-edge bite without implying analyzed capacity.
+  - {id: roof_front_left, type: exterior_wood_screw, name: roof front left screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["1.5 in", "0.375 in", "$roof_front_screw_z"]}}}
+  - {id: roof_front_right, type: exterior_wood_screw, name: roof front right screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["4 in", "0.375 in", "$roof_front_screw_z"]}}}
+  - {id: roof_back_left, type: exterior_wood_screw, name: roof back left screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["1.5 in", "5.125 in", "$roof_back_screw_z"]}}}
+  - {id: roof_back_right, type: exterior_wood_screw, name: roof back right screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["4 in", "5.125 in", "$roof_back_screw_z"]}}}
+  - {id: roof_side_front, type: exterior_wood_screw, name: roof fixed-side front screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["0.375 in", "2 in", "$roof_side_screw_z0"]}}}
+  - {id: roof_side_rear, type: exterior_wood_screw, name: roof fixed-side rear screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["0.375 in", "3.5 in", "$roof_side_screw_z1"]}}}
+
+  # Cleat-to-back fasteners; field pole clamps remain outside the model.
+  - {id: cleat_left, type: exterior_wood_screw, name: mounting cleat left screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["1.5 in", "= body_depth + cedar_thk", "3.5 in"], rotate: [["X", -90]]}}}
+  - {id: cleat_right, type: exterior_wood_screw, name: mounting cleat right screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["4 in", "= body_depth + cedar_thk", "4.5 in"], rotate: [["X", -90]]}}}
+
+  # Two coaxial top pivots and one lower front latch retain the service side.
+  - {id: pivot_front, type: exterior_wood_screw, name: cleanout front pivot screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["5.125 in", "0 in", "7.25 in"], rotate: [["X", 90]]}}}
+  - {id: pivot_back, type: exterior_wood_screw, name: cleanout back pivot screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["5.125 in", "$body_depth", "7.25 in"], rotate: [["X", -90]]}}}
+  - {id: latch_front, type: exterior_wood_screw, name: cleanout lower latch screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["5.125 in", "0 in", "1.75 in"], rotate: [["X", 90]]}}}
+
+connections:
+  - {type: butt_screwed, label: "front -> fixed side", params: {n_screws: 2}, parts: [front, side_fixed], hardware: [fixed_front_low, fixed_front_high], assumptions: ["Exterior screws bite cedar edge grain; joint capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "back -> fixed side", params: {n_screws: 2}, parts: [back, side_fixed], hardware: [fixed_back_low, fixed_back_high], assumptions: ["Exterior screws bite cedar edge grain; joint capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "front -> recessed floor", params: {n_screws: 2}, parts: [front, floor], hardware: [floor_front_left, floor_front_right], assumptions: ["Floor is recessed 1/4 inch; exterior screws bite cedar edge grain; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "back -> recessed floor", params: {n_screws: 2}, parts: [back, floor], hardware: [floor_back_left, floor_back_right], assumptions: ["Floor is recessed 1/4 inch; exterior screws bite cedar edge grain; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "fixed side -> recessed floor", params: {n_screws: 2}, parts: [side_fixed, floor], hardware: [floor_side_front, floor_side_rear], assumptions: ["Floor is recessed 1/4 inch; exterior screws bite cedar edge grain; capacity NOT analyzed."]}
+  - type: butt_screwed
+    label: "roof -> front"
+    params: {n_screws: 2}
+    parts: [roof, front]
+    hardware: [roof_front_left, roof_front_right]
+    install: {tool: {length: "6 in", dia: "0.375 in"}}
+    assumptions: ["Screws drive vertically through the sloped roof into the front top edge with a 3/8-inch maximum driver-extension envelope; the small roof/wall ventilation wedge is intentional; capacity NOT analyzed."]
+  - type: butt_screwed
+    label: "roof -> back"
+    params: {n_screws: 2}
+    parts: [roof, back]
+    hardware: [roof_back_left, roof_back_right]
+    install: {tool: {length: "6 in", dia: "0.375 in"}}
+    assumptions: ["Screws drive vertically through the sloped roof into the back top edge with a 3/8-inch maximum driver-extension envelope; capacity NOT analyzed."]
+  - type: butt_screwed
+    label: "roof -> fixed side"
+    params: {n_screws: 2}
+    parts: [roof, side_fixed]
+    hardware: [roof_side_front, roof_side_rear]
+    install: {tool: {length: "6 in", dia: "0.375 in"}}
+    assumptions: ["Screws span the protected ventilation wedge into the fixed-side top edge with a 3/8-inch maximum driver-extension envelope; capacity NOT analyzed."]
+  - {type: cleat_screwed, label: "mounting cleat -> extended back", params: {n_screws: 2}, parts: [mount_cleat, back], hardware: [cleat_left, cleat_right], assumptions: ["Cleat-to-back screws bite cedar face grain. Pole clamp and mounting capacity NOT analyzed."]}
+  - {type: pivot_screwed, label: "front pivot -> cleanout side", parts: [front, side_cleanout], hardware: [pivot_front], assumptions: ["Loose pilot clearance in the front and controlled bite in the side allow seasonal motion; fit and wear require adult verification."]}
+  - {type: pivot_screwed, label: "back pivot -> cleanout side", parts: [back, side_cleanout], hardware: [pivot_back], assumptions: ["The two pivot screws share the modeled Y-axis station; pilot fit, motion, and wear require adult verification."]}
+  - {type: service_latch_screwed, label: "lower latch -> cleanout side", parts: [front, side_cleanout], hardware: [latch_front], assumptions: ["Adult loosens this lower screw for cleanout and retightens it after service; retention capacity NOT analyzed."]}
+
+sequence:
+  stages:
+    - name: close the rear fixed corner before adding the pole cleat
+      connections: ["back -> fixed side"]
+      why: >-
+        Drive the two rear fixed-corner screws while the back face is open on
+        the bench; the later mounting cleat otherwise occupies that driver
+        corridor in the completed model.
+    - name: add the pole cleat after the rear fixed corner
+      connections: ["mounting cleat -> extended back"]
+      why: >-
+        The cleat is an exterior interface added only after the rear fixed
+        corner is complete, preserving direct driver access to both operations.
+  subassemblies:
+    - name: birdhouse enclosure
+      parts:
+        - front
+        - back
+        - side_fixed
+        - side_cleanout
+        - floor
+        - roof
+        - fixed_front_low
+        - fixed_front_high
+        - fixed_back_low
+        - fixed_back_high
+        - floor_front_left
+        - floor_front_right
+        - floor_back_left
+        - floor_back_right
+        - floor_side_front
+        - floor_side_rear
+        - roof_front_left
+        - roof_front_right
+        - roof_back_left
+        - roof_back_right
+        - roof_side_front
+        - roof_side_rear
+        - pivot_front
+        - pivot_back
+        - latch_front
+      why: >-
+        Build the six-board enclosure, roof, and moving service side as one
+        stable bench unit while the pole mounting cleat and its fasteners are
+        absent. Add that cleat only at the root assembly after the rear corner
+        is closed. The complete empty box is field-mounted only after every
+        installation hold is resolved; lifting and insertion travel are not
+        analyzed.
+
+validation:
+  dimensions:
+    - {name: "GOVERNING body width = 5 1/2 inches", part: front, measure: xlen, expected: "5.5 in", tolerance: "0.02 in"}
+    - {name: "GOVERNING wall height = 8 inches", part: front, measure: zlen, expected: "8 in", tolerance: "0.02 in"}
+    - {name: "GOVERNING cavity floor width = 4 inches", part: floor, measure: xlen, expected: "4 in", tolerance: "0.02 in"}
+    - {name: "recessed floor starts 1/4 inch above wall bottoms", part: floor, measure: zmin, expected: "0.25 in", tolerance: "0.02 in"}
+    - {name: "extended back reaches 2 1/2 inches below the box", part: back, measure: zmin, expected: "-2.5 in", tolerance: "0.02 in"}
+    - {name: "extended back top sets 1/2 inch roof rise", part: back, measure: zmax, expected: "8.5 in", tolerance: "0.02 in"}
+    - {name: "oversized roof spans 7 1/2 inches across", part: roof, measure: xlen, expected: "7.5 in", tolerance: "0.02 in"}
+
+callouts:
+  - {param: body_w, label: "BODY {v}", p0: [0, "-2 in", 0], p1: ["$body_w", "-2 in", 0]}
+  - {param: floor_w, label: "CAVITY FLOOR {v}", p0: ["$inner_x0", "-1 in", "1 in"], p1: ["$inner_x1", "-1 in", "1 in"]}
+  - {param: entrance_dia, label: "ENTRANCE Ø {v}", p0: ["= body_w/2 - entrance_dia/2", "-1 in", "5.75 in"], p1: ["= body_w/2 + entrance_dia/2", "-1 in", "5.75 in"]}
+  - {param: wall_h, label: "WALL {v}", p0: ["7 in", "2.75 in", 0], p1: ["7 in", "2.75 in", "$wall_h"]}
+
+explode:
+  - {id: roof, vector: [0, 0, 4]}
+  - {id: front, vector: [0, -4, 0]}
+  - {id: back, vector: [0, 4, 0]}
+  - {id: side_fixed, vector: [-4, 0, 0]}
+  - {id: side_cleanout, vector: [4, 0, 0]}
+  - {id: floor, vector: [0, 0, -3]}
+  - {id: mount_cleat, vector: [0, 5, 0]}
+
+export: {glb_tolerance: 0.08, glb_angular_tolerance: 0.12, inject_explode: true, explode_authoring_units: true}
+
+doc:
+  sections:
+    - prose: |
+        # Family Birdhouse — Governed Validation Report
+
+        A compact untreated-cedar chickadee/wren nest box modeled from the approved `pivot_side_classic` concept. Six primary boards provide the entrance front, extended back, fixed side, pivoting cleanout side, recessed drained floor, and sloped oversized roof; a seventh cedar cleat owns the field mounting handoff. The enclosure has one 1 1/8 inch entrance, four high side vents, four floor drains, a rough interior below the entrance, and no exterior perch.
+
+        ## Family work boundary
+        - **ADULT-ONLY:** every saw cut, entrance/vent/drain bore, pilot and countersink setup, sharp-edge correction, pole/baffle operation, lift, and exterior installation.
+        - **CHILD-SUITABLE with direct adult supervision:** measure and mark from a story stick, match labels to prepared parts, sand already-prepared exterior edges, decorate exterior faces only, sort fasteners, and finish selected pre-started screws with a hand driver or adult-set low clutch.
+        - Keep paint, stain, and decorations off the interior, entrance rim, vents, drains, panel seams, and mounting surfaces. Coating selection remains a field hold.
+    - findings: {header: "## Dimension checks", check: dimension}
+    - findings: {header: "## Fastener installation checks", check: install_termination}
+    - hardware_presence: {header: "## Connection hardware presence", cap: 32}
+    - derivation_log:
+        header: "## Construction Graph — derivation log"
+        preamble: "Fixed shell joints, cleanout pivots, latch retention, and mounting-cleat attachment are all generated from declared connection semantics."
+        mode: per_connection
+        cap: 64
+    - prose: "## Result: **{result_verdict}**"
+    - bom_table: {header: "## Bill of materials"}
+    - prose: |
+        ## Modeling assumptions, service rule, and field holds
+        - **Service side.** Loosen the lower front latch screw only. Support the panel, swing its lower edge outward around the two aligned upper pivot screws, clean after the nesting season, let the empty box dry, close the panel, and retighten the latch by hand. Pivot fit, cedar-thread wear, and long-term retention are not analyzed.
+        - **Bird-facing surfaces.** Leave the rough interior, entrance rim, vents, drains, and floor unfinished. The model carries the hole geometry but does not claim occupancy, nesting success, bird health, or predator resistance.
+        - **Fasteners.** Ordinary corrosion-resistant exterior wood screws are represented. Exact product, coating compatibility, pilot chart, torque, withdrawal, shear, wind, and connection capacity NOT analyzed; select from manufacturer data for the purchased cedar and exposure.
+        - **Roof driver.** The three roof screw groups declare a 6-inch-long, 3/8-inch-maximum extension corridor so the driver clears the uphill sloped roof face. Verify the purchased bit/extension geometry before drilling; the driver body beyond that represented envelope is not analyzed.
+        - **FIELD HOLD — pole / baffle / site.** Do not install until the actual freestanding metal pole, commercial predator baffle, clamps or U-bolts, cleat interface, soil/foundation, frost, wind exposure, underground and overhead utilities, setbacks, and service access are verified at the dacha. Pole stability and predator protection are not inferred from the wooden box.
+        - **FIELD HOLD — coating.** Use no coating inside the cavity. Any child decoration or exterior water-based coating requires adult selection for cured exterior suitability and must stay clear of openings, seams, and mount faces.
