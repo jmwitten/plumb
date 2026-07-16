@@ -14,8 +14,6 @@ params:
   member_length: 96.0
   stud_thickness: 1.5
   stud_depth: 3.5
-  screw_diameter: 0.22
-  screw_length: 2.5
   first_station: 6.0
   station_spacing: 12.0
   station_count: 8
@@ -24,7 +22,6 @@ derived:
   assembly_width: "= 2 * stud_thickness"
   screw_center_z: "= stud_depth / 2"
   final_station: "= first_station + (station_count - 1) * station_spacing"
-  modeled_embedment: "= screw_length - stud_thickness"
 
 components:
   - id: ply_a
@@ -45,52 +42,52 @@ components:
   - id: screw_06
     type: structural_screw
     name: screw at 6 inches from face A
-    reader_name: 2½-inch structural screw
-    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    reader_name: Structural screw
+    params: {catalog_ref: &selected_screw home_depot_318899877}
     place: {raw: {at: ["6 in", "0 in", "$screw_center_z"], rotate: [["X", 90]]}}
   - id: screw_30
     type: structural_screw
     name: screw at 30 inches from face A
-    reader_name: 2½-inch structural screw
-    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    reader_name: Structural screw
+    params: {catalog_ref: *selected_screw}
     place: {raw: {at: ["30 in", "0 in", "$screw_center_z"], rotate: [["X", 90]]}}
   - id: screw_54
     type: structural_screw
     name: screw at 54 inches from face A
-    reader_name: 2½-inch structural screw
-    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    reader_name: Structural screw
+    params: {catalog_ref: *selected_screw}
     place: {raw: {at: ["54 in", "0 in", "$screw_center_z"], rotate: [["X", 90]]}}
   - id: screw_78
     type: structural_screw
     name: screw at 78 inches from face A
-    reader_name: 2½-inch structural screw
-    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    reader_name: Structural screw
+    params: {catalog_ref: *selected_screw}
     place: {raw: {at: ["78 in", "0 in", "$screw_center_z"], rotate: [["X", 90]]}}
 
   # B-face screw heads at Y=3 drive -Y through ply B and one inch into ply A.
   - id: screw_18
     type: structural_screw
     name: screw at 18 inches from face B
-    reader_name: 2½-inch structural screw
-    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    reader_name: Structural screw
+    params: {catalog_ref: *selected_screw}
     place: {raw: {at: ["18 in", "$assembly_width", "$screw_center_z"], rotate: [["X", -90]]}}
   - id: screw_42
     type: structural_screw
     name: screw at 42 inches from face B
-    reader_name: 2½-inch structural screw
-    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    reader_name: Structural screw
+    params: {catalog_ref: *selected_screw}
     place: {raw: {at: ["42 in", "$assembly_width", "$screw_center_z"], rotate: [["X", -90]]}}
   - id: screw_66
     type: structural_screw
     name: screw at 66 inches from face B
-    reader_name: 2½-inch structural screw
-    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    reader_name: Structural screw
+    params: {catalog_ref: *selected_screw}
     place: {raw: {at: ["66 in", "$assembly_width", "$screw_center_z"], rotate: [["X", -90]]}}
   - id: screw_90
     type: structural_screw
     name: screw at 90 inches from face B
-    reader_name: 2½-inch structural screw
-    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    reader_name: Structural screw
+    params: {catalog_ref: *selected_screw}
     place: {raw: {at: ["90 in", "$assembly_width", "$screw_center_z"], rotate: [["X", -90]]}}
 
 connections:
@@ -153,7 +150,7 @@ doc:
     - prose: |
         # Built-Up 2×4 Member — Validation Report
 
-        Two full-length nominal 2×4s are clamped wide-face to wide-face and joined by eight representative 0.22-inch × 2½-inch structural wood screws. Centers run from 6 through 90 inches at 12 inches on center; consecutive screw heads alternate between the two exposed broad faces. The actual assembled section is 3 inches × 3½ inches, not a true 4×4.
+        Two full-length nominal 2×4s are clamped wide-face to wide-face and joined by eight catalog-selected #9 × 2½-inch washer-head structural screws. Centers run from 6 through 90 inches at 12 inches on center; consecutive screw heads alternate between the two exposed broad faces. The actual assembled section is 3 inches × 3½ inches, not a true 4×4.
     - findings: {header: "## Full-face contact", check: contact}
     - hardware_presence: {header: "## Screw presence", cap: 8}
     - derivation_log:
@@ -166,7 +163,7 @@ doc:
     - bom_table: {header: "## Bill of materials"}
     - prose: |
         ## Modeling assumptions and honest limits
-        - **Representative fastener geometry.** The model uses a generic lag-like structural screw at the selected 0.22-inch × 2½-inch envelope. Confirm the purchased product, drive bit, coating, lumber-treatment compatibility, and current manufacturer instructions before work.
+        - **Catalog-backed fastener selection.** The component geometry, #9 × 2½-inch terminology, washer-head/hex-star-drive description, and purchase source resolve from the selected screw-catalog record. The #9 trade size is normalized to a representative 0.177-inch modeled major diameter; confirm the purchased product, drive bit, coating, lumber-treatment compatibility, and current manufacturer instructions before work.
         - **Owner-selected spacing.** The 12-inch station pattern and alternating faces come from the brief. They are modeled and dimension-checked, not structurally engineered here.
         - **No structural approval.** Species, grade, moisture, loads, supports, end connections, exposure, composite action, capacity, and code compliance remain UNKNOWN — NOT ANALYZED.
         - **Fabrication check.** Clamp both plies with ends and edges flush before driving. Reject splits, protruding tips, unseated heads, or a member that does not remain straight and fully closed along the mating faces.
