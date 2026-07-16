@@ -41,6 +41,15 @@ from pathlib import Path
 
 import pytest
 
+from scope_manifest import (
+    ScopeManifestError,
+    load_scope_manifest,
+    reconcile_scope_manifest,
+)
+
+
+TESTS_DIR = Path(__file__).resolve().parent
+SCOPE_MANIFEST = TESTS_DIR / "test_scope_manifest.csv"
 
 REQUIRED_DETAIL_CONTRACTS = frozenset({
     "compile",
@@ -54,6 +63,26 @@ REQUIRED_DETAIL_CONTRACTS = frozenset({
     "determinism",
 })
 ALLOWED_DETAIL_CONTRACTS = REQUIRED_DETAIL_CONTRACTS | {"documents"}
+
+
+def _is_ordinary_full_collection(
+    args,
+    *,
+    detail_gate=None,
+    platform_tier=None,
+):
+    """Return whether collection should exactly reconcile the full manifest."""
+    if detail_gate or platform_tier:
+        return False
+    if not args:
+        return True
+    if len(args) != 1:
+        return False
+    raw = str(args[0]).split("::", 1)[0]
+    try:
+        return Path(raw).resolve() == TESTS_DIR
+    except OSError:
+        return False
 
 
 def _is_detail_gate_candidate(path: str | Path) -> bool:
@@ -142,7 +171,20 @@ def pytest_ignore_collect(collection_path, config):
 
 def pytest_collection_modifyitems(config, items):
     slug = config.getoption("detail_gate")
+    platform_tier = config.getoption("platform_tier", default=None)
     if not slug:
+        if _is_ordinary_full_collection(
+            config.args,
+            detail_gate=slug,
+            platform_tier=platform_tier,
+        ):
+            try:
+                reconcile_scope_manifest(
+                    load_scope_manifest(SCOPE_MANIFEST),
+                    {item.nodeid for item in items},
+                )
+            except ScopeManifestError as exc:
+                raise pytest.UsageError(str(exc)) from exc
         return
     selected, deselected, contracts = _detail_gate_selection(items, slug)
     _require_complete_detail_gate(slug, selected, contracts)
