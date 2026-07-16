@@ -57,5 +57,5 @@ detailgen = "src"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
-    "detail_gate(slug, contracts): semantic per-build accuracy certification",
+    "detail_gate(slug, contracts, cadence): semantic per-build accuracy certification",
 ]

@@ -19,6 +19,13 @@ if str(SCRIPTS) not in sys.path:
 import family_birdhouse_report as FBR
 
 
+pytestmark = pytest.mark.detail_gate(
+    "family_birdhouse",
+    contracts=("documents",),
+    cadence="release",
+)
+
+
 def test_still_shading_is_invariant_to_tessellation_winding():
     face = FBR.np.array(
         [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]

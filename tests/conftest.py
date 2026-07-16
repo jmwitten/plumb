@@ -43,7 +43,9 @@ import pytest
 
 from scope_manifest import (
     ScopeManifestError,
+    build_nodes,
     load_scope_manifest,
+    module_paths,
     reconcile_scope_manifest,
 )
 
@@ -97,8 +99,10 @@ def _is_detail_gate_candidate(path: str | Path) -> bool:
     return "pytest.mark.detail_gate" in source
 
 
-def _detail_gate_selection(items, slug):
+def _detail_gate_selection(items, slug, *, cadence="inner"):
     """Return tests for ``slug`` plus their declared semantic contracts."""
+    if cadence not in {"inner", "release"}:
+        raise pytest.UsageError(f"unknown detail-gate cadence {cadence!r}")
     selected = []
     deselected = []
     contracts = set()
@@ -109,9 +113,13 @@ def _detail_gate_selection(items, slug):
                 raise pytest.UsageError(
                     f"{item.nodeid}: detail_gate requires one string slug"
                 )
-            if set(marker.kwargs) != {"contracts"}:
+            if "contracts" not in marker.kwargs or not set(marker.kwargs) <= {
+                "contracts",
+                "cadence",
+            }:
                 raise pytest.UsageError(
-                    f"{item.nodeid}: detail_gate accepts only contracts="
+                    f"{item.nodeid}: detail_gate accepts only contracts= "
+                    "and cadence="
                 )
             declared = marker.kwargs["contracts"]
             if not isinstance(declared, (tuple, list)) or not declared:
@@ -129,18 +137,32 @@ def _detail_gate_selection(items, slug):
                     f"{item.nodeid}: unknown detail-gate contracts "
                     f"{sorted(unknown)}"
                 )
-            if marker.args[0] == slug:
+            marker_cadence = marker.kwargs.get("cadence", "inner")
+            if marker_cadence not in {"inner", "release"}:
+                raise pytest.UsageError(
+                    f"{item.nodeid}: unknown detail-gate cadence "
+                    f"{marker_cadence!r}"
+                )
+            cadence_matches = (
+                marker_cadence == "inner" or cadence == "release"
+            )
+            if marker.args[0] == slug and cadence_matches:
                 matched = True
                 contracts.update(declared)
         (selected if matched else deselected).append(item)
     return selected, deselected, contracts
 
 
-def _require_complete_detail_gate(slug, selected, contracts):
+def _require_complete_detail_gate(
+    slug, selected, contracts, *, cadence="inner"
+):
     """Fail closed when a requested gate is unknown or semantically thin."""
     if not selected:
         raise pytest.UsageError(f"unknown detail gate {slug!r}")
-    missing = REQUIRED_DETAIL_CONTRACTS - contracts
+    required = set(REQUIRED_DETAIL_CONTRACTS)
+    if cadence == "release":
+        required.add("documents")
+    missing = required - contracts
     if missing:
         raise pytest.UsageError(
             f"detail gate {slug!r} is missing contracts: "
@@ -157,6 +179,29 @@ def pytest_addoption(parser):
         metavar="SLUG",
         help="run the complete semantic build gate for one detail",
     )
+    group.addoption(
+        "--detail-cadence",
+        action="store",
+        choices=("inner", "release"),
+        default="inner",
+        help="run the fast accepted-model gate or include release documents",
+    )
+
+
+def _scope_records(config):
+    records = getattr(config, "_plumb_scope_records", None)
+    if records is None:
+        records = load_scope_manifest(SCOPE_MANIFEST)
+        config._plumb_scope_records = records
+    return records
+
+
+def _requested_build_records(config):
+    return build_nodes(
+        _scope_records(config),
+        config.getoption("detail_gate"),
+        include_release=config.getoption("detail_cadence") == "release",
+    )
 
 
 def pytest_ignore_collect(collection_path, config):
@@ -166,11 +211,18 @@ def pytest_ignore_collect(collection_path, config):
     path = Path(str(collection_path))
     if path.suffix != ".py" or not path.name.startswith("test_"):
         return None
-    return not _is_detail_gate_candidate(path)
+    try:
+        relative = path.resolve().relative_to(Path(str(config.rootpath)).resolve())
+    except ValueError:
+        return True
+    return relative.as_posix() not in set(
+        module_paths(_requested_build_records(config))
+    )
 
 
 def pytest_collection_modifyitems(config, items):
     slug = config.getoption("detail_gate")
+    cadence = config.getoption("detail_cadence")
     platform_tier = config.getoption("platform_tier", default=None)
     if not slug:
         if _is_ordinary_full_collection(
@@ -186,8 +238,17 @@ def pytest_collection_modifyitems(config, items):
             except ScopeManifestError as exc:
                 raise pytest.UsageError(str(exc)) from exc
         return
-    selected, deselected, contracts = _detail_gate_selection(items, slug)
-    _require_complete_detail_gate(slug, selected, contracts)
+    selected_nodeids = {
+        record.nodeid for record in _requested_build_records(config)
+    }
+    selected = [item for item in items if item.nodeid in selected_nodeids]
+    deselected = [item for item in items if item.nodeid not in selected_nodeids]
+    _marker_selected, _marker_deselected, contracts = _detail_gate_selection(
+        items, slug, cadence=cadence
+    )
+    _require_complete_detail_gate(
+        slug, selected, contracts, cadence=cadence
+    )
     config.hook.pytest_deselected(items=deselected)
     items[:] = selected
 
