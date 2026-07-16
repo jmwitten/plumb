@@ -27,7 +27,6 @@ sys.path.insert(0, str(_REPO / "scripts"))
 
 import single_detail_report as SDR
 
-from detailgen.components import CedarPanel, ExteriorWoodScrew
 from detailgen.core.units import IN
 from detailgen.design_review import (
     load_design_review_file,
@@ -75,6 +74,14 @@ def _fmt_in(value_mm: float) -> str:
     return f"{value:g} in"
 
 
+def _is_cedar_component(component) -> bool:
+    return component.material_key == "cedar"
+
+
+def _is_ordinary_wood_screw(component) -> bool:
+    return "ordinary_wood_screw" in component.capability_tags()
+
+
 def _part_polys(part, offset=(0.0, 0.0, 0.0)):
     vertices, triangles = part.world_solid().val().tessellate(0.12)
     values = np.array([[v.x, v.y, v.z] for v in vertices], dtype=float)
@@ -96,7 +103,7 @@ def _shade(base, faces, alpha=1.0):
 
 
 def _part_color(part):
-    if isinstance(part.component, ExteriorWoodScrew):
+    if _is_ordinary_wood_screw(part.component):
         return (0.50, 0.53, 0.58)
     if part.name == "sloped oversized roof":
         return (0.53, 0.25, 0.12)
@@ -305,7 +312,7 @@ def _fabrication_html(detail, selection_fp: str, model_fp: str, *, preview: bool
     rows = []
     for part in detail.assembly.parts:
         component = part.component
-        if not isinstance(component, CedarPanel):
+        if not _is_cedar_component(component):
             continue
         record = component.fabrication_record(part.id)
         bores = [step for step in record.steps if step.kind == "bore"]
@@ -424,7 +431,7 @@ def _write_cut_csv(detail, path: Path) -> None:
         writer.writeheader()
         for part in detail.assembly.parts:
             component = part.component
-            if not isinstance(component, CedarPanel):
+            if not _is_cedar_component(component):
                 continue
             record = component.fabrication_record(part.id)
             writer.writerow({
@@ -545,11 +552,11 @@ def build_family_birdhouse_package(
     model_manifest = json.loads(model_manifest_path.read_text())
     cedar_parts = [
         part for part in detail.assembly.parts
-        if isinstance(part.component, CedarPanel)
+        if _is_cedar_component(part.component)
     ]
     screws = [
         part for part in detail.assembly.parts
-        if isinstance(part.component, ExteriorWoodScrew)
+        if _is_ordinary_wood_screw(part.component)
     ]
     bore_count = sum(
         step.kind == "bore"

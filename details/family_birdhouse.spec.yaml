@@ -56,46 +56,46 @@ derived:
 components:
   # Six primary enclosure boards.
   - id: front
-    type: cedar_panel
+    type: fabricated_panel
     name: entrance front
     reader_name: Entrance front
-    params: {length: "$body_w", width: "$wall_h", thickness: "$cedar_thk"}
+    params: {length: "$body_w", width: "$wall_h", thickness: "$cedar_thk", material_key: cedar}
     place: {raw: {at: ["0 in", "$cedar_thk", "0 in"], rotate: [["X", 90]]}}
     features:
       - bore: {dia: "$entrance_dia", id: entrance, name: "1 1/8 inch entrance", at: ["= body_w/2", "5.75 in"]}
 
   - id: back
-    type: cedar_panel
+    type: fabricated_panel
     name: extended back
     reader_name: Extended back
-    params: {length: "$body_w", width: "$back_h", thickness: "$cedar_thk"}
+    params: {length: "$body_w", width: "$back_h", thickness: "$cedar_thk", material_key: cedar}
     place: {raw: {at: ["0 in", "$body_depth", "$back_bottom_z"], rotate: [["X", 90]]}}
 
   - id: side_fixed
-    type: cedar_panel
+    type: fabricated_panel
     name: fixed side
     reader_name: Fixed side
-    params: {length: "$cavity_w", width: "$wall_h", thickness: "$cedar_thk"}
+    params: {length: "$cavity_w", width: "$wall_h", thickness: "$cedar_thk", material_key: cedar}
     place: {raw: {at: ["0 in", "$inner_y0", "0 in"], rotate: [["X", 90], ["Z", 90]]}}
     features:
       - bore: {dia: "$vent_dia", id: vent_fixed_front, name: "fixed-side front vent", at: ["1.25 in", "7.25 in"]}
       - bore: {dia: "$vent_dia", id: vent_fixed_rear, name: "fixed-side rear vent", at: ["2.75 in", "7.25 in"]}
 
   - id: side_cleanout
-    type: cedar_panel
+    type: fabricated_panel
     name: pivoting cleanout side
     reader_name: Pivoting cleanout side
-    params: {length: "$cavity_w", width: "$wall_h", thickness: "$cedar_thk"}
+    params: {length: "$cavity_w", width: "$wall_h", thickness: "$cedar_thk", material_key: cedar}
     place: {raw: {at: ["$inner_x1", "$inner_y0", "0 in"], rotate: [["X", 90], ["Z", 90]]}}
     features:
       - bore: {dia: "$vent_dia", id: vent_cleanout_front, name: "cleanout-side front vent", at: ["1.25 in", "7.25 in"]}
       - bore: {dia: "$vent_dia", id: vent_cleanout_rear, name: "cleanout-side rear vent", at: ["2.75 in", "7.25 in"]}
 
   - id: floor
-    type: cedar_panel
+    type: fabricated_panel
     name: recessed floor
     reader_name: Recessed floor
-    params: {length: "$floor_w", width: "$floor_w", thickness: "$cedar_thk"}
+    params: {length: "$floor_w", width: "$floor_w", thickness: "$cedar_thk", material_key: cedar}
     place: {raw: {at: ["$inner_x0", "$inner_y0", "$floor_recess"]}}
     features:
       - bore: {dia: "$drain_dia", id: drain_front_left, name: "front-left drain", at: ["0.5 in", "0.5 in"]}
@@ -104,52 +104,52 @@ components:
       - bore: {dia: "$drain_dia", id: drain_rear_right, name: "rear-right drain", at: ["3.5 in", "3.5 in"]}
 
   - id: roof
-    type: cedar_panel
+    type: fabricated_panel
     name: sloped oversized roof
     reader_name: Sloped oversized roof
-    params: {length: "$roof_len", width: "$roof_slope_len", thickness: "$cedar_thk"}
+    params: {length: "$roof_len", width: "$roof_slope_len", thickness: "$cedar_thk", material_key: cedar}
     place: {raw: {at: ["-1 in", "$roof_base_y", "$roof_base_z"], rotate: [["X", 5.1944]]}}
 
   # The cleat is the modeled handoff to unknown field-selected pole hardware.
   - id: mount_cleat
-    type: cedar_panel
+    type: fabricated_panel
     name: pole mounting cleat
     reader_name: Pole mounting cleat
-    params: {length: "$body_w", width: "$cleat_h", thickness: "$cedar_thk"}
+    params: {length: "$body_w", width: "$cleat_h", thickness: "$cedar_thk", material_key: cedar}
     place: {raw: {at: ["0 in", "= body_depth + cedar_thk", "2.75 in"], rotate: [["X", 90]]}}
 
   # Fixed-side shell screws through front/back faces into the side edge.
-  - {id: fixed_front_low, type: exterior_wood_screw, name: fixed-side front lower screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0.375 in", "0 in", "2.5 in"], rotate: [["X", 90]]}}}
-  - {id: fixed_front_high, type: exterior_wood_screw, name: fixed-side front upper screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0.375 in", "0 in", "5.5 in"], rotate: [["X", 90]]}}}
-  - {id: fixed_back_low, type: exterior_wood_screw, name: fixed-side back lower screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0.375 in", "$body_depth", "2.5 in"], rotate: [["X", -90]]}}}
-  - {id: fixed_back_high, type: exterior_wood_screw, name: fixed-side back upper screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0.375 in", "$body_depth", "5.5 in"], rotate: [["X", -90]]}}}
+  - {id: fixed_front_low, type: wood_screw, name: fixed-side front lower screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0.375 in", "0 in", "2.5 in"], rotate: [["X", 90]]}}}
+  - {id: fixed_front_high, type: wood_screw, name: fixed-side front upper screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0.375 in", "0 in", "5.5 in"], rotate: [["X", 90]]}}}
+  - {id: fixed_back_low, type: wood_screw, name: fixed-side back lower screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0.375 in", "$body_depth", "2.5 in"], rotate: [["X", -90]]}}}
+  - {id: fixed_back_high, type: wood_screw, name: fixed-side back upper screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0.375 in", "$body_depth", "5.5 in"], rotate: [["X", -90]]}}}
 
   # Recessed-floor screws: front, back, and fixed side only.
-  - {id: floor_front_left, type: exterior_wood_screw, name: floor front left screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["1.5 in", "0 in", "0.625 in"], rotate: [["X", 90]]}}}
-  - {id: floor_front_right, type: exterior_wood_screw, name: floor front right screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["4 in", "0 in", "0.625 in"], rotate: [["X", 90]]}}}
-  - {id: floor_back_left, type: exterior_wood_screw, name: floor back left screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["1.5 in", "$body_depth", "0.625 in"], rotate: [["X", -90]]}}}
-  - {id: floor_back_right, type: exterior_wood_screw, name: floor back right screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["4 in", "$body_depth", "0.625 in"], rotate: [["X", -90]]}}}
-  - {id: floor_side_front, type: exterior_wood_screw, name: floor fixed-side front screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0 in", "1.75 in", "0.625 in"], rotate: [["Y", -90]]}}}
-  - {id: floor_side_rear, type: exterior_wood_screw, name: floor fixed-side rear screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0 in", "3.75 in", "0.625 in"], rotate: [["Y", -90]]}}}
+  - {id: floor_front_left, type: wood_screw, name: floor front left screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["1.5 in", "0 in", "0.625 in"], rotate: [["X", 90]]}}}
+  - {id: floor_front_right, type: wood_screw, name: floor front right screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["4 in", "0 in", "0.625 in"], rotate: [["X", 90]]}}}
+  - {id: floor_back_left, type: wood_screw, name: floor back left screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["1.5 in", "$body_depth", "0.625 in"], rotate: [["X", -90]]}}}
+  - {id: floor_back_right, type: wood_screw, name: floor back right screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["4 in", "$body_depth", "0.625 in"], rotate: [["X", -90]]}}}
+  - {id: floor_side_front, type: wood_screw, name: floor fixed-side front screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0 in", "1.75 in", "0.625 in"], rotate: [["Y", -90]]}}}
+  - {id: floor_side_rear, type: wood_screw, name: floor fixed-side rear screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["0 in", "3.75 in", "0.625 in"], rotate: [["Y", -90]]}}}
 
   # Roof screws are vertical through the sloped cedar face. Their head stations
   # lie on the computed top plane; the 2-1/4-inch length spans roof, wedge, and
   # adequate wall-edge bite without implying analyzed capacity.
-  - {id: roof_front_left, type: exterior_wood_screw, name: roof front left screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["1.5 in", "0.375 in", "$roof_front_screw_z"]}}}
-  - {id: roof_front_right, type: exterior_wood_screw, name: roof front right screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["4 in", "0.375 in", "$roof_front_screw_z"]}}}
-  - {id: roof_back_left, type: exterior_wood_screw, name: roof back left screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["1.5 in", "5.125 in", "$roof_back_screw_z"]}}}
-  - {id: roof_back_right, type: exterior_wood_screw, name: roof back right screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["4 in", "5.125 in", "$roof_back_screw_z"]}}}
-  - {id: roof_side_front, type: exterior_wood_screw, name: roof fixed-side front screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["0.375 in", "2 in", "$roof_side_screw_z0"]}}}
-  - {id: roof_side_rear, type: exterior_wood_screw, name: roof fixed-side rear screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["0.375 in", "3.5 in", "$roof_side_screw_z1"]}}}
+  - {id: roof_front_left, type: wood_screw, name: roof front left screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["1.5 in", "0.375 in", "$roof_front_screw_z"]}}}
+  - {id: roof_front_right, type: wood_screw, name: roof front right screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["4 in", "0.375 in", "$roof_front_screw_z"]}}}
+  - {id: roof_back_left, type: wood_screw, name: roof back left screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["1.5 in", "5.125 in", "$roof_back_screw_z"]}}}
+  - {id: roof_back_right, type: wood_screw, name: roof back right screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["4 in", "5.125 in", "$roof_back_screw_z"]}}}
+  - {id: roof_side_front, type: wood_screw, name: roof fixed-side front screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["0.375 in", "2 in", "$roof_side_screw_z0"]}}}
+  - {id: roof_side_rear, type: wood_screw, name: roof fixed-side rear screw, params: {diameter: "$shell_screw_dia", length: "$roof_screw_len"}, place: {raw: {at: ["0.375 in", "3.5 in", "$roof_side_screw_z1"]}}}
 
   # Cleat-to-back fasteners; field pole clamps remain outside the model.
-  - {id: cleat_left, type: exterior_wood_screw, name: mounting cleat left screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["1.5 in", "= body_depth + cedar_thk", "3.5 in"], rotate: [["X", -90]]}}}
-  - {id: cleat_right, type: exterior_wood_screw, name: mounting cleat right screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["4 in", "= body_depth + cedar_thk", "4.5 in"], rotate: [["X", -90]]}}}
+  - {id: cleat_left, type: wood_screw, name: mounting cleat left screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["1.5 in", "= body_depth + cedar_thk", "3.5 in"], rotate: [["X", -90]]}}}
+  - {id: cleat_right, type: wood_screw, name: mounting cleat right screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["4 in", "= body_depth + cedar_thk", "4.5 in"], rotate: [["X", -90]]}}}
 
   # Two coaxial top pivots and one lower front latch retain the service side.
-  - {id: pivot_front, type: exterior_wood_screw, name: cleanout front pivot screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["5.125 in", "0 in", "7.25 in"], rotate: [["X", 90]]}}}
-  - {id: pivot_back, type: exterior_wood_screw, name: cleanout back pivot screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["5.125 in", "$body_depth", "7.25 in"], rotate: [["X", -90]]}}}
-  - {id: latch_front, type: exterior_wood_screw, name: cleanout lower latch screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["5.125 in", "0 in", "1.75 in"], rotate: [["X", 90]]}}}
+  - {id: pivot_front, type: wood_screw, name: cleanout front pivot screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["5.125 in", "0 in", "7.25 in"], rotate: [["X", 90]]}}}
+  - {id: pivot_back, type: wood_screw, name: cleanout back pivot screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["5.125 in", "$body_depth", "7.25 in"], rotate: [["X", -90]]}}}
+  - {id: latch_front, type: wood_screw, name: cleanout lower latch screw, params: {diameter: "$shell_screw_dia", length: "$shell_screw_len"}, place: {raw: {at: ["5.125 in", "0 in", "1.75 in"], rotate: [["X", 90]]}}}
 
 connections:
   - {type: butt_screwed, label: "front -> fixed side", params: {n_screws: 2}, parts: [front, side_fixed], hardware: [fixed_front_low, fixed_front_high], assumptions: ["Exterior screws bite cedar edge grain; joint capacity NOT analyzed."]}
@@ -179,9 +179,9 @@ connections:
     install: {tool: {length: "6 in", dia: "0.375 in"}}
     assumptions: ["Screws span the protected ventilation wedge into the fixed-side top edge with a 3/8-inch maximum driver-extension envelope; capacity NOT analyzed."]
   - {type: cleat_screwed, label: "mounting cleat -> extended back", params: {n_screws: 2}, parts: [mount_cleat, back], hardware: [cleat_left, cleat_right], assumptions: ["Cleat-to-back screws bite cedar face grain. Pole clamp and mounting capacity NOT analyzed."]}
-  - {type: pivot_screwed, label: "front pivot -> cleanout side", parts: [front, side_cleanout], hardware: [pivot_front], assumptions: ["Loose pilot clearance in the front and controlled bite in the side allow seasonal motion; fit and wear require adult verification."]}
-  - {type: pivot_screwed, label: "back pivot -> cleanout side", parts: [back, side_cleanout], hardware: [pivot_back], assumptions: ["The two pivot screws share the modeled Y-axis station; pilot fit, motion, and wear require adult verification."]}
-  - {type: service_latch_screwed, label: "lower latch -> cleanout side", parts: [front, side_cleanout], hardware: [latch_front], assumptions: ["Adult loosens this lower screw for cleanout and retightens it after service; retention capacity NOT analyzed."]}
+  - {type: service_panel_screwed, label: "front pivot -> cleanout side", params: {mode: pivot}, parts: [front, side_cleanout], hardware: [pivot_front], assumptions: ["Loose pilot clearance in the front and controlled bite in the side allow seasonal motion; fit and wear require adult verification."]}
+  - {type: service_panel_screwed, label: "back pivot -> cleanout side", params: {mode: pivot}, parts: [back, side_cleanout], hardware: [pivot_back], assumptions: ["The two pivot screws share the modeled Y-axis station; pilot fit, motion, and wear require adult verification."]}
+  - {type: service_panel_screwed, label: "lower latch -> cleanout side", params: {mode: latch}, parts: [front, side_cleanout], hardware: [latch_front], assumptions: ["Adult loosens this lower screw for cleanout and retightens it after service; retention capacity NOT analyzed."]}
 
 sequence:
   stages:

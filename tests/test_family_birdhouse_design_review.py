@@ -17,6 +17,10 @@ SPEC = ROOT / "details/family_birdhouse.spec.yaml"
 REVIEW = ROOT / "details/family_birdhouse.design-review.yaml"
 SELECTION_FP = "b7f91b653c95270ebf35968478b2d3a686cf49e356c35482f3e2c2aed4b8e1ff"
 
+pytestmark = pytest.mark.detail_gate(
+    "family_birdhouse", contracts=("governance",)
+)
+
 
 def test_review_remains_complete_and_compares_three_access_architectures():
     doc = load_design_review_file(REVIEW)

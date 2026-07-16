@@ -295,7 +295,7 @@ class WoodScrew(_AxialFastener):
         )
 
     def bom_label(self) -> str:
-        return "Wood screw"
+        return f"{self.exposure.capitalize()} wood screw"
 
     def bom_group(self) -> str:
         return (

@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from detailgen.components import CedarPanel, ExteriorWoodScrew
+from detailgen.components import FabricatedPanel, WoodScrew
+from detailgen.core.buildinfo import build_manifest
 from detailgen.core.process_graph import verify_assembly_fabrication
 from detailgen.core.units import IN
 from detailgen.spec import compile_spec_file
@@ -12,6 +13,20 @@ from detailgen.spec import compile_spec_file
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = ROOT / "details/family_birdhouse.spec.yaml"
+
+pytestmark = pytest.mark.detail_gate(
+    "family_birdhouse",
+    contracts=(
+        "compile",
+        "geometry",
+        "validation",
+        "connections",
+        "fabrication",
+        "bom",
+        "intent",
+        "determinism",
+    ),
+)
 
 
 @pytest.fixture(scope="module")
@@ -32,7 +47,10 @@ def _feature_steps(detail, part_id):
 
 def test_model_has_six_primary_cedar_parts_plus_the_mounting_cleat(birdhouse):
     detail, _report = birdhouse
-    cedar = [p for p in detail.assembly.parts if isinstance(p.component, CedarPanel)]
+    cedar = [
+        p for p in detail.assembly.parts
+        if p.component.material_key == "cedar"
+    ]
 
     assert {p.name for p in cedar} == {
         "entrance front",
@@ -44,7 +62,7 @@ def test_model_has_six_primary_cedar_parts_plus_the_mounting_cleat(birdhouse):
         "pole mounting cleat",
     }
     assert len(cedar) == 7
-    assert all(p.component.material_key == "cedar" for p in cedar)
+    assert all(type(p.component) is FabricatedPanel for p in cedar)
     assert all("untreated" in p.component.assumptions().lower() for p in cedar)
     assert not any("perch" in p.name.lower() for p in detail.assembly.parts)
 
@@ -107,10 +125,10 @@ def test_cleanout_panel_is_pivoted_and_latched_never_fixed(birdhouse):
     connections = detail.connections()
     service = [
         conn for conn in connections
-        if conn.kind.label in {"pivot_screwed", "service_latch_screwed"}
+        if conn.kind.label == "service_panel_screwed"
     ]
-    assert [conn.kind.label for conn in service].count("pivot_screwed") == 2
-    assert [conn.kind.label for conn in service].count("service_latch_screwed") == 1
+    assert [conn.kind.mode for conn in service].count("pivot") == 2
+    assert [conn.kind.mode for conn in service].count("latch") == 1
     assert all(conn.parts[1].id == detail._by_id["side_cleanout"].id for conn in service)
 
     fixed_connections = [
@@ -135,11 +153,17 @@ def test_connections_use_only_ordinary_exterior_screws_and_fabrication_folds(bir
     detail, report = birdhouse
     screws = [
         p for p in detail.assembly.parts
-        if isinstance(p.component, ExteriorWoodScrew)
+        if "ordinary_wood_screw" in p.component.capability_tags()
     ]
 
     assert len(screws) == 21
-    assert not any(type(p.component).__name__ == "StructuralScrew" for p in screws)
+    assert all(type(p.component) is WoodScrew for p in screws)
+    assert all(p.component.representation == "envelope" for p in screws)
+    assert all("exterior_use" in p.component.capability_tags() for p in screws)
+    assert not any(
+        type(p.component).__name__ == "StructuralScrew"
+        for p in detail.assembly.parts
+    )
     assert all(p.component.material_key == "steel_galv" for p in screws)
     verify_assembly_fabrication(detail.assembly)
     assert report.ok, [str(finding) for finding in report.blocking]
@@ -165,3 +189,13 @@ def test_bom_and_spec_text_keep_family_tasks_and_installation_holds_explicit(bir
         "capacity NOT analyzed",
     ):
         assert phrase in text
+
+
+def test_two_fresh_compiles_have_the_same_assembly_hash():
+    first = compile_spec_file(SPEC)
+    second = compile_spec_file(SPEC)
+
+    assert (
+        build_manifest(first.assembly)["assembly_hash"]
+        == build_manifest(second.assembly)["assembly_hash"]
+    )
