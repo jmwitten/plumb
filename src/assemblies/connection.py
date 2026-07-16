@@ -869,7 +869,6 @@ def merge_into_spec(assembly: DetailAssembly, hand_spec: dict, generated: Connec
 
 _HANGER = ("JoistHanger",)
 _SCREW = ("StructuralScrew",)
-_BOX_SCREW = ("StructuralScrew", "ExteriorWoodScrew")
 _EXTERIOR_SCREW = ("ExteriorWoodScrew",)
 _BOLT = ("HexBolt",)
 _WASHER = ("Washer",)
@@ -903,6 +902,31 @@ def _require_hardware_roles(conn: "Connection", roles: list[tuple[str, ...]]) ->
                 f"({part.name!r}). Hardware is unpacked positionally by role — "
                 f"a wrong-order (same-count) declaration would otherwise "
                 f"derive a plausible but WRONG fact instead of failing loudly."
+            )
+    return hw
+
+
+def _require_hardware_capabilities(
+    conn: "Connection", requirements: list[frozenset[str]]
+) -> list[Placed]:
+    """Validate positional hardware slots by semantic component capability."""
+    hw = conn.hardware
+    if len(hw) != len(requirements):
+        required = ["&".join(sorted(tags)) for tags in requirements]
+        raise ValueError(
+            f"Connection {conn.label!r} ({conn.kind.label}): expected "
+            f"{len(requirements)} hardware item(s) {required}, got {len(hw)} "
+            f"({[p.name for p in hw]}). Hardware is unpacked positionally by "
+            "role — a wrong-count declaration can't be mapped to roles."
+        )
+    for index, (part, required) in enumerate(zip(hw, requirements)):
+        actual = part.component.capability_tags()
+        if not required <= actual:
+            raise ValueError(
+                f"Connection {conn.label!r} ({conn.kind.label}): hardware "
+                f"slot {index} requires capabilities {sorted(required)}, got "
+                f"{type(part.component).__name__} with {sorted(actual)} "
+                f"({part.name!r})."
             )
     return hw
 
@@ -1603,7 +1627,9 @@ class CleatScrewed(ConnectionType):
 
     def _unpack(self, conn: Connection):
         cleat, member = conn.parts
-        screws = _require_hardware_roles(conn, [_SCREW] * self.n_screws)
+        screws = _require_hardware_capabilities(
+            conn, [frozenset({"wood_screw"})] * self.n_screws
+        )
         return cleat, member, list(screws)
 
     def allowed_intersections(self, conn: Connection):
@@ -1712,7 +1738,9 @@ class ButtScrewed(ConnectionType):
 
     def _unpack(self, conn: Connection):
         face_member, butting = conn.parts
-        screws = _require_hardware_roles(conn, [_BOX_SCREW] * self.n_screws)
+        screws = _require_hardware_capabilities(
+            conn, [frozenset({"wood_screw"})] * self.n_screws
+        )
         return face_member, butting, list(screws)
 
     def allowed_intersections(self, conn: Connection):

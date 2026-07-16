@@ -21,6 +21,7 @@ import cadquery as cq
 
 from ..core.base import Component
 from ..core.frame import Frame
+from ..core.materials import MATERIALS
 from ..core.registry import register_component
 from ..core.units import IN, fmt_in
 from ._geometry import hex_prism, threaded_shaft, axis_cylinder
@@ -173,30 +174,58 @@ class StructuralScrew(LagScrew):
     material_key = "steel_galv"
 
 
-@register_component("exterior_wood_screw")
-class ExteriorWoodScrew(_AxialFastener):
-    """Pointed, corrosion-resistant exterior wood screw with a round head.
+EXPOSURES = ("interior", "exterior")
+SCREW_REPRESENTATIONS = ("envelope", "represented_threads")
 
-    This ordinary assembly/service fastener is deliberately distinct from the
-    GRK/LedgerLOK-class :class:`StructuralScrew`: its presence carries no
-    structural capacity implication. The local datum contract is the common
-    headed-fastener frame (head underside at Z=0, shank along -Z).
-    """
+
+@register_component("wood_screw")
+class WoodScrew(_AxialFastener):
+    """Ordinary pointed wood screw with selectable service and representation."""
 
     material_key = "steel_galv"
     CAPABILITIES = _AxialFastener.CAPABILITIES | frozenset({
         "wood_screw",
         "ordinary_wood_screw",
-        "exterior_use",
     })
     thread_fraction = 0.72
 
-    def __init__(self, diameter: float, length: float, name: str | None = None):
+    def __init__(
+        self,
+        diameter: float,
+        length: float,
+        material_key: str = "steel_galv",
+        exposure: str = "exterior",
+        representation: str = "envelope",
+        name: str | None = None,
+    ):
+        if material_key not in MATERIALS:
+            raise ValueError(
+                f"unknown wood screw material {material_key!r}; "
+                f"known materials: {sorted(MATERIALS)}"
+            )
+        if exposure not in EXPOSURES:
+            raise ValueError(
+                f"wood screw exposure must be one of {EXPOSURES}; got {exposure!r}"
+            )
+        if representation not in SCREW_REPRESENTATIONS:
+            raise ValueError(
+                "wood screw representation must be one of "
+                f"{SCREW_REPRESENTATIONS}; got {representation!r}"
+            )
         super().__init__(
             diameter,
             length,
-            name or f"{fmt_in(diameter)} x {fmt_in(length, 1)} exterior wood screw",
+            name or f"{fmt_in(diameter)} x {fmt_in(length)} {exposure} wood screw",
         )
+        self.material_key = str(material_key)
+        self.exposure = str(exposure)
+        self.representation = str(representation)
+
+    def capability_tags(self) -> frozenset[str]:
+        tags = super().capability_tags()
+        if self.exposure == "exterior":
+            tags = tags | frozenset({"exterior_use"})
+        return tags
 
     @property
     def head_diameter(self) -> float:
@@ -229,18 +258,73 @@ class ExteriorWoodScrew(_AxialFastener):
         )
         tip_len = self._tip_length()
         shank_len = self.length - tip_len
-        pitch = self.thread_pitch_ratio * self.diameter
-        shaft = threaded_shaft(
-            self.diameter,
-            shank_len,
-            pitch,
-            zones=[(0.0, shank_len * self.thread_fraction)],
-        ).rotate((0, 0, 0), (1, 0, 0), 180)
+        if self.representation == "represented_threads":
+            pitch = self.thread_pitch_ratio * self.diameter
+            shaft = threaded_shaft(
+                self.diameter,
+                shank_len,
+                pitch,
+                zones=[(0.0, shank_len * self.thread_fraction)],
+            ).rotate((0, 0, 0), (1, 0, 0), 180)
+        else:
+            shaft = axis_cylinder(
+                self.diameter / 2,
+                shank_len,
+                (0, 0, 0),
+                (0, 0, -1),
+            )
         return head.union(shaft).union(self._tip())
 
     def describe(self) -> str:
         return (
-            f"{fmt_in(self.diameter)} dia x {fmt_in(self.length, 1)} "
+            f"{fmt_in(self.diameter)} dia x {fmt_in(self.length)} "
+            f"{self.exposure} wood screw"
+        )
+
+    def assumptions(self) -> str:
+        representation = (
+            "Smooth collision/render envelope; threads and drive details are "
+            "omitted"
+            if self.representation == "envelope"
+            else "Threads are represented; drive details are omitted"
+        )
+        return (
+            f"Ordinary {self.exposure} wood screw with a simplified round head. "
+            f"{representation}; manufacturer, coating system, and capacity are "
+            "not selected or analyzed."
+        )
+
+    def bom_label(self) -> str:
+        return "Wood screw"
+
+    def bom_group(self) -> str:
+        return (
+            f"WoodScrew|{self.material_key}|{self.exposure}|"
+            f"{self.representation}|{round(self.diameter, 3)}|"
+            f"{round(self.length, 3)}"
+        )
+
+
+@register_component("exterior_wood_screw")
+class ExteriorWoodScrew(WoodScrew):
+    """Compatibility wrapper preserving the detailed exterior screw model."""
+
+    def __init__(self, diameter: float, length: float, name: str | None = None):
+        super().__init__(
+            diameter,
+            length,
+            material_key="steel_galv",
+            exposure="exterior",
+            representation="represented_threads",
+            name=(
+                name
+                or f"{fmt_in(diameter)} x {fmt_in(length)} exterior wood screw"
+            ),
+        )
+
+    def describe(self) -> str:
+        return (
+            f"{fmt_in(self.diameter)} dia x {fmt_in(self.length)} "
             "exterior wood screw"
         )
 
@@ -253,6 +337,12 @@ class ExteriorWoodScrew(_AxialFastener):
 
     def bom_label(self) -> str:
         return "Exterior wood screw"
+
+    def bom_group(self) -> str:
+        return (
+            f"ExteriorWoodScrew|{round(self.diameter, 2)}|"
+            f"{round(self.length, 2)}"
+        )
 
 
 @register_component("hex_nut")
