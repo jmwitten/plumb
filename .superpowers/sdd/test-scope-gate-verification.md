@@ -1,6 +1,6 @@
 # Test Scope and Gate Verification
 
-**Branch:** `codex/plumb-reusable-vocabulary`
+**Branch:** `main` after merging `codex/plumb-reusable-vocabulary`
 
 **Baseline commit:** `808c8fd`
 
@@ -26,19 +26,30 @@ The exhaustive platform bbox oracle took 105.84 seconds in the baseline run.
 
 ## Scope manifest and selectors
 
-Final ordinary collection reconciles exactly to 2,325 node ids. The
+Final ordinary collection reconciles exactly to 2,356 node ids. The
 manifest has no duplicates, unclassified nodes, or retired ids.
+
+Main already contained three blind-certification harness tests plus their
+`test_scripts_spec_rewire` parameterized node. All four are platform unit:
+their git/worktree/pytest effects are mocked, they take 0.002–0.004 seconds,
+and they provide no accepted-document evidence.
+
+The subsequently merged generic full-package compiler added 27 nodes. All are
+platform-owned: 24 fast units plus three integrations for real STEP export and
+real generic package builds. The package checks intentionally span reusable
+machinery or multiple accepted models, so none is evidence for one named
+document/build gate.
 
 | Selector | Nodes | Required boundary evidence |
 |---|---:|---|
 | `--detail-gate family_birdhouse --detail-cadence inner` | 10 | Includes accepted birdhouse validation/collision fixture; excludes package tests. |
 | `--detail-gate family_birdhouse --detail-cadence release` | 22 | Inner 10 plus all 12 birdhouse package assertions. |
-| `--platform-tier integration` | 254 | Includes one real baseline regeneration and all accepted-live-site view checks; excludes bbox/affected/revision audits. |
+| `--platform-tier integration` | 266 | Includes one real baseline regeneration, generic package/export checks, and all accepted-live-site/viewer model checks; excludes bbox/affected/revision audits. |
 | `--platform-tier audit` | 46 | Includes both exhaustive bbox oracles plus every affected-region and revision-identity node. |
 
-The final birdhouse gates passed in 7.05 seconds inner and 26.47 seconds
+The final birdhouse gates passed in 12.86 seconds inner and 20.00 seconds
 release. The release package fixture was generated once. The platform
-integration gate passed all 254 nodes in 477.46 seconds; the platform audit
+integration gate passed all 266 nodes in 434.35 seconds; the platform audit
 passed all 46 nodes in 636.43 seconds.
 
 ## Baseline integrity refactor
@@ -107,29 +118,29 @@ all pass. The second unfiltered run passed through the original failure point.
 
 ```text
 pytest --detail-gate family_birdhouse --detail-cadence inner -q
-10 passed in 7.05s
+10 passed in 12.86s
 
 pytest --detail-gate family_birdhouse --detail-cadence release -q
-22 passed in 26.47s
+22 passed in 20.00s
 
 pytest --platform-tier integration -q -n 4
-254 passed in 477.46s
+266 passed in 434.35s
 
 pytest --platform-tier audit -q -n 4
 46 passed in 636.43s
 
-pytest -q -n 4 --junitxml=/tmp/plumb-test-scope-final.xml
-2320 passed, 4 skipped, 1 xfailed in 1203.91s
+pytest -q -n 4 --junitxml=/tmp/plumb-main-final.xml
+2351 passed, 4 skipped, 1 xfailed in 941.04s
 ```
 
-The final JUnit artifact joins exactly to all 2,325 runtime-manifest rows:
+The final JUnit artifact joins exactly to all 2,356 runtime-manifest rows:
 
 | Category | Nodes | Cumulative worker time | Nodes over 10 s |
 |---|---:|---:|---:|
-| Platform | 1,907 | 3,758.633 s | 82 |
-| Document/build accuracy | 418 | 384.177 s | 10 |
+| Platform | 1,938 | 2,620.604 s | 81 |
+| Document/build accuracy | 418 | 348.624 s | 11 |
 
-All 82 slow platform nodes are integration or audit; none is unit. All ten slow
-build nodes have a named owner and an inner/release cadence in the refreshed
-audit. The 7,626-pair oracle took 504.590 seconds in the final full run and is
-absent from both birdhouse gates.
+All 81 slow platform nodes are integration or audit; none is unit. All eleven
+slow build nodes have a named owner and an inner/release cadence in the
+refreshed audit. The 7,626-pair oracle took 119.334 seconds in the final full
+run and is absent from both birdhouse gates.
