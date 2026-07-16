@@ -186,9 +186,13 @@ decision:
   tradeoffs:
     - The finished section measures three inches by three and one-half inches rather than the three-and-one-half-inch square section of a nominal four-by-four.
     - The seam and alternating screw heads remain visible, and the assembly carries no structural-capacity or code-compliance approval.
-  application: recommendation_only
+  application: implemented
 modeling_approval:
   approved_by: Joel Witten
   approved_on: 2026-07-15
-  selection_fingerprint: ad36dacf6577373dd039b230a6fb8ce4b49353a8cd5b36cd9e9b37ca8bca4523
-delivery_confirmation: null
+  selection_fingerprint: 0badb26b2bb1e1c90523a430c0b37e1b513248d26cdc10d40145c4b7d9bbdea8
+delivery_confirmation:
+  approved_by: Joel Witten
+  approved_on: 2026-07-15
+  selection_fingerprint: 0badb26b2bb1e1c90523a430c0b37e1b513248d26cdc10d40145c4b7d9bbdea8
+  model_fingerprint: 36eb70fffd81e26e139b858f71428263675ff8d0b386a40f8eec864a30302c81

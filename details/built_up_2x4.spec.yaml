@@ -1,0 +1,172 @@
+# DetailSpec — two full-length 2x4 plies mechanically laminated wide-face to
+# wide-face. The user-selected 12-inch screw pattern is modeled exactly but is
+# not represented as an engineered schedule or approval for any structural use.
+
+name: built up 2x4 member
+type: built_up_2x4
+units: in
+
+design_review:
+  record: built_up_2x4.design-review.yaml
+  selected_concept: alternating_mechanical_lamination
+
+params:
+  member_length: 96.0
+  stud_thickness: 1.5
+  stud_depth: 3.5
+  screw_diameter: 0.22
+  screw_length: 2.5
+  first_station: 6.0
+  station_spacing: 12.0
+  station_count: 8
+
+derived:
+  assembly_width: "= 2 * stud_thickness"
+  screw_center_z: "= stud_depth / 2"
+  final_station: "= first_station + (station_count - 1) * station_spacing"
+  modeled_embedment: "= screw_length - stud_thickness"
+
+components:
+  - id: ply_a
+    type: lumber
+    name: 2x4 ply A
+    reader_name: 2×4 ply A
+    params: {nominal: "2x4", length: "$member_length"}
+    place: {raw: {at: ["0 in", "0 in", "0 in"]}}
+
+  - id: ply_b
+    type: lumber
+    name: 2x4 ply B
+    reader_name: 2×4 ply B
+    params: {nominal: "2x4", length: "$member_length"}
+    place: {raw: {at: ["0 in", "$stud_thickness", "0 in"]}}
+
+  # A-face screw heads at Y=0 drive +Y through ply A and one inch into ply B.
+  - id: screw_06
+    type: structural_screw
+    name: screw at 6 inches from face A
+    reader_name: 2½-inch structural screw
+    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    place: {raw: {at: ["6 in", "0 in", "$screw_center_z"], rotate: [["X", 90]]}}
+  - id: screw_30
+    type: structural_screw
+    name: screw at 30 inches from face A
+    reader_name: 2½-inch structural screw
+    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    place: {raw: {at: ["30 in", "0 in", "$screw_center_z"], rotate: [["X", 90]]}}
+  - id: screw_54
+    type: structural_screw
+    name: screw at 54 inches from face A
+    reader_name: 2½-inch structural screw
+    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    place: {raw: {at: ["54 in", "0 in", "$screw_center_z"], rotate: [["X", 90]]}}
+  - id: screw_78
+    type: structural_screw
+    name: screw at 78 inches from face A
+    reader_name: 2½-inch structural screw
+    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    place: {raw: {at: ["78 in", "0 in", "$screw_center_z"], rotate: [["X", 90]]}}
+
+  # B-face screw heads at Y=3 drive -Y through ply B and one inch into ply A.
+  - id: screw_18
+    type: structural_screw
+    name: screw at 18 inches from face B
+    reader_name: 2½-inch structural screw
+    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    place: {raw: {at: ["18 in", "$assembly_width", "$screw_center_z"], rotate: [["X", -90]]}}
+  - id: screw_42
+    type: structural_screw
+    name: screw at 42 inches from face B
+    reader_name: 2½-inch structural screw
+    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    place: {raw: {at: ["42 in", "$assembly_width", "$screw_center_z"], rotate: [["X", -90]]}}
+  - id: screw_66
+    type: structural_screw
+    name: screw at 66 inches from face B
+    reader_name: 2½-inch structural screw
+    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    place: {raw: {at: ["66 in", "$assembly_width", "$screw_center_z"], rotate: [["X", -90]]}}
+  - id: screw_90
+    type: structural_screw
+    name: screw at 90 inches from face B
+    reader_name: 2½-inch structural screw
+    params: {diameter: "$screw_diameter", length: "$screw_length"}
+    place: {raw: {at: ["90 in", "$assembly_width", "$screw_center_z"], rotate: [["X", -90]]}}
+
+connections:
+  - type: cleat_screwed
+    label: "ply A -> ply B (A-face stations)"
+    params: {n_screws: 4}
+    parts: [ply_a, ply_b]
+    hardware: [screw_06, screw_30, screw_54, screw_78]
+    install: {embedment: "1 in"}
+    assumptions:
+      - "The screws pass through 1.5 inches of ply A and provide one inch of modeled geometric bite in ply B. This authored bite describes geometry only; the 12-inch pattern is the owner brief, and withdrawal, shear, composite action, and structural capacity are NOT analyzed."
+
+  - type: cleat_screwed
+    label: "ply B -> ply A (B-face stations)"
+    params: {n_screws: 4}
+    parts: [ply_b, ply_a]
+    hardware: [screw_18, screw_42, screw_66, screw_90]
+    install: {embedment: "1 in"}
+    assumptions:
+      - "The screws pass through 1.5 inches of ply B and provide one inch of modeled geometric bite in ply A. This authored bite describes geometry only; the 12-inch pattern is the owner brief, and withdrawal, shear, composite action, and structural capacity are NOT analyzed."
+
+validation:
+  contacts:
+    - {a: ply_a, b: ply_b}
+  dimensions:
+    - {name: "ply A finished length is 96 inches", part: ply_a, measure: xlen, expected: "$member_length", tolerance: "0.01 in"}
+    - {name: "ply B finished length is 96 inches", part: ply_b, measure: xlen, expected: "$member_length", tolerance: "0.01 in"}
+    - {name: "assembly outside face A is at zero", part: ply_a, measure: ymin, expected: "0 in", tolerance: "0.01 in"}
+    - {name: "assembly outside face B is at three inches", part: ply_b, measure: ymax, expected: "$assembly_width", tolerance: "0.01 in"}
+    - {name: "both plies retain the 3.5-inch wide face", part: ply_a, measure: zlen, expected: "$stud_depth", tolerance: "0.01 in"}
+    - {name: "first screw station is six inches from the reference end", part: screw_06, measure: xmid, expected: "$first_station", tolerance: "0.01 in"}
+    - {name: "last screw station is ninety inches from the reference end", part: screw_90, measure: xmid, expected: "$final_station", tolerance: "0.01 in"}
+
+callouts:
+  - {param: member_length, label: "OVERALL {v}", p0: ["0 in", "-2 in", "4.5 in"], p1: ["$member_length", "-2 in", "4.5 in"]}
+  - {param: assembly_width, label: "BUILT-UP WIDTH {v}", p0: ["48 in", "0 in", "4.5 in"], p1: ["48 in", "$assembly_width", "4.5 in"]}
+  - {param: stud_depth, label: "DEPTH {v}", p0: ["98 in", "0 in", "0 in"], p1: ["98 in", "0 in", "$stud_depth"]}
+  - {param: first_station, label: "END OFFSET {v}", p0: ["0 in", "-1 in", "-1 in"], p1: ["$first_station", "-1 in", "-1 in"]}
+  - {param: station_spacing, label: "SCREWS @ {v} O.C.", p0: ["$first_station", "-1 in", "-1 in"], p1: ["= first_station + station_spacing", "-1 in", "-1 in"]}
+
+explode:
+  - {id: ply_a, vector: [0, -100, 0]}
+  - {id: ply_b, vector: [0, 100, 0]}
+  - {id: screw_06, vector: [0, -160, 0]}
+  - {id: screw_30, vector: [0, -160, 0]}
+  - {id: screw_54, vector: [0, -160, 0]}
+  - {id: screw_78, vector: [0, -160, 0]}
+  - {id: screw_18, vector: [0, 160, 0]}
+  - {id: screw_42, vector: [0, 160, 0]}
+  - {id: screw_66, vector: [0, 160, 0]}
+  - {id: screw_90, vector: [0, 160, 0]}
+
+export:
+  glb_tolerance: 0.2
+  glb_angular_tolerance: 0.25
+  inject_explode: true
+
+doc:
+  sections:
+    - prose: |
+        # Built-Up 2×4 Member — Validation Report
+
+        Two full-length nominal 2×4s are clamped wide-face to wide-face and joined by eight representative 0.22-inch × 2½-inch structural wood screws. Centers run from 6 through 90 inches at 12 inches on center; consecutive screw heads alternate between the two exposed broad faces. The actual assembled section is 3 inches × 3½ inches, not a true 4×4.
+    - findings: {header: "## Full-face contact", check: contact}
+    - hardware_presence: {header: "## Screw presence", cap: 8}
+    - derivation_log:
+        header: "## Construction Graph — derivation log"
+        preamble: "The two direction-specific cleat_screwed connections derive every screw-to-ply overlap, connection bond, installation order, and hardware-presence fact without claiming structural capacity:"
+        mode: per_connection
+        cap: 32
+    - findings: {header: "## Dimension checks", check: dimension}
+    - prose: "## Result: **{result_verdict}**"
+    - bom_table: {header: "## Bill of materials"}
+    - prose: |
+        ## Modeling assumptions and honest limits
+        - **Representative fastener geometry.** The model uses a generic lag-like structural screw at the selected 0.22-inch × 2½-inch envelope. Confirm the purchased product, drive bit, coating, lumber-treatment compatibility, and current manufacturer instructions before work.
+        - **Owner-selected spacing.** The 12-inch station pattern and alternating faces come from the brief. They are modeled and dimension-checked, not structurally engineered here.
+        - **No structural approval.** Species, grade, moisture, loads, supports, end connections, exposure, composite action, capacity, and code compliance remain UNKNOWN — NOT ANALYZED.
+        - **Fabrication check.** Clamp both plies with ends and edges flush before driving. Reject splits, protruding tips, unseated heads, or a member that does not remain straight and fully closed along the mating faces.
