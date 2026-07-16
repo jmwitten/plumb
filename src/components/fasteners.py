@@ -21,6 +21,7 @@ import cadquery as cq
 
 from ..core.base import Component
 from ..core.frame import Frame
+from ..core.materials import MATERIALS
 from ..core.registry import register_component
 from ..core.units import IN, fmt_in
 from ._geometry import hex_prism, threaded_shaft, axis_cylinder
@@ -49,6 +50,7 @@ def _hex_af(diameter: float) -> float:
 class _AxialFastener(Component):
     """Shared geometry for headed, shanked fasteners (see module frame note)."""
 
+    CAPABILITIES = frozenset({"installation_fastener"})
     material_key = "steel_zinc"
     #: fraction of the *threaded* shank length that carries thread representation
     thread_fraction = 0.55
@@ -130,6 +132,7 @@ class LagScrew(_AxialFastener):
     """
 
     material_key = "steel_galv"
+    CAPABILITIES = _AxialFastener.CAPABILITIES | frozenset({"wood_screw"})
 
     def __init__(self, diameter: float, length: float, name: str | None = None):
         super().__init__(
@@ -169,6 +172,189 @@ class StructuralScrew(LagScrew):
     exists as its own class so BOMs and checks can distinguish it."""
 
     material_key = "steel_galv"
+
+
+EXPOSURES = ("interior", "exterior")
+SCREW_REPRESENTATIONS = ("envelope", "represented_threads")
+
+
+@register_component("wood_screw")
+class WoodScrew(_AxialFastener):
+    """Ordinary pointed wood screw with selectable service and representation."""
+
+    material_key = "steel_galv"
+    CAPABILITIES = _AxialFastener.CAPABILITIES | frozenset({
+        "wood_screw",
+        "ordinary_wood_screw",
+    })
+    thread_fraction = 0.72
+
+    def __init__(
+        self,
+        diameter: float,
+        length: float,
+        material_key: str = "steel_galv",
+        exposure: str = "exterior",
+        representation: str = "envelope",
+        name: str | None = None,
+    ):
+        if material_key not in MATERIALS:
+            raise ValueError(
+                f"unknown wood screw material {material_key!r}; "
+                f"known materials: {sorted(MATERIALS)}"
+            )
+        if exposure not in EXPOSURES:
+            raise ValueError(
+                f"wood screw exposure must be one of {EXPOSURES}; got {exposure!r}"
+            )
+        if representation not in SCREW_REPRESENTATIONS:
+            raise ValueError(
+                "wood screw representation must be one of "
+                f"{SCREW_REPRESENTATIONS}; got {representation!r}"
+            )
+        super().__init__(
+            diameter,
+            length,
+            name or f"{fmt_in(diameter)} x {fmt_in(length)} {exposure} wood screw",
+        )
+        self.material_key = str(material_key)
+        self.exposure = str(exposure)
+        self.representation = str(representation)
+
+    def capability_tags(self) -> frozenset[str]:
+        tags = super().capability_tags()
+        if self.exposure == "exterior":
+            tags = tags | frozenset({"exterior_use"})
+        return tags
+
+    @property
+    def head_diameter(self) -> float:
+        return 2.3 * self.diameter
+
+    @property
+    def head_height(self) -> float:
+        return 0.45 * self.diameter
+
+    def _tip_length(self) -> float:
+        return 1.2 * self.diameter
+
+    def _tip(self) -> cq.Workplane:
+        cyl_end = -(self.length - self._tip_length())
+        return (
+            cq.Workplane("XY")
+            .workplane(offset=cyl_end)
+            .circle(self.diameter / 2)
+            .workplane(offset=-self._tip_length())
+            .circle(0.02 * IN)
+            .loft()
+        )
+
+    def _build(self) -> cq.Workplane:
+        tip_len = self._tip_length()
+        shank_len = self.length - tip_len
+        if self.representation == "envelope":
+            head_radius = self.head_diameter / 2
+            shank_radius = self.diameter / 2
+            near_tip_radius = 0.02 * IN
+            profile = (
+                (0.0, self.head_height),
+                (head_radius, self.head_height),
+                (head_radius, 0.0),
+                (shank_radius, 0.0),
+                (shank_radius, -shank_len),
+                (near_tip_radius, -self.length),
+                (0.0, -self.length),
+            )
+            return (
+                cq.Workplane("XZ")
+                .polyline(profile)
+                .close()
+                .revolve(360, (0, 0), (0, 1))
+            )
+
+        head = axis_cylinder(
+            self.head_diameter / 2,
+            self.head_height,
+            (0, 0, 0),
+            (0, 0, 1),
+        )
+        pitch = self.thread_pitch_ratio * self.diameter
+        shaft = threaded_shaft(
+            self.diameter,
+            shank_len,
+            pitch,
+            zones=[(0.0, shank_len * self.thread_fraction)],
+        ).rotate((0, 0, 0), (1, 0, 0), 180)
+        return head.union(shaft).union(self._tip())
+
+    def describe(self) -> str:
+        return (
+            f"{fmt_in(self.diameter)} dia x {fmt_in(self.length)} "
+            f"{self.exposure} wood screw"
+        )
+
+    def assumptions(self) -> str:
+        representation = (
+            "Smooth collision/render envelope; threads and drive details are "
+            "omitted"
+            if self.representation == "envelope"
+            else "Threads are represented; drive details are omitted"
+        )
+        return (
+            f"Ordinary {self.exposure} wood screw with a simplified round head. "
+            f"{representation}; manufacturer, coating system, and capacity are "
+            "not selected or analyzed."
+        )
+
+    def bom_label(self) -> str:
+        return f"{self.exposure.capitalize()} wood screw"
+
+    def bom_group(self) -> str:
+        return (
+            f"WoodScrew|{self.material_key}|{self.exposure}|"
+            f"{self.representation}|{round(self.diameter, 3)}|"
+            f"{round(self.length, 3)}"
+        )
+
+
+@register_component("exterior_wood_screw")
+class ExteriorWoodScrew(WoodScrew):
+    """Compatibility wrapper preserving the detailed exterior screw model."""
+
+    def __init__(self, diameter: float, length: float, name: str | None = None):
+        super().__init__(
+            diameter,
+            length,
+            material_key="steel_galv",
+            exposure="exterior",
+            representation="represented_threads",
+            name=(
+                name
+                or f"{fmt_in(diameter)} x {fmt_in(length)} exterior wood screw"
+            ),
+        )
+
+    def describe(self) -> str:
+        return (
+            f"{fmt_in(self.diameter)} dia x {fmt_in(self.length)} "
+            "exterior wood screw"
+        )
+
+    def assumptions(self) -> str:
+        return (
+            "Corrosion-resistant exterior wood screw with a simplified round "
+            "head and represented threads; manufacturer, coating system, drive, "
+            "and capacity are not selected or analyzed."
+        )
+
+    def bom_label(self) -> str:
+        return "Exterior wood screw"
+
+    def bom_group(self) -> str:
+        return (
+            f"ExteriorWoodScrew|{round(self.diameter, 2)}|"
+            f"{round(self.length, 2)}"
+        )
 
 
 @register_component("hex_nut")
@@ -274,6 +460,7 @@ class ThreadedRod(Component):
     """
 
     material_key = "steel_galv"
+    CAPABILITIES = frozenset({"installation_fastener"})
     thread_pitch_ratio = 0.3   # exaggerated display pitch / diameter
 
     def __init__(self, diameter: float, length: float,

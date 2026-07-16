@@ -49,6 +49,16 @@ class RelatedDocumentLink:
 
 
 @dataclass(frozen=True)
+class JoinPresentation:
+    """Project-authored reader copy for a typed root-join event."""
+
+    title: str
+    instructions: tuple[str, ...]
+    honesty: tuple[str, ...] = ()
+    tools: tuple[DisplayRow, ...] = ()
+
+
+@dataclass(frozen=True)
 class StopNotice:
     """An unavoidable action gate rendered before a panel's resources."""
 
@@ -385,21 +395,33 @@ def reader_dimensions(component) -> str:
 
 def _hardware_rows(detail, installs) -> tuple[DisplayRow, ...]:
     by_id = {p.id: p for p in detail.assembly.parts}
-    ids = [pid for install in installs for pid in install.fasteners]
-    if not ids:
-        return ()
-    first = by_id[ids[0]].component
-    size = reader_dimensions(first)
-    head_key = installs[0].contract.head
-    head = _HEAD_TEXT.get(head_key, head_key.replace("_", " "))
     labels = part_labels(detail.assembly.parts)
-    reader_name = labels[ids[0]].reader_name
-    return (DisplayRow(
-        "screw",
-        f"{len(ids)} × {reader_name} — {size}, {head}; builder-selected "
-        "fastener system, with maker/model and drilling requirements selected "
-        "before work begins",
-        count=len(ids), source_part_ids=tuple(ids)),)
+    grouped = {}
+    for install in installs:
+        head_key = install.contract.head
+        head = _HEAD_TEXT.get(head_key, head_key.replace("_", " "))
+        for part_id in install.fasteners:
+            component = by_id[part_id].component
+            key = (
+                labels[part_id].item,
+                reader_dimensions(component),
+                head,
+                component.bom_group(),
+            )
+            grouped.setdefault(key, []).append(part_id)
+    if not grouped:
+        return ()
+    return tuple(
+        DisplayRow(
+            "screw",
+            f"{len(ids)} × {item} — {size}, {head}; builder-selected "
+            "fastener system, with maker/model and drilling requirements "
+            "selected before work begins",
+            count=len(ids),
+            source_part_ids=tuple(ids),
+        )
+        for (item, size, head, _bom_group), ids in grouped.items()
+    )
 
 
 def _fabrication_tools(parts) -> tuple[DisplayRow, ...]:
@@ -440,7 +462,10 @@ def _inventory(detail, labels) -> tuple[DisplayRow, ...]:
     for part in detail.assembly.parts:
         if part.component.bom_label().endswith("(existing)"):
             continue
-        key = (labels[part.id].reader_name, labels[part.id].item,
+        reader_name = labels[part.id].reader_name
+        if "installation_fastener" in part.component.capability_tags():
+            reader_name = labels[part.id].item
+        key = (reader_name, labels[part.id].item,
                reader_dimensions(part.component),
                _actual_finished_dimensions(part.component))
         grouped.setdefault(key, []).append(part)
@@ -465,7 +490,7 @@ def _consumable_inventory(graph) -> tuple[DisplayRow, ...]:
 
 
 def _panel_content(detail, graph, steps, cohort, action, labels,
-                   installs_by_connection):
+                   installs_by_connection, join_presentation):
     by_id = {p.id: p for p in detail.assembly.parts}
     connections = tuple(label for i in cohort for label in steps[i].connections)
     joins = tuple(unit for i in cohort for unit in steps[i].joins)
@@ -538,21 +563,25 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
         hardware = _hardware_rows(detail, installs)
         for connection in connections:
             resolved = installs_by_connection.get(connection, ())
-            rail_ids = tuple(install.contract.entry_face.part
-                             for install in resolved)
+            entry_ids = tuple(dict.fromkeys(
+                install.contract.entry_face.part for install in resolved
+            ))
             member_ids = graph.members_of[connection]
-            side_ids = tuple(pid for pid in member_ids if pid not in rail_ids)
-            side_names = " and ".join(
-                _display(labels, pid) for pid in side_ids)
-            rail_names = " and ".join(
-                _display(labels, pid) for pid in rail_ids)
+            receiving_ids = tuple(
+                pid for pid in member_ids if pid not in entry_ids
+            )
+            receiving_names = " and ".join(
+                _display(labels, pid) for pid in receiving_ids)
+            entry_names = " and ".join(
+                _display(labels, pid) for pid in entry_ids)
             count = sum(len(install.fasteners) for install in resolved)
             head = _HEAD_TEXT.get(
                 resolved[0].contract.head,
                 resolved[0].contract.head.replace("_", " "))
             instructions.append(
-                f"Fasten {side_names} to {rail_names}; drive all {count} modeled "
-                f"fasteners through the rail into the other member, with each {head}.")
+                f"Fasten {receiving_names} to {entry_names}; drive all {count} "
+                f"modeled fasteners through {entry_names} into {receiving_names}, "
+                f"with each {head}.")
         rationales.extend(_constraint_whys(graph, connections=connections))
         method_keys = tuple(dict.fromkeys(
             install.contract.method for install in installs))
@@ -564,23 +593,33 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
                    if key in _HEAD_TOOL_ROWS)]
 
     elif action == "join":
-        context = tuple(graph.context_parts)
-        context_names = _counted_names(labels, context)
-        instructions.extend((
-            f"Set the completed {detail.name} over {context_names}.",
-            "Choose its along-arm position during fitting; the model does not "
-            "represent that direction as a critical placement station.",
-        ))
+        if join_presentation is None:
+            context = tuple(graph.context_parts)
+            context_names = _counted_names(labels, context)
+            instructions.extend((
+                f"Set the completed {detail.name} over {context_names}.",
+                "Choose its along-arm position during fitting; the model does not "
+                "represent that direction as a critical placement station.",
+            ))
+            honesty.append(
+                "DECLARED TRUST — the sofa arm is connection-free context. "
+                "insertion travel is not analyzed; stability, sliding resistance, "
+                "structural capacity, and hot-drink use are not proved.")
+            tools = [DisplayRow(
+                "fit", f"Actual {context_names} for the declared fit placement")]
+        else:
+            instructions.extend(join_presentation.instructions)
+            honesty.extend(join_presentation.honesty)
+            tools = list(join_presentation.tools)
         if graph.staging is not None and graph.staging.why:
             rationales.append(graph.staging.why)
-        honesty.append(
-            "DECLARED TRUST — the sofa arm is connection-free context. "
-            "insertion travel is not analyzed; stability, sliding resistance, "
-            "structural capacity, and hot-drink use are not proved.")
-        tools = [DisplayRow("fit", f"Actual {context_names} for the declared fit placement")]
 
     return {
-        "title": _panel_title(detail, action, graph, steps, cohort, labels),
+        "title": (
+            join_presentation.title
+            if action == "join" and join_presentation is not None
+            else _panel_title(detail, action, graph, steps, cohort, labels)
+        ),
         "connections": connections,
         "joins": joins,
         "process_kind": process_kind,
@@ -624,6 +663,7 @@ def build_instruction_manual(
     lede: str = _CADDY_MANUAL_LEDE,
     related_documents: tuple[RelatedDocumentLink, ...] = (),
     excluded_part_ids: tuple[str, ...] = (),
+    join_presentation: JoinPresentation | None = None,
 ) -> InstructionManual:
     """Build the pure instruction-manual model for a validated detail."""
     technical_href = _relative_html_basename(technical_href, "technical_href")
@@ -705,7 +745,7 @@ def build_instruction_manual(
         action = actions[cohort[0]]
         content = _panel_content(
             detail, graph, steps, cohort, action, labels,
-            installs_by_connection)
+            installs_by_connection, join_presentation)
         arrivals = tuple(part.id for part in detail.assembly.parts
                          if part.id in schedule
                          and schedule[part.id] == panel_index)

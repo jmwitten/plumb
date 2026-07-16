@@ -190,7 +190,8 @@ def export_manifest(assembly: DetailAssembly, path: str | Path | None = None,
         "parts": [
             {"name": pl.name,
              "material": pl.component.material_key,
-             "material_name": pl.component.material.name}
+             "material_name": pl.component.material.name,
+             "rgba": list(pl.component.material.rgba)}
             for pl in assembly.parts
         ],
         "build": build_manifest(assembly),

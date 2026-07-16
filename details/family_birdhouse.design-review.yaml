@@ -1,0 +1,301 @@
+schema: detailgen/design-review/v1
+project_id: family_birdhouse
+title: Family birdhouse precedent-first design selection
+status: approved_for_modeling
+brief:
+  use: Build one practical outdoor nest box with Maia and Zach for small cavity-nesting birds at the dacha.
+  loads: Carry the cedar enclosure, ordinary nest material, and small cavity-nesting birds while mounted to a separately purchased freestanding pole system.
+  fit_range: Provide a 4 by 4 inch interior floor, an approximately 8 inch cavity, and a 1 1/8 inch entrance sized for chickadees and wrens.
+  appearance: Read as a simple traditional cedar birdhouse with one sloping overhanging roof and exterior surfaces the children may decorate.
+  builder_skill: Adult performs every saw cut, entrance bore, ventilation bore, pilot hole, pole operation, and lift; children measure, mark, sand prepared edges, decorate exterior faces, sort parts, and drive selected screws under direct supervision.
+  tools:
+    - tape measure and combination square
+    - miter saw or circular saw with guide
+    - drill or drill press with 1 1/8 inch Forstner bit
+    - small drill bits and countersink
+    - clamps and sanding block
+    - screwdriver or drill driver with adult-controlled clutch
+  required_features:
+    - id: req_species
+      text: Use a 1 1/8 inch entrance and cavity proportions suitable for a general-purpose chickadee and wren nest box.
+    - id: req_weather
+      text: Use untreated 3/4 inch cedar, an extended sloped roof, a recessed floor, four corner drains, and four high side ventilation openings.
+    - id: req_cleanout
+      text: Provide a latched access panel that one adult can open for monitoring and annual cleaning without dismantling the box.
+    - id: req_kid_build
+      text: Separate adult-only cutting and drilling from child-suitable measuring, prepared-edge sanding, exterior decoration, part matching, and supervised screw driving.
+    - id: req_mount
+      text: Mount from an extended back through a cleat to a freestanding metal pole and commercial predator baffle whose final dimensions remain field-selected.
+    - id: req_bird_safety
+      text: Omit an exterior perch, leave the interior and entrance rim unfinished, and provide a rough climbing surface below the entrance.
+  constraints:
+    - id: constraint_bird_welfare
+      text: Bird health, weather protection, predator resistance, and honest installation holds outrank decorative or convenience choices.
+      priority: 1
+    - id: constraint_family_workflow
+      text: Give the children meaningful repeatable tasks without assigning saw, large-bore drilling, pole installation, or overhead work.
+      priority: 2
+    - id: constraint_simplicity
+      text: Prefer square stock preparation, few unique parts, and familiar exterior screws over precision joinery or specialized hardware.
+      priority: 3
+    - id: constraint_maintenance
+      text: Annual cleanout must be obvious, tool-light, and possible without removing the mounted box.
+      priority: 4
+    - id: constraint_installation_honesty
+      text: Keep the unselected pole, baffle, U-bolts, soil, utilities, and site exposure as explicit field holds rather than invented model facts.
+      priority: 5
+precedents:
+  - id: mn_dnr_pivot_plan
+    kind: build_instruction
+    title: Chickadee and Wren Nest Box Plan
+    publisher: Minnesota Department of Natural Resources via Cornell NestWatch
+    url: https://nestwatch.org/wp-content/plugins/nw-nbrc-feature/nestbox-plans/chestnut-backed-chickadee.pdf
+    accessed_on: 2026-07-15
+    construction_pattern: A four-foot one-by-six yields a 4 inch floor, 8 inch front and sides, 8 1/4 inch roof, and 11 inch back; two pivot fasteners let one side swing for cleaning.
+    lessons:
+      - A conventional six-board box can provide a small cavity and cleanout access with ordinary square stock and only two pivot points.
+      - The plan explicitly changes the floor width when cedar thickness changes, making actual dressed stock thickness a pre-cut verification.
+  - id: cornell_good_birdhouse
+    kind: build_instruction
+    title: Features of a Good Birdhouse
+    publisher: Cornell Lab of Ornithology NestWatch
+    url: https://nestwatch.org/learn/all-about-birdhouses/features-of-a-good-birdhouse/
+    accessed_on: 2026-07-15
+    construction_pattern: An untreated thick-walled box combines a sloped overhanging roof, recessed drained floor, high ventilation, rough interior, hinged access, extended back, metal pole, baffle, and no perch.
+    lessons:
+      - Weather, ventilation, predator protection, cleanout, and mounting are one coordinated enclosure system rather than optional decorations.
+      - A few extra inches on the back simplify pole mounting while a sturdy latch keeps the cleanout panel closed.
+  - id: jcs_wren_chickadee
+    kind: commercial_product
+    title: Cedar and Poly Wren, Chickadee, and Warbler Birdhouse
+    publisher: JCS Wildlife
+    url: https://www.jcswildlife.com/products/jcs-wildlife-cedar-poly-wren-chickadee-warbler-birdhouse
+    accessed_on: 2026-07-15
+    construction_pattern: A commercial small-bird house combines a 1 1/8 inch entrance, cedar body, opening side panel, ventilation, drainage, and broad protective roof.
+    lessons:
+      - Side cleanout, drainage, ventilation, and the small entrance coexist in a compact manufactured product.
+      - A contrasting oversized roof can remain visually simple while providing a distinct weather-shedding part.
+  - id: natures_way_wren
+    kind: commercial_product
+    title: Traditional Cedar Wren House with Clean-Out Door
+    publisher: Nature's Way Bird Products
+    url: https://www.natureswaybirds.com/products/traditional-wren-house
+    accessed_on: 2026-07-15
+    construction_pattern: A compact cedar house uses rust-resistant hardware, a 1 1/8 inch entrance, wall and floor ventilation, and a dedicated cleanout door.
+    lessons:
+      - A traditional cedar silhouette can conceal practical ventilation and cleanout provisions without looking technical.
+      - Corrosion-resistant hardware and water-based exterior finish are compatible with a serviceable outdoor nest box.
+  - id: texas_cleanup_options
+    kind: build_instruction
+    title: Bird Houses - Introducing Birds to Young Naturalists
+    publisher: Texas Parks and Wildlife Department
+    url: https://tpwd.texas.gov/publications/nonpwdpubs/introducing_birds/bird_houses/
+    accessed_on: 2026-07-15
+    construction_pattern: A simple nest box may use a hinged or sliding roof, front, or bottom for seasonal cleanout while retaining floor drainage and a predator shield.
+    lessons:
+      - Top, front, and side access are materially different maintenance architectures worth comparing before choosing hardware.
+      - Predator protection belongs to the mounting system and cannot be inferred from the wooden enclosure alone.
+concepts:
+  - id: pivot_side_classic
+    title: Classic pivot-side box
+    summary: Six cedar boards form a square-screwed shell; one side pivots on two pan-head screws and closes with a child-resistant latch screw under an oversized single-slope roof.
+    signature:
+      load_path: roof_to_front_back_and_fixed_side_then_recessed_floor
+      joint_family: exterior_screwed_butt_shell_with_pivot_side
+      part_topology: six_board_box_plus_extended_back_and_mounting_cleat
+      fastening_strategy: corrosion_resistant_shell_screws_two_pivot_screws_and_latch
+      visible_seam_strategy: square_corner_seams_below_single_plane_roof
+      fit_strategy: captured_floor_with_side_swing_clearance
+    features:
+      - id: pivot_cleanout
+        description: One side swings down around two aligned pivot screws while a lower latch screw prevents accidental opening.
+        precedent_refs: [mn_dnr_pivot_plan, cornell_good_birdhouse, jcs_wren_chickadee]
+      - id: oversized_roof
+        description: A separate broad cedar roof slopes toward the entrance and overhangs the front and both sides.
+        precedent_refs: [cornell_good_birdhouse, jcs_wren_chickadee]
+      - id: protected_small_cavity
+        description: The compact untreated cedar cavity includes the small entrance, high vents, corner drains, rough interior, and no perch.
+        precedent_refs: [mn_dnr_pivot_plan, cornell_good_birdhouse, natures_way_wren]
+      - id: extended_back_mount
+        description: The back extends beyond the cavity to provide model-visible attachment zones for a separately selected pole cleat.
+        precedent_refs: [mn_dnr_pivot_plan, cornell_good_birdhouse]
+    parts:
+      - part_family: front and fixed side wall
+        purpose: Enclose the cavity, carry the entrance and ventilation features, and transfer roof and fastener reactions to the recessed floor.
+        requirement_refs: [req_species, req_weather, req_bird_safety]
+        feature_refs: [pivot_side_classic.protected_small_cavity]
+        joinery_replacement: The cavity cannot remain enclosed or weather-protected if these wall surfaces are absorbed into fasteners or adjacent joints.
+      - part_family: extended back
+        purpose: Close the cavity while providing upper and lower mounting zones outside the occupied nest volume.
+        requirement_refs: [req_weather, req_mount]
+        feature_refs: [pivot_side_classic.extended_back_mount]
+        joinery_replacement: A separate cleat cannot replace the weather wall, and the other walls cannot supply both rear closure and external mounting zones.
+      - part_family: pivoting cleanout side
+        purpose: Complete the enclosure during use and open as one intact maintenance panel after the nesting season.
+        requirement_refs: [req_cleanout, req_weather]
+        feature_refs: [pivot_side_classic.pivot_cleanout]
+        joinery_replacement: Fixed joinery would defeat cleaning access; the existing fixed side cannot also open without removing enclosure restraint on both sides.
+      - part_family: recessed floor
+        purpose: Support nest material above the wall bottoms while providing four drainage paths at its clipped corners.
+        requirement_refs: [req_weather, req_species]
+        feature_refs: [pivot_side_classic.protected_small_cavity]
+        joinery_replacement: Wall joints cannot provide a continuous nest-support surface or the required controlled drainage plane.
+      - part_family: sloped roof
+        purpose: Shed rain beyond the entrance and wall seams while remaining removable only through ordinary repair fasteners.
+        requirement_refs: [req_weather]
+        feature_refs: [pivot_side_classic.oversized_roof]
+        joinery_replacement: Extending wall tops cannot provide the broad front and side overhang or a single replaceable weathering surface.
+      - part_family: mounting cleat
+        purpose: Isolate the modeled cedar box from field-selected pole clamps and preserve access to the cleanout side.
+        requirement_refs: [req_mount]
+        feature_refs: [pivot_side_classic.extended_back_mount]
+        joinery_replacement: Direct unknown pole hardware through the cavity would invent field geometry and obstruct maintenance; a separate cleat owns that interface.
+  - id: hinged_roof_access
+    title: Hinged-roof cleanout
+    summary: Four fixed cedar walls surround the recessed floor while the oversized roof hinges at the back and latches at the front for top-down cleaning.
+    signature:
+      load_path: hinged_roof_hardware_to_four_fixed_walls_then_floor
+      joint_family: screwed_fixed_shell_with_hinged_roof
+      part_topology: five_fixed_box_panels_plus_hinged_roof_and_mounting_cleat
+      fastening_strategy: shell_screws_two_roof_hinges_and_front_latch
+      visible_seam_strategy: continuous_fixed_walls_with_hinge_line_at_back
+      fit_strategy: fixed_shell_with_top_access_and_hinge_clearance
+    features:
+      - id: top_cleanout
+        description: The entire overhanging roof lifts around rear hinges and secures with a positive front latch.
+        precedent_refs: [texas_cleanup_options, cornell_good_birdhouse]
+      - id: fixed_weather_shell
+        description: All four wall panels stay fully screwed during maintenance, preserving a rigid box around the nest cavity.
+        precedent_refs: [texas_cleanup_options, cornell_good_birdhouse]
+      - id: roof_weather_surface
+        description: One broad roof remains the primary rain-shedding surface even though its rear edge must accommodate hinges.
+        precedent_refs: [cornell_good_birdhouse, jcs_wren_chickadee]
+    parts:
+      - part_family: four fixed walls
+        purpose: Carry every cavity, entrance, ventilation, and extended-back function without a moving wall seam.
+        requirement_refs: [req_species, req_weather, req_mount, req_bird_safety]
+        feature_refs: [hinged_roof_access.fixed_weather_shell]
+        joinery_replacement: The enclosure needs four vertical boundaries, and roof hardware cannot replace those weather and nesting surfaces.
+      - part_family: recessed floor
+        purpose: Support nest material and drain water while remaining captured inside the fixed wall shell.
+        requirement_refs: [req_weather, req_species]
+        feature_refs: [hinged_roof_access.fixed_weather_shell]
+        joinery_replacement: Fixed walls alone provide neither a nest-support plane nor verified corner drainage openings.
+      - part_family: hinged roof
+        purpose: Shed weather in service and become the complete top-access cleanout opening during maintenance.
+        requirement_refs: [req_weather, req_cleanout]
+        feature_refs: [hinged_roof_access.top_cleanout, hinged_roof_access.roof_weather_surface]
+        joinery_replacement: A fixed roof loses cleanout access, while a wall panel cannot supply the same overhanging weather surface.
+      - part_family: roof hinges and latch
+        purpose: Constrain roof motion, resist wind opening, and provide a repeatable adult-operated maintenance closure.
+        requirement_refs: [req_cleanout, req_weather]
+        feature_refs: [hinged_roof_access.top_cleanout]
+        joinery_replacement: Wooden friction alone does not positively retain the large overhanging roof against weather and repeated service.
+      - part_family: mounting cleat
+        purpose: Receive field-selected pole clamps without placing unknown mounting hardware through the nesting cavity.
+        requirement_refs: [req_mount]
+        feature_refs: [hinged_roof_access.fixed_weather_shell]
+        joinery_replacement: The extended back still needs a replaceable interface to unselected pole hardware and cannot absorb that unknown fit directly.
+  - id: removable_front_access
+    title: Removable-front cleanout
+    summary: A fixed back, sides, floor, and roof form the support shell while the entrance-bearing front overlaps the box and removes after loosening two retaining screws.
+    signature:
+      load_path: fixed_roof_sides_and_back_to_floor_with_nonbearing_front
+      joint_family: screwed_fixed_shell_with_removable_front
+      part_topology: five_fixed_panels_plus_removable_entrance_front_and_cleat
+      fastening_strategy: shell_screws_plus_two_service_retaining_screws
+      visible_seam_strategy: front_perimeter_reveal_with_exposed_retainers
+      fit_strategy: overlapping_front_removes_forward_from_fixed_shell
+    features:
+      - id: front_cleanout
+        description: The complete entrance panel lifts away after two accessible retaining screws are loosened.
+        precedent_refs: [texas_cleanup_options, cornell_good_birdhouse]
+      - id: fixed_roof_and_sides
+        description: Roof, back, sides, and floor remain assembled while the front opening exposes the cavity for cleaning.
+        precedent_refs: [texas_cleanup_options, cornell_good_birdhouse]
+      - id: entrance_service_panel
+        description: Entrance wear can be repaired by replacing one panel without disturbing the roof or pole mount.
+        precedent_refs: [texas_cleanup_options, natures_way_wren]
+    parts:
+      - part_family: fixed side and back shell
+        purpose: Carry the roof, floor, ventilation, and mounting interface while leaving the front plane available for service.
+        requirement_refs: [req_weather, req_mount]
+        feature_refs: [removable_front_access.fixed_roof_and_sides]
+        joinery_replacement: The retained box needs these fixed boundaries to stay mounted and square when the front panel is removed.
+      - part_family: recessed floor
+        purpose: Support the nest and drain water without depending on the removable entrance panel.
+        requirement_refs: [req_weather, req_species]
+        feature_refs: [removable_front_access.fixed_roof_and_sides]
+        joinery_replacement: Wall joinery cannot replace a continuous support and drainage surface beneath the nest.
+      - part_family: fixed sloped roof
+        purpose: Maintain uninterrupted weather cover before, during, and after front-panel servicing.
+        requirement_refs: [req_weather]
+        feature_refs: [removable_front_access.fixed_roof_and_sides]
+        joinery_replacement: The walls cannot supply the specified overhang or replaceable weathering surface without a distinct roof.
+      - part_family: removable entrance front
+        purpose: Carry the species-selective opening and rough escape surface while becoming the full maintenance access closure.
+        requirement_refs: [req_species, req_cleanout, req_bird_safety]
+        feature_refs: [removable_front_access.front_cleanout, removable_front_access.entrance_service_panel]
+        joinery_replacement: A fixed entrance wall would eliminate service access, and no other panel can own the opening without changing bird approach and weather exposure.
+      - part_family: retaining screws
+        purpose: Positively hold the front against wind and animal contact while allowing deliberate adult removal.
+        requirement_refs: [req_cleanout, req_weather]
+        feature_refs: [removable_front_access.front_cleanout]
+        joinery_replacement: A loose friction fit lacks a positive service closure, while permanent joinery would defeat the access requirement.
+      - part_family: mounting cleat
+        purpose: Connect the retained back shell to field-selected pole clamps independently of the removable front.
+        requirement_refs: [req_mount]
+        feature_refs: [removable_front_access.fixed_roof_and_sides]
+        joinery_replacement: Unknown field clamps require a replaceable interface that the entrance panel and cavity walls cannot safely absorb.
+comparison:
+  - {id: pivot_side_classic.strength, concept: pivot_side_classic, criterion: strength, assessment: advantage, explanation: "Five fixed panels and a captured recessed floor create a direct screwed shell while the cleanout side remains restrained at three points.", evidence_refs: [mn_dnr_pivot_plan, constraint_simplicity]}
+  - {id: pivot_side_classic.part_count, concept: pivot_side_classic, criterion: part_count, assessment: advantage, explanation: "Six primary cedar boards and one mounting cleat provide enclosure, access, drainage, and mounting without separate hinges.", evidence_refs: [mn_dnr_pivot_plan, constraint_simplicity]}
+  - {id: pivot_side_classic.fasteners, concept: pivot_side_classic, criterion: fasteners, assessment: advantage, explanation: "Ordinary corrosion-resistant screws serve fixed joints, pivots, and the latch with no specialized hinge purchase.", evidence_refs: [cornell_good_birdhouse, constraint_simplicity]}
+  - {id: pivot_side_classic.operations, concept: pivot_side_classic, criterion: operations, assessment: advantage, explanation: "Square cuts, one sloped roof setup, aligned pivot pilots, and repetitive shell screws divide cleanly into adult and child-safe stages.", evidence_refs: [req_kid_build, mn_dnr_pivot_plan]}
+  - {id: pivot_side_classic.tooling, concept: pivot_side_classic, criterion: tooling, assessment: advantage, explanation: "The listed saw, drill, square, clamps, and driver cover every modeled shop operation without a hinge mortise or router.", evidence_refs: [constraint_simplicity, req_kid_build]}
+  - {id: pivot_side_classic.tolerances, concept: pivot_side_classic, criterion: tolerances, assessment: advantage, explanation: "The floor width follows measured dressed stock and the pivot side needs only a small perimeter clearance to swing freely.", evidence_refs: [mn_dnr_pivot_plan, constraint_maintenance]}
+  - {id: pivot_side_classic.material, concept: pivot_side_classic, criterion: material, assessment: advantage, explanation: "Most enclosure pieces nest in common one-by-six cedar stock; only the broad protective roof and cleat use separate stock.", evidence_refs: [mn_dnr_pivot_plan, req_weather]}
+  - {id: pivot_side_classic.appearance, concept: pivot_side_classic, criterion: appearance, assessment: advantage, explanation: "A traditional box, simple square seams, and broad roof leave clear exterior faces for child decoration without exposed hinge leaves.", evidence_refs: [natures_way_wren, req_kid_build]}
+  - {id: pivot_side_classic.builder_skill, concept: pivot_side_classic, criterion: builder_skill, assessment: advantage, explanation: "The adult owns cutting and drilling while the children can measure, match, sand, decorate, and finish selected shell screws.", evidence_refs: [req_kid_build, constraint_family_workflow]}
+  - {id: pivot_side_classic.instruction_complexity, concept: pivot_side_classic, criterion: instruction_complexity, assessment: advantage, explanation: "One moving side and one repeated screw family produce a short assembly story with a clear annual-cleanout action.", evidence_refs: [constraint_maintenance, constraint_family_workflow]}
+  - {id: hinged_roof_access.strength, concept: hinged_roof_access, criterion: strength, assessment: neutral, explanation: "Four fixed walls make a rigid shell, but the broad roof depends on small hinge and latch hardware that remains exposed to wind leverage.", evidence_refs: [texas_cleanup_options, req_weather]}
+  - {id: hinged_roof_access.part_count, concept: hinged_roof_access, criterion: part_count, assessment: neutral, explanation: "The wooden part count stays low, yet two hinges, a positive latch, and their fasteners add purchased components.", evidence_refs: [texas_cleanup_options, constraint_simplicity]}
+  - {id: hinged_roof_access.fasteners, concept: hinged_roof_access, criterion: fasteners, assessment: disadvantage, explanation: "Hinge and latch screws introduce shorter hardware, edge-distance limits, and corrosion choices beyond the shell screw family.", evidence_refs: [cornell_good_birdhouse, constraint_simplicity]}
+  - {id: hinged_roof_access.operations, concept: hinged_roof_access, criterion: operations, assessment: disadvantage, explanation: "Rear hinge layout, pilot control, latch alignment, and weather-clearance adjustment add accuracy-sensitive steps after the box is square.", evidence_refs: [req_weather, constraint_family_workflow]}
+  - {id: hinged_roof_access.tooling, concept: hinged_roof_access, criterion: tooling, assessment: neutral, explanation: "Basic tools can surface-mount the hardware, but a careful adult setup is needed to keep both hinges coaxial and the roof seated.", evidence_refs: [constraint_simplicity, req_kid_build]}
+  - {id: hinged_roof_access.tolerances, concept: hinged_roof_access, criterion: tolerances, assessment: disadvantage, explanation: "The overhanging roof must clear the extended back through its full arc while still closing tightly against rain and wind.", evidence_refs: [req_weather, constraint_maintenance]}
+  - {id: hinged_roof_access.material, concept: hinged_roof_access, criterion: material, assessment: neutral, explanation: "Cedar consumption matches the selected box, but durable exterior hinges and a latch add hardware with no cavity function.", evidence_refs: [cornell_good_birdhouse, constraint_simplicity]}
+  - {id: hinged_roof_access.appearance, concept: hinged_roof_access, criterion: appearance, assessment: neutral, explanation: "Fixed wall faces remain clean, while hinge leaves and a front latch interrupt the otherwise simple roof silhouette.", evidence_refs: [req_kid_build, natures_way_wren]}
+  - {id: hinged_roof_access.builder_skill, concept: hinged_roof_access, criterion: builder_skill, assessment: disadvantage, explanation: "Children lose most roof-fastening work because hinge alignment, latch fit, and wind restraint require adult-controlled precision.", evidence_refs: [constraint_family_workflow, req_kid_build]}
+  - {id: hinged_roof_access.instruction_complexity, concept: hinged_roof_access, criterion: instruction_complexity, assessment: disadvantage, explanation: "The manual must distinguish fixed shell assembly from hinge alignment, latch adjustment, weather inspection, and safe top opening.", evidence_refs: [constraint_maintenance, constraint_installation_honesty]}
+  - {id: removable_front_access.strength, concept: removable_front_access, criterion: strength, assessment: disadvantage, explanation: "The entrance face contributes little racking restraint because it must separate from the fixed shell for every cleaning cycle.", evidence_refs: [texas_cleanup_options, req_cleanout]}
+  - {id: removable_front_access.part_count, concept: removable_front_access, criterion: part_count, assessment: advantage, explanation: "The concept retains the same major wooden surfaces and needs only two service screws rather than hinge hardware.", evidence_refs: [texas_cleanup_options, constraint_simplicity]}
+  - {id: removable_front_access.fasteners, concept: removable_front_access, criterion: fasteners, assessment: neutral, explanation: "Two removable retainers are simple, but repeated seasonal removal can wear cedar threads unless the interface is maintained.", evidence_refs: [cornell_good_birdhouse, constraint_maintenance]}
+  - {id: removable_front_access.operations, concept: removable_front_access, criterion: operations, assessment: neutral, explanation: "Shell fabrication stays straightforward, though the overlapping front needs a repeatable reveal and two service-clearance pilots.", evidence_refs: [constraint_simplicity, req_cleanout]}
+  - {id: removable_front_access.tooling, concept: removable_front_access, criterion: tooling, assessment: advantage, explanation: "No hinge mortise, jig, or special cutter is required beyond the ordinary saw, drill, square, and driver.", evidence_refs: [constraint_simplicity, req_kid_build]}
+  - {id: removable_front_access.tolerances, concept: removable_front_access, criterion: tolerances, assessment: neutral, explanation: "A loose front removes easily, but too much perimeter clearance exposes the entrance wall to wind-driven rain and movement.", evidence_refs: [req_weather, constraint_maintenance]}
+  - {id: removable_front_access.material, concept: removable_front_access, criterion: material, assessment: advantage, explanation: "No extra wooden reinforcement or commercial hinge set is required beyond the standard enclosure and cleat stock.", evidence_refs: [constraint_simplicity, texas_cleanup_options]}
+  - {id: removable_front_access.appearance, concept: removable_front_access, criterion: appearance, assessment: disadvantage, explanation: "A visible front perimeter reveal and accessible retaining screws occupy the face that carries the entrance and most decoration.", evidence_refs: [req_kid_build, natures_way_wren]}
+  - {id: removable_front_access.builder_skill, concept: removable_front_access, criterion: builder_skill, assessment: neutral, explanation: "Initial work is beginner-accessible, but adults must preserve the service fit and avoid stripping the same cedar holes over repeated cleanouts.", evidence_refs: [constraint_family_workflow, constraint_maintenance]}
+  - {id: removable_front_access.instruction_complexity, concept: removable_front_access, criterion: instruction_complexity, assessment: neutral, explanation: "Cleaning is obvious, yet the guide must control two loose screws, protect the nest contents, and verify the entrance panel reseats weather-tight.", evidence_refs: [req_cleanout, constraint_maintenance]}
+deviations: []
+decision:
+  selected_concept: pivot_side_classic
+  rationale: The classic pivot-side architecture best preserves the prior approved design while winning the decisive simplicity, kid participation, tooling, maintenance, and instruction comparisons without weakening the required birdhouse features.
+  decisive_cells:
+    - pivot_side_classic.operations
+    - pivot_side_classic.tooling
+    - pivot_side_classic.builder_skill
+    - pivot_side_classic.instruction_complexity
+    - pivot_side_classic.tolerances
+    - pivot_side_classic.appearance
+  tradeoffs:
+    - The pivoting side needs controlled clearance and accurately aligned pivot pilots rather than becoming a fully fixed structural wall.
+    - The exposed pivot and latch screw heads remain visible on one side in exchange for avoiding separate exterior hinge hardware.
+    - Pole, baffle, clamp, soil, utility, and wind facts remain field holds until actual products and the dacha site are verified.
+  application: implemented
+modeling_approval:
+  approved_by: Joel Witten
+  approved_on: 2026-07-15
+  selection_fingerprint: b7f91b653c95270ebf35968478b2d3a686cf49e356c35482f3e2c2aed4b8e1ff
+delivery_confirmation: null

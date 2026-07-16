@@ -117,16 +117,6 @@ PROVENANCE_ASSUMPTION = "assumption"
 PROVENANCE_SOURCES = (PROVENANCE_TYPE_DEFAULT, PROVENANCE_MANUFACTURER,
                       PROVENANCE_AUTHORED, PROVENANCE_ASSUMPTION)
 
-#: Component class names that are FASTENER-class — hardware that is DRIVEN or
-#: SET and therefore owes an installation contract. Washers/nuts/epoxy/hangers
-#: /post bases are stack or connector hardware: they ride a fastener's single
-#: contract (``ResolvedInstallation.stack``) or carry field fasteners on their
-#: own BOM line, never a contract of their own. Class-name matching keeps this
-#: module free of a components import, exactly like connection.py's
-#: positional-unpack role guards.
-FASTENER_COMPONENT_CLASSES = ("LagScrew", "StructuralScrew", "HexBolt",
-                              "ThreadedRod")
-
 #: The toe-screw tool-axis angle off the entry face this vocabulary DECLARES
 #: when nothing better is known — typical toe-screw/toenail technique, an
 #: ASSUMPTION-grade value (stamped ``assumption`` in the provenance map),
@@ -141,9 +131,8 @@ METHOD_TOOL_ENVELOPES: dict[str, "ToolEnvelope"] = {}
 
 
 def is_fastener(placed) -> bool:
-    """Whether a ``Placed`` part is FASTENER-class hardware (owes a
-    contract). See :data:`FASTENER_COMPONENT_CLASSES`."""
-    return type(placed.component).__name__ in FASTENER_COMPONENT_CLASSES
+    """Whether a ``Placed`` part owes an installation contract."""
+    return "installation_fastener" in placed.component.capability_tags()
 
 
 # -- contract leaf types ------------------------------------------------------

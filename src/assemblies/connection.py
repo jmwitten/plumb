@@ -905,6 +905,31 @@ def _require_hardware_roles(conn: "Connection", roles: list[tuple[str, ...]]) ->
     return hw
 
 
+def _require_hardware_capabilities(
+    conn: "Connection", requirements: list[frozenset[str]]
+) -> list[Placed]:
+    """Validate positional hardware slots by semantic component capability."""
+    hw = conn.hardware
+    if len(hw) != len(requirements):
+        required = ["&".join(sorted(tags)) for tags in requirements]
+        raise ValueError(
+            f"Connection {conn.label!r} ({conn.kind.label}): expected "
+            f"{len(requirements)} hardware item(s) {required}, got {len(hw)} "
+            f"({[p.name for p in hw]}). Hardware is unpacked positionally by "
+            "role — a wrong-count declaration can't be mapped to roles."
+        )
+    for index, (part, required) in enumerate(zip(hw, requirements)):
+        actual = part.component.capability_tags()
+        if not required <= actual:
+            raise ValueError(
+                f"Connection {conn.label!r} ({conn.kind.label}): hardware "
+                f"slot {index} requires capabilities {sorted(required)}, got "
+                f"{type(part.component).__name__} with {sorted(actual)} "
+                f"({part.name!r})."
+            )
+    return hw
+
+
 # -- Concrete ConnectionTypes (P2 dictionary, seeded from real details) -----
 
 
@@ -1601,7 +1626,9 @@ class CleatScrewed(ConnectionType):
 
     def _unpack(self, conn: Connection):
         cleat, member = conn.parts
-        screws = _require_hardware_roles(conn, [_SCREW] * self.n_screws)
+        screws = _require_hardware_capabilities(
+            conn, [frozenset({"wood_screw"})] * self.n_screws
+        )
         return cleat, member, list(screws)
 
     def allowed_intersections(self, conn: Connection):
@@ -1710,7 +1737,9 @@ class ButtScrewed(ConnectionType):
 
     def _unpack(self, conn: Connection):
         face_member, butting = conn.parts
-        screws = _require_hardware_roles(conn, [_SCREW] * self.n_screws)
+        screws = _require_hardware_capabilities(
+            conn, [frozenset({"wood_screw"})] * self.n_screws
+        )
         return face_member, butting, list(screws)
 
     def allowed_intersections(self, conn: Connection):
@@ -1744,6 +1773,84 @@ class ButtScrewed(ConnectionType):
         # free face (its outside, opposite the joint plane).
         face_member, _butting, screws = self._unpack(conn)
         return (straight_screw_group("butt_screws", screws, face_member.id),)
+
+
+SERVICE_PANEL_MODES = {
+    "pivot": ("pivoted_by", "pivot_screw"),
+    "latch": ("latched_by", "latch_screw"),
+}
+
+
+@connection_types.register("service_panel_screwed")
+class ServicePanelScrewed(ConnectionType):
+    """One exterior screw retaining a service panel without fixing the joint."""
+
+    label = "service_panel_screwed"
+
+    def __init__(self, mode: str):
+        if mode not in SERVICE_PANEL_MODES:
+            raise ValueError(
+                "service panel mode must be 'pivot' or 'latch'; "
+                f"got {mode!r}"
+            )
+        self.mode = str(mode)
+        self.edge_kind, self.role = SERVICE_PANEL_MODES[self.mode]
+
+    def _unpack(self, conn: Connection):
+        frame_member, service_panel = conn.parts
+        (screw,) = _require_hardware_capabilities(
+            conn,
+            [frozenset({"ordinary_wood_screw", "exterior_use"})],
+        )
+        return frame_member, service_panel, screw
+
+    def allowed_intersections(self, conn: Connection):
+        frame_member, service_panel, screw = self._unpack(conn)
+        return {(screw, frame_member), (screw, service_panel)}
+
+    def bonded_pairs(self, conn: Connection):
+        frame_member, service_panel, screw = self._unpack(conn)
+        return [(screw, frame_member), (screw, service_panel)]
+
+    def edges(self, conn: Connection):
+        frame_member, service_panel, screw = self._unpack(conn)
+        return [
+            Edge(frame_member.id, screw.id, "installed_before", conn.label),
+            Edge(service_panel.id, screw.id, "installed_before", conn.label),
+            Edge(service_panel.id, screw.id, self.edge_kind, conn.label),
+        ]
+
+    def install_contract(self, conn: Connection):
+        frame_member, _service_panel, screw = self._unpack(conn)
+        return (straight_screw_group(self.role, [screw], frame_member.id),)
+
+
+@connection_types.register("pivot_screwed")
+class PivotScrewed(ServicePanelScrewed):
+    """An exterior screw acting as one pivot pin for an opening service panel.
+
+    The connection intentionally has no load-transfer claim, no gravity seat,
+    and no member-to-member ``fastened_by`` edge: the panel remains operable.
+    """
+
+    label = "pivot_screwed"
+
+    def __init__(self):
+        super().__init__("pivot")
+
+
+@connection_types.register("service_latch_screwed")
+class ServiceLatchScrewed(ServicePanelScrewed):
+    """A removable exterior screw latching an otherwise operable panel.
+
+    The connection represents retention and service access only, not a fixed
+    structural joint or an analyzed load path.
+    """
+
+    label = "service_latch_screwed"
+
+    def __init__(self):
+        super().__init__("latch")
 
 
 @connection_types.register("glued")

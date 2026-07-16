@@ -20,6 +20,8 @@ Usage:  python scripts/single_detail_report.py [--out PATH] [--preview]
 from __future__ import annotations
 
 import argparse
+import base64
+import gzip
 import html as _html
 import json
 import shutil
@@ -986,7 +988,8 @@ def build_single_detail_html(name: str, detail, views_dir: Path, panel_cfg: dict
                              cut_note_context: str = _CUT_NOTE_CONTEXT,
                              extra_sections: tuple = (),
                              companion_href: str | None = None,
-                             instruction_manual=None) -> str:
+                             instruction_manual=None,
+                             documentation_prepared: bool = False) -> str:
     """Assemble the one-panel HTML build document, reusing consolidated_report's
     section builders. ``detail`` must be compiled + validated. ``design_store``
     (optional) is a SIBLING design-review store rendered as a second findings
@@ -1000,7 +1003,8 @@ def build_single_detail_html(name: str, detail, views_dir: Path, panel_cfg: dict
     report = detail.report or detail.validate()
 
     # documentation render (the REAL ungated path) -> manifest + GLB source parity.
-    detail.render_documentation(work_dir)
+    if not documentation_prepared:
+        detail.render_documentation(work_dir)
     manifest = json.loads((work_dir / "detail.manifest.json").read_text())
 
     # panel still images: matplotlib rasterizations -> data URIs (REUSE png_data_uri).
@@ -1028,7 +1032,15 @@ def build_single_detail_html(name: str, detail, views_dir: Path, panel_cfg: dict
     slug = payload["slug"]
 
     # interactive GLB (CadQuery path, no Blender) for "Explore in 3D".
-    glb_b64, _raw, _gz = CR.web_glb_b64(detail.assembly, work_dir, WEB_GLB_TOL)
+    if documentation_prepared:
+        raw = (work_dir / "detail.glb").read_bytes()
+        gz = gzip.compress(raw, compresslevel=9, mtime=0)
+        glb_b64 = base64.b64encode(gz).decode("ascii")
+        _raw, _gz = len(raw), len(gz)
+    else:
+        glb_b64, _raw, _gz = CR.web_glb_b64(
+            detail.assembly, work_dir, WEB_GLB_TOL
+        )
 
     # BOM + cut plan, single-detail — the SAME builders the site uses. stub_guard
     # OFF: the zipline double-count guard drops any non-platform lumber as a
@@ -1330,7 +1342,8 @@ def build_document(out: Path, spec_path: Path = CADDY_SPEC,
                    preview: bool = False,
                    companion_href: str | None = None,
                    *, compiled_detail=None, instruction_manual=None,
-                   document_notice: str | None = None) -> dict:
+                   document_notice: str | None = None,
+                   prepared_documentation_dir: str | Path | None = None) -> dict:
     """Compile + validate the detail named by ``spec_path``, build its
     single-detail HTML build document (reusing consolidated_report's machinery),
     write it to ``out``, and return a summary dict
@@ -1346,10 +1359,10 @@ def build_document(out: Path, spec_path: Path = CADDY_SPEC,
         report = detail.report or detail.validate()
     _ensure_consumer_views(consumer, detail)
 
-    with tempfile.TemporaryDirectory() as td:
-        html = build_single_detail_html(
+    def build_html(work_dir: Path, *, documentation_prepared: bool) -> str:
+        return build_single_detail_html(
             consumer["name"], detail, consumer["views_dir"], consumer["panel"],
-            consumer["view_files"], consumer["store"], Path(td),
+            consumer["view_files"], consumer["store"], work_dir,
             design_store=consumer.get("design_store"),
             design_title=consumer.get("design_title"),
             design_lede=consumer.get("design_lede"),
@@ -1360,7 +1373,16 @@ def build_document(out: Path, spec_path: Path = CADDY_SPEC,
             cut_note_context=consumer.get("cut_note_context", _CUT_NOTE_CONTEXT),
             extra_sections=consumer.get("extra_sections", ()),
             companion_href=companion_href,
-            instruction_manual=instruction_manual)
+            instruction_manual=instruction_manual,
+            documentation_prepared=documentation_prepared)
+
+    if prepared_documentation_dir is None:
+        with tempfile.TemporaryDirectory() as td:
+            html = build_html(Path(td), documentation_prepared=False)
+    else:
+        html = build_html(
+            Path(prepared_documentation_dir), documentation_prepared=True
+        )
 
     if document_notice:
         notice = _html.escape(document_notice)

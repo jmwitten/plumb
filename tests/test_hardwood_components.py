@@ -4,6 +4,7 @@ import math
 
 import pytest
 
+from detailgen.core.buildinfo import geometry_hash
 from detailgen.core.registry import components
 from detailgen.core.units import IN
 from detailgen.spec.compiler import compile_spec
@@ -60,6 +61,56 @@ def test_hardwood_panel_and_dowel_are_registered_with_truthful_bom_language():
     assert "pressure-treated" not in panel.assumptions().lower()
     assert dowel.bom_label() == "3/8 in hardwood dowel"
     assert dowel.bom_length_mm() == pytest.approx(math.sqrt(2) * 0.75 * IN)
+
+
+def test_hardwood_panel_compatibility_surface_is_characterized():
+    from detailgen.components.hardwood import HardwoodPanel
+
+    panel = HardwoodPanel(
+        8 * IN,
+        5.5 * IN,
+        0.75 * IN,
+        miter_ends=("near", "far"),
+    )
+    panel.apply_feature_cut(
+        4 * IN,
+        2.75 * IN,
+        0.5 * IN,
+        noun="probe",
+        step_kind="bore",
+        provenance="probe",
+    )
+
+    assert geometry_hash(panel.solid) == (
+        "cd42ca17af15e6cd8618f119faf31deef61836ec583580f977cda32106d7ced4"
+    )
+    assert set(panel.datums) == {"origin", "base", "top", "end_near", "end_far"}
+    assert panel.datum("base").origin == pytest.approx((4 * IN, 2.75 * IN, 0))
+    assert panel.datum("top").origin == pytest.approx(
+        (4 * IN, 2.75 * IN, 0.75 * IN)
+    )
+    assert panel.datum("end_near").origin == pytest.approx(
+        (0, 2.75 * IN, 0.375 * IN)
+    )
+    assert panel.datum("end_far").origin == pytest.approx(
+        (8 * IN, 2.75 * IN, 0.375 * IN)
+    )
+    record = panel.fabrication_record("probe")
+    assert [step.kind for step in record.steps] == [
+        "crosscut",
+        "miter_crosscut",
+        "miter_crosscut",
+        "bore",
+    ]
+    assert record.stock.profile == "3/4 in hardwood panel, 5 1/2 in wide"
+    assert record.stock.material_key == "hardwood"
+    assert panel.solid.val().Volume() == pytest.approx(480422.8552731925)
+    assert panel.bom_label() == "3/4 in hardwood panel"
+    assert panel.bom_length_mm() == pytest.approx(8 * IN)
+    assert panel.assumptions() == (
+        "Solid indoor hardwood panel; species and grade are selected for "
+        "appearance and workability but are not analyzed structurally."
+    )
 
 
 def test_wood_dowel_is_a_finished_cylinder_along_local_positive_x():

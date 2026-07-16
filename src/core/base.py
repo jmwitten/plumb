@@ -27,12 +27,20 @@ implementation of this contract.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import ClassVar
 
 import cadquery as cq
 
 from .diskcache import DiskCache, brep_dumps, brep_loads, component_disk_key
 from .frame import Frame
 from .materials import Material, MATERIALS
+
+COMPONENT_CAPABILITIES = frozenset({
+    "installation_fastener",
+    "wood_screw",
+    "ordinary_wood_screw",
+    "exterior_use",
+})
 
 #: Process-wide cache of built LOCAL solids, keyed by ``Component.cache_key()``.
 #: Shared across every ``Component`` instance and every ``DetailAssembly`` in
@@ -110,6 +118,7 @@ def _load_solid(key: str) -> "cq.Workplane | None":
 class Component(ABC):
     #: Key into MATERIALS; subclasses override (or set per-instance).
     material_key: str = "steel_galv"
+    CAPABILITIES: ClassVar[frozenset[str]] = frozenset()
 
     def __init__(self, name: str):
         self.name = name
@@ -225,6 +234,18 @@ class Component(ABC):
             k: v for k, v in vars(self).items()
             if not k.startswith("_") and k != "name"
         }
+
+    def capability_tags(self) -> frozenset[str]:
+        """Closed semantic roles that do not require building this component."""
+        tags = frozenset(self.CAPABILITIES)
+        unknown = tags - COMPONENT_CAPABILITIES
+        if unknown:
+            raise ValueError(
+                f"{type(self).__name__} declares unknown component capabilities "
+                f"{sorted(unknown)}; valid capabilities: "
+                f"{sorted(COMPONENT_CAPABILITIES)}"
+            )
+        return tags
 
     # -- bill-of-materials hooks (override for readable BOM rows) -------------
 

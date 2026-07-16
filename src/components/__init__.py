@@ -1,12 +1,15 @@
 from .lumber import Lumber, NOMINAL_SIZES
 from .concrete import ConcretePier, Footing, Slab, Boulder, Epoxy, PierBlock
 from .fasteners import (
-    LagScrew, HexBolt, Washer, StructuralScrew, HexNut, ThreadedRod,
+    LagScrew, HexBolt, Washer, StructuralScrew, WoodScrew, ExteriorWoodScrew, HexNut,
+    ThreadedRod,
 )
 from .connectors import JoistHanger, PostBase, AngleBracket
 from .railing import WireMesh, DeckBoard
 from .sheet import PlywoodPanel
+from .panel import FabricatedPanel
 from .hardwood import HardwoodPanel, WoodDowel
+from .cedar import CedarPanel
 from .tree import TreeTrunk, SlottedBeamEnd
 from .zipline_hardware import (
     Cable, TrolleyWheel, Hanger, GrabBar, StrapGate, GrabHandle,
@@ -15,9 +18,13 @@ from .zipline_hardware import (
 __all__ = [
     "Lumber", "NOMINAL_SIZES",
     "ConcretePier", "Footing", "Slab", "Boulder", "Epoxy", "PierBlock",
-    "LagScrew", "HexBolt", "Washer", "StructuralScrew", "HexNut", "ThreadedRod",
+    "LagScrew", "HexBolt", "Washer", "StructuralScrew", "WoodScrew",
+    "ExteriorWoodScrew",
+    "HexNut", "ThreadedRod",
     "JoistHanger", "PostBase", "AngleBracket",
-    "WireMesh", "DeckBoard", "PlywoodPanel", "HardwoodPanel", "WoodDowel",
+    "WireMesh", "DeckBoard", "PlywoodPanel", "FabricatedPanel",
+    "HardwoodPanel", "WoodDowel",
+    "CedarPanel",
     "TreeTrunk", "SlottedBeamEnd",
     "Cable", "TrolleyWheel", "Hanger", "GrabBar", "StrapGate", "GrabHandle",
 ]

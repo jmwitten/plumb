@@ -33,6 +33,18 @@ def _load_benchmark_module():
 bench = _load_benchmark_module()
 
 
+def test_family_birdhouse_is_a_normal_compiled_detail_benchmark_target():
+    assert bench.DETAIL_SPECS["family_birdhouse"] == (
+        "family_birdhouse.spec.yaml"
+    )
+
+    detail_module, factory = bench.load_detail("family_birdhouse")
+    detail = factory()
+
+    assert detail_module is None
+    assert detail.name == "family birdhouse"
+
+
 def _stub_detail_cls():
     """A minimal 2-part Detail — cheap enough to build/validate/render in a
     fraction of a second, so this test stays fast.
@@ -100,6 +112,23 @@ def test_run_detail_once_emits_schema_valid_record(tmp_path):
     bbox = record["bbox_prefilter_estimate"]
     assert set(bbox) == {"pairs", "bbox_non_overlapping_pairs", "skippable_fraction"}
     assert bbox["pairs"] == 1
+
+
+def test_run_detail_once_uses_ungated_documentation_surface(monkeypatch, tmp_path):
+    detail_cls = _stub_detail_cls()
+    monkeypatch.setattr(
+        detail_cls,
+        "render",
+        lambda *_args, **_kwargs: pytest.fail(
+            "benchmark attempted a certified delivery render"
+        ),
+    )
+
+    record = bench.run_detail_once(
+        "bench_stub", detail_cls, tmp_path / "documentation"
+    )
+
+    assert record["validation_ok"] is True
 
 
 def test_instrumentation_restores_originals_after_use():

@@ -67,6 +67,7 @@ DETAIL_SPECS: dict[str, str] = {
     "tree_attachment": "tree_attachment.spec.yaml",
     "trolley_launch": "trolley_launch.spec.yaml",
     "platform": "platform.spec.yaml",
+    "family_birdhouse": "family_birdhouse.spec.yaml",
 }
 
 
@@ -170,7 +171,7 @@ def _instrument(timer, detail_module=None) -> ExitStack:
 # One in-process measured pass over a single detail.
 # --------------------------------------------------------------------------- #
 def run_detail_once(name: str, detail_cls, out_dir: Path, detail_module=None) -> dict:
-    """Fresh detail instance -> assemble -> validate -> render -> a PNG
+    """Fresh detail instance -> assemble -> validate -> documentation render -> a PNG
     capture (PNG isn't part of these details' Detail.render(), so it's timed
     as its own extra step to satisfy the "PNG/VTK measured too" requirement).
     ``detail_module`` (the module ``detail_cls`` came from, if any — see
@@ -189,7 +190,7 @@ def run_detail_once(name: str, detail_cls, out_dir: Path, detail_module=None) ->
         with timer.phase("validate"):
             report = detail.validate()
         with timer.phase("render"):
-            detail.render(out_dir)
+            detail.render_documentation(out_dir)
         with timer.phase("export_png"):
             from detailgen.rendering.export import export_png
             export_png(detail.assembly, out_dir / f"{name}_bench.png")
