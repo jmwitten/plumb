@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="540" viewBox="0 0 1200 540" role="img" aria-labelledby="title desc">
+  <title id="title">Built-up 2x4 concept comparison</title>
+  <desc id="desc">Three simplified concepts: alternating-side dry lamination, adhesive-bonded lamination, and a solid four-by-four.</desc>
+  <rect width="1200" height="540" fill="#f7f4ec"/>
+  <text x="60" y="58" font-family="system-ui,sans-serif" font-size="30" font-weight="700" fill="#202124">Built-up 2×4 — concept comparison</text>
+  <text x="60" y="88" font-family="system-ui,sans-serif" font-size="16" fill="#4b5563">Simplified sections and fastening strategy; not a structural-capacity drawing</text>
+
+  <g transform="translate(55 125)">
+    <rect width="345" height="350" rx="16" fill="#ffffff" stroke="#1f6f43" stroke-width="4"/>
+    <text x="24" y="40" font-family="system-ui,sans-serif" font-size="20" font-weight="700" fill="#1f6f43">A — SELECTED</text>
+    <text x="24" y="67" font-family="system-ui,sans-serif" font-size="17" font-weight="600" fill="#202124">Dry mechanical lamination</text>
+    <rect x="74" y="105" width="94" height="154" fill="#d6a85f" stroke="#6b4a1f" stroke-width="2"/>
+    <rect x="168" y="105" width="94" height="154" fill="#e1b873" stroke="#6b4a1f" stroke-width="2"/>
+    <line x1="168" y1="105" x2="168" y2="259" stroke="#713f12" stroke-width="3" stroke-dasharray="7 5"/>
+    <g fill="#374151">
+      <circle cx="104" cy="130" r="7"/><circle cx="232" cy="148" r="7"/><circle cx="104" cy="166" r="7"/><circle cx="232" cy="184" r="7"/>
+      <circle cx="104" cy="202" r="7"/><circle cx="232" cy="220" r="7"/><circle cx="104" cy="238" r="7"/><circle cx="232" cy="250" r="7"/>
+    </g>
+    <text x="24" y="294" font-family="system-ui,sans-serif" font-size="15" fill="#202124">2 plies · 8 screws · no adhesive</text>
+    <text x="24" y="319" font-family="system-ui,sans-serif" font-size="15" fill="#202124">Actual section: 3″ × 3½″</text>
+    <text x="24" y="342" font-family="system-ui,sans-serif" font-size="14" fill="#4b5563">Heads alternate at 12″ centers</text>
+  </g>
+
+  <g transform="translate(427 125)">
+    <rect width="345" height="350" rx="16" fill="#ffffff" stroke="#9a6700" stroke-width="2"/>
+    <text x="24" y="40" font-family="system-ui,sans-serif" font-size="20" font-weight="700" fill="#9a6700">B — ALTERNATE</text>
+    <text x="24" y="67" font-family="system-ui,sans-serif" font-size="17" font-weight="600" fill="#202124">Adhesive-bonded lamination</text>
+    <rect x="74" y="105" width="94" height="154" fill="#d6a85f" stroke="#6b4a1f" stroke-width="2"/>
+    <rect x="168" y="105" width="94" height="154" fill="#e1b873" stroke="#6b4a1f" stroke-width="2"/>
+    <line x1="168" y1="105" x2="168" y2="259" stroke="#2563eb" stroke-width="8"/>
+    <g fill="#374151"><circle cx="104" cy="135" r="7"/><circle cx="104" cy="175" r="7"/><circle cx="104" cy="215" r="7"/><circle cx="104" cy="245" r="7"/></g>
+    <text x="24" y="294" font-family="system-ui,sans-serif" font-size="15" fill="#202124">Full-face bond · one-side screws</text>
+    <text x="24" y="319" font-family="system-ui,sans-serif" font-size="15" fill="#202124">Actual section: 3″ × 3½″</text>
+    <text x="24" y="342" font-family="system-ui,sans-serif" font-size="14" fill="#4b5563">More operations and cure governance</text>
+  </g>
+
+  <g transform="translate(799 125)">
+    <rect width="345" height="350" rx="16" fill="#ffffff" stroke="#6b7280" stroke-width="2"/>
+    <text x="24" y="40" font-family="system-ui,sans-serif" font-size="20" font-weight="700" fill="#6b7280">C — REJECTED</text>
+    <text x="24" y="67" font-family="system-ui,sans-serif" font-size="17" font-weight="600" fill="#202124">Solid nominal 4×4</text>
+    <rect x="84" y="105" width="168" height="168" fill="#d7aa62" stroke="#6b4a1f" stroke-width="2"/>
+    <path d="M100 135 C135 115, 190 150, 235 125 M100 195 C145 170, 190 220, 235 185 M110 245 C150 220, 200 260, 238 230" fill="none" stroke="#9a6a32" stroke-width="3" opacity="0.65"/>
+    <text x="24" y="294" font-family="system-ui,sans-serif" font-size="15" fill="#202124">1 member · no interface fasteners</text>
+    <text x="24" y="319" font-family="system-ui,sans-serif" font-size="15" fill="#202124">Actual section: 3½″ × 3½″</text>
+    <text x="24" y="342" font-family="system-ui,sans-serif" font-size="14" fill="#4b5563">Violates the two-2×4 requirement</text>
+  </g>
+</svg>
