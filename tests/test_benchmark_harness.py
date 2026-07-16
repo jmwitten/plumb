@@ -131,6 +131,36 @@ def test_run_detail_once_uses_ungated_documentation_surface(monkeypatch, tmp_pat
     assert record["validation_ok"] is True
 
 
+def test_run_package_once_reports_public_builder_timings(monkeypatch, tmp_path):
+    import detailgen.package.builder as builder_module
+
+    seen = {}
+
+    class _Result:
+        artifacts = (object(), object())
+
+        def manifest(self):
+            return {"timings_seconds": {"compile_validate": 0.25, "documents": 0.5}}
+
+    def fake_build(request):
+        seen["request"] = request
+        return _Result()
+
+    monkeypatch.setattr(builder_module, "build_package", fake_build)
+
+    record = bench.run_package_once(
+        tmp_path / "generic.spec.yaml",
+        tmp_path / "package",
+    )
+
+    assert seen["request"].views == ("iso",)
+    assert record == {
+        "timings_seconds": {"compile_validate": 0.25, "documents": 0.5},
+        "total_s": 0.75,
+        "artifact_count": 2,
+    }
+
+
 def test_instrumentation_restores_originals_after_use():
     from detailgen.core import base as base_mod
     from detailgen.core.timing import PhaseTimer
