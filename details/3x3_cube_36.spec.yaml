@@ -1,0 +1,163 @@
+name: 36-inch open 3x3 cube
+type: lumber_frame
+units: in
+components:
+- id: p00
+  type: lumber
+  name: front-left post
+  reader_name: Front-left post
+  params: {nominal: 3x3, length: 36 in}
+  place: {raw: {at: [2.5 in, 0 in, 0 in], rotate: [[Y, -90]]}}
+- id: p10
+  type: lumber
+  name: front-right post
+  reader_name: Front-right post
+  params: {nominal: 3x3, length: 36 in}
+  place: {raw: {at: [36 in, 0 in, 0 in], rotate: [[Y, -90]]}}
+- id: p01
+  type: lumber
+  name: rear-left post
+  reader_name: Rear-left post
+  params: {nominal: 3x3, length: 36 in}
+  place: {raw: {at: [2.5 in, 33.5 in, 0 in], rotate: [[Y, -90]]}}
+- id: p11
+  type: lumber
+  name: rear-right post
+  reader_name: Rear-right post
+  params: {nominal: 3x3, length: 36 in}
+  place: {raw: {at: [36 in, 33.5 in, 0 in], rotate: [[Y, -90]]}}
+- id: x_front_bottom
+  type: lumber
+  name: front bottom rail
+  reader_name: Front bottom rail
+  params: {nominal: 3x3, length: 31 in}
+  place: {raw: {at: [2.5 in, 0 in, 0 in]}}
+- id: x_front_top
+  type: lumber
+  name: front top rail
+  reader_name: Front top rail
+  params: {nominal: 3x3, length: 31 in}
+  place: {raw: {at: [2.5 in, 0 in, 33.5 in]}}
+- id: x_rear_bottom
+  type: lumber
+  name: rear bottom rail
+  reader_name: Rear bottom rail
+  params: {nominal: 3x3, length: 31 in}
+  place: {raw: {at: [2.5 in, 33.5 in, 0 in]}}
+- id: x_rear_top
+  type: lumber
+  name: rear top rail
+  reader_name: Rear top rail
+  params: {nominal: 3x3, length: 31 in}
+  place: {raw: {at: [2.5 in, 33.5 in, 33.5 in]}}
+- id: y_left_bottom
+  type: lumber
+  name: left bottom rail
+  reader_name: Left bottom rail
+  params: {nominal: 3x3, length: 31 in}
+  place: {raw: {at: [2.5 in, 2.5 in, 0 in], rotate: [[Z, 90]]}}
+- id: y_left_top
+  type: lumber
+  name: left top rail
+  reader_name: Left top rail
+  params: {nominal: 3x3, length: 31 in}
+  place: {raw: {at: [2.5 in, 2.5 in, 33.5 in], rotate: [[Z, 90]]}}
+- id: y_right_bottom
+  type: lumber
+  name: right bottom rail
+  reader_name: Right bottom rail
+  params: {nominal: 3x3, length: 31 in}
+  place: {raw: {at: [36 in, 2.5 in, 0 in], rotate: [[Z, 90]]}}
+- id: y_right_top
+  type: lumber
+  name: right top rail
+  reader_name: Right top rail
+  params: {nominal: 3x3, length: 31 in}
+  place: {raw: {at: [36 in, 2.5 in, 33.5 in], rotate: [[Z, 90]]}}
+connections:
+- {type: glued, label: "front bottom rail -> front-left post", parts: [x_front_bottom, p00]}
+- {type: glued, label: "front bottom rail -> front-right post", parts: [x_front_bottom, p10]}
+- {type: glued, label: "front top rail -> front-left post", parts: [x_front_top, p00]}
+- {type: glued, label: "front top rail -> front-right post", parts: [x_front_top, p10]}
+- {type: glued, label: "rear bottom rail -> rear-left post", parts: [x_rear_bottom, p01]}
+- {type: glued, label: "rear bottom rail -> rear-right post", parts: [x_rear_bottom, p11]}
+- {type: glued, label: "rear top rail -> rear-left post", parts: [x_rear_top, p01]}
+- {type: glued, label: "rear top rail -> rear-right post", parts: [x_rear_top, p11]}
+- {type: glued, label: "left bottom rail -> front rectangle", parts: [y_left_bottom, p00]}
+- {type: glued, label: "left bottom rail -> rear rectangle", parts: [y_left_bottom, p01]}
+- {type: glued, label: "left top rail -> front rectangle", parts: [y_left_top, p00]}
+- {type: glued, label: "left top rail -> rear rectangle", parts: [y_left_top, p01]}
+- {type: glued, label: "right bottom rail -> front rectangle", parts: [y_right_bottom, p10]}
+- {type: glued, label: "right bottom rail -> rear rectangle", parts: [y_right_bottom, p11]}
+- {type: glued, label: "right top rail -> front rectangle", parts: [y_right_top, p10]}
+- {type: glued, label: "right top rail -> rear rectangle", parts: [y_right_top, p11]}
+sequence:
+  stages:
+    - name: bond the four side rails to the cured front rectangle
+      connections:
+        - "left bottom rail -> front rectangle"
+        - "left top rail -> front rectangle"
+        - "right bottom rail -> front rectangle"
+        - "right top rail -> front rectangle"
+      why: >-
+        Clamp the cured front rectangle square, bond all four side-rail front
+        ends in one setup, keep the rails parallel and square to the rectangle,
+        and let the four bonds fully cure before fitting the rear rectangle.
+    - name: close the cube with the cured rear rectangle
+      connections:
+        - "left bottom rail -> rear rectangle"
+        - "left top rail -> rear rectangle"
+        - "right bottom rail -> rear rectangle"
+        - "right top rail -> rear rectangle"
+      why: >-
+        Fit the cured rear rectangle over the four cured side rails, bond all
+        four rear ends in one setup, verify 36 inches outside-to-outside in all
+        three axes, equalize the body diagonals, and clamp through full cure.
+  subassemblies:
+    - name: front rectangle
+      parts: [p00, p10, x_front_bottom, x_front_top]
+      why: >-
+        Lay the two front posts and two front rails flat on a bench. Bond all
+        four corners, equalize the diagonals, and keep the rectangle clamped
+        square through the adhesive label's full-cure condition.
+    - name: rear rectangle
+      parts: [p01, p11, x_rear_bottom, x_rear_top]
+      why: >-
+        Lay the two rear posts and two rear rails flat on a bench. Bond all four
+        corners, equalize the diagonals, and keep the rectangle clamped square
+        through the adhesive label's full-cure condition.
+validation:
+  dimensions:
+    - {name: "outside left face", part: p00, measure: xmin, expected: "0 in", tolerance: "0.02 in"}
+    - {name: "outside right face", part: p10, measure: xmax, expected: "36 in", tolerance: "0.02 in"}
+    - {name: "outside front face", part: p00, measure: ymin, expected: "0 in", tolerance: "0.02 in"}
+    - {name: "outside rear face", part: p01, measure: ymax, expected: "36 in", tolerance: "0.02 in"}
+    - {name: "outside bottom face", part: p00, measure: zmin, expected: "0 in", tolerance: "0.02 in"}
+    - {name: "outside top face", part: p00, measure: zmax, expected: "36 in", tolerance: "0.02 in"}
+    - {name: "post length", part: p00, measure: zlen, expected: "36 in", tolerance: "0.02 in"}
+    - {name: "front rail length", part: x_front_bottom, measure: xlen, expected: "31 in", tolerance: "0.02 in"}
+    - {name: "side rail length", part: y_left_bottom, measure: ylen, expected: "31 in", tolerance: "0.02 in"}
+    - {name: "dressed width", part: x_front_bottom, measure: ylen, expected: "2.5 in", tolerance: "0.02 in"}
+    - {name: "dressed thickness", part: x_front_bottom, measure: zlen, expected: "2.5 in", tolerance: "0.02 in"}
+export: {glb_tolerance: 0.1, glb_angular_tolerance: 0.15}
+doc:
+  sections:
+    - prose: |
+        # 36-Inch Open 3x3 Cube — Build Package
+
+        Cut four straight nominal 3x3 posts to 36 inches and eight nominal 3x3
+        rails to 31 inches, all with square ends. This package deliberately
+        models the dressed stock as 2.5 by 2.5 inches. Build and fully cure the
+        front and rear rectangles flat, bond the four side rails to the front
+        rectangle as one square setup, then fit and bond the rear rectangle
+        after those front-end bonds cure.
+
+        Dry-fit before gluing. Use a flat surface, framing square, equal-diagonal
+        checks, and the adhesive manufacturer's preparation, clamping, and cure
+        instructions. The result must measure exactly 36 inches outside in X,
+        Y, and Z. Confirm that 3x3 stock with a 2.5-inch dressed section is
+        available before buying or cutting. This is an uninstalled,
+        low-consequence decorative/display frame. Structural capacity,
+        stability under loading, climbing, seating, hanging, overhead use, and
+        code compliance are not analyzed.
+    - findings: {header: "## Dimension checks", check: dimension}

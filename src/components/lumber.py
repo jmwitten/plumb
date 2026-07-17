@@ -56,6 +56,7 @@ NOMINAL_SIZES: dict[str, tuple[float, float]] = {
     "2x8": (1.5 * IN, 7.25 * IN),
     "2x10": (1.5 * IN, 9.25 * IN),
     "2x12": (1.5 * IN, 11.25 * IN),
+    "3x3": (2.5 * IN, 2.5 * IN),
     "4x4": (3.5 * IN, 3.5 * IN),
     "4x6": (3.5 * IN, 5.5 * IN),
     "6x6": (5.5 * IN, 5.5 * IN),

@@ -1,0 +1,19 @@
+schema: detailgen/component-extension/v1
+id: nominal_3x3_lumber
+family: stock_member
+change_class: catalog_variant
+component:
+  type: lumber
+  params:
+    nominal: 3x3
+    length: 24 in
+expect:
+  dimensions:
+    xlen: 24 in
+    ylen: 2.5 in
+    zlen: 2.5 in
+  datums:
+    - end_near
+    - end_far
+  capabilities: []
+  material_key: lumber_spf
