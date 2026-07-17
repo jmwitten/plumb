@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import re
+import shutil
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -225,7 +226,7 @@ def build_scaffold(request: ScaffoldRequest) -> ScaffoldDocuments:
 
 def write_scaffold(request: ScaffoldRequest) -> ScaffoldResult:
     """Write both verified documents without leaving a partial pair."""
-    documents = build_scaffold(request)
+    _validate_request(request)
     output_dir = Path(request.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     spec_path = output_dir / f"{request.slug}.spec.yaml"
@@ -237,6 +238,7 @@ def write_scaffold(request: ScaffoldRequest) -> ScaffoldResult:
             + ", ".join(str(path) for path in collisions)
             + "; pass --force to replace both"
         )
+    documents = build_scaffold(request)
 
     with tempfile.TemporaryDirectory(dir=output_dir) as temporary:
         staging = Path(temporary)
@@ -245,8 +247,27 @@ def write_scaffold(request: ScaffoldRequest) -> ScaffoldResult:
         staged_spec.write_text(documents.spec_text, encoding="utf-8")
         staged_contract.write_text(documents.contract_text, encoding="utf-8")
         load_contract(staged_contract, repo_root=output_dir)
-        staged_spec.replace(spec_path)
-        staged_contract.replace(contract_path)
+        backup_dir = staging / "prior"
+        backups: dict[Path, Path] = {}
+        for target in (spec_path, contract_path):
+            if target.exists():
+                backup_dir.mkdir(exist_ok=True)
+                backup = backup_dir / target.name
+                shutil.copy2(target, backup)
+                backups[target] = backup
+
+        installed: list[Path] = []
+        try:
+            staged_spec.replace(spec_path)
+            installed.append(spec_path)
+            staged_contract.replace(contract_path)
+            installed.append(contract_path)
+        except BaseException:
+            for target in installed:
+                target.unlink(missing_ok=True)
+            for target, backup in backups.items():
+                backup.replace(target)
+            raise
 
     return ScaffoldResult(
         spec_path=spec_path,

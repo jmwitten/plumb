@@ -90,6 +90,32 @@ tests/test_authored_identity.py::test_authored_identity_convenience_entry_point,
 tests/test_authoring_manifest.py::test_authoring_manifest_is_deterministic_and_project_agnostic,platform,plumb-platform,unit,Generic authoring-vocabulary serialization contract; no accepted build is evaluated.
 tests/test_authoring_manifest.py::test_authoring_manifest_covers_live_registries_and_schema,platform,plumb-platform,unit,Generic registry/schema coverage contract; no accepted build is evaluated.
 tests/test_authoring_manifest.py::test_authoring_manifest_publishes_parameters_and_workflow_contract,platform,plumb-platform,unit,Public workflow and parameter metadata contract; no accepted build is evaluated.
+tests/test_authoring_manifest.py::test_authoring_manifest_publishes_compact_nested_grammar,platform,plumb-platform,unit,Generic nested authoring grammar and scaffold command contract.
+tests/test_authoring_manifest.py::test_authoring_grammar_is_explicit_about_dimension_and_lumber_conventions,platform,plumb-platform,unit,Generic measurement and cut convention contract.
+tests/test_authoring_scaffold.py::test_authoring_cli_without_subcommand_still_prints_manifest,platform,plumb-platform,unit,Backward-compatible generic authoring CLI contract.
+tests/test_authoring_scaffold.py::test_authoring_cli_grammar_is_bounded_without_full_registry,platform,plumb-platform,unit,Bounded low-context authoring grammar contract.
+tests/test_authoring_scaffold.py::test_authoring_cli_scaffolds_explicit_components_and_connection,platform,plumb-platform,unit,Generic explicit component connection and hardware authoring contract.
+tests/test_authoring_scaffold.py::test_authoring_cli_yaml_value_keeps_nominal_size_string,platform,plumb-platform,unit,Generic YAML value parsing contract.
+tests/test_authoring_scaffold.py::test_authoring_cli_reports_malformed_yaml_value,platform,plumb-platform,unit,Fail-closed malformed authoring value diagnostic.
+tests/test_authoring_scaffold.py::test_authoring_cli_reports_unknown_component_with_known_keys,platform,plumb-platform,unit,Fail-closed unknown registry component diagnostic.
+tests/test_authoring_scaffold.py::test_writes_generic_component_spec_and_resolvable_certification,platform,plumb-platform,unit,Generic DetailSpec and certification scaffold contract.
+tests/test_authoring_scaffold.py::test_preserves_explicit_raw_placement_and_parameterized_connection,platform,plumb-platform,unit,Generic placement and parameterized connection scaffold contract.
+tests/test_authoring_scaffold.py::test_fails_closed_for_invalid_registry_inputs[scaffold_request0-unknown component],platform,plumb-platform,unit,Fail-closed unknown component scaffold input.
+tests/test_authoring_scaffold.py::test_fails_closed_for_invalid_registry_inputs[scaffold_request1-missing required params ['length']],platform,plumb-platform,unit,Fail-closed missing component parameter scaffold input.
+tests/test_authoring_scaffold.py::test_fails_closed_for_invalid_registry_inputs[scaffold_request2-unknown params ['widht']],platform,plumb-platform,unit,Fail-closed unknown component parameter scaffold input.
+tests/test_authoring_scaffold.py::test_fails_closed_for_invalid_registry_inputs[scaffold_request3-duplicate component id 'base'],platform,plumb-platform,unit,Fail-closed duplicate component identity scaffold input.
+tests/test_authoring_scaffold.py::test_fails_closed_for_invalid_registry_inputs[scaffold_request4-unknown connection type],platform,plumb-platform,unit,Fail-closed unknown connection scaffold input.
+tests/test_authoring_scaffold.py::test_fails_closed_for_invalid_registry_inputs[scaffold_request5-missing required params ['n_screws']],platform,plumb-platform,unit,Fail-closed missing connection parameter scaffold input.
+tests/test_authoring_scaffold.py::test_fails_closed_for_invalid_registry_inputs[scaffold_request6-undeclared parts ['missing']],platform,plumb-platform,unit,Fail-closed undeclared connection participant scaffold input.
+tests/test_authoring_scaffold.py::test_build_scaffold_instantiates_geometry_before_success,platform,plumb-platform,unit,Generic scaffold component construction check.
+tests/test_authoring_scaffold.py::test_rejects_connection_that_would_crash_package_validation,platform,plumb-platform,unit,Generic package-invocable connection validation check.
+tests/test_authoring_scaffold.py::test_refuses_to_overwrite_before_expensive_build,platform,plumb-platform,unit,Generic early output collision contract.
+tests/test_authoring_scaffold.py::test_second_install_failure_restores_prior_output_pair,platform,plumb-platform,unit,Generic transactional scaffold output pair contract.
+tests/test_authoring_scaffold.py::test_contract_verification_failure_leaves_no_partial_outputs,platform,plumb-platform,unit,Generic pre-publication certification rollback contract.
+tests/test_authoring_scaffold.py::test_generated_yaml_uses_only_authoring_fields,platform,plumb-platform,unit,Generic closed DetailSpec field emission contract.
+tests/test_authoring_scaffold.py::test_connection_missing_param_diagnostic_names_connection_set_flag,platform,plumb-platform,unit,Actionable generic connection parameter diagnostic.
+tests/test_authoring_scaffold.py::test_scaffold_api_is_public,platform,plumb-platform,unit,Generic public scaffolder API contract.
+tests/test_authoring_scaffold.py::test_readme_teaches_scaffold_and_non_inference_conventions,platform,plumb-platform,unit,Generic scaffolder guidance contract.
 tests/test_baseline_integrity_unit.py::test_tampered_plain_baseline_is_named_without_regeneration,platform,plumb-platform,unit,Pure baseline-integrity self-test with no live model compilation.
 tests/test_baseline_integrity_unit.py::test_missing_and_extra_baselines_are_both_named,platform,plumb-platform,unit,Pure baseline-integrity self-test with no live model compilation.
 tests/test_baseline_integrity_unit.py::test_annotated_merge_preserves_notes_and_flags_new_and_removed,platform,plumb-platform,unit,Pure baseline-integrity self-test with no live model compilation.
@@ -1753,6 +1779,7 @@ tests/test_scripts_spec_rewire.py::test_no_test_loads_a_detail_py[test_action_fr
 tests/test_scripts_spec_rewire.py::test_no_test_loads_a_detail_py[test_affected_region.py],platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_scripts_spec_rewire.py::test_no_test_loads_a_detail_py[test_authored_identity.py],platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_scripts_spec_rewire.py::test_no_test_loads_a_detail_py[test_authoring_manifest.py],platform,plumb-platform,unit,Static generic test-harness policy check.
+tests/test_scripts_spec_rewire.py::test_no_test_loads_a_detail_py[test_authoring_scaffold.py],platform,plumb-platform,unit,Static generic test-harness policy check.
 tests/test_scripts_spec_rewire.py::test_no_test_loads_a_detail_py[test_baseline_integrity_unit.py],platform,plumb-platform,unit,Pure baseline-integrity self-test with no live model compilation.
 tests/test_scripts_spec_rewire.py::test_no_test_loads_a_detail_py[test_baselines.py],platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_scripts_spec_rewire.py::test_no_test_loads_a_detail_py[test_bbox_prefilter.py],platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."

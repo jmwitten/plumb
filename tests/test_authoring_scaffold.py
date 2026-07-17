@@ -303,7 +303,7 @@ def test_rejects_connection_that_would_crash_package_validation(tmp_path):
         build_scaffold(request)
 
 
-def test_refuses_to_overwrite_either_output_without_force(tmp_path):
+def test_refuses_to_overwrite_before_expensive_build(tmp_path, monkeypatch):
     request = ScaffoldRequest(
         "garden_slab",
         tmp_path,
@@ -312,12 +312,49 @@ def test_refuses_to_overwrite_either_output_without_force(tmp_path):
         ),),
     )
     (tmp_path / "garden_slab.cert.yaml").write_text("existing\n")
+    monkeypatch.setattr(
+        "detailgen.authoring.scaffold.build_scaffold",
+        lambda _request: pytest.fail("collision must precede CAD build"),
+    )
 
     with pytest.raises(ScaffoldError, match="refusing to overwrite"):
         write_scaffold(request)
 
     assert not (tmp_path / "garden_slab.spec.yaml").exists()
     assert (tmp_path / "garden_slab.cert.yaml").read_text() == "existing\n"
+
+
+def test_second_install_failure_restores_prior_output_pair(tmp_path, monkeypatch):
+    request = ScaffoldRequest(
+        "garden_slab",
+        tmp_path,
+        (ScaffoldComponent(
+            "base", "slab", {"width": 12, "length": 18},
+        ),),
+        force=True,
+    )
+    spec_path = tmp_path / "garden_slab.spec.yaml"
+    contract_path = tmp_path / "garden_slab.cert.yaml"
+    spec_path.write_text("old spec\n")
+    contract_path.write_text("old contract\n")
+    original_replace = Path.replace
+    failed = False
+
+    def fail_first_contract_install(source, target):
+        nonlocal failed
+        if Path(target) == contract_path and not failed:
+            failed = True
+            raise OSError("forced second rename failure")
+        return original_replace(source, target)
+
+    monkeypatch.setattr(Path, "replace", fail_first_contract_install)
+
+    with pytest.raises(OSError, match="forced second rename failure"):
+        write_scaffold(request)
+
+    assert spec_path.read_text() == "old spec\n"
+    assert contract_path.read_text() == "old contract\n"
+    assert [path for path in tmp_path.iterdir() if path.is_dir()] == []
 
 
 def test_contract_verification_failure_leaves_no_partial_outputs(tmp_path, monkeypatch):
