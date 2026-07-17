@@ -1,0 +1,343 @@
+{
+  "clock": {
+    "started_at": "2026-07-17T11:52:51.322470Z"
+  },
+  "events": [
+    {
+      "elapsed_seconds": 13.960501,
+      "kind": "route_validated",
+      "monotonic_ns": 2883449956625333,
+      "sequence": 1
+    },
+    {
+      "elapsed_seconds": 27.255346,
+      "gate_names": [
+        "product_inner",
+        "product_release"
+      ],
+      "kind": "spec_and_gates_ready",
+      "monotonic_ns": 2883463251469750,
+      "sequence": 2,
+      "spec_hash": "dc32e2aef934312d5fd1d60b2b806a5d12c3ef5056d8100f9df734f2bb67eeef",
+      "spec_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/details/2x4_triangle.spec.yaml"
+    },
+    {
+      "argv": [
+        "-m",
+        "detailgen.package",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/details/2x4_triangle.spec.yaml",
+        "--out",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/build/2x4_triangle",
+        "--preview"
+      ],
+      "command_id": "command-0003",
+      "duration_seconds": 5.703567,
+      "elapsed_seconds": 74.248924,
+      "ended_at": "2026-07-17T11:54:48.747883Z",
+      "executed_argv": [
+        "/Users/joelwitten/Code/construction-detail-generator/.venv/bin/python",
+        "-S",
+        "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/plumb-python.py",
+        "--source",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/src",
+        "--venv",
+        "/Users/joelwitten/Code/construction-detail-generator/.venv",
+        "--",
+        "-m",
+        "detailgen.package",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/details/2x4_triangle.spec.yaml",
+        "--out",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/build/2x4_triangle",
+        "--preview"
+      ],
+      "gate": null,
+      "invocation": "initial",
+      "kind": "command",
+      "label": "package-initial",
+      "log_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/acceptance/triangle-8min-v2/trace-fast.logs/03-package-initial.log",
+      "log_sha256": "999c7e4e296f0bc04d35b828f9374de364f56f555678c5e5c2fd76ec90abbbe2",
+      "monotonic_ns": 2883510245047833,
+      "returncode": 0,
+      "sequence": 3,
+      "source_binding": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/src/__init__.py",
+      "source_commit": "8d04d46f3e41a77b74f8bd668cc77bd07e26318b",
+      "started_at": "2026-07-17T11:54:43.044190Z",
+      "status": "PASS"
+    },
+    {
+      "command_id": "command-0003",
+      "duration_seconds": 5.703567,
+      "elapsed_seconds": 74.25129,
+      "invocation": "initial",
+      "kind": "package_generated",
+      "monotonic_ns": 2883510247414666,
+      "package_hash": "9fe3db91da88e8e6665de0cc0f748b4ecd2064ff2e7ec575cf1cd0c0e823761d",
+      "package_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/build/2x4_triangle",
+      "sequence": 4,
+      "source_commit": "8d04d46f3e41a77b74f8bd668cc77bd07e26318b",
+      "spec_hash": "dc32e2aef934312d5fd1d60b2b806a5d12c3ef5056d8100f9df734f2bb67eeef",
+      "trigger_finding_id": null
+    },
+    {
+      "blocking_finding_ids": [],
+      "elapsed_seconds": 139.156861,
+      "evidence_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/acceptance/triangle-8min-v2/review-evidence.json",
+      "evidence_sha256": "82f0537ce587d9eb525711c68c9b977b076891cda5de2bdb2504384526a17986",
+      "kind": "review_complete",
+      "monotonic_ns": 2883575152985291,
+      "package_hash": "9fe3db91da88e8e6665de0cc0f748b4ecd2064ff2e7ec575cf1cd0c0e823761d",
+      "pass_number": 1,
+      "sequence": 5,
+      "source_commit": "8d04d46f3e41a77b74f8bd668cc77bd07e26318b",
+      "spec_hash": "dc32e2aef934312d5fd1d60b2b806a5d12c3ef5056d8100f9df734f2bb67eeef"
+    },
+    {
+      "argv": [
+        "pytest",
+        "--detail-gate",
+        "2x4_triangle",
+        "--detail-cadence",
+        "inner",
+        "-q"
+      ],
+      "command_id": "command-0006",
+      "duration_seconds": 3.51312,
+      "elapsed_seconds": 142.760377,
+      "ended_at": "2026-07-17T11:55:57.258020Z",
+      "executed_argv": [
+        "/Users/joelwitten/Code/construction-detail-generator/.venv/bin/python",
+        "-S",
+        "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/plumb-python.py",
+        "--source",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/src",
+        "--venv",
+        "/Users/joelwitten/Code/construction-detail-generator/.venv",
+        "--",
+        "pytest",
+        "--detail-gate",
+        "2x4_triangle",
+        "--detail-cadence",
+        "inner",
+        "-q"
+      ],
+      "gate": "product_inner",
+      "kind": "command",
+      "label": "product_inner",
+      "log_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/acceptance/triangle-8min-v2/trace-fast.logs/06-product-inner.log",
+      "log_sha256": "85f97c3067feb572d3e8690b9bfe9baa61d06dc5cf651fe9e5d09ea7adad042b",
+      "monotonic_ns": 2883578756501125,
+      "returncode": 0,
+      "sequence": 6,
+      "source_binding": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/src/__init__.py",
+      "source_commit": "8d04d46f3e41a77b74f8bd668cc77bd07e26318b",
+      "started_at": "2026-07-17T11:55:53.744753Z",
+      "status": "PASS"
+    },
+    {
+      "argv": [
+        "pytest",
+        "--detail-gate",
+        "2x4_triangle",
+        "--detail-cadence",
+        "release",
+        "-q"
+      ],
+      "command_id": "command-0007",
+      "duration_seconds": 2.404744,
+      "elapsed_seconds": 145.173143,
+      "ended_at": "2026-07-17T11:55:59.670559Z",
+      "executed_argv": [
+        "/Users/joelwitten/Code/construction-detail-generator/.venv/bin/python",
+        "-S",
+        "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/plumb-python.py",
+        "--source",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/src",
+        "--venv",
+        "/Users/joelwitten/Code/construction-detail-generator/.venv",
+        "--",
+        "pytest",
+        "--detail-gate",
+        "2x4_triangle",
+        "--detail-cadence",
+        "release",
+        "-q"
+      ],
+      "gate": "product_release",
+      "kind": "command",
+      "label": "product_release",
+      "log_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/acceptance/triangle-8min-v2/trace-fast.logs/07-product-release.log",
+      "log_sha256": "ffe2a4a341462d569b35e1e292ac1aa0fb4d5f4f8c0cc6d1855131d67100244c",
+      "monotonic_ns": 2883581169267250,
+      "returncode": 0,
+      "sequence": 7,
+      "source_binding": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/src/__init__.py",
+      "source_commit": "8d04d46f3e41a77b74f8bd668cc77bd07e26318b",
+      "started_at": "2026-07-17T11:55:57.265826Z",
+      "status": "PASS"
+    },
+    {
+      "elapsed_seconds": 145.173756,
+      "kind": "product_gates_complete",
+      "monotonic_ns": 2883581169880458,
+      "sequence": 8
+    },
+    {
+      "artifacts": [
+        {
+          "path": "/Users/joelwitten/Code/JoelBrain/05_Attachments/Organized/2x4 Triangle/2026-07-17/48-inch Package",
+          "sha256": "9fe3db91da88e8e6665de0cc0f748b4ecd2064ff2e7ec575cf1cd0c0e823761d"
+        }
+      ],
+      "elapsed_seconds": 187.448754,
+      "kind": "delivery_complete",
+      "monotonic_ns": 2883623444878583,
+      "package_hash": "9fe3db91da88e8e6665de0cc0f748b4ecd2064ff2e7ec575cf1cd0c0e823761d",
+      "sequence": 9,
+      "source_commit": "8d04d46f3e41a77b74f8bd668cc77bd07e26318b",
+      "spec_hash": "dc32e2aef934312d5fd1d60b2b806a5d12c3ef5056d8100f9df734f2bb67eeef"
+    },
+    {
+      "elapsed_seconds": 187.528297,
+      "kind": "trace_complete",
+      "monotonic_ns": 2883623524421208,
+      "sequence": 10
+    }
+  ],
+  "pre_route_reads": [
+    {
+      "kind": "user_brief",
+      "path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/acceptance/triangle-8min-v2/brief.md",
+      "sha256": "e636a62f8c82ec7ce97152dc6654b22cb2210c64529062cf459f2d5884254bd1"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/plumb-preflight.py"
+      ],
+      "duration_seconds": 2.192439,
+      "ended_at": "2026-07-17T11:52:53.515135Z",
+      "kind": "preflight_json",
+      "log_sha256": "8929a4f0ac3f26b41fcadee50b59243d81eb64cb49ab0a1f302dccaeb7cffd95",
+      "returncode": 0,
+      "selected_repo": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2",
+      "started_at": "2026-07-17T11:52:51.322728Z",
+      "status": "PASS"
+    },
+    {
+      "kind": "authoring_index",
+      "path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/acceptance/triangle-8min-v2/routing-manifest-fast.json",
+      "sha256": "ae41b42c65ff36bb34103cbf444df67442938890360d0b21460811ccdc430834"
+    }
+  ],
+  "preflight_test_commands": {
+    "product_inner": [
+      "pytest",
+      "--detail-gate",
+      "2x4_triangle",
+      "--detail-cadence",
+      "inner",
+      "-q"
+    ],
+    "product_release": [
+      "pytest",
+      "--detail-gate",
+      "2x4_triangle",
+      "--detail-cadence",
+      "release",
+      "-q"
+    ]
+  },
+  "route": "fast_product",
+  "runner": {
+    "package_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/build/2x4_triangle",
+    "published_test_commands": {
+      "platform_audit": [
+        "pytest",
+        "--platform-tier",
+        "audit",
+        "-q"
+      ],
+      "platform_integration": [
+        "pytest",
+        "--platform-tier",
+        "integration",
+        "-q"
+      ],
+      "product_inner": [
+        "pytest",
+        "--detail-gate",
+        "{slug}",
+        "--detail-cadence",
+        "inner",
+        "-q"
+      ],
+      "product_release": [
+        "pytest",
+        "--detail-gate",
+        "{slug}",
+        "--detail-cadence",
+        "release",
+        "-q"
+      ],
+      "repository_verification": [
+        "pytest",
+        "-q",
+        "-n",
+        "4"
+      ]
+    },
+    "review_count": 1,
+    "route_evidence": {
+      "argv": [
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/fast_lane.py",
+        "--assessment",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/acceptance/triangle-8min-v2/assessment-fast.json",
+        "--manifest",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/acceptance/triangle-8min-v2/routing-manifest-fast.json"
+      ],
+      "assessment_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/acceptance/triangle-8min-v2/assessment-fast.json",
+      "assessment_sha256": "90cc6e8abe7d40d881c21104d129b41e8edfaed8195c5f0fa7082d9f02dcdaaa",
+      "authoring_index_sha256": "ae41b42c65ff36bb34103cbf444df67442938890360d0b21460811ccdc430834",
+      "duration_seconds": 0.052968,
+      "log_sha256": "c1cc65d7a63e5da103798744fe66c93d535b2939beea9b292a98e0accfff7c05",
+      "result": {
+        "issues": [],
+        "resume": null,
+        "route": "fast_product",
+        "schema": "plumb/fast-lane-result/v1"
+      },
+      "returncode": 0,
+      "status": "PASS"
+    },
+    "schema": "plumb/fast-product-runner/v1",
+    "slug": "2x4_triangle",
+    "spec_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/details/2x4_triangle.spec.yaml",
+    "started_monotonic_ns": 2883435996124208,
+    "validation": {
+      "issues": [],
+      "passed": true,
+      "validated_at": "2026-07-17T11:56:42.027777Z"
+    }
+  },
+  "schema": "plumb/fast-product-run/v1",
+  "source_binding": {
+    "cwd": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2",
+    "detailgen_file": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/src/__init__.py",
+    "launcher_argv": [
+      "/Users/joelwitten/Code/construction-detail-generator/.venv/bin/python",
+      "-S",
+      "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/plumb-python.py",
+      "--source",
+      "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/src",
+      "--venv",
+      "/Users/joelwitten/Code/construction-detail-generator/.venv",
+      "--"
+    ],
+    "schema": "plumb/source-bound-launcher/v1",
+    "selected_source": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/src",
+    "source_commit": "8d04d46f3e41a77b74f8bd668cc77bd07e26318b"
+  },
+  "source_commit": "8d04d46f3e41a77b74f8bd668cc77bd07e26318b",
+  "spec_hash": "dc32e2aef934312d5fd1d60b2b806a5d12c3ef5056d8100f9df734f2bb67eeef"
+}

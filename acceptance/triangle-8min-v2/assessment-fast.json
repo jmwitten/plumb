@@ -1,0 +1,68 @@
+{
+  "architecture": {
+    "joint_family": "3 glued symmetric miters",
+    "load_path_alternatives": [],
+    "material_alternatives": [],
+    "orientation": "3.5-inch faces coplanar",
+    "part_topology": "3 equal members forming a closed triangle",
+    "support_installation_model": "uninstalled low-consequence decorative assembly"
+  },
+  "blocked_command": [
+    "python3",
+    "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/fast_product_runner.py",
+    "package",
+    "--trace",
+    "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/acceptance/triangle-8min-v2/trace-fast.json",
+    "--out",
+    "/Users/joelwitten/Code/construction-detail-generator/.worktrees/triangle-8min-acceptance-v2/build/2x4_triangle"
+  ],
+  "delegation": {
+    "ordinary_choices": true
+  },
+  "dimensions": {
+    "conflicts": [],
+    "derived": [
+      "triangle_height=48*sqrt(3)/2"
+    ],
+    "governing": [
+      "outside_edge=48in",
+      "face_width=3.5in",
+      "included_corner=60deg"
+    ],
+    "reference_semantics": [
+      "outside edges are long-point-to-long-point"
+    ],
+    "unresolved": []
+  },
+  "project_slug": "2x4_triangle",
+  "risk": {
+    "code_or_life_safety": false,
+    "level": "low",
+    "professional_approval_required": false,
+    "structural": false
+  },
+  "schema": "plumb/fast-lane-assessment/v1",
+  "vocabulary": {
+    "components": [
+      {
+        "key": "lumber",
+        "required_parameters": [
+          "nominal",
+          "length",
+          "end_cuts",
+          "length_semantics"
+        ],
+        "role": "member"
+      }
+    ],
+    "connections": [
+      {
+        "key": "glued",
+        "required_parameters": [],
+        "role": "miter_joint"
+      }
+    ],
+    "missing": [],
+    "requires_escape_hatch": false
+  }
+}

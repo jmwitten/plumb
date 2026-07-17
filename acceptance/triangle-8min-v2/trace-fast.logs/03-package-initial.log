@@ -1,0 +1,175 @@
+{
+  "artifacts": [
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/479ff0b772c9b6336558badabfbcaadfd694d460f220a9f0a893fa4ef651b4c2.png",
+      "sha256": "74366aff985cc2b230b14234f8b0f2f5b99ff2bb66e66f06f2bef2d75b9c6b3b",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/cc1099543b98b96c59c2bfc728bd3da513a452a0df69538be39c70dc89817ebb.png",
+      "sha256": "359fe3ffd4dc54050fdfb891769b0f0143bb8d57c861bdd053e9459ecd1c108b",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/cc64f07ab23421c02590b9618f1b97f575a4e3844875b44c353a053c432ab85f.png",
+      "sha256": "e63d0f05544a94d9c0d714d61b6d83508cf5c15531c8abf8bb1e2aff886d80ef",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/ee6de8bb7756331669946058fe4e0a182c461a21a8c8bd2e754896b6438538d1.png",
+      "sha256": "ee575317ce01ed4557fc28c84fa2cc456d7bdc63d9cc8ddd06490e02de54e01d",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "assembly",
+      "media_type": "text/html",
+      "relative_path": "assembly.html",
+      "sha256": "0d552fc6e98cf3926d0ffebf19b38e87a703660b3e30a225083ce47e44ff9b10",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "bom",
+      "media_type": "text/csv",
+      "relative_path": "bom.csv",
+      "sha256": "5cbb91636960602071cbd3895ac9632d2448fff2f66e7bfb7addefdde79b54ab",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "cuts",
+      "media_type": "text/csv",
+      "relative_path": "cuts.csv",
+      "sha256": "7686e8077e3938a010ba8f1f8532f3844f63e4aa70dd2a60e079a0311527f3d7",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "fabrication",
+      "media_type": "text/html",
+      "relative_path": "fabrication.html",
+      "sha256": "5b84fe06a796aee547e96da27daa2ca02e76dfff26700dde18cac594cc537e49",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "model",
+      "media_type": "model/step",
+      "relative_path": "model/2x4_equilateral_triangle.step",
+      "sha256": "bd2ba9bb725ed5ae81ff5f90f7c96b6120e553843dbfd7079a28321a292f8527",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "model",
+      "media_type": "application/json",
+      "relative_path": "model/coverage_matrix.json",
+      "sha256": "993daf58d06803048d83ff8b1ff4fc8f45de413fd257fc6447d71c50b803b70f",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "model",
+      "media_type": "model/gltf-binary",
+      "relative_path": "model/detail.glb",
+      "sha256": "596a5431d5eb4d2b0d3a86ec6f851302970d73096b3fe62d7ff45cea13a750ba",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "model",
+      "media_type": "application/json",
+      "relative_path": "model/detail.manifest.json",
+      "sha256": "c75145b0f147c3b01cbd2c3c88de71b08f27a7a2bb0f2dd64c7355c67b3d6342",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "model",
+      "media_type": "application/json",
+      "relative_path": "model/evidence_graph.json",
+      "sha256": "67a6840a2e9a15c89d4b09bf7127d6b44590b2c3aaaad655caf23bc01d3da0a8",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "model",
+      "media_type": "text/markdown",
+      "relative_path": "model/validation_report.md",
+      "sha256": "844fa18b3d03d6e3da178a390cb590a03a844a9b2a8816956bf42eb2287ce771",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "review-manifest",
+      "media_type": "application/json",
+      "relative_path": "review-manifest.json",
+      "sha256": "3910828d4551acb94365e4495d265174f591a37beefce4a00127ea946719ad0a",
+      "source": "rendered-artifacts"
+    },
+    {
+      "kind": "technical",
+      "media_type": "text/html",
+      "relative_path": "technical.html",
+      "sha256": "114e1bf705d11fc5535ddb5786959293465dac734f76e4ac6547f96cc74fb0ce",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "standard-view",
+      "media_type": "image/png",
+      "relative_path": "views/front.png",
+      "sha256": "2722549789d38b3a0936107cb6672430e6c96121b382db4af1ce090b5787fd4b",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "standard-view",
+      "media_type": "image/png",
+      "relative_path": "views/iso.png",
+      "sha256": "62cb015fe10ff07728fc76ba8311e04fb4e46a4856b0acc8b814f9c9fea5a2fb",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "standard-view",
+      "media_type": "image/png",
+      "relative_path": "views/right.png",
+      "sha256": "680c55c5e747a12d664618b07ce765d8eaa1315ce974fd5d5d27cb5655c3c0fc",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "standard-view",
+      "media_type": "image/png",
+      "relative_path": "views/top.png",
+      "sha256": "f7d5e89643eb3ac103e07d5b9e0722bbcf52bc7e7015ea450aa6f7329ead361d",
+      "source": "compiled-detail"
+    }
+  ],
+  "assembly_hash": "8ad13649601803f04ed55563b02ce8fe89edb74cdc395bb9de6ad5b041764268",
+  "holds": [
+    "Spatial intent \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Construction completeness \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Fastener installability \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Functional use \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Load-path representation \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Support/Stability representation \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Structural capacity \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Code compliance \u2014 UNKNOWN \u2014 NOT ANALYZED"
+  ],
+  "model_fingerprint": null,
+  "release": "preview",
+  "schema": "detailgen/package-manifest/v1",
+  "selection_fingerprint": null,
+  "spec": "2x4_triangle.spec.yaml",
+  "tests": {
+    "reason": "package generation does not execute tests",
+    "status": "not-run"
+  },
+  "timings_seconds": {
+    "compile_validate": 0.11900258297100663,
+    "documents": 0.8061805837787688,
+    "model_export": 0.05065537476912141,
+    "review_trace": 0.00322291674092412,
+    "standard_views": 0.9149932079017162
+  },
+  "validation": {
+    "blocking_count": 0,
+    "ok": true
+  }
+}

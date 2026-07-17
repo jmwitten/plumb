@@ -1,0 +1,70 @@
+{
+  "components": [
+    {
+      "constructor": "(nominal: 'str', length: 'float', name: 'str | None' = None, treated: 'bool' = False, ease_radius: 'float' = 0.0, holes: 'tuple' = (), full_length: 'float | None' = None, end_cuts: 'tuple' = (), length_semantics: 'str | None' = None)",
+      "key": "lumber",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "nominal",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "treated",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "ease_radius",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "holes",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "full_length",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "end_cuts",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length_semantics",
+          "required": false
+        }
+      ],
+      "summary": "A straight dimensional-lumber member. Optional ``end_cuts`` entries are mappings with ``end`` (``near``/``far``), conventional ``miter_angle_degrees`` off square, and ``long_face`` (``top``/``bottom``); they require ``length_semantics=\"long_point_to_long_point\"`` and expose physical ``cut_near``/``cut_far`` mating datums."
+    }
+  ],
+  "connections": [
+    {
+      "constructor": "()",
+      "key": "dowel_reinforced_miter",
+      "parameters": [],
+      "summary": "Two hardwood panels joined at a glued miter and keyed by two dowels."
+    },
+    {
+      "constructor": "()",
+      "key": "glued",
+      "parameters": [],
+      "summary": "Two members joined by an ADHESIVE BOND at a face-to-face mating plane — no hardware at all: the adhesive is the joint (task GLUE; the R-GLUE work order's plain face-to-face case — design task #22's glued-miter is the waterfall sibling, not this type)."
+    }
+  ]
+}

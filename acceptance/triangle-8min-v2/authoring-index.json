@@ -1,0 +1,194 @@
+{
+  "components": [
+    {
+      "key": "angle_bracket",
+      "summary": "Hot-rolled / bent steel angle with a real inner bend radius, broken toe corners and (optionally) punched bolt holes."
+    },
+    {
+      "key": "boulder",
+      "summary": "Natural rock foundation (e.g. a glacial boulder anchored into with epoxy rods). Modeled as an exact rectangular chunk so it is a clean validation body; the organic surface is a render-time concern, not a CAD one."
+    },
+    {
+      "key": "cable",
+      "summary": "Pre-existing zipline cable — reference/context geometry only; not purchased, not in this build's BOM. Anchored to the tree at the far end (out of scope — the tree-attachment detail owns that anchorage); this models a short straight segment at the launch end, long enough to read as a cable in the assembly, not the full tree-to-launch run."
+    },
+    {
+      "key": "cedar_panel",
+      "summary": "Compatibility surface for an untreated exterior cedar panel."
+    },
+    {
+      "key": "concrete_pier",
+      "summary": "Cylindrical cast pier (e.g. Sonotube)."
+    },
+    {
+      "key": "deck_board",
+      "summary": "A 5/4x6 pressure-treated decking board (1\" x 5.5\" dressed), laid flat."
+    },
+    {
+      "key": "epoxy",
+      "summary": "Anchoring-epoxy annulus filling a drilled hole around an anchor rod. Datum: top at Z=0, annulus extends into -Z."
+    },
+    {
+      "key": "exterior_wood_screw",
+      "summary": "Compatibility wrapper preserving the detailed exterior screw model."
+    },
+    {
+      "key": "fabricated_panel",
+      "summary": "A solid panel whose material identity and fabrication are data."
+    },
+    {
+      "key": "footing",
+      "summary": "Rectangular spread footing. Datum: top face at Z=0, centered in X/Y."
+    },
+    {
+      "key": "grab_bar",
+      "summary": "Pre-existing grab bar the rider holds before/during launch — reference/ context geometry only; not purchased, not in this build's BOM. Its height is the platform's primary design driver."
+    },
+    {
+      "key": "grab_handle",
+      "summary": "NEW — fabricated. Fixed galvanized grab handle mounted on the launch-corner post (in the project's shopping list), so a kid has something to hold before the trolley bar takes their weight. Modeled as a bent tube: two short standoff legs perpendicular to the mounting face, joined by a vertical grip bar — engineering-grade but legible, not a specific manufacturer SKU."
+    },
+    {
+      "key": "hanger",
+      "summary": "Pre-existing rod/chain connecting the trolley to the grab bar — reference/context geometry only; not purchased, not in this build's BOM."
+    },
+    {
+      "key": "hardwood_panel",
+      "summary": "A solid indoor-hardwood panel laid flat in local X/Y/Z."
+    },
+    {
+      "key": "hex_bolt",
+      "summary": "Hex bolt (flat end). Datum: underside of head at Z=0."
+    },
+    {
+      "key": "hex_nut",
+      "summary": "Finished hex nut with washer-face chamfers."
+    },
+    {
+      "key": "joist_hanger",
+      "summary": "Face-mount joist hanger (U shape + header flanges)."
+    },
+    {
+      "key": "lag_screw",
+      "summary": "Hex-head lag screw with a conical gimlet tip."
+    },
+    {
+      "key": "lumber",
+      "summary": "A straight dimensional-lumber member. Optional ``end_cuts`` entries are mappings with ``end`` (``near``/``far``), conventional ``miter_angle_degrees`` off square, and ``long_face`` (``top``/``bottom``); they require ``length_semantics=\"long_point_to_long_point\"`` and expose physical ``cut_near``/``cut_far`` mating datums."
+    },
+    {
+      "key": "pier_block",
+      "summary": "Precast concrete pier block — the foundation under a free-standing post that does not land on the rock anchor."
+    },
+    {
+      "key": "plywood_panel",
+      "summary": "A rectangular plywood panel cut from sheet stock."
+    },
+    {
+      "key": "post_base",
+      "summary": "Elevated post base (plate + standoff + U bracket), e.g. Simpson ABU."
+    },
+    {
+      "key": "slab",
+      "summary": "Slab-on-grade — a Footing with a slab-appropriate default check."
+    },
+    {
+      "key": "slotted_beam_end",
+      "summary": "A 2x6 platform-beam end segment with vertical slotted lag holes."
+    },
+    {
+      "key": "standoff_post_base",
+      "summary": "An adjustable standoff post base — the purchased mechanical connector that holds a post DOWN onto its foundation against uplift and lateral load (exemplar: a Simpson ABU-class galvanized standoff). This is the part R29 found missing: a pier block a leg merely *rests on* has no attachment; a post base is the attachment."
+    },
+    {
+      "key": "strap_gate",
+      "summary": "NEW — fabricated. Closes the open launch edge with a short safety strap/chain and a carabiner at each end (in the project's shopping list). Modeled as simple solids per the common brief (straps/gates are not modeled as a real buckle/hook mechanism): a flat webbing strap with a torus ring fused at each end representing the carabiner attachment point."
+    },
+    {
+      "key": "structural_screw",
+      "summary": "Structural wood screw (GRK/LedgerLOK class) — geometry is lag-like; exists as its own class so BOMs and checks can distinguish it."
+    },
+    {
+      "key": "threaded_rod",
+      "summary": "All-thread rod (anchor rod). Thread representation on chosen zones only; the embedded portion is left smooth."
+    },
+    {
+      "key": "tree_trunk",
+      "summary": "A live tree trunk, modeled as a clean vertical cylinder (context only)."
+    },
+    {
+      "key": "trolley_wheel",
+      "summary": "Pre-existing zipline trolley wheel/pulley — reference/context geometry only; not purchased, not in this build's BOM. Rides on the cable."
+    },
+    {
+      "key": "washer",
+      "summary": "Flat/fender washer. Datum: bottom face at Z=0, axis +Z."
+    },
+    {
+      "key": "wire_mesh",
+      "summary": "A welded-wire / hardware-cloth guard panel, modeled as one thin solid panel (see module docstring)."
+    },
+    {
+      "key": "wood_dowel",
+      "summary": "A finished flush hardwood dowel pin with its axis along local +X."
+    },
+    {
+      "key": "wood_screw",
+      "summary": "Ordinary pointed wood screw with selectable service and representation."
+    }
+  ],
+  "connections": [
+    {
+      "key": "bolted_clamp",
+      "summary": "A through-bolt (with a head-side washer and a nut-side washer + nut) clamping 2+ flat plates together — exemplar: the rock anchor's leg thru-bolts (``details/rock_anchor.py``, leg sandwiched between two steel angles); the same shape covers the platform's leg-to-beam carriage bolts (not re-authored this wave — see the task brief's scope note)."
+    },
+    {
+      "key": "butt_screwed",
+      "summary": "A screwed BUTT joint: one member's end/edge butts against another member's FACE, and screws are driven through that face into the butting member's END/EDGE GRAIN — the plain glue-and-screw box corner every sheet-goods project reaches for."
+    },
+    {
+      "key": "cleat_screwed",
+      "summary": "A CLEAT block fastened to an adjacent member by axis-aligned screws driven through the cleat's FACE into the member's FACE — the hidden-fastener joint the standard cabinet/furniture ladder reaches for (a corner block / glue cleat) when a show-face screw is unacceptable."
+    },
+    {
+      "key": "dowel_reinforced_miter",
+      "summary": "Two hardwood panels joined at a glued miter and keyed by two dowels."
+    },
+    {
+      "key": "face_mount_hanger",
+      "summary": "A HEADER member (beam or launch leg) carries a HUNG member (joist or ladder rung) in a bent-sheet-metal face-mount hanger, screwed to both."
+    },
+    {
+      "key": "glued",
+      "summary": "Two members joined by an ADHESIVE BOND at a face-to-face mating plane — no hardware at all: the adhesive is the joint (task GLUE; the R-GLUE work order's plain face-to-face case — design task #22's glued-miter is the waterfall sibling, not this type)."
+    },
+    {
+      "key": "pivot_screwed",
+      "summary": "An exterior screw acting as one pivot pin for an opening service panel."
+    },
+    {
+      "key": "rail_cap_screwed",
+      "summary": "A horizontal CAP member (e.g. a top rail) sits flat on a standing SUPPORT's (post or leg) top end grain and is fastened with structural screws driven straight DOWN through the cap into that end grain."
+    },
+    {
+      "key": "service_latch_screwed",
+      "summary": "A removable exterior screw latching an otherwise operable panel."
+    },
+    {
+      "key": "service_panel_screwed",
+      "summary": "One exterior screw retaining a service panel without fixing the joint."
+    },
+    {
+      "key": "standoff_post_base",
+      "summary": "A POST held down onto its FOUNDATION block by an adjustable standoff post base (a :class:`~detailgen.components.concrete.PostBase`) — the mechanical attachment R29 found missing, where a leg merely *rested* on a pier block with no connection joining them (``retro-index.md:66``)."
+    },
+    {
+      "key": "threaded_rod_epoxy_anchor",
+      "summary": "Epoxied all-thread rod anchoring a clamp bracket, which in turn bears against a third member — exemplar: the rock anchor's rod + leveling-nut + angle stack (``details/rock_anchor.py``): ``Boulder --[epoxy + rod hardware]--> Angle bracket --bears_on--> Leg``."
+    },
+    {
+      "key": "toe_screwed",
+      "summary": "A hung member's end grain bears DIRECTLY on the header (no hanger metal), secured with toe-driven structural screws."
+    }
+  ]
+}
