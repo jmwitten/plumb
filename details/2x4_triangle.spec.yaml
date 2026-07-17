@@ -1,0 +1,112 @@
+name: 2x4 equilateral triangle
+type: lumber_triangle
+units: in
+
+params:
+  outside_edge: 48.0
+  face_width: 3.5
+  stock_thickness: 1.5
+  miter_off_square: 30.0
+
+derived:
+  triangle_height: "= outside_edge * (3 ** 0.5) / 2"
+  face_outset_x: "= face_width * (3 ** 0.5) / 2"
+  half_face: "= face_width / 2"
+  right_at_x: "= outside_edge - face_outset_x"
+  right_at_y: "= -half_face"
+  left_at_x: "= outside_edge/2 + face_outset_x"
+  left_at_y: "= triangle_height - half_face"
+
+components:
+  - id: base
+    type: lumber
+    name: base 2x4
+    reader_name: Base member
+    params:
+      nominal: 2x4
+      length: "$outside_edge"
+      length_semantics: long_point_to_long_point
+      end_cuts:
+        - {end: near, miter_angle_degrees: 30, long_face: top}
+        - {end: far, miter_angle_degrees: 30, long_face: top}
+    place: {raw: {at: ["0 in", "$face_width", "0 in"], rotate: [["X", 90]]}}
+
+  - id: right_side
+    type: lumber
+    name: right 2x4
+    reader_name: Right member
+    params:
+      nominal: 2x4
+      length: "$outside_edge"
+      length_semantics: long_point_to_long_point
+      end_cuts:
+        - {end: near, miter_angle_degrees: 30, long_face: top}
+        - {end: far, miter_angle_degrees: 30, long_face: top}
+    place: {datum: cut_near, to: base, to_datum: cut_far, flip: true}
+
+  - id: left_side
+    type: lumber
+    name: left 2x4
+    reader_name: Left member
+    params:
+      nominal: 2x4
+      length: "$outside_edge"
+      length_semantics: long_point_to_long_point
+      end_cuts:
+        - {end: near, miter_angle_degrees: 30, long_face: top}
+        - {end: far, miter_angle_degrees: 30, long_face: top}
+    place: {datum: cut_near, to: right_side, to_datum: cut_far, flip: true}
+
+connections:
+  - type: glued
+    label: "base far cut -> right near cut"
+    parts: [base, right_side]
+    assumptions:
+      - "Use wood adhesive compatible with the selected dry 2x4 stock; adhesive strength is not analyzed."
+  - type: glued
+    label: "right far cut -> left near cut"
+    parts: [right_side, left_side]
+    assumptions:
+      - "Use wood adhesive compatible with the selected dry 2x4 stock; adhesive strength is not analyzed."
+  - type: glued
+    label: "left far cut -> base near cut"
+    parts: [left_side, base]
+    assumptions:
+      - "Use wood adhesive compatible with the selected dry 2x4 stock; adhesive strength is not analyzed."
+
+sequence:
+  assembly:
+    mode: bench_then_set
+    why: >-
+      Dry-fit all three miters on a flat bench, glue all three joints, strap-clamp
+      the equilateral ring, verify the 48-inch outside edges, and leave clamped
+      for the adhesive label's full cure time. This decorative assembly has no
+      installation or structural duty.
+
+validation:
+  dimensions:
+    - {name: "base outside long edge", part: base, measure: xlen, expected: "$outside_edge", tolerance: "0.02 in"}
+    - {name: "2x4 face lies in triangle plane", part: base, measure: ylen, expected: "$face_width", tolerance: "0.02 in"}
+    - {name: "2x4 thickness normal to triangle plane", part: base, measure: zlen, expected: "$stock_thickness", tolerance: "0.02 in"}
+
+callouts:
+  - {param: outside_edge, label: "OUTSIDE EDGE {v}", p0: [0, 0, 2], p1: ["$outside_edge", 0, 2]}
+  - {param: outside_edge, label: "OUTSIDE EDGE {v}", p0: ["$outside_edge", 0, 2], p1: ["= outside_edge/2", "$triangle_height", 2]}
+  - {param: outside_edge, label: "OUTSIDE EDGE {v}", p0: ["= outside_edge/2", "$triangle_height", 2], p1: [0, 0, 2]}
+
+export: {glb_tolerance: 0.1, glb_angular_tolerance: 0.15}
+
+doc:
+  sections:
+    - prose: |
+        # 2x4 Equilateral Triangle — Build Package
+
+        Cut three dry, straight nominal 2x4 members to 48 inches long-point to
+        long-point. Cut both ends of every member 30 degrees off square with the
+        same 3.5-inch face kept long. Lay the 3.5-inch faces in one plane, dry-fit
+        three 60-degree corners, glue the cut faces, strap-clamp on a flat bench,
+        and verify all three outside edges are 48 inches before full cure.
+
+        This is an uninstalled, low-consequence decorative assembly. Joint
+        capacity, hanging, loading, and structural use are outside this package.
+    - findings: {header: "## Dimension checks", check: dimension}
