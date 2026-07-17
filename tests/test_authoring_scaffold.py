@@ -522,3 +522,6 @@ def test_readme_teaches_scaffold_and_non_inference_conventions():
     assert "definite validation failure" in readme
     assert "UNKNOWN" in readme
     assert "datum mate" in readme
+    assert "off-square miter = 90° - included corner angle / 2" in readme
+    assert "{datum: cut_near, to: previous_member" in readme
+    assert "not a nested `mate` wrapper" in readme

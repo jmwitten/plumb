@@ -249,6 +249,22 @@ def test_release_gate_missing_documents_fails_closed():
         )
 
 
+def test_canonical_release_integrity_supplies_documents_contract():
+    inner = _item(
+        "garden_shelf",
+        contracts=tuple(REQUIRED_DETAIL_CONTRACTS),
+        cadence="inner",
+    )
+
+    _require_complete_detail_gate(
+        "garden_shelf",
+        [inner],
+        set(REQUIRED_DETAIL_CONTRACTS),
+        cadence="release",
+        canonical_release=True,
+    )
+
+
 def test_unknown_slug_fails_collection():
     with pytest.raises(pytest.UsageError, match="unknown detail gate"):
         _require_complete_detail_gate("missing", [], set())

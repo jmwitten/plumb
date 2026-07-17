@@ -96,7 +96,14 @@ member's `xlen` its length.
 For lumber `end_cuts`, `miter_angle_degrees` means **degrees off square**, not
 the acute angle between joined members. Every cut mapping must contain `end`,
 `miter_angle_degrees`, and `long_face`, and cut members must also author
-`length_semantics: long_point_to_long_point`.
+`length_semantics: long_point_to_long_point`. For equal symmetric planar cuts,
+use **off-square miter = 90° - included corner angle / 2**. For example, a 60°
+included corner needs a 60° off-square miter; its cut line is 30° to the member
+run.
+
+Seat cut members with the mate fields directly in the placement mapping, for
+example `{datum: cut_near, to: previous_member, to_datum: cut_far, flip: true,
+rotate: 180}`. This is not a nested `mate` wrapper.
 
 Use `.venv/bin/python -m detailgen.authoring grammar` when only the nested field
 shapes and conventions are needed. Its bounded output omits the full component

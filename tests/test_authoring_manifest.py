@@ -152,7 +152,17 @@ def test_authoring_grammar_is_explicit_about_dimension_and_lumber_conventions():
     assert "do not use xlen" in dimensions["intrinsic_length_guidance"]
 
     assert lumber["miter_angle_degrees"] == "degrees off square"
+    assert lumber["symmetric_planar_miter"] == (
+        "off_square_degrees = 90 - included_corner_degrees / 2"
+    )
     assert lumber["end_cut_required"] == [
         "end", "miter_angle_degrees", "long_face",
     ]
     assert lumber["length_semantics"] == "long_point_to_long_point"
+    assert grammar["placement"]["exactly_one"]["mate"]["example"] == {
+        "datum": "cut_near",
+        "to": "previous_member",
+        "to_datum": "cut_far",
+        "flip": True,
+        "rotate": 180,
+    }

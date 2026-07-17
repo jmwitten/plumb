@@ -64,6 +64,17 @@ _AUTHORING_GRAMMAR: dict[str, object] = {
             "mate": {
                 "required": ["datum", "to"],
                 "optional": ["to_datum", "offset", "rotate", "flip"],
+                "example": {
+                    "datum": "cut_near",
+                    "to": "previous_member",
+                    "to_datum": "cut_far",
+                    "flip": True,
+                    "rotate": 180,
+                },
+                "shape_note": (
+                    "Use these keys directly in the placement mapping; do not "
+                    "wrap them in a nested mate key."
+                ),
             },
             "raw": {
                 "required": ["at"],
@@ -119,10 +130,15 @@ _AUTHORING_GRAMMAR: dict[str, object] = {
             "end": ["near", "far"],
             "long_face": ["top", "bottom"],
             "miter_angle_degrees": "degrees off square",
+            "symmetric_planar_miter": (
+                "off_square_degrees = 90 - included_corner_degrees / 2"
+            ),
             "length_semantics": "long_point_to_long_point",
             "rule": (
                 "Any end_cuts require length_semantics to be authored as "
-                "long_point_to_long_point."
+                "long_point_to_long_point. For equal symmetric planar miters, "
+                "derive the conventional off-square angle from the included "
+                "corner angle before authoring the cuts."
             ),
         },
     },

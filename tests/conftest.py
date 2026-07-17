@@ -176,13 +176,18 @@ def _detail_gate_selection(items, slug, *, cadence="inner"):
 
 
 def _require_complete_detail_gate(
-    slug, selected, contracts, *, cadence="inner"
+    slug,
+    selected,
+    contracts,
+    *,
+    cadence="inner",
+    canonical_release=False,
 ):
     """Fail closed when a requested gate is unknown or semantically thin."""
     if not selected:
         raise pytest.UsageError(f"unknown detail gate {slug!r}")
     required = set(REQUIRED_DETAIL_CONTRACTS)
-    if cadence == "release":
+    if cadence == "release" and not canonical_release:
         required.add("documents")
     missing = required - contracts
     if missing:
@@ -343,7 +348,14 @@ def pytest_collection_modifyitems(config, items):
         items, slug, cadence=cadence
     )
     _require_complete_detail_gate(
-        slug, selected, contracts, cadence=cadence
+        slug,
+        selected,
+        contracts,
+        cadence=cadence,
+        canonical_release=(
+            cadence == "release"
+            and resolve_product_subject(slug, DETAILS_DIR, ROOT) is not None
+        ),
     )
     config.hook.pytest_deselected(items=deselected)
     items[:] = selected
