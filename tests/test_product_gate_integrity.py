@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from hashlib import sha256
+import json
 from pathlib import Path
 
 import pytest
@@ -30,6 +32,19 @@ class _Detail:
 
     def validate(self):
         return self._report
+
+
+class _ReleaseDetail(_Detail):
+    def __init__(self):
+        super().__init__(_Report())
+        self.modeling_approval_calls = 0
+        self.delivery_ready_calls = 0
+
+    def require_modeling_approval(self):
+        self.modeling_approval_calls += 1
+
+    def require_delivery_ready(self):
+        self.delivery_ready_calls += 1
 
 
 def _write_contract(path: Path, source: str) -> None:
@@ -152,3 +167,208 @@ def test_inner_integrity_reports_compile_failure_with_gate_context(
         match=r"product.*product\.spec\.yaml.*bad placement",
     ):
         integrity.verify_inner_integrity("product", spec)
+
+
+def _release_evidence(spec: Path, detail: _ReleaseDetail):
+    return integrity.CurrentProductEvidence(
+        detail=detail,
+        spec_path=spec.resolve(),
+        assembly_hash="a" * 64,
+        selection_fingerprint="selection-current",
+        model_fingerprint="model-current",
+    )
+
+
+def _write_package(
+    package: Path,
+    spec: Path,
+    *,
+    release: str = "preview",
+    manifest_updates: dict | None = None,
+) -> dict:
+    package.mkdir()
+    artifact = package / "technical.html"
+    artifact.write_text("current technical package", encoding="utf-8")
+    payload = {
+        "schema": "detailgen/package-manifest/v1",
+        "spec": spec.name,
+        "release": release,
+        "assembly_hash": "a" * 64,
+        "selection_fingerprint": "selection-current",
+        "model_fingerprint": "model-current",
+        "validation": {"ok": True, "blocking_count": 0},
+        "holds": [],
+        "tests": {
+            "status": "not-run",
+            "reason": "package generation does not execute tests",
+        },
+        "timings_seconds": {},
+        "artifacts": [
+            {
+                "kind": "technical",
+                "relative_path": "technical.html",
+                "sha256": sha256(artifact.read_bytes()).hexdigest(),
+                "media_type": "text/html",
+                "source": "compiled-detail",
+            }
+        ],
+    }
+    if manifest_updates:
+        payload.update(manifest_updates)
+    (package / "package-manifest.json").write_text(
+        json.dumps(payload), encoding="utf-8"
+    )
+    return payload
+
+
+@pytest.mark.parametrize(
+    ("release", "expected_modeling", "expected_delivery"),
+    (("preview", 1, 0), ("delivery", 0, 1)),
+)
+def test_release_integrity_accepts_current_closed_package_and_lifecycle(
+    monkeypatch,
+    tmp_path,
+    release,
+    expected_modeling,
+    expected_delivery,
+):
+    spec = tmp_path / "product.spec.yaml"
+    spec.write_text("name: product\n", encoding="utf-8")
+    package = tmp_path / "package"
+    _write_package(package, spec, release=release)
+    detail = _ReleaseDetail()
+    monkeypatch.setattr(
+        integrity,
+        "verify_inner_integrity",
+        lambda slug, path: _release_evidence(spec, detail),
+    )
+
+    integrity.verify_release_integrity("product", spec, package)
+
+    assert detail.modeling_approval_calls == expected_modeling
+    assert detail.delivery_ready_calls == expected_delivery
+
+
+@pytest.mark.parametrize(
+    ("updates", "message"),
+    (
+        ({"schema": "detailgen/package-manifest/v0"}, "schema"),
+        ({"release": "draft"}, "release"),
+        ({"spec": "stale.spec.yaml"}, "spec"),
+        ({"assembly_hash": "b" * 64}, "assembly_hash"),
+        ({"selection_fingerprint": "stale"}, "selection_fingerprint"),
+        ({"model_fingerprint": "stale"}, "model_fingerprint"),
+        ({"validation": {"ok": False, "blocking_count": 0}}, "validation.ok"),
+        ({"validation": {"ok": True, "blocking_count": 1}}, "blocking_count"),
+    ),
+)
+def test_release_integrity_rejects_stale_or_blocked_manifest(
+    monkeypatch, tmp_path, updates, message
+):
+    spec = tmp_path / "product.spec.yaml"
+    spec.write_text("name: product\n", encoding="utf-8")
+    package = tmp_path / "package"
+    _write_package(package, spec, manifest_updates=updates)
+    detail = _ReleaseDetail()
+    monkeypatch.setattr(
+        integrity,
+        "verify_inner_integrity",
+        lambda slug, path: _release_evidence(spec, detail),
+    )
+
+    with pytest.raises(integrity.ProductGateIntegrityError, match=message):
+        integrity.verify_release_integrity("product", spec, package)
+
+
+def test_release_integrity_requires_manifest_and_valid_json(monkeypatch, tmp_path):
+    spec = tmp_path / "product.spec.yaml"
+    spec.write_text("name: product\n", encoding="utf-8")
+    package = tmp_path / "package"
+    package.mkdir()
+    detail = _ReleaseDetail()
+    monkeypatch.setattr(
+        integrity,
+        "verify_inner_integrity",
+        lambda slug, path: _release_evidence(spec, detail),
+    )
+
+    with pytest.raises(integrity.ProductGateIntegrityError, match="generate.*package"):
+        integrity.verify_release_integrity("product", spec, package)
+
+    (package / "package-manifest.json").write_text("{", encoding="utf-8")
+    with pytest.raises(integrity.ProductGateIntegrityError, match="valid JSON"):
+        integrity.verify_release_integrity("product", spec, package)
+
+
+@pytest.mark.parametrize("defect", ("extra", "missing", "bad-hash"))
+def test_release_integrity_rejects_artifact_closure_or_digest_defect(
+    monkeypatch, tmp_path, defect
+):
+    spec = tmp_path / "product.spec.yaml"
+    spec.write_text("name: product\n", encoding="utf-8")
+    package = tmp_path / "package"
+    payload = _write_package(package, spec)
+    if defect == "extra":
+        (package / "stale.txt").write_text("stale", encoding="utf-8")
+    elif defect == "missing":
+        (package / "technical.html").unlink()
+    else:
+        payload["artifacts"][0]["sha256"] = "0" * 64
+        (package / "package-manifest.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+    detail = _ReleaseDetail()
+    monkeypatch.setattr(
+        integrity,
+        "verify_inner_integrity",
+        lambda slug, path: _release_evidence(spec, detail),
+    )
+
+    with pytest.raises(
+        integrity.ProductGateIntegrityError,
+        match="artifact (closure|hash)",
+    ):
+        integrity.verify_release_integrity("product", spec, package)
+
+
+@pytest.mark.parametrize("unsafe_path", ("../escape.txt", "/tmp/escape.txt"))
+def test_release_integrity_rejects_unsafe_artifact_path(
+    monkeypatch, tmp_path, unsafe_path
+):
+    spec = tmp_path / "product.spec.yaml"
+    spec.write_text("name: product\n", encoding="utf-8")
+    package = tmp_path / "package"
+    payload = _write_package(package, spec)
+    payload["artifacts"][0]["relative_path"] = unsafe_path
+    (package / "package-manifest.json").write_text(
+        json.dumps(payload), encoding="utf-8"
+    )
+    detail = _ReleaseDetail()
+    monkeypatch.setattr(
+        integrity,
+        "verify_inner_integrity",
+        lambda slug, path: _release_evidence(spec, detail),
+    )
+
+    with pytest.raises(integrity.ProductGateIntegrityError, match="unsafe artifact"):
+        integrity.verify_release_integrity("product", spec, package)
+
+
+def test_release_integrity_rejects_duplicate_artifact_path(monkeypatch, tmp_path):
+    spec = tmp_path / "product.spec.yaml"
+    spec.write_text("name: product\n", encoding="utf-8")
+    package = tmp_path / "package"
+    payload = _write_package(package, spec)
+    payload["artifacts"].append(dict(payload["artifacts"][0]))
+    (package / "package-manifest.json").write_text(
+        json.dumps(payload), encoding="utf-8"
+    )
+    detail = _ReleaseDetail()
+    monkeypatch.setattr(
+        integrity,
+        "verify_inner_integrity",
+        lambda slug, path: _release_evidence(spec, detail),
+    )
+
+    with pytest.raises(integrity.ProductGateIntegrityError, match="duplicate artifact"):
+        integrity.verify_release_integrity("product", spec, package)
