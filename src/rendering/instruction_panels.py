@@ -376,6 +376,10 @@ def _panel_title(detail, action, graph, steps, cohort, labels) -> str:
         noun = "bond" if count == 1 else "bonds"
         return f"Hold {count} adhesive {noun} to full cure"
     if action == "join":
+        joins = tuple(unit for index in cohort
+                      for unit in steps[index].joins)
+        if joins != ("whole detail",):
+            return f"Complete {joins[0]} subassembly"
         context = tuple(graph.context_parts)
         if context:
             return (
@@ -600,9 +604,14 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
 
     elif action == "join":
         if join_presentation is None:
-            context = tuple(graph.context_parts)
-            context_names = _counted_names(labels, context)
-            if context:
+            if joins != ("whole detail",):
+                instructions.append(
+                    f"Complete the {joins[0]} as one subassembly."
+                )
+            else:
+                context = tuple(graph.context_parts)
+                context_names = _counted_names(labels, context)
+            if joins == ("whole detail",) and context:
                 instructions.extend((
                     f"Bring the completed {detail.name} to {context_names}.",
                     "Complete its declared final placement during fitting; the "
@@ -618,7 +627,7 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
                     "fit",
                     f"Actual {context_names} for the declared fit placement",
                 )]
-            else:
+            elif joins == ("whole detail",):
                 instructions.append(
                     f"Complete the {detail.name} as one bench assembly."
                 )

@@ -14,6 +14,7 @@ from detailgen.assemblies.event_graph import (
     ReaderStepProjectionError,
     derive_reader_steps,
 )
+from detailgen.spec import compile_spec, load_spec_text
 from detailgen.spec.compiler import compile_spec_file
 import detailgen.rendering.instruction_panels as instruction_panels_module
 from detailgen.rendering.instruction_panels import (
@@ -32,6 +33,42 @@ SPEC = ROOT / "details" / "armchair_caddy.spec.yaml"
 def caddy():
     detail = compile_spec_file(SPEC)
     detail.validate()
+    return detail
+
+
+@pytest.fixture(scope="module")
+def two_named_subassemblies():
+    detail = compile_spec(load_spec_text("""
+name: twin trestle display
+units: in
+components:
+  - id: left_post
+    type: lumber
+    params: {nominal: 2x4, length: "12 in"}
+    place: {raw: {at: ["0 in", "0 in", "0 in"]}}
+  - id: left_rail
+    type: lumber
+    params: {nominal: 2x4, length: "8 in"}
+    place: {raw: {at: ["20 in", "0 in", "0 in"]}}
+  - id: right_post
+    type: lumber
+    params: {nominal: 2x4, length: "12 in"}
+    place: {raw: {at: ["40 in", "0 in", "0 in"]}}
+  - id: right_rail
+    type: lumber
+    params: {nominal: 2x4, length: "8 in"}
+    place: {raw: {at: ["60 in", "0 in", "0 in"]}}
+sequence:
+  subassemblies:
+    - name: left trestle
+      parts: [left_post, left_rail]
+      why: Build the left trestle on the bench.
+    - name: right trestle
+      parts: [right_post, right_rail]
+      why: Build the right trestle on the bench.
+"""))
+    report = detail.validate()
+    assert report.ok
     return detail
 
 
@@ -96,6 +133,29 @@ def test_project_can_author_join_reader_copy_without_changing_graph(caddy):
     assert join.instructions == presentation.instructions
     assert join.honesty == presentation.honesty
     assert join.tools == presentation.tools
+
+
+def test_named_subassembly_join_panels_use_each_subassembly_name(
+    two_named_subassemblies,
+):
+    manual = build_instruction_manual(two_named_subassemblies)
+    joins = [panel for panel in manual.panels if panel.action == "join"]
+
+    assert [
+        (panel.joins, panel.title, panel.instructions)
+        for panel in joins
+    ] == [
+        (
+            ("left trestle",),
+            "Complete left trestle subassembly",
+            ("Complete the left trestle as one subassembly.",),
+        ),
+        (
+            ("right trestle",),
+            "Complete right trestle subassembly",
+            ("Complete the right trestle as one subassembly.",),
+        ),
+    ]
 
 
 def test_caddy_panels_cover_each_reader_step_once(caddy):
