@@ -34,9 +34,11 @@ _AUTHORING_GRAMMAR: dict[str, object] = {
             "--component": "ID:REGISTERED_TYPE",
             "--set": "ID.PARAM=YAML_VALUE",
             "--place": (
-                "Direct placement fields, for example "
-                "ID={datum: LOCAL_DATUM, to: TARGET_ID, to_datum: TARGET_DATUM, "
-                "flip: true}. Do not wrap mate fields in a mate key."
+                "ID=YAML_MAPPING. Mate fields are direct (no mate wrapper), "
+                "for example ID={datum: LOCAL_DATUM, to: TARGET_ID, "
+                "to_datum: TARGET_DATUM, flip: true}. The raw wrapper is "
+                "required for raw transforms, for example "
+                "ID={raw: {at: [0, 0, 0]}}."
             ),
             "--connection": "REGISTERED_TYPE:PART_ID[,PART_ID...]",
             "--connection-set": "ZERO_BASED_INDEX.PARAM=YAML_VALUE",
@@ -65,8 +67,9 @@ _AUTHORING_GRAMMAR: dict[str, object] = {
     },
     "placement": {
         "form_selection": (
-            "Choose exactly one form below; form names are not YAML wrappers. "
-            "Mate fields are authored directly in the placement mapping."
+            "Choose exactly one form below. Mate fields are authored directly "
+            "in the placement mapping; raw and mount fields require their "
+            "named YAML wrappers."
         ),
         "exactly_one": {
             "mate": {
@@ -89,9 +92,15 @@ _AUTHORING_GRAMMAR: dict[str, object] = {
                 ),
             },
             "raw": {
+                "wrapper": "raw",
                 "required": ["at"],
                 "optional": ["rotate"],
                 "shape": {"at": "[x, y, z]", "rotate": "[[axis, degrees], ...]"},
+                "example": {"raw": {"at": [0, 0, 0]}},
+                "shape_note": (
+                    "The raw wrapper is required; author raw fields inside a "
+                    "single raw mapping."
+                ),
             },
             "mount": {
                 "required": ["to", "face", "axis"],

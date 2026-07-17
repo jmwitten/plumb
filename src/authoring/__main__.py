@@ -210,16 +210,77 @@ def _parser() -> argparse.ArgumentParser:
     scaffold = subcommands.add_parser(
         "scaffold",
         help="write a registry-checked DetailSpec and certification stub",
+        formatter_class=lambda prog: argparse.HelpFormatter(prog, width=110),
     )
-    scaffold.add_argument("--slug", required=True)
-    scaffold.add_argument("--out", required=True, type=Path)
-    scaffold.add_argument("--component", action="append", required=True)
-    scaffold.add_argument("--set", dest="component_set", action="append", default=[])
-    scaffold.add_argument("--place", action="append", default=[])
-    scaffold.add_argument("--connection", action="append", default=[])
-    scaffold.add_argument("--connection-set", action="append", default=[])
-    scaffold.add_argument("--connection-hardware", action="append", default=[])
-    scaffold.add_argument("--force", action="store_true")
+    scaffold.add_argument(
+        "--slug",
+        required=True,
+        help=(
+            "Use lowercase letters, digits, and underscores; start with a "
+            "lowercase letter or digit."
+        ),
+    )
+    scaffold.add_argument(
+        "--out",
+        required=True,
+        type=Path,
+        metavar="DIRECTORY",
+        help=(
+            "Directory that receives SLUG.spec.yaml and SLUG.cert.yaml; "
+            "created if missing."
+        ),
+    )
+    scaffold.add_argument(
+        "--component",
+        action="append",
+        required=True,
+        metavar="ID:TYPE",
+        help="Declare a component id and registered type; repeat as needed.",
+    )
+    scaffold.add_argument(
+        "--set",
+        dest="component_set",
+        action="append",
+        default=[],
+        metavar="ID.PARAM=YAML_VALUE",
+        help="Set one component parameter; repeat as needed.",
+    )
+    scaffold.add_argument(
+        "--place",
+        action="append",
+        default=[],
+        metavar="ID=YAML_MAPPING",
+        help=(
+            "Mate fields are direct; raw requires a raw wrapper. Repeat for "
+            "each explicitly placed component."
+        ),
+    )
+    scaffold.add_argument(
+        "--connection",
+        action="append",
+        default=[],
+        metavar="TYPE:PART[,PART...]",
+        help="Declare a registered connection and its participants; repeat as needed.",
+    )
+    scaffold.add_argument(
+        "--connection-set",
+        action="append",
+        default=[],
+        metavar="INDEX.PARAM=YAML_VALUE",
+        help="Set one parameter on a zero-based declared connection index.",
+    )
+    scaffold.add_argument(
+        "--connection-hardware",
+        action="append",
+        default=[],
+        metavar="INDEX=PART[,PART...]",
+        help="Assign hardware component ids to a zero-based declared connection index.",
+    )
+    scaffold.add_argument(
+        "--force",
+        action="store_true",
+        help="Replace both output files if either already exists.",
+    )
     return parser
 
 

@@ -160,18 +160,24 @@ def test_authoring_grammar_is_explicit_about_dimension_and_lumber_conventions():
     ]
     assert lumber["length_semantics"] == "long_point_to_long_point"
     place_help = grammar["scaffold_command"]["repeatable"]["--place"]
-    assert "Direct" in place_help
-    assert "Do not wrap" in place_help
-    assert "form names are not YAML wrappers" in grammar["placement"]["form_selection"]
-    assert grammar["placement"]["exactly_one"]["mate"]["example"] == {
+    assert "Mate fields are direct" in place_help
+    assert "raw wrapper is required" in place_help
+    form_selection = grammar["placement"]["form_selection"]
+    assert "Mate fields are authored directly" in form_selection
+    assert "raw and mount fields require their named YAML wrappers" in form_selection
+    mate = grammar["placement"]["exactly_one"]["mate"]
+    raw = grammar["placement"]["exactly_one"]["raw"]
+    assert mate["example"] == {
         "datum": "cut_near",
         "to": "previous_member",
         "to_datum": "cut_far",
         "flip": True,
     }
-    cut_face_rule = grammar["placement"]["exactly_one"]["mate"][
-        "physical_cut_face_rule"
-    ]
+    assert "do not wrap" in mate["shape_note"]
+    assert raw["wrapper"] == "raw"
+    assert raw["example"] == {"raw": {"at": [0, 0, 0]}}
+    assert "raw wrapper is required" in raw["shape_note"]
+    cut_face_rule = mate["physical_cut_face_rule"]
     assert "flip: true" in cut_face_rule
     assert "normals oppose" in cut_face_rule
     assert "exact corrected --place assignment" in cut_face_rule

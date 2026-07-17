@@ -83,6 +83,25 @@ def test_authoring_cli_grammar_is_bounded_without_full_registry(capsys):
     assert "components" not in grammar
 
 
+def test_authoring_cli_scaffold_help_publishes_argument_contract(capsys):
+    from detailgen.authoring.__main__ import main
+
+    with pytest.raises(SystemExit) as error:
+        main(["scaffold", "--help"])
+
+    assert error.value.code == 0
+    output = capsys.readouterr().out
+    assert "--component ID:TYPE" in output
+    assert "--set ID.PARAM=YAML_VALUE" in output
+    assert "--place ID=YAML_MAPPING" in output
+    assert "--connection TYPE:PART[,PART...]" in output
+    assert "lowercase letters, digits, and underscores" in output
+    assert "Directory that receives SLUG.spec.yaml and SLUG.cert.yaml" in output
+    assert "created if missing" in output
+    assert "Mate fields are direct; raw requires a raw wrapper" in output
+    assert "COMPONENT_SET" not in output
+
+
 def test_authoring_cli_scaffolds_explicit_components_and_connection(tmp_path, capsys):
     from detailgen.authoring.__main__ import main
 
