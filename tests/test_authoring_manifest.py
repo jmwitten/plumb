@@ -10,7 +10,7 @@ def test_authoring_manifest_is_deterministic_and_project_agnostic():
     second = json.loads(authoring_manifest_json())
 
     assert first == second
-    assert first["schema"] == "detailgen/authoring-manifest/v1"
+    assert first["schema"] == "detailgen/authoring-manifest/v2"
     assert first["components"] == sorted(
         first["components"], key=lambda row: row["key"]
     )
@@ -18,7 +18,7 @@ def test_authoring_manifest_is_deterministic_and_project_agnostic():
         first["connections"], key=lambda row: row["key"]
     )
     assert all(
-        set(row) == {"key", "constructor", "summary"}
+        set(row) == {"key", "constructor", "summary", "parameters"}
         for row in (*first["components"], *first["connections"])
     )
     assert first["views"] == sorted(first["views"])
@@ -42,3 +42,57 @@ def test_authoring_manifest_covers_live_registries_and_schema():
     )
     assert payload["views"] == sorted(VIEWS)
     assert payload["detail_spec_keys"] == sorted(DETAIL_SPEC_KEYS)
+
+
+def test_authoring_manifest_publishes_parameters_and_workflow_contract():
+    payload = build_authoring_manifest()
+
+    assert payload["schema"] == "detailgen/authoring-manifest/v2"
+    assert all(
+        set(row) == {"key", "constructor", "summary", "parameters"}
+        for row in (*payload["components"], *payload["connections"])
+    )
+    assert all(
+        set(parameter) == {"name", "required", "kind"}
+        for row in (*payload["components"], *payload["connections"])
+        for parameter in row["parameters"]
+    )
+    assert payload["workflow"] == {
+        "schema": "detailgen/workflow-contract/v1",
+        "tests": {
+            "product_inner": {
+                "argv": [
+                    "pytest",
+                    "--detail-gate",
+                    "{slug}",
+                    "--detail-cadence",
+                    "inner",
+                    "-q",
+                ],
+                "normal_product_gate": True,
+            },
+            "product_release": {
+                "argv": [
+                    "pytest",
+                    "--detail-gate",
+                    "{slug}",
+                    "--detail-cadence",
+                    "release",
+                    "-q",
+                ],
+                "normal_product_gate": True,
+            },
+            "platform_integration": {
+                "argv": ["pytest", "--platform-tier", "integration", "-q"],
+                "normal_product_gate": False,
+            },
+            "platform_audit": {
+                "argv": ["pytest", "--platform-tier", "audit", "-q"],
+                "normal_product_gate": False,
+            },
+            "repository_verification": {
+                "argv": ["pytest", "-q", "-n", "4"],
+                "normal_product_gate": False,
+            },
+        },
+    }

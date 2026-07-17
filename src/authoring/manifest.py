@@ -10,6 +10,7 @@ from ..assemblies.connection import connection_types
 from ..core.registry import components
 from ..rendering.export import VIEWS
 from ..spec.loader import DETAIL_SPEC_KEYS
+from .workflow import build_workflow_contract
 
 
 def _summary(obj: object) -> str:
@@ -17,12 +18,25 @@ def _summary(obj: object) -> str:
     return text.split("\n\n", 1)[0].replace("\n", " ").strip()
 
 
-def _rows(registry: object) -> list[dict[str, str]]:
+def _parameters(obj: object) -> list[dict[str, object]]:
+    return [
+        {
+            "name": name,
+            "required": parameter.default is inspect.Parameter.empty,
+            "kind": parameter.kind.name.lower(),
+        }
+        for name, parameter in inspect.signature(obj).parameters.items()
+        if name not in {"self", "cls"}
+    ]
+
+
+def _rows(registry: object) -> list[dict[str, object]]:
     return [
         {
             "key": key,
             "constructor": str(inspect.signature(registry.get(key))),
             "summary": _summary(registry.get(key)),
+            "parameters": _parameters(registry.get(key)),
         }
         for key in sorted(registry.names())
     ]
@@ -31,11 +45,12 @@ def _rows(registry: object) -> list[dict[str, str]]:
 def build_authoring_manifest() -> dict[str, object]:
     """Return the live, project-agnostic vocabulary needed to author a spec."""
     return {
-        "schema": "detailgen/authoring-manifest/v1",
+        "schema": "detailgen/authoring-manifest/v2",
         "components": _rows(components),
         "connections": _rows(connection_types),
         "views": sorted(VIEWS),
         "detail_spec_keys": sorted(DETAIL_SPEC_KEYS),
+        "workflow": build_workflow_contract(),
     }
 
 

@@ -62,6 +62,10 @@ Ordinary projects require no source-code registration or project-specific
 renderer dispatch. Read framework source or extend a registry only when the
 compact manifest proves that a required capability is absent.
 
+Orchestrators must consume `workflow.schema` and `workflow.tests` from this
+live manifest rather than copying test policy into their own instructions. An
+unsupported workflow schema is a fail-closed compatibility error.
+
 ## Architecture
 
 ```
