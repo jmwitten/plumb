@@ -97,6 +97,7 @@ tests/test_authoring_scaffold.py::test_authoring_cli_without_subcommand_still_pr
 tests/test_authoring_scaffold.py::test_authoring_cli_grammar_is_bounded_without_full_registry,platform,plumb-platform,unit,Bounded low-context authoring grammar contract.
 tests/test_authoring_scaffold.py::test_authoring_cli_scaffolds_explicit_components_and_connection,platform,plumb-platform,unit,Generic explicit component connection and hardware authoring contract.
 tests/test_authoring_scaffold.py::test_authoring_cli_yaml_value_keeps_nominal_size_string,platform,plumb-platform,unit,Generic YAML value parsing contract.
+tests/test_authoring_scaffold.py::test_authoring_cli_scaffolds_nominal_2x2_with_dressed_dimensions,platform,plumb-platform,integration,Public scaffold compilation and dressed-geometry contract for nominal 2x2 lumber.
 tests/test_authoring_scaffold.py::test_authoring_cli_reports_malformed_yaml_value,platform,plumb-platform,unit,Fail-closed malformed authoring value diagnostic.
 tests/test_authoring_scaffold.py::test_authoring_cli_reports_unknown_component_with_known_keys,platform,plumb-platform,unit,Fail-closed unknown registry component diagnostic.
 tests/test_authoring_scaffold.py::test_writes_generic_component_spec_and_resolvable_certification,platform,plumb-platform,unit,Generic DetailSpec and certification scaffold contract.

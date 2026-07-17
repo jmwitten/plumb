@@ -15,6 +15,7 @@ from detailgen.authoring.scaffold import (
     write_scaffold,
 )
 from detailgen.certification import load_contract
+from detailgen.core import IN
 from detailgen.spec import compile_spec, compile_spec_file, load_spec_file, load_spec_text
 from detailgen.validation import Finding, ValidationReport
 from detailgen.validation.checks import UNKNOWN_VERDICT
@@ -134,6 +135,28 @@ def test_authoring_cli_yaml_value_keeps_nominal_size_string(tmp_path, capsys):
 
     raw = yaml.safe_load((tmp_path / "single_member.spec.yaml").read_text())
     assert raw["components"][0]["params"]["nominal"] == "2x4"
+
+
+def test_authoring_cli_scaffolds_nominal_2x2_with_dressed_dimensions(
+    tmp_path, capsys,
+):
+    from detailgen.authoring.__main__ import main
+
+    assert main([
+        "scaffold", "--slug", "single_2x2_member", "--out", str(tmp_path),
+        "--component", "member:lumber",
+        "--set", "member.nominal=2x2",
+        "--set", "member.length=36 in",
+    ]) == 0
+    capsys.readouterr()
+
+    detail = compile_spec_file(tmp_path / "single_2x2_member.spec.yaml")
+    member = detail.assembly.parts[0].component
+    assert member.nominal == "2x2"
+    assert member.actual == pytest.approx((1.5 * IN, 1.5 * IN))
+    bounds = member.bounding_box()
+    assert bounds.ylen == pytest.approx(1.5 * IN)
+    assert bounds.zlen == pytest.approx(1.5 * IN)
 
 
 def test_authoring_cli_reports_malformed_yaml_value(tmp_path, capsys):
