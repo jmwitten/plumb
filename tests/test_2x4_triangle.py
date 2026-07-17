@@ -22,16 +22,23 @@ def triangle():
     contracts=("compile", "geometry", "validation", "fabrication", "bom", "governance", "intent", "determinism"),
 )
 def test_triangle_has_three_equal_mitered_2x4_members(triangle):
-    members = [triangle._by_id[name].component for name in ("base", "right_side", "left_side")]
+    placed = [triangle._by_id[name] for name in ("base", "right_side", "left_side")]
+    members = [part.component for part in placed]
     assert all(isinstance(member, Lumber) for member in members)
     assert {member.nominal for member in members} == {"2x4"}
     assert {member.length_semantics for member in members} == {"long_point_to_long_point"}
     assert {round(member.length / 25.4, 6) for member in members} == {48.0}
     for member in members:
         steps = [step for step in member.fabrication_record("member").steps if step.kind == "miter_crosscut"]
-        assert [step.param("miter_angle_degrees") for step in steps] == [30.0, 30.0]
+        assert [step.param("miter_angle_degrees") for step in steps] == [60.0, 60.0]
         assert member.datum("cut_near") is not None
         assert member.datum("cut_far") is not None
+
+    for first, second in ((placed[0], placed[1]), (placed[1], placed[2]), (placed[2], placed[0])):
+        assert first.world_solid().val().intersect(second.world_solid().val()).Volume() == pytest.approx(0.0, abs=1e-6)
+    assert placed[0].datum_world("cut_far").origin == pytest.approx(placed[1].datum_world("cut_near").origin)
+    assert placed[1].datum_world("cut_far").origin == pytest.approx(placed[2].datum_world("cut_near").origin)
+    assert placed[2].datum_world("cut_far").origin == pytest.approx(placed[0].datum_world("cut_near").origin)
 
 
 @pytest.mark.detail_gate("2x4_triangle", contracts=("connections",))

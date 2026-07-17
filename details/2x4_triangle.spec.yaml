@@ -6,7 +6,7 @@ params:
   outside_edge: 48.0
   face_width: 3.5
   stock_thickness: 1.5
-  miter_off_square: 30.0
+  miter_off_square: 60.0
 
 derived:
   triangle_height: "= outside_edge * (3 ** 0.5) / 2"
@@ -27,8 +27,8 @@ components:
       length: "$outside_edge"
       length_semantics: long_point_to_long_point
       end_cuts:
-        - {end: near, miter_angle_degrees: 30, long_face: top}
-        - {end: far, miter_angle_degrees: 30, long_face: top}
+        - {end: near, miter_angle_degrees: 60, long_face: top}
+        - {end: far, miter_angle_degrees: 60, long_face: top}
     place: {raw: {at: ["0 in", "$face_width", "0 in"], rotate: [["X", 90]]}}
 
   - id: right_side
@@ -40,9 +40,9 @@ components:
       length: "$outside_edge"
       length_semantics: long_point_to_long_point
       end_cuts:
-        - {end: near, miter_angle_degrees: 30, long_face: top}
-        - {end: far, miter_angle_degrees: 30, long_face: top}
-    place: {datum: cut_near, to: base, to_datum: cut_far, flip: true}
+        - {end: near, miter_angle_degrees: 60, long_face: top}
+        - {end: far, miter_angle_degrees: 60, long_face: top}
+    place: {datum: cut_near, to: base, to_datum: cut_far, flip: true, rotate: 180}
 
   - id: left_side
     type: lumber
@@ -53,9 +53,9 @@ components:
       length: "$outside_edge"
       length_semantics: long_point_to_long_point
       end_cuts:
-        - {end: near, miter_angle_degrees: 30, long_face: top}
-        - {end: far, miter_angle_degrees: 30, long_face: top}
-    place: {datum: cut_near, to: right_side, to_datum: cut_far, flip: true}
+        - {end: near, miter_angle_degrees: 60, long_face: top}
+        - {end: far, miter_angle_degrees: 60, long_face: top}
+    place: {datum: cut_near, to: right_side, to_datum: cut_far, flip: true, rotate: 180}
 
 connections:
   - type: glued
@@ -102,7 +102,8 @@ doc:
         # 2x4 Equilateral Triangle — Build Package
 
         Cut three dry, straight nominal 2x4 members to 48 inches long-point to
-        long-point. Cut both ends of every member 30 degrees off square with the
+        long-point. Cut both ends of every member 60 degrees off square (the cut
+        line is 30 degrees to the member length) with the
         same 3.5-inch face kept long. Lay the 3.5-inch faces in one plane, dry-fit
         three 60-degree corners, glue the cut faces, strap-clamp on a flat bench,
         and verify all three outside edges are 48 inches before full cure.

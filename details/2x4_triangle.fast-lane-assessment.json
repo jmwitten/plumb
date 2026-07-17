@@ -10,7 +10,7 @@
   "vocabulary": {
     "components": [
       {
-        "role": "three nominal 2x4 triangle members with 30-degree end cuts",
+        "role": "three nominal 2x4 triangle members with 60-degree off-square end cuts",
         "key": "lumber",
         "required_parameters": ["nominal", "length", "end_cuts", "length_semantics"]
       }
@@ -32,7 +32,7 @@
   },
   "architecture": {
     "part_topology": "Three equal nominal 2x4 members forming one closed equilateral ring.",
-    "joint_family": "Three 60-degree included corners, each made by paired 30-degree end cuts and a glued miter.",
+    "joint_family": "Three 60-degree included corners, each made by paired 60-degree-off-square end cuts and a glued miter.",
     "orientation": "The 3.5 in lumber faces lie in one plane; the 1.5 in thickness is normal to that plane.",
     "support_installation_model": "Low-consequence decorative shop assembly with no site attachment or structural duty.",
     "material_alternatives": [],
