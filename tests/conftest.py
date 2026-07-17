@@ -41,8 +41,10 @@ from pathlib import Path
 
 import pytest
 
+from detailgen.certification import discover_contracts
 from scope_manifest import (
     ScopeManifestError,
+    augment_certification_nodes,
     build_nodes,
     load_scope_manifest,
     module_paths,
@@ -52,6 +54,8 @@ from scope_manifest import (
 
 
 TESTS_DIR = Path(__file__).resolve().parent
+ROOT = TESTS_DIR.parent
+DETAILS_DIR = ROOT / "details"
 SCOPE_MANIFEST = TESTS_DIR / "test_scope_manifest.csv"
 
 REQUIRED_DETAIL_CONTRACTS = frozenset({
@@ -219,9 +223,22 @@ def pytest_configure(config):
 def _scope_records(config):
     records = getattr(config, "_plumb_scope_records", None)
     if records is None:
-        records = load_scope_manifest(SCOPE_MANIFEST)
+        records = _load_runtime_scope_records(
+            SCOPE_MANIFEST,
+            DETAILS_DIR,
+            ROOT,
+        )
         config._plumb_scope_records = records
     return records
+
+
+def _load_runtime_scope_records(manifest_path, details_dir, repo_root):
+    explicit = load_scope_manifest(manifest_path)
+    contracts = discover_contracts(details_dir, repo_root=repo_root)
+    return augment_certification_nodes(
+        explicit,
+        (contract.slug for contract in contracts),
+    )
 
 
 def _requested_build_records(config):
@@ -285,7 +302,7 @@ def pytest_collection_modifyitems(config, items):
         ):
             try:
                 reconcile_scope_manifest(
-                    load_scope_manifest(SCOPE_MANIFEST),
+                    _scope_records(config),
                     {item.nodeid for item in items},
                 )
             except ScopeManifestError as exc:

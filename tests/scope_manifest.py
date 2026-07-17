@@ -15,6 +15,9 @@ PLATFORM_OWNER = "plumb-platform"
 PLATFORM_CADENCES = frozenset({"unit", "integration", "audit"})
 BUILD_CADENCES = frozenset({"inner", "release"})
 MANIFEST_COLUMNS = ("nodeid", "category", "owner", "cadence", "rationale")
+CERTIFIED_BUILD_NODE = (
+    "tests/test_certified_builds.py::test_certified_build[{slug}]"
+)
 
 
 class ScopeManifestError(ValueError):
@@ -114,6 +117,31 @@ def reconcile_scope_manifest(
             "scope manifest drift: "
             f"unclassified={unclassified}; retired={retired}"
         )
+
+
+def augment_certification_nodes(
+    records: Iterable[ScopeRecord],
+    contract_slugs: Iterable[str],
+) -> tuple[ScopeRecord, ...]:
+    """Classify discovered generic certification nodes not already explicit."""
+    augmented = list(records)
+    existing = {record.nodeid for record in augmented}
+    for slug in sorted(set(contract_slugs)):
+        nodeid = CERTIFIED_BUILD_NODE.format(slug=slug)
+        if nodeid in existing:
+            continue
+        augmented.append(ScopeRecord(
+            nodeid=nodeid,
+            category="document_build_accuracy",
+            owner=slug,
+            cadence="inner",
+            rationale=(
+                "Generic certification node discovered from "
+                f"details/{slug}.cert.yaml."
+            ),
+        ))
+        existing.add(nodeid)
+    return tuple(augmented)
 
 
 def build_nodes(

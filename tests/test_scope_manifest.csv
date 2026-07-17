@@ -689,6 +689,7 @@ tests/test_detail_base.py::test_callout_placement_tracks_param_value,platform,pl
 tests/test_detail_base.py::test_tolerances_flow_from_validation_spec_through_validate,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_detail_base.py::test_bom_paths_agree_on_shared_fields,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_detail_gate_selection.py::test_collection_candidate_filter_skips_files_without_gate_markers,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
+tests/test_detail_gate_selection.py::test_runtime_scope_discovers_generic_contract_without_manifest_row,platform,plumb-platform,unit,Fail-closed registry-free generic product-gate discovery self-test.
 tests/test_detail_gate_selection.py::test_selection_keeps_only_requested_slug,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_detail_gate_selection.py::test_inner_gate_excludes_release_documents,platform,plumb-platform,unit,Fail-closed detail build cadence selection self-test.
 tests/test_detail_gate_selection.py::test_release_gate_includes_inner_and_requires_documents,platform,plumb-platform,unit,Fail-closed detail build cadence selection self-test.
@@ -1697,6 +1698,7 @@ tests/test_scope_manifest.py::test_every_record_has_one_closed_category,platform
 tests/test_scope_manifest.py::test_reconciliation_fails_for_unclassified_and_retired_nodes,platform,plumb-platform,unit,Fail-closed runtime scope-manifest self-certification.
 tests/test_scope_manifest.py::test_duplicate_nodeids_fail_closed,platform,plumb-platform,unit,Fail-closed runtime scope-manifest self-certification.
 tests/test_scope_manifest.py::test_generic_parameterized_node_can_belong_to_one_build,platform,plumb-platform,unit,Fail-closed runtime scope-manifest self-certification.
+tests/test_scope_manifest.py::test_certification_contracts_fill_only_missing_generic_scope_records,platform,plumb-platform,unit,Fail-closed derived certification scope self-test.
 tests/test_scope_manifest.py::test_category_owner_and_cadence_must_agree[platform-family_birdhouse-unit-platform owner],platform,plumb-platform,unit,Fail-closed runtime scope-manifest self-certification.
 tests/test_scope_manifest.py::test_category_owner_and_cadence_must_agree[document_build_accuracy-plumb-platform-inner-build owner],platform,plumb-platform,unit,Fail-closed runtime scope-manifest self-certification.
 tests/test_scope_manifest.py::test_category_owner_and_cadence_must_agree[platform-plumb-platform-inner-platform cadence],platform,plumb-platform,unit,Fail-closed runtime scope-manifest self-certification.

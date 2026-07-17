@@ -13,6 +13,7 @@ from conftest import (
 from scope_manifest import (
     ScopeManifestError,
     ScopeRecord,
+    augment_certification_nodes,
     build_nodes,
     load_scope_manifest,
     module_paths,
@@ -109,6 +110,36 @@ def test_generic_parameterized_node_can_belong_to_one_build(tmp_path):
     assert [row.nodeid for row in build_nodes(rows, "family_birdhouse")] == [
         "tests/test_certified_builds.py::test_certified_build[family_birdhouse]"
     ]
+
+
+def test_certification_contracts_fill_only_missing_generic_scope_records():
+    explicit = ScopeRecord(
+        nodeid="tests/test_certified_builds.py::test_certified_build[existing]",
+        category="document_build_accuracy",
+        owner="existing",
+        cadence="inner",
+        rationale="explicit rationale",
+    )
+
+    records = augment_certification_nodes(
+        (explicit,), ("future_build", "existing", "future_build")
+    )
+
+    assert records[0] is explicit
+    assert records[1] == ScopeRecord(
+        nodeid=(
+            "tests/test_certified_builds.py::"
+            "test_certified_build[future_build]"
+        ),
+        category="document_build_accuracy",
+        owner="future_build",
+        cadence="inner",
+        rationale=(
+            "Generic certification node discovered from "
+            "details/future_build.cert.yaml."
+        ),
+    )
+    reconcile_scope_manifest(records, {row.nodeid for row in records})
 
 
 @pytest.mark.parametrize(

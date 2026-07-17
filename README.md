@@ -406,6 +406,9 @@ under `-n`.
 Every standalone build can opt into the generic certification engine by adding
 `details/<slug>.cert.yaml` beside its spec. Contracts are discovered from the
 filesystem, so a new build needs no Python test module or central registry edit.
+Pytest derives the generic node's inner-cadence scope from that discovered
+contract at runtime; only bespoke product tests need explicit rows in
+`tests/test_scope_manifest.csv`.
 The YAML records the build's declarative intent: expected parts and
 connections, validation findings, fabrication folds, BOM bounds, governance,
 and any explicit decisions. The shared engine supplies the tests. V1 standalone
