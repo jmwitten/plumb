@@ -26,8 +26,8 @@ _AUTHORING_GRAMMAR: dict[str, object] = {
             "python", "-m", "detailgen.authoring", "scaffold",
             "--slug", "example_detail", "--out", "details",
             "--component", "base:slab",
-            "--set", "base.width=12",
-            "--set", "base.length=18",
+            "--set", "base.width=12 in",
+            "--set", "base.length=18 in",
             "--place", "base={raw: {at: [0, 0, 0]}}",
         ],
         "repeatable": {
@@ -38,9 +38,15 @@ _AUTHORING_GRAMMAR: dict[str, object] = {
             "--connection-set": "ZERO_BASED_INDEX.PARAM=YAML_VALUE",
             "--connection-hardware": "ZERO_BASED_INDEX=PART_ID[,PART_ID...]",
         },
+        "length_values": {
+            "bare_numbers": "millimeters",
+            "generated_document_units": "mm",
+            "other_units": "use a unit-suffixed YAML string, such as '42 in'",
+        },
         "policy": (
             "Values and placements are explicit; the scaffolder fails closed "
-            "instead of inferring geometry."
+            "instead of inferring geometry. Bare numeric component and "
+            "placement lengths are millimeters."
         ),
     },
     "detail_spec": {

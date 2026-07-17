@@ -127,6 +127,11 @@ def test_authoring_manifest_publishes_compact_nested_grammar():
     assert "--component" in grammar["scaffold_command"]["example"]
     assert "--set" in grammar["scaffold_command"]["example"]
     assert "--connection-hardware" in grammar["scaffold_command"]["repeatable"]
+    assert grammar["scaffold_command"]["length_values"] == {
+        "bare_numbers": "millimeters",
+        "generated_document_units": "mm",
+        "other_units": "use a unit-suffixed YAML string, such as '42 in'",
+    }
 
     grammar["component"]["required"].append("mutation")
     assert "mutation" not in build_authoring_grammar()["component"]["required"]

@@ -63,8 +63,8 @@ placements:
   --slug example_detail \
   --out details \
   --component base:slab \
-  --set base.width=12 \
-  --set base.length=18 \
+  --set 'base.width=12 in' \
+  --set 'base.length=18 in' \
   --place 'base={raw: {at: [0, 0, 0]}}'
 ```
 
@@ -75,6 +75,17 @@ placements, or validation claims. An omitted placement is DetailSpec's identity
 placement at the origin; with multiple components that is structurally valid
 but physically unresolved until the author supplies relationships or explicit
 placements.
+
+Bare numeric component and placement lengths are millimeters, and generated
+scaffolds declare `units: mm` to make that contract explicit. To author another
+unit, pass a unit-suffixed YAML string such as `--set 'member.length=42 in'`.
+The top-level `units` field controls `$`/`=` authoring expressions; it does not
+reinterpret bare constructor or raw-placement numbers.
+
+Filesystem/output slugs may begin with a lowercase letter or digit, so a name
+such as `2x4_frame` is preserved exactly in the generated spec, certification
+sidecar, and package path. Component IDs still begin with a letter because they
+are internal reference identifiers.
 
 Dimension checks use the placed solid's **world-axis bounding-box** measures.
 `xlen`, `ylen`, and `zlen` are projections on those world axes, so they change

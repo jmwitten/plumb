@@ -19,7 +19,7 @@ from ..core.registry import components
 from ..spec import compile_spec, load_spec_text
 
 
-_SLUG = re.compile(r"^[a-z][a-z0-9_]*$")
+_SLUG = re.compile(r"^[a-z0-9][a-z0-9_]*$")
 _ID = re.compile(r"^[A-Za-z][A-Za-z0-9_+-]*$")
 
 
@@ -115,7 +115,7 @@ def _validate_request(request: ScaffoldRequest) -> None:
     if not _SLUG.fullmatch(request.slug):
         raise ScaffoldError(
             f"invalid slug {request.slug!r}; use lowercase letters, digits, and "
-            "underscores, starting with a letter"
+            "underscores, starting with a lowercase letter or digit"
         )
     if not request.components:
         raise ScaffoldError("at least one --component ID:TYPE is required")
@@ -190,7 +190,7 @@ def build_scaffold(request: ScaffoldRequest) -> ScaffoldDocuments:
     spec: dict[str, object] = {
         "name": request.slug,
         "type": "detail",
-        "units": "in",
+        "units": "mm",
         "components": component_rows,
     }
     if request.connections:

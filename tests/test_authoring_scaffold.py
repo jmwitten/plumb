@@ -123,7 +123,7 @@ def test_authoring_cli_reports_unknown_component_with_known_keys(tmp_path, capsy
 
 def test_writes_generic_component_spec_and_resolvable_certification(tmp_path):
     request = ScaffoldRequest(
-        slug="garden_slab",
+        slug="2x4_garden_slab",
         output_dir=tmp_path,
         components=(ScaffoldComponent(
             id="base",
@@ -137,10 +137,12 @@ def test_writes_generic_component_spec_and_resolvable_certification(tmp_path):
     doc = load_spec_file(result.spec_path)
     detail = compile_spec_file(result.spec_path)
     contract = load_contract(result.contract_path, repo_root=tmp_path)
-    assert doc.name == "garden_slab"
+    assert result.spec_path == tmp_path / "2x4_garden_slab.spec.yaml"
+    assert result.contract_path == tmp_path / "2x4_garden_slab.cert.yaml"
+    assert doc.name == "2x4_garden_slab"
     assert [(row.id, row.type) for row in doc.components] == [("base", "slab")]
     assert len(detail.assembly.parts) == 1
-    assert contract.slug == "garden_slab"
+    assert contract.slug == "2x4_garden_slab"
     assert contract.subject.source == result.spec_path.resolve()
     assert result.implicit_identity_placements == ("base",)
 
@@ -387,9 +389,11 @@ def test_generated_yaml_uses_only_authoring_fields(tmp_path):
         ),),
     ))
 
-    assert set(yaml.safe_load(documents.spec_text)) == {
+    raw = yaml.safe_load(documents.spec_text)
+    assert set(raw) == {
         "name", "type", "units", "components",
     }
+    assert raw["units"] == "mm"
 
 
 def test_connection_missing_param_diagnostic_names_connection_set_flag(tmp_path):
@@ -430,3 +434,4 @@ def test_readme_teaches_scaffold_and_non_inference_conventions():
     assert "world-axis bounding-box" in readme
     assert "degrees off square" in readme
     assert "No rotation-invariant member-length measure" in readme
+    assert "Bare numeric component and placement lengths are millimeters" in readme

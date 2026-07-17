@@ -42,13 +42,13 @@ def _minimal_contract(
 
 
 def test_loads_minimal_closed_contract(tmp_path):
-    path = _minimal_contract(tmp_path)
+    path = _minimal_contract(tmp_path, slug="2x4_toy")
 
     contract = load_contract(path, repo_root=tmp_path)
 
-    assert contract.slug == "toy"
+    assert contract.slug == "2x4_toy"
     assert contract.subject.kind == "standalone_detail"
-    assert contract.subject.source == (tmp_path / "toy.spec.yaml").resolve()
+    assert contract.subject.source == (tmp_path / "2x4_toy.spec.yaml").resolve()
     assert contract.source_path == path.resolve()
     assert contract.intent.counts == ()
     assert contract.deliverables == ()

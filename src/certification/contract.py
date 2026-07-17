@@ -23,7 +23,7 @@ from .model import (
 )
 
 
-_SLUG = re.compile(r"^[a-z][a-z0-9_]*$")
+_SLUG = re.compile(r"^[a-z0-9][a-z0-9_]*$")
 _SELECTOR_FIELDS = {
     "component", "material", "role", "name", "name_contains", "kind",
     "check", "verdict", "subject_contains",
