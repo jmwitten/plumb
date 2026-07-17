@@ -33,7 +33,11 @@ _AUTHORING_GRAMMAR: dict[str, object] = {
         "repeatable": {
             "--component": "ID:REGISTERED_TYPE",
             "--set": "ID.PARAM=YAML_VALUE",
-            "--place": "ID=YAML_PLACEMENT_MAPPING",
+            "--place": (
+                "Direct placement fields, for example "
+                "ID={datum: LOCAL_DATUM, to: TARGET_ID, to_datum: TARGET_DATUM, "
+                "flip: true}. Do not wrap mate fields in a mate key."
+            ),
             "--connection": "REGISTERED_TYPE:PART_ID[,PART_ID...]",
             "--connection-set": "ZERO_BASED_INDEX.PARAM=YAML_VALUE",
             "--connection-hardware": "ZERO_BASED_INDEX=PART_ID[,PART_ID...]",
@@ -60,6 +64,10 @@ _AUTHORING_GRAMMAR: dict[str, object] = {
         "params": "mapping passed to the selected registered component",
     },
     "placement": {
+        "form_selection": (
+            "Choose exactly one form below; form names are not YAML wrappers. "
+            "Mate fields are authored directly in the placement mapping."
+        ),
         "exactly_one": {
             "mate": {
                 "required": ["datum", "to"],
@@ -69,11 +77,15 @@ _AUTHORING_GRAMMAR: dict[str, object] = {
                     "to": "previous_member",
                     "to_datum": "cut_far",
                     "flip": True,
-                    "rotate": 180,
                 },
                 "shape_note": (
                     "Use these keys directly in the placement mapping; do not "
                     "wrap them in a nested mate key."
+                ),
+                "physical_cut_face_rule": (
+                    "For cut_near/cut_far mates, use flip: true so face normals "
+                    "oppose. If an omitted or false flip produces interference, "
+                    "scaffold reports the exact corrected --place assignment."
                 ),
             },
             "raw": {

@@ -102,8 +102,10 @@ included corner needs a 60° off-square miter; its cut line is 30° to the membe
 run.
 
 Seat cut members with the mate fields directly in the placement mapping, for
-example `{datum: cut_near, to: previous_member, to_datum: cut_far, flip: true,
-rotate: 180}`. This is not a nested `mate` wrapper.
+example `{datum: cut_near, to: previous_member, to_datum: cut_far, flip: true}`.
+This is not a nested `mate` wrapper. If a physical cut-face mate overlaps because
+`flip` is omitted or false, scaffold validation reports the exact corrected
+`--place` assignment with `flip: true`.
 
 Use `.venv/bin/python -m detailgen.authoring grammar` when only the nested field
 shapes and conventions are needed. Its bounded output omits the full component

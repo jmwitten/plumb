@@ -21,6 +21,7 @@ from ..spec import compile_spec, load_spec_text
 
 _SLUG = re.compile(r"^[a-z0-9][a-z0-9_]*$")
 _ID = re.compile(r"^[A-Za-z][A-Za-z0-9_+-]*$")
+_CUT_FACE_DATUMS = frozenset({"cut_near", "cut_far"})
 
 
 class ScaffoldError(ValueError):
@@ -64,6 +65,13 @@ class ScaffoldResult:
     spec_path: Path
     contract_path: Path
     implicit_identity_placements: tuple[str, ...]
+
+
+def _place_assignment(component_id: str, placement: Mapping[str, object]) -> str:
+    rendered = yaml.safe_dump(
+        dict(placement), sort_keys=False, default_flow_style=True
+    ).strip()
+    return f"--place '{component_id}={rendered}'"
 
 
 def _entry(registry, key: str, *, owner: str):
@@ -142,6 +150,19 @@ def _validate_request(request: ScaffoldRequest) -> None:
             raise ScaffoldError(
                 f"component {component.id}: placement must be a mapping"
             )
+        if component.place is not None and "mate" in component.place:
+            nested = component.place["mate"]
+            if isinstance(nested, Mapping):
+                correction = _place_assignment(component.id, nested)
+            else:
+                correction = (
+                    f"--place '{component.id}={{datum: LOCAL_DATUM, "
+                    "to: TARGET_ID, to_datum: TARGET_DATUM, flip: true}'"
+                )
+            raise ScaffoldError(
+                f"component {component.id}: use mate fields directly as "
+                f"{correction}; this is not a nested `mate` wrapper"
+            )
 
     for index, connection in enumerate(request.connections):
         owner = f"connection {index}"
@@ -212,12 +233,45 @@ def build_scaffold(request: ScaffoldRequest) -> ScaffoldDocuments:
     failures = report.failures
     if failures:
         rendered = "\n".join(str(finding) for finding in failures)
+        cut_face_guidance = []
+        interference_subjects = {
+            finding.subject
+            for finding in failures
+            if finding.check == "interference"
+        }
+        for component in request.components:
+            placement = component.place
+            if not isinstance(placement, Mapping) or placement.get("flip") is True:
+                continue
+            target = placement.get("to")
+            if (
+                placement.get("datum") not in _CUT_FACE_DATUMS
+                or placement.get("to_datum") not in _CUT_FACE_DATUMS
+                or not isinstance(target, str)
+                or not {
+                    f"{component.id} <-> {target}",
+                    f"{target} <-> {component.id}",
+                } & interference_subjects
+            ):
+                continue
+            corrected = dict(placement)
+            corrected["flip"] = True
+            cut_face_guidance.append(
+                f"Physical cut-face mate `{component.id}` -> `{target}` overlaps. "
+                "Set `flip: true` so the cut-face normals oppose: "
+                f"{_place_assignment(component.id, corrected)}"
+            )
+        correction = (
+            "\n" + "\n".join(cut_face_guidance)
+            if cut_face_guidance else ""
+        )
         raise ScaffoldError(
             f"scaffold validation failed with {len(failures)} definite "
             f"failure(s):\n{rendered}\n"
             "Parts seated on neighbors should use a datum mate placement with "
             "`datum`, `to`, and `to_datum`; reserve `raw` transforms for global "
             "measurements or genuine free degrees of freedom."
+            f"{correction}"
         )
 
     contract = {

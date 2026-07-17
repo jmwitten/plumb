@@ -115,6 +115,8 @@ tests/test_authoring_scaffold.py::test_contract_verification_failure_leaves_no_p
 tests/test_authoring_scaffold.py::test_generated_yaml_uses_only_authoring_fields,platform,plumb-platform,unit,Generic closed DetailSpec field emission contract.
 tests/test_authoring_scaffold.py::test_connection_missing_param_diagnostic_names_connection_set_flag,platform,plumb-platform,unit,Actionable generic connection parameter diagnostic.
 tests/test_authoring_scaffold.py::test_scaffold_api_is_public,platform,plumb-platform,unit,Generic public scaffolder API contract.
+tests/test_authoring_scaffold.py::test_nested_mate_wrapper_reports_exact_direct_place_assignment,platform,plumb-platform,unit,Actionable direct mate placement shape diagnostic.
+tests/test_authoring_scaffold.py::test_cut_face_interference_reports_exact_flip_true_assignment,platform,plumb-platform,unit,Actionable physical cut-face mate orientation diagnostic.
 tests/test_authoring_scaffold.py::test_readme_teaches_scaffold_and_non_inference_conventions,platform,plumb-platform,unit,Generic scaffolder guidance contract.
 tests/test_baseline_integrity_unit.py::test_tampered_plain_baseline_is_named_without_regeneration,platform,plumb-platform,unit,Pure baseline-integrity self-test with no live model compilation.
 tests/test_baseline_integrity_unit.py::test_missing_and_extra_baselines_are_both_named,platform,plumb-platform,unit,Pure baseline-integrity self-test with no live model compilation.

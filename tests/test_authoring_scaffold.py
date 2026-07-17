@@ -42,6 +42,27 @@ def _overlapping_slab_request(tmp_path):
     )
 
 
+def _cut_face_mate_request(tmp_path, placement):
+    params = {
+        "nominal": "2x4",
+        "length": "24 in",
+        "length_semantics": "long_point_to_long_point",
+        "end_cuts": [
+            {"end": "near", "miter_angle_degrees": 60, "long_face": "bottom"},
+            {"end": "far", "miter_angle_degrees": 60, "long_face": "bottom"},
+        ],
+    }
+    return ScaffoldRequest(
+        "cut_face_mate",
+        tmp_path,
+        (
+            ScaffoldComponent("first", "lumber", params),
+            ScaffoldComponent("second", "lumber", params, placement),
+        ),
+        (ScaffoldConnection("glued", ("first", "second")),),
+    )
+
+
 def test_authoring_cli_without_subcommand_still_prints_manifest(capsys):
     from detailgen.authoring.__main__ import main
 
@@ -343,6 +364,45 @@ def test_scaffold_rejects_all_definite_validation_failures_with_mate_guidance(
     assert "second <-> third" in message
     assert "datum" in message and "to_datum" in message
     assert "reserve `raw` transforms" in message
+
+
+def test_nested_mate_wrapper_reports_exact_direct_place_assignment(tmp_path):
+    request = _cut_face_mate_request(tmp_path, {"mate": {
+        "datum": "cut_near",
+        "to": "first",
+        "to_datum": "cut_far",
+        "flip": True,
+    }})
+
+    with pytest.raises(ScaffoldError) as error:
+        build_scaffold(request)
+
+    message = str(error.value)
+    assert "not a nested `mate` wrapper" in message
+    assert (
+        "--place 'second={datum: cut_near, to: first, to_datum: cut_far, "
+        "flip: true}'"
+    ) in message
+
+
+def test_cut_face_interference_reports_exact_flip_true_assignment(tmp_path):
+    request = _cut_face_mate_request(tmp_path, {
+        "datum": "cut_near",
+        "to": "first",
+        "to_datum": "cut_far",
+    })
+
+    with pytest.raises(ScaffoldError) as error:
+        build_scaffold(request)
+
+    message = str(error.value)
+    assert "first <-> second" in message
+    assert "Physical cut-face mate `second` -> `first` overlaps" in message
+    assert "Set `flip: true` so the cut-face normals oppose" in message
+    assert (
+        "--place 'second={datum: cut_near, to: first, to_datum: cut_far, "
+        "flip: true}'"
+    ) in message
 
 
 def test_validation_failure_leaves_no_partial_outputs(tmp_path):
