@@ -2,7 +2,11 @@
 
 import json
 
-from detailgen.authoring import authoring_manifest_json, build_authoring_manifest
+from detailgen.authoring import (
+    authoring_manifest_json,
+    build_authoring_grammar,
+    build_authoring_manifest,
+)
 
 
 def test_authoring_manifest_is_deterministic_and_project_agnostic():
@@ -10,7 +14,7 @@ def test_authoring_manifest_is_deterministic_and_project_agnostic():
     second = json.loads(authoring_manifest_json())
 
     assert first == second
-    assert first["schema"] == "detailgen/authoring-manifest/v2"
+    assert first["schema"] == "detailgen/authoring-manifest/v3"
     assert first["components"] == sorted(
         first["components"], key=lambda row: row["key"]
     )
@@ -50,7 +54,7 @@ def test_authoring_manifest_publishes_parameters_and_workflow_contract():
     lumber = next(row for row in payload["components"] if row["key"] == "lumber")
     lumber_parameters = {parameter["name"] for parameter in lumber["parameters"]}
 
-    assert payload["schema"] == "detailgen/authoring-manifest/v2"
+    assert payload["schema"] == "detailgen/authoring-manifest/v3"
     assert {"end_cuts", "length_semantics"} <= lumber_parameters
     assert "miter_angle_degrees" in lumber["summary"]
     assert "long_point_to_long_point" in lumber["summary"]
@@ -102,3 +106,42 @@ def test_authoring_manifest_publishes_parameters_and_workflow_contract():
             },
         },
     }
+
+
+def test_authoring_manifest_publishes_compact_nested_grammar():
+    grammar = build_authoring_manifest()["authoring_grammar"]
+
+    assert grammar["schema"] == "detailgen/authoring-grammar/v1"
+    assert grammar["detail_spec"]["required"] == ["name", "components"]
+    assert grammar["component"]["required"] == ["id", "type"]
+    assert set(grammar["placement"]["exactly_one"]) == {"mate", "raw", "mount"}
+    assert grammar["connection"]["required"] == ["type", "parts"]
+    assert grammar["certification_contract"]["minimal"]["subject"]["kind"] \
+        == "standalone_detail"
+    assert grammar["scaffold_command"]["argv"][:3] == [
+        "python", "-m", "detailgen.authoring",
+    ]
+
+    grammar["component"]["required"].append("mutation")
+    assert "mutation" not in build_authoring_grammar()["component"]["required"]
+
+
+def test_authoring_grammar_is_explicit_about_dimension_and_lumber_conventions():
+    grammar = build_authoring_manifest()["authoring_grammar"]
+    dimensions = grammar["validation"]["dimensions"]
+    lumber = grammar["component_conventions"]["lumber"]
+
+    assert set(dimensions["measures"]) == {
+        "xmin", "xmax", "xmid", "xlen",
+        "ymin", "ymax", "ymid", "ylen",
+        "zmin", "zmax", "zmid", "zlen",
+    }
+    assert "world-axis bounding box" in dimensions["semantics"]
+    assert dimensions["rotation_invariant_member_length"] is None
+    assert "do not use xlen" in dimensions["intrinsic_length_guidance"]
+
+    assert lumber["miter_angle_degrees"] == "degrees off square"
+    assert lumber["end_cut_required"] == [
+        "end", "miter_angle_degrees", "long_face",
+    ]
+    assert lumber["length_semantics"] == "long_point_to_long_point"
