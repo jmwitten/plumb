@@ -293,13 +293,12 @@ class Lumber(Component):
             z_sign = -1.0 if long_face == "top" else 1.0
             setback = d * math.tan(angle)
             origin_x = setback / 2 if end == "near" else L - setback / 2
-            normal = (end_sign * math.sin(angle), 0.0, z_sign * math.cos(angle))
-            tangent_x = (
-                end_sign * math.cos(angle)
-                if long_face == "top"
-                else -end_sign * math.cos(angle)
+            normal = (end_sign * math.cos(angle), 0.0, z_sign * math.sin(angle))
+            tangent = (
+                math.sin(angle),
+                0.0,
+                -z_sign * end_sign * math.cos(angle),
             )
-            tangent = (tangent_x, 0.0, math.sin(angle))
             datums[f"cut_{end}"] = Frame.from_origin_axes(
                 (origin_x, t / 2, d / 2), tangent, normal
             )
