@@ -707,6 +707,10 @@ tests/test_detail_gate_selection.py::test_malformed_marker_fails_with_item_ident
 tests/test_detail_gate_selection.py::test_malformed_marker_fails_with_item_identity[marker3-contracts must contain only strings],platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_detail_gate_selection.py::test_malformed_marker_fails_with_item_identity[marker4-unknown detail-gate contracts.*magic],platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_detail_gate_selection.py::test_malformed_marker_fails_with_item_identity[marker5-unknown detail-gate cadence.*nightly],platform,plumb-platform,unit,Fail-closed detail build cadence selection self-test.
+tests/test_detail_gate_selection.py::test_product_integrity_does_nothing_without_named_gate,platform,plumb-platform,unit,Automatic named product-gate integrity activation self-test.
+tests/test_detail_gate_selection.py::test_product_integrity_preserves_unbound_legacy_alias,platform,plumb-platform,unit,Automatic named product-gate integrity activation self-test.
+tests/test_detail_gate_selection.py::test_product_integrity_routes_inner_to_current_validation,platform,plumb-platform,unit,Automatic named product-gate integrity activation self-test.
+tests/test_detail_gate_selection.py::test_product_integrity_routes_release_to_canonical_package,platform,plumb-platform,unit,Automatic named product-gate integrity activation self-test.
 tests/test_diskcache.py::test_get_on_empty_cache_is_a_clean_miss,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_diskcache.py::test_put_then_get_round_trips_bytes,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_diskcache.py::test_distinct_keys_do_not_collide,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
@@ -1539,6 +1543,30 @@ tests/test_process_graph.py::test_fold_rejects_a_non_geometric_kind_and_a_missin
 tests/test_process_graph.py::test_rectangular_groove_is_a_folded_material_removing_step[top],platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_process_graph.py::test_rectangular_groove_is_a_folded_material_removing_step[bottom],platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_process_graph.py::test_assert_invariant_signature_accepts_explicit_record,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
+tests/test_product_gate_integrity.py::test_certification_subject_precedes_filename_fallback,platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_hyphenated_owner_resolves_normalized_standalone_spec,platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_legacy_alias_without_canonical_subject_remains_unbound,platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_inner_integrity_returns_current_model_evidence,platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_inner_integrity_rejects_any_blocking_validation[report0],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_inner_integrity_rejects_any_blocking_validation[report1],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_inner_integrity_reports_compile_failure_with_gate_context,platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_accepts_current_closed_package_and_lifecycle[preview-1-0],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_accepts_current_closed_package_and_lifecycle[delivery-0-1],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_stale_or_blocked_manifest[updates0-schema],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_stale_or_blocked_manifest[updates1-release],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_stale_or_blocked_manifest[updates2-spec],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_stale_or_blocked_manifest[updates3-assembly_hash],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_stale_or_blocked_manifest[updates4-selection_fingerprint],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_stale_or_blocked_manifest[updates5-model_fingerprint],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_stale_or_blocked_manifest[updates6-validation.ok],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_stale_or_blocked_manifest[updates7-blocking_count],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_requires_manifest_and_valid_json,platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_artifact_closure_or_digest_defect[extra],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_artifact_closure_or_digest_defect[missing],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_artifact_closure_or_digest_defect[bad-hash],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_unsafe_artifact_path[../escape.txt],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_unsafe_artifact_path[/tmp/escape.txt],platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
+tests/test_product_gate_integrity.py::test_release_integrity_rejects_duplicate_artifact_path,platform,plumb-platform,unit,Automatic named product-gate integrity self-test.
 tests/test_reader_names.py::test_reader_name_loads_and_duplicate_values_are_allowed,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 "tests/test_reader_names.py::test_reader_name_rejects_empty_or_non_string_values[""""]",platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 "tests/test_reader_names.py::test_reader_name_rejects_empty_or_non_string_values[""   ""]",platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."

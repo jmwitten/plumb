@@ -42,6 +42,11 @@ from pathlib import Path
 import pytest
 
 from detailgen.certification import discover_contracts
+from product_gate_integrity import (
+    resolve_product_subject,
+    verify_inner_integrity,
+    verify_release_integrity,
+)
 from scope_manifest import (
     ScopeManifestError,
     augment_certification_nodes,
@@ -256,6 +261,27 @@ def _requested_platform_records(config):
     )
 
 
+def _verify_requested_product_integrity(config, repo_root, details_dir):
+    """Run mandatory evidence for a canonically bound named product gate."""
+    slug = config.getoption("detail_gate")
+    if not slug:
+        return None
+    spec_path = resolve_product_subject(slug, details_dir, repo_root)
+    if spec_path is None:
+        # Legacy/composite owners without a one-to-one standalone subject keep
+        # their existing bespoke gates until explicitly migrated.
+        return None
+    if config.getoption("detail_cadence") == "release":
+        verify_release_integrity(
+            slug,
+            spec_path,
+            Path(repo_root) / "build" / slug,
+        )
+    else:
+        verify_inner_integrity(slug, spec_path)
+    return spec_path
+
+
 def pytest_ignore_collect(collection_path, config):
     """Avoid importing unrelated modules during an explicit scoped gate."""
     slug = config.getoption("detail_gate")
@@ -328,3 +354,16 @@ def _isolated_detailgen_cache_dir(tmp_path_factory, monkeypatch):
     cache_dir = tmp_path_factory.mktemp("detailgen_cache")
     monkeypatch.setenv("DETAILGEN_CACHE_DIR", str(cache_dir))
     monkeypatch.delenv("DETAILGEN_NO_CACHE", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _automatic_product_gate_integrity(
+    request,
+    _isolated_detailgen_cache_dir,
+):
+    """Verify a canonical named product once, independent of marker claims."""
+    config = request.config
+    if getattr(config, "_plumb_product_integrity_checked", False):
+        return
+    config._plumb_product_integrity_checked = True
+    _verify_requested_product_integrity(config, ROOT, DETAILS_DIR)

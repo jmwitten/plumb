@@ -10,6 +10,7 @@ from conftest import (
     _is_detail_gate_candidate,
     _load_runtime_scope_records,
     _require_complete_detail_gate,
+    _verify_requested_product_integrity,
 )
 from scope_manifest import build_nodes, module_paths
 
@@ -45,6 +46,100 @@ def _item(
         kwargs["cadence"] = cadence
     markers = () if slug is None else (_marker(slug, **kwargs),)
     return _Item(name=slug or "unmarked", markers=markers)
+
+
+class _Config:
+    def __init__(self, **options):
+        self.options = options
+
+    def getoption(self, name, default=None):
+        return self.options.get(name, default)
+
+
+def test_product_integrity_does_nothing_without_named_gate(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(
+        "conftest.resolve_product_subject",
+        lambda *args: calls.append(args),
+    )
+
+    result = _verify_requested_product_integrity(
+        _Config(detail_gate=None), tmp_path, tmp_path / "details"
+    )
+
+    assert result is None
+    assert calls == []
+
+
+def test_product_integrity_preserves_unbound_legacy_alias(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(
+        "conftest.resolve_product_subject",
+        lambda *args: None,
+    )
+    monkeypatch.setattr(
+        "conftest.verify_inner_integrity",
+        lambda *args: calls.append(args),
+    )
+
+    result = _verify_requested_product_integrity(
+        _Config(detail_gate="zipline-platform", detail_cadence="inner"),
+        tmp_path,
+        tmp_path / "details",
+    )
+
+    assert result is None
+    assert calls == []
+
+
+def test_product_integrity_routes_inner_to_current_validation(
+    monkeypatch, tmp_path
+):
+    spec = tmp_path / "details" / "garden_shelf.spec.yaml"
+    calls = []
+    monkeypatch.setattr(
+        "conftest.resolve_product_subject",
+        lambda *args: spec,
+    )
+    monkeypatch.setattr(
+        "conftest.verify_inner_integrity",
+        lambda *args: calls.append(args),
+    )
+
+    result = _verify_requested_product_integrity(
+        _Config(detail_gate="garden-shelf", detail_cadence="inner"),
+        tmp_path,
+        tmp_path / "details",
+    )
+
+    assert result == spec
+    assert calls == [("garden-shelf", spec)]
+
+
+def test_product_integrity_routes_release_to_canonical_package(
+    monkeypatch, tmp_path
+):
+    spec = tmp_path / "details" / "garden_shelf.spec.yaml"
+    calls = []
+    monkeypatch.setattr(
+        "conftest.resolve_product_subject",
+        lambda *args: spec,
+    )
+    monkeypatch.setattr(
+        "conftest.verify_release_integrity",
+        lambda *args: calls.append(args),
+    )
+
+    result = _verify_requested_product_integrity(
+        _Config(detail_gate="garden-shelf", detail_cadence="release"),
+        tmp_path,
+        tmp_path / "details",
+    )
+
+    assert result == spec
+    assert calls == [
+        ("garden-shelf", spec, tmp_path / "build" / "garden-shelf")
+    ]
 
 
 def test_collection_candidate_filter_skips_files_without_gate_markers(tmp_path):

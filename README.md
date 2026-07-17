@@ -415,6 +415,27 @@ and any explicit decisions. The shared engine supplies the tests. V1 standalone
 contracts leave `deliverables: []`; a requested deliverable fails closed until
 an adapter supplies typed evidence for it.
 
+A named gate with a canonical standalone subject also receives automatic
+integrity evidence independent of every bespoke test marker. The binding comes
+first from `details/<slug>.cert.yaml`; otherwise Plumb accepts
+`details/<slug>.spec.yaml` or the hyphen-to-underscore filename equivalent. The
+inner cadence freshly compiles that spec and requires authoritative validation
+with `ok: true` and zero blocking findings.
+
+The release cadence additionally requires a current package at
+`build/<slug>/package-manifest.json`. Its spec identity, validation status,
+current assembly and governance fingerprints, exact declared artifact set, and
+every artifact SHA-256 must reconcile. A preview manifest remains a preview and
+a delivery manifest must still satisfy delivery readiness; the gate never
+rewrites `not-run` or skipped tests as passed. Package-manifest v1 has no
+spec-content hash, so current source identity is limited to its exact spec
+filename while model freshness uses the persisted assembly hash.
+
+Legacy or composite owners without a one-to-one certification subject or
+normalized spec filename keep their existing owner-specific gates until they
+are explicitly migrated. That compatibility path does not claim automatic
+package integrity.
+
 Use the detail gate as the inner loop when a change is owned entirely by one
 build. Documents are release-cadence evidence, not inner-cadence model
 accuracy. Each gate starts with fresh temporary caches, compiles twice, and
