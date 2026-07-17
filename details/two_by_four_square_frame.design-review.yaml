@@ -1,0 +1,214 @@
+schema: detailgen/design-review/v1
+project_id: two_by_four_square_frame
+title: Four-foot square 2x4 frame precedent-first design selection
+status: approved_for_modeling
+brief:
+  use: Build one freestanding geometry-only square frame from four nominal two-by-fours, with no inferred picture-retention, hanging, guard, furniture, or structural function.
+  loads: No supported load, mounting condition, environmental exposure, or code-governed use was supplied; the package must not approve load-bearing or life-safety service.
+  fit_range: Hold the outside envelope to forty-eight inches square, the clear opening to forty-one inches square, and the finished depth to one and one-half inches.
+  appearance: Lay every two-by-four flat so its actual three-and-one-half-inch dimension is the visible front border on all four sides; leave the wood unfinished unless the owner later specifies a finish.
+  builder_skill: Suit a homeowner who can select straight lumber, make square crosscuts, clamp an assembly square, drill pilot holes, and drive wood screws without over-driving.
+  tools:
+    - tape measure and sharp pencil
+    - carpenter square
+    - circular saw or miter saw
+    - drill and driver bits
+    - four clamps or a frame clamp
+    - eye and hearing protection
+  required_features:
+    - id: req_material
+      text: Use exactly four nominal two-by-fours with actual one-and-one-half-inch by three-and-one-half-inch sections.
+    - id: req_geometry
+      text: Produce a forty-eight-inch square outside envelope with the three-and-one-half-inch face of every member visible from the front.
+    - id: req_simple
+      text: Keep fabrication and assembly simple enough for ordinary homeowner tools and avoid specialty joinery machinery.
+    - id: req_document
+      text: Generate a complete model-backed fabrication, assembly, installation-status, and review package while preserving unknown use and mounting facts as holds.
+  constraints:
+    - id: constraint_brief_fidelity
+      text: Preserve the requested forty-eight-inch outside size and flat two-by-four orientation ahead of optional aesthetic refinements.
+      priority: 1
+    - id: constraint_honesty
+      text: Do not infer structural capacity, hanging safety, exterior durability, or code compliance from geometry or general frame precedents.
+      priority: 2
+    - id: constraint_simplicity
+      text: Minimize cuts, parts, operations, and authoring complexity because the build is intentionally simple and the full Plumb workflow is being timed.
+      priority: 3
+    - id: constraint_squareness
+      text: Make the forty-one-inch clear opening and equal diagonals directly inspectable during dry fit and final assembly.
+      priority: 4
+precedents:
+  - id: finerworks_hudson_48
+    kind: commercial_product
+    title: Hudson Collection 48x48 custom wholesale picture frame
+    publisher: FinerWorks
+    url: https://finerworks.com/frames/mouldings/hudson/522
+    accessed_on: 2026-07-16
+    construction_pattern: FinerWorks offers a custom-cut and joined square wood-composite frame up to forty-eight by forty-eight inches, with a three-inch-wide and one-point-one-three-inch-deep moulding profile.
+    lessons:
+      - A forty-eight-inch square wood frame with a broad, shallow perimeter profile is a commercially established scale and proportion.
+      - The comparator is a finished display product, not evidence that this heavier two-by-four frame is safe to hang or use structurally.
+  - id: home_depot_diy_frame
+    kind: build_instruction
+    title: How to Make a DIY Picture Frame
+    publisher: The Home Depot
+    url: https://www.homedepot.com/c/ah/how-to-make-a-DIY-picture-frame/9ba683603be9fa5395fab90c1db7836
+    accessed_on: 2026-07-16
+    construction_pattern: The guide cuts lumber to a documented list, checks edges flush and square, clamps the frame, and joins the pieces with glue and mechanical fasteners.
+    lessons:
+      - A square, flush dry fit and clamped assembly are practical controls for a simple four-member wood frame.
+      - The small decorative example does not establish joint capacity, fastener sizing, or mounting safety for a four-foot two-by-four frame.
+  - id: lowes_barn_door_frame
+    kind: build_instruction
+    title: DIY Barn Doors for Your Home
+    publisher: Lowe's
+    url: https://www.lowes.com/n/how-to/diy-barn-doors
+    accessed_on: 2026-07-16
+    construction_pattern: The guide forms a rectangular wood frame with boards laid out on a flat surface, glue at the joints, and three-inch screws driven with a drill.
+    lessons:
+      - Straight-cut rectangular frame members can be clamped and mechanically fastened with ordinary homeowner tools.
+      - A general door-frame instruction supports the process pattern only and does not validate this project's exact screw count or any supported load.
+concepts:
+  - id: butt_screwed_rails_stiles
+    title: Butt-screwed rails and inset stiles
+    summary: Two forty-eight-inch rails span the full width while two forty-one-inch stiles fit between them; all four members lie flat and each corner receives three screws through a rail into stile end grain.
+    signature:
+      load_path: nonstructural_perimeter_with_direct_end_bearing_at_four_corners
+      joint_family: clamped_butt_joints_with_mechanical_fasteners
+      part_topology: two_full_width_rails_plus_two_inset_stiles
+      fastening_strategy: three_face_driven_screws_per_corner
+      visible_seam_strategy: straight_cross_seams_at_rail_ends
+      fit_strategy: square_crosscuts_and_equal_diagonal_clamping
+    features:
+      - id: face_flat_geometry
+        description: Every nominal two-by-four lies on its one-and-one-half-inch edge dimension so the visible front border is three and one-half inches wide around a forty-one-inch clear opening.
+        precedent_refs: []
+      - id: straight_cut_frame
+        description: The frame uses two forty-eight-inch parts and two forty-one-inch parts with only square crosscuts and clamped butt joints.
+        precedent_refs: [home_depot_diy_frame, lowes_barn_door_frame]
+      - id: three_screw_corners
+        description: Three evenly distributed screws at each corner retain the direct rail-to-stile butt joint without specialty joinery.
+        precedent_refs: [lowes_barn_door_frame]
+    parts:
+      - part_family: flat two-by-four rails and stiles
+        purpose: Four stock members create the complete requested perimeter, outside envelope, opening, face width, and depth.
+        requirement_refs: [req_material, req_geometry]
+        feature_refs: [butt_screwed_rails_stiles.face_flat_geometry, butt_screwed_rails_stiles.straight_cut_frame]
+        joinery_replacement: No member can be removed because each supplies one complete side; a panel or routed one-piece ring would violate the four-two-by-four brief.
+      - part_family: corner wood screws
+        purpose: Twelve screws retain the four butt joints after the clamps are removed while keeping assembly accessible to ordinary tools.
+        requirement_refs: [req_simple, req_document]
+        feature_refs: [butt_screwed_rails_stiles.three_screw_corners]
+        joinery_replacement: Dowels, splines, half-laps, or loose tenons could absorb the fastening role but would add precision machining or unsupported public vocabulary.
+  - id: reinforced_miter_frame
+    title: Reinforced forty-five-degree miter frame
+    summary: Four equal forty-eight-inch long-point members meet at diagonal miter seams, with glue and concealed reinforcement holding each corner.
+    signature:
+      load_path: nonstructural_perimeter_through_four_diagonal_corner_interfaces
+      joint_family: glued_miters_with_concealed_reinforcement
+      part_topology: four_equal_mitered_side_members
+      fastening_strategy: adhesive_plus_hidden_spline_or_dowel_reinforcement
+      visible_seam_strategy: diagonal_corner_seams_with_continuous_face_width
+      fit_strategy: matched_forty_five_degree_cuts_and_band_clamping
+    features:
+      - id: equal_mitered_sides
+        description: Four identical long-point dimensions and diagonal seams produce a symmetric square with uninterrupted border width at the corners.
+        precedent_refs: [finerworks_hudson_48, home_depot_diy_frame]
+      - id: reinforced_corner_bond
+        description: Adhesive and concealed cross-grain reinforcement address the limited reliability of an unreinforced end-grain miter.
+        precedent_refs: [home_depot_diy_frame]
+    parts:
+      - part_family: mitered two-by-four sides
+        purpose: Four equal members create the requested square while diagonal seams provide the most conventional frame appearance.
+        requirement_refs: [req_material, req_geometry]
+        feature_refs: [reinforced_miter_frame.equal_mitered_sides]
+        joinery_replacement: Square butt joints could absorb the corner geometry but would change the visible seam pattern and unequal cut list.
+      - part_family: adhesive and concealed corner reinforcement
+        purpose: The bond and cross-grain reinforcement keep the miter closed after clamping without exposed screw heads on the front.
+        requirement_refs: [req_simple, req_document]
+        feature_refs: [reinforced_miter_frame.reinforced_corner_bond]
+        joinery_replacement: Face-driven screws would be simpler but visibly interrupt the perimeter and require a public miter-fastener connection that is not registered.
+  - id: half_lap_square_frame
+    title: Glued half-lap corner frame
+    summary: Four forty-eight-inch members overlap at four half-depth corner laps, creating continuous full-length sides with broad glued bearing areas.
+    signature:
+      load_path: nonstructural_perimeter_through_broad_overlapping_corner_laps
+      joint_family: glued_half_depth_cross_laps
+      part_topology: four_full_length_overlapping_side_members
+      fastening_strategy: adhesive_bond_across_four_half_lap_interfaces
+      visible_seam_strategy: rectangular_overlap_seams_at_each_corner
+      fit_strategy: matched_half_depth_shoulders_and_square_overlap_clamping
+    features:
+      - id: full_length_lapped_sides
+        description: Four full-length members overlap within the same forty-eight-inch square envelope while maintaining the three-and-one-half-inch front border.
+        precedent_refs: [finerworks_hudson_48]
+      - id: broad_glued_laps
+        description: Half-depth corner pockets create broad face-grain bonding areas and self-registering shoulders at the cost of extra machining.
+        precedent_refs: [home_depot_diy_frame]
+    parts:
+      - part_family: half-lapped two-by-four sides
+        purpose: Each member provides one complete side and one half of each adjacent overlapping corner joint.
+        requirement_refs: [req_material, req_geometry]
+        feature_refs: [half_lap_square_frame.full_length_lapped_sides, half_lap_square_frame.broad_glued_laps]
+        joinery_replacement: Butt joints eliminate the pockets and preserve the requested geometry with less tooling, so the laps are not indispensable under the simplicity constraint.
+      - part_family: corner adhesive
+        purpose: Adhesive bonds the broad overlapping faces without visible front fasteners.
+        requirement_refs: [req_simple]
+        feature_refs: [half_lap_square_frame.broad_glued_laps]
+        joinery_replacement: Screws could supplement or replace adhesive but would add visible or plugged fastening operations.
+comparison:
+  - {id: butt.strength, concept: butt_screwed_rails_stiles, criterion: strength, assessment: unknown, explanation: "The screws retain a nonstructural frame, but species, grade, screw product, loads, and support conditions are not sufficient for a capacity claim.", evidence_refs: [constraint_honesty, lowes_barn_door_frame]}
+  - {id: butt.part_count, concept: butt_screwed_rails_stiles, criterion: part_count, assessment: advantage, explanation: "Exactly four lumber members and twelve repeated fasteners satisfy the complete geometry without auxiliary blocks or reinforcement parts.", evidence_refs: [req_material, req_simple]}
+  - {id: butt.fasteners, concept: butt_screwed_rails_stiles, criterion: fasteners, assessment: neutral, explanation: "Three exposed screw heads occur on each rail end, but the repeated pattern is direct and compatible with the registered butt-screwed connection.", evidence_refs: [lowes_barn_door_frame, req_document]}
+  - {id: butt.operations, concept: butt_screwed_rails_stiles, criterion: operations, assessment: advantage, explanation: "Four square cuts, one dry fit, diagonal adjustment, pilot drilling, and repeated driving create the whole assembly.", evidence_refs: [home_depot_diy_frame, constraint_simplicity]}
+  - {id: butt.tooling, concept: butt_screwed_rails_stiles, criterion: tooling, assessment: advantage, explanation: "A saw, square, clamps, and drill cover every fabrication and assembly operation.", evidence_refs: [req_simple, lowes_barn_door_frame]}
+  - {id: butt.tolerances, concept: butt_screwed_rails_stiles, criterion: tolerances, assessment: advantage, explanation: "The forty-one-inch stiles directly set the opening, while equal overall diagonals expose racking before final tightening.", evidence_refs: [constraint_squareness, home_depot_diy_frame]}
+  - {id: butt.material, concept: butt_screwed_rails_stiles, criterion: material, assessment: advantage, explanation: "The cut list consumes two eight-foot two-by-fours with one forty-eight-inch and one forty-one-inch part from each board, excluding kerf waste.", evidence_refs: [req_material, constraint_simplicity]}
+  - {id: butt.appearance, concept: butt_screwed_rails_stiles, criterion: appearance, assessment: neutral, explanation: "The face width is exact and continuous, although straight seams and rail-end screw heads are visibly less refined than concealed miter joinery.", evidence_refs: [req_geometry, constraint_brief_fidelity]}
+  - {id: butt.builder_skill, concept: butt_screwed_rails_stiles, criterion: builder_skill, assessment: advantage, explanation: "The builder repeats square crosscuts and straight pilot-hole drilling without angled setup or depth-controlled pockets.", evidence_refs: [req_simple, home_depot_diy_frame]}
+  - {id: butt.instruction_complexity, concept: butt_screwed_rails_stiles, criterion: instruction_complexity, assessment: advantage, explanation: "Two cut lengths and one corner fastening pattern fully describe fabrication and assembly.", evidence_refs: [constraint_simplicity, req_document]}
+  - {id: miter.strength, concept: reinforced_miter_frame, criterion: strength, assessment: unknown, explanation: "Concealed reinforcement improves an end-grain bond conceptually, but no registered lumber-miter connection or project load analysis establishes capacity.", evidence_refs: [constraint_honesty, home_depot_diy_frame]}
+  - {id: miter.part_count, concept: reinforced_miter_frame, criterion: part_count, assessment: neutral, explanation: "Four equal wood sides remain, while splines or dowels and adhesive add secondary part families.", evidence_refs: [req_material, constraint_simplicity]}
+  - {id: miter.fasteners, concept: reinforced_miter_frame, criterion: fasteners, assessment: advantage, explanation: "Concealed reinforcement avoids face screw heads and preserves a clean perimeter when executed correctly.", evidence_refs: [req_geometry, finerworks_hudson_48]}
+  - {id: miter.operations, concept: reinforced_miter_frame, criterion: operations, assessment: disadvantage, explanation: "Eight accurate angle cuts, dry fitting, reinforcement machining, gluing, cleanup, and cure control exceed the straight-cut sequence.", evidence_refs: [constraint_simplicity, home_depot_diy_frame]}
+  - {id: miter.tooling, concept: reinforced_miter_frame, criterion: tooling, assessment: disadvantage, explanation: "Accurate miters and concealed reinforcement benefit from calibrated angle cutting, a band clamp, and a spline or dowel jig.", evidence_refs: [req_simple, constraint_simplicity]}
+  - {id: miter.tolerances, concept: reinforced_miter_frame, criterion: tolerances, assessment: disadvantage, explanation: "Small angle or length errors accumulate across four corners and can open visible outer or inner points.", evidence_refs: [constraint_squareness, home_depot_diy_frame]}
+  - {id: miter.material, concept: reinforced_miter_frame, criterion: material, assessment: neutral, explanation: "The same four two-by-fours are used, but adhesive and reinforcement stock add consumables.", evidence_refs: [req_material, constraint_simplicity]}
+  - {id: miter.appearance, concept: reinforced_miter_frame, criterion: appearance, assessment: advantage, explanation: "Diagonal seams continue the full border around each corner and conceal reinforcement from the front.", evidence_refs: [finerworks_hudson_48, req_geometry]}
+  - {id: miter.builder_skill, concept: reinforced_miter_frame, criterion: builder_skill, assessment: disadvantage, explanation: "A builder must tune complementary angles, keep four slippery joints aligned, and machine repeatable reinforcement locations.", evidence_refs: [req_simple, constraint_simplicity]}
+  - {id: miter.instruction_complexity, concept: reinforced_miter_frame, criterion: instruction_complexity, assessment: disadvantage, explanation: "Angle references, long-point measurement, reinforcement placement, adhesive open time, clamping, and cure each require separate controls.", evidence_refs: [req_document, constraint_simplicity]}
+  - {id: lap.strength, concept: half_lap_square_frame, criterion: strength, assessment: unknown, explanation: "Broad laps provide more bond area, but no adhesive system, wood grade, loading, or tested connection capacity is defined.", evidence_refs: [constraint_honesty, home_depot_diy_frame]}
+  - {id: lap.part_count, concept: half_lap_square_frame, criterion: part_count, assessment: advantage, explanation: "Four lumber members and adhesive form the frame without discrete hardware, although the joint geometry is more elaborate.", evidence_refs: [req_material, constraint_simplicity]}
+  - {id: lap.fasteners, concept: half_lap_square_frame, criterion: fasteners, assessment: advantage, explanation: "The glued-lap concept has no permanent mechanical fasteners or exposed heads.", evidence_refs: [req_geometry, home_depot_diy_frame]}
+  - {id: lap.operations, concept: half_lap_square_frame, criterion: operations, assessment: disadvantage, explanation: "Eight depth-controlled shoulder cuts, waste removal, bottom cleanup, test fitting, glue application, and cure exceed the brief's simplest path.", evidence_refs: [constraint_simplicity, req_simple]}
+  - {id: lap.tooling, concept: half_lap_square_frame, criterion: tooling, assessment: disadvantage, explanation: "Consistent laps need controlled-depth sawing plus chisel or router cleanup beyond ordinary crosscut work.", evidence_refs: [req_simple, constraint_simplicity]}
+  - {id: lap.tolerances, concept: half_lap_square_frame, criterion: tolerances, assessment: neutral, explanation: "Shoulders can register the square reliably, but mismatched pocket depth creates face steps at the corners.", evidence_refs: [constraint_squareness, req_geometry]}
+  - {id: lap.material, concept: half_lap_square_frame, criterion: material, assessment: neutral, explanation: "Only four frame members and adhesive remain, but corner pockets remove more wood and generate more chips than either alternative.", evidence_refs: [req_material, constraint_simplicity]}
+  - {id: lap.appearance, concept: half_lap_square_frame, criterion: appearance, assessment: neutral, explanation: "No screw heads appear, yet rectangular lap seams and possible face steps remain visible at every corner.", evidence_refs: [req_geometry, constraint_squareness]}
+  - {id: lap.builder_skill, concept: half_lap_square_frame, criterion: builder_skill, assessment: disadvantage, explanation: "The builder must hold shoulder locations and half-depth cuts consistently across eight member ends.", evidence_refs: [req_simple, constraint_simplicity]}
+  - {id: lap.instruction_complexity, concept: half_lap_square_frame, criterion: instruction_complexity, assessment: disadvantage, explanation: "Pocket layout, depth stops, waste removal, cleanup, dry fitting, adhesive handling, and cure checks create the longest manual.", evidence_refs: [req_document, constraint_simplicity]}
+deviations:
+  - feature_ref: butt_screwed_rails_stiles.face_flat_geometry
+    forcing_requirement: req_geometry
+    exception: null
+decision:
+  selected_concept: butt_screwed_rails_stiles
+  rationale: The butt-screwed rail-and-stile frame is the only concept that combines the exact outside size and face orientation with square cuts, ordinary tools, a directly registered public connection, and no unmodeled specialty reinforcement.
+  decisive_cells:
+    - butt.operations
+    - butt.tooling
+    - butt.tolerances
+    - butt.instruction_complexity
+  tradeoffs:
+    - Straight corner seams and twelve screw heads remain visible on the rail faces.
+    - The package approves geometry and fabrication only; use, loads, mounting, environment, finish, and structural capacity remain unknown.
+  application: implemented
+modeling_approval:
+  approved_by: Joel Witten
+  approved_on: 2026-07-16
+  selection_fingerprint: c4775c516b8d9c999aecd3f8d042f5d1f4ea63a18cf4705f1d686aba657da88c
+delivery_confirmation:
+  approved_by: Joel Witten
+  approved_on: 2026-07-16
+  selection_fingerprint: c4775c516b8d9c999aecd3f8d042f5d1f4ea63a18cf4705f1d686aba657da88c
+  model_fingerprint: a22801819c61a64be9802b114820cc99cf9177e7afe2098e84db5f0efecb825a

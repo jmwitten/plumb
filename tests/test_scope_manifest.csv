@@ -1456,6 +1456,7 @@ tests/test_package_builder.py::test_two_existing_governed_details_share_the_same
 tests/test_package_cli.py::test_package_cli_help_is_fast,platform,plumb-platform,unit,Generic CLI surface check with no model or document build.
 tests/test_package_documents.py::test_generic_documents_are_standalone_escaped_and_keep_unknowns,platform,plumb-platform,unit,Pure generic document-template contract on synthetic inputs.
 tests/test_package_documents.py::test_write_package_documents_creates_fixed_generic_surface,platform,plumb-platform,unit,Generic document writer surface contract on synthetic inputs.
+tests/test_package_documents.py::test_wide_model_tables_are_contained_and_labeled_for_mobile_readers,platform,plumb-platform,unit,Shared generated-document contract contains wide model tables in an accessible mobile scroll region.
 tests/test_package_model.py::test_package_request_rejects_unknown_release_state,platform,plumb-platform,unit,Pure generic package request validation.
 tests/test_package_model.py::test_package_request_requires_reason_when_tests_are_skipped,platform,plumb-platform,unit,Pure generic package request validation.
 tests/test_package_model.py::test_manifest_keeps_skipped_distinct_and_orders_artifacts,platform,plumb-platform,unit,Pure generic package manifest serialization contract.
@@ -2299,6 +2300,9 @@ tests/test_timing.py::test_repeated_calls_accumulate_and_count,platform,plumb-pl
 tests/test_timing.py::test_wall_total_sums_every_phase_no_double_count,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_timing.py::test_as_dict_schema,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_timing.py::test_reset_clears_state,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
+tests/test_two_by_four_square_frame_e2e.py::test_exact_requested_envelope_and_face_orientation,document_build_accuracy,two_by_four_square_frame,inner,Checks the accepted four-foot square frame envelope and 3.5-inch face orientation.
+tests/test_two_by_four_square_frame_e2e.py::test_all_twelve_screws_are_driveable_from_the_outside_edges,document_build_accuracy,two_by_four_square_frame,inner,Checks the accepted frame's twelve modeled screw installation contracts and clean validation result.
+tests/test_two_by_four_square_frame_e2e.py::test_square_frame_package_contains_required_acceptance_artifacts,document_build_accuracy,two_by_four_square_frame,release,Checks the delivered square-frame package artifact closure.
 tests/test_trebuchet_e2e.py::test_compiles_and_validates_with_honest_embedment_failures,document_build_accuracy,trebuchet,inner,Checks the accepted current trebuchet model or document output.
 tests/test_trebuchet_e2e.py::test_every_member_has_expected_fabrication_record,document_build_accuracy,trebuchet,inner,Checks the accepted current trebuchet model or document output.
 tests/test_trebuchet_e2e.py::test_fabrication_fold_invariant_holds,document_build_accuracy,trebuchet,inner,Checks the accepted current trebuchet model or document output.
