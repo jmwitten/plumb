@@ -35,6 +35,8 @@ Example
 
 from __future__ import annotations
 
+import math
+
 import cadquery as cq
 
 from ..core.base import Component
@@ -64,7 +66,11 @@ STOCK_LENGTHS = [8 * FT, 10 * FT, 12 * FT, 14 * FT, 16 * FT, 20 * FT]
 
 @register_component("lumber")
 class Lumber(Component):
-    """A straight dimensional-lumber member.
+    """A straight dimensional-lumber member. Optional ``end_cuts`` entries
+    are mappings with ``end`` (``near``/``far``), conventional
+    ``miter_angle_degrees`` off square, and ``long_face`` (``top``/``bottom``);
+    they require ``length_semantics="long_point_to_long_point"`` and expose
+    physical ``cut_near``/``cut_far`` mating datums.
 
     Parameters
     ----------
@@ -88,6 +94,8 @@ class Lumber(Component):
         ease_radius: float = 0.0,
         holes: tuple = (),
         full_length: float | None = None,
+        end_cuts: tuple = (),
+        length_semantics: str | None = None,
     ):
         super().__init__(name or nominal)
         if nominal not in NOMINAL_SIZES:
@@ -108,6 +116,103 @@ class Lumber(Component):
         #: launch leg). Underscored so it stays out of ``params()``/BOM specs;
         #: surfaced instead through ``stub_of()``. ``None`` for ordinary lumber.
         self._full_length = None if full_length is None else float(full_length)
+        self._end_cuts = self._normalize_end_cuts(end_cuts, length_semantics)
+        self._length_semantics = (
+            "long_point_to_long_point" if self._end_cuts else None
+        )
+
+        for end, miter_angle, _long_face in self._end_cuts:
+            setback = self.depth * math.tan(math.radians(miter_angle))
+            if setback >= self.length:
+                raise ValueError(
+                    f"lumber {end} end cut setback must be shorter than the "
+                    f"authored long-point length; got {setback:g} mm setback "
+                    f"for {self.length:g} mm length"
+                )
+
+    @staticmethod
+    def _normalize_end_cuts(end_cuts, length_semantics):
+        raw_cuts = tuple(end_cuts or ())
+        if not raw_cuts:
+            if length_semantics is not None:
+                raise ValueError(
+                    "lumber length_semantics is only valid when end_cuts are authored"
+                )
+            return ()
+        if length_semantics != "long_point_to_long_point":
+            raise ValueError(
+                "lumber end_cuts require "
+                "length_semantics='long_point_to_long_point'"
+            )
+
+        normalized = []
+        allowed_keys = {"end", "miter_angle_degrees", "long_face"}
+        for index, cut in enumerate(raw_cuts):
+            if not isinstance(cut, dict):
+                raise ValueError(
+                    f"lumber end_cuts[{index}] must be a mapping with "
+                    "end, miter_angle_degrees, and long_face"
+                )
+            unknown = set(cut) - allowed_keys
+            missing = allowed_keys - set(cut)
+            if unknown or missing:
+                raise ValueError(
+                    f"lumber end_cuts[{index}] must contain exactly "
+                    "end, miter_angle_degrees, and long_face; "
+                    f"missing={sorted(missing)}, unknown={sorted(unknown)}"
+                )
+            end = str(cut["end"])
+            long_face = str(cut["long_face"])
+            if end not in {"near", "far"}:
+                raise ValueError("lumber end cut end must be 'near' or 'far'")
+            if long_face not in {"top", "bottom"}:
+                raise ValueError(
+                    "lumber end cut long_face must be 'top' or 'bottom'"
+                )
+            try:
+                miter_angle = float(cut["miter_angle_degrees"])
+            except (TypeError, ValueError):
+                raise ValueError(
+                    "lumber end cut miter_angle_degrees must be numeric"
+                ) from None
+            if not 0.0 < miter_angle < 90.0:
+                raise ValueError(
+                    "lumber end cut miter_angle_degrees must be between 0 and "
+                    "90 degrees off square"
+                )
+            normalized.append((end, miter_angle, long_face))
+
+        ends = [cut[0] for cut in normalized]
+        if len(set(ends)) != len(ends):
+            raise ValueError("lumber end_cuts may contain each end only once")
+        if len({cut[2] for cut in normalized}) > 1:
+            raise ValueError(
+                "lumber long_point_to_long_point end cuts must retain the "
+                "same long_face"
+            )
+        return tuple(sorted(normalized, key=lambda cut: cut[0] != "near"))
+
+    @property
+    def end_cuts(self) -> tuple[dict[str, object], ...]:
+        return tuple(
+            {
+                "end": end,
+                "miter_angle_degrees": angle,
+                "long_face": long_face,
+            }
+            for end, angle, long_face in self._end_cuts
+        )
+
+    @property
+    def length_semantics(self) -> str | None:
+        return self._length_semantics
+
+    def params(self) -> dict:
+        params = super().params()
+        if self._end_cuts:
+            params["end_cuts"] = self.end_cuts
+            params["length_semantics"] = self.length_semantics
+        return params
 
     # -- real-world semantics -------------------------------------------------
 
@@ -127,13 +232,12 @@ class Lumber(Component):
     # -- Component contract ----------------------------------------------------
 
     def fabrication_record(self, part_id: str = ""):
-        """This member's fabrication story: crosscut to length, ease the long
-        edges (if any), then drill each hole — in that order (see
-        ``process_graph.fold``). The installed solid is DERIVED from these steps,
-        so the cut length the BOM reports and the geometry can no longer disagree
-        (retro R28). Each step carries provenance back to the design intent that
-        produced it: the crosscut to the finished length, the ease to
-        ``ease_radius``, each drill to its authored ``holes`` entry."""
+        """This member's fabrication story: establish the authored length,
+        ease the long edges (if any), make each semantic end cut, then drill
+        each hole — in that order (see ``process_graph.fold``). The installed
+        solid is DERIVED from these steps, so the cut length the BOM reports
+        and the geometry can no longer disagree (retro R28). Each step carries
+        provenance back to the design intent that produced it."""
         from ..core.process_graph import ProcessRecord, ProcessStep, StockRef
 
         stock = StockRef(
@@ -142,9 +246,21 @@ class Lumber(Component):
             section=(self.thickness, self.depth),
             material_key=self.material_key,
         )
-        steps = [ProcessStep.crosscut(self.length, provenance="finished-length")]
+        length_provenance = (
+            "long_point_to_long_point" if self._end_cuts else "finished-length"
+        )
+        steps = [ProcessStep.crosscut(self.length, provenance=length_provenance)]
         if self.ease_radius > 0:
             steps.append(ProcessStep.ease(self.ease_radius, provenance="ease_radius"))
+        for end, miter_angle, long_face in self._end_cuts:
+            steps.append(
+                ProcessStep.miter_crosscut_from_square(
+                    end,
+                    miter_angle_degrees=miter_angle,
+                    long_face=long_face,
+                    provenance=f"end_cuts:{end}",
+                )
+            )
         for (hx, hz, hd) in self.holes:
             steps.append(ProcessStep.drill(
                 hx, hz, hd, provenance=f"holes[({hx}, {hz}, {hd})]"))
@@ -153,8 +269,8 @@ class Lumber(Component):
     def _build(self) -> cq.Workplane:
         # Delegate to fold(stock, steps): the ProcessRecord is the single
         # authoritative source of this member's installed geometry. The steps
-        # reproduce exactly the box -> ease -> drill sequence documented above,
-        # so the folded solid is byte-identical to the former inline build.
+        # reproduce exactly the box -> ease -> end-cut -> drill sequence above;
+        # without end cuts, the fold remains byte-identical to the former path.
         return self.fabrication_record().installed_geometry()
 
     def _datums(self) -> dict[str, Frame]:
@@ -163,7 +279,7 @@ class Lumber(Component):
         # assembly-up axis (the outward normal of a face, or +Z into the member
         # for the seating ``base``).
         L, t, d = self.length, self.thickness, self.depth
-        return {
+        datums = {
             "base": Frame.from_origin_axes((L / 2, t / 2, 0), (1, 0, 0), (0, 0, 1)),
             "top": Frame.from_origin_axes((L / 2, t / 2, d), (1, 0, 0), (0, 0, 1)),
             "end_near": Frame.from_origin_axes((0, t / 2, d / 2), (0, 0, 1), (-1, 0, 0)),
@@ -171,18 +287,55 @@ class Lumber(Component):
             "face_near": Frame.from_origin_axes((L / 2, 0, d / 2), (1, 0, 0), (0, -1, 0)),
             "face_far": Frame.from_origin_axes((L / 2, t, d / 2), (1, 0, 0), (0, 1, 0)),
         }
+        for end, miter_angle, long_face in self._end_cuts:
+            angle = math.radians(miter_angle)
+            end_sign = -1.0 if end == "near" else 1.0
+            z_sign = -1.0 if long_face == "top" else 1.0
+            setback = d * math.tan(angle)
+            origin_x = setback / 2 if end == "near" else L - setback / 2
+            normal = (end_sign * math.sin(angle), 0.0, z_sign * math.cos(angle))
+            tangent_x = (
+                end_sign * math.cos(angle)
+                if long_face == "top"
+                else -end_sign * math.cos(angle)
+            )
+            tangent = (tangent_x, 0.0, math.sin(angle))
+            datums[f"cut_{end}"] = Frame.from_origin_axes(
+                (origin_x, t / 2, d / 2), tangent, normal
+            )
+        return datums
 
     def describe(self) -> str:
-        return f'{self.nominal} x {fmt_in(self.length, 1)}'
+        description = f'{self.nominal} x {fmt_in(self.length, 1)}'
+        if self._end_cuts:
+            description += " (long-point to long-point)"
+        return description
 
     def assumptions(self) -> str:
         note = "Actual dressed dimensions (PS 20)."
-        if self.ease_radius:
-            note += f" Long edges eased r={fmt_in(self.ease_radius)}; end grain square."
+        if self._end_cuts:
+            if self.ease_radius:
+                note += f" Long edges eased r={fmt_in(self.ease_radius)}."
+            cuts = ", ".join(
+                f"{end} {angle:g}° off-square miter, {long_face} face long"
+                for end, angle, long_face in self._end_cuts
+            )
+            note += (
+                f" End cuts: {cuts}; authored length is long-point to "
+                "long-point on the retained face."
+            )
+        elif self.ease_radius:
+            note += (
+                f" Long edges eased r={fmt_in(self.ease_radius)}; "
+                "end grain square."
+            )
         return note
 
     def bom_group(self) -> str:
-        return f"Lumber|{self.nominal}|{round(self.length,1)}|{self.treated}"
+        base = f"Lumber|{self.nominal}|{round(self.length,1)}|{self.treated}"
+        if not self._end_cuts:
+            return base
+        return f"{base}|{self._end_cuts!r}|{self._length_semantics!r}"
 
     def bom_label(self) -> str:
         return ("PT " if self.treated else "") + self.nominal + " lumber"

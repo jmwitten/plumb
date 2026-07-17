@@ -194,6 +194,37 @@ class ProcessStep:
         )
 
     @classmethod
+    def miter_crosscut_from_square(
+        cls,
+        end: str,
+        miter_angle_degrees: float,
+        long_face: str,
+        provenance: str = "",
+    ) -> "ProcessStep":
+        """Cut an end using the conventional miter-saw angle off square.
+
+        The geometry fold historically expresses its cut-line angle from the
+        stock's +X length axis. Contractor-facing miter angles instead use
+        zero for a square crosscut, so this constructor records both values
+        explicitly and converts without changing the existing cut-line API.
+        """
+        miter_angle = float(miter_angle_degrees)
+        if not 0.0 < miter_angle < 90.0:
+            raise ValueError(
+                "miter_angle_degrees must be between 0 and 90 degrees off square"
+            )
+        cut_line_angle = 90.0 - miter_angle
+        step = cls.miter_crosscut(
+            end,
+            angle_degrees=cut_line_angle,
+            long_face=long_face,
+            provenance=provenance,
+        )
+        params = step.params_dict()
+        params["miter_angle_degrees"] = miter_angle
+        return cls("miter_crosscut", params, provenance)
+
+    @classmethod
     def ease(cls, radius: float, provenance: str = "", edges: str = "|X") -> "ProcessStep":
         return cls("ease", {"radius": float(radius), "edges": str(edges)}, provenance)
 
@@ -337,9 +368,20 @@ class ProcessRecord:
         notes: list[str] = []
         for s in self.steps:
             if s.kind == "miter_crosscut":
-                angle = f'{round(float(s.param("angle_degrees")), 3):g}'
+                params = s.params_dict()
+                if "miter_angle_degrees" in params:
+                    miter = f'{round(float(params["miter_angle_degrees"]), 3):g}'
+                    cut_line = f'{round(float(params["angle_degrees"]), 3):g}'
+                    angle_note = (
+                        f'{miter}° off square '
+                        f'(cut line {cut_line}° to length)'
+                    )
+                else:
+                    angle_note = (
+                        f'{round(float(params["angle_degrees"]), 3):g}°'
+                    )
                 notes.append(
-                    f'miter crosscut: {s.param("end")} end at {angle}°, '
+                    f'miter crosscut: {s.param("end")} end at {angle_note}, '
                     f'{s.param("long_face")} face long'
                 )
                 continue
