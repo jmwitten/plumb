@@ -16,6 +16,30 @@ from detailgen.authoring.scaffold import (
 )
 from detailgen.certification import load_contract
 from detailgen.spec import compile_spec, compile_spec_file, load_spec_file, load_spec_text
+from detailgen.validation import Finding, ValidationReport
+from detailgen.validation.checks import UNKNOWN_VERDICT
+
+
+def _overlapping_slab_request(tmp_path):
+    placement = {"raw": {"at": [0, 0, 0]}}
+    return ScaffoldRequest(
+        "overlapping_slabs",
+        tmp_path,
+        tuple(
+            ScaffoldComponent(
+                name,
+                "slab",
+                {"width": 12, "length": 18},
+                placement,
+            )
+            for name in ("first", "second", "third")
+        ),
+        (
+            ScaffoldConnection("glued", ("first", "second")),
+            ScaffoldConnection("glued", ("first", "third")),
+            ScaffoldConnection("glued", ("second", "third")),
+        ),
+    )
 
 
 def test_authoring_cli_without_subcommand_still_prints_manifest(capsys):
@@ -51,11 +75,11 @@ def test_authoring_cli_scaffolds_explicit_components_and_connection(tmp_path, ca
         "--component", "right:slab",
         "--set", "right.width=12",
         "--set", "right.length=18",
-        "--place", "right={raw: {at: [12, 0, 0]}}",
+        "--place", "right={raw: {at: [18, 0, 0]}}",
         "--component", "screw:wood_screw",
         "--set", "screw.diameter=0.16",
         "--set", "screw.length=1.5",
-        "--place", "screw={raw: {at: [12, 6, 9]}}",
+        "--place", "screw={raw: {at: [18, 6, 9]}}",
         "--connection", "butt_screwed:left,right",
         "--connection-set", "0.n_screws=1",
         "--connection-hardware", "0=screw",
@@ -71,7 +95,7 @@ def test_authoring_cli_scaffolds_explicit_components_and_connection(tmp_path, ca
         "implicit_identity_placements": [],
         "geometry_inferred": False,
     }
-    assert doc.components[1].place.at == (12, 0, 0)
+    assert doc.components[1].place.at == (18, 0, 0)
     assert doc.connections[0].params == {"n_screws": 1}
     assert doc.connections[0].hardware == ["screw"]
 
@@ -128,7 +152,7 @@ def test_writes_generic_component_spec_and_resolvable_certification(tmp_path):
         components=(ScaffoldComponent(
             id="base",
             type="slab",
-            params={"width": 12, "length": 18, "thickness": 1},
+            params={"width": 12, "length": 18},
         ),),
     )
 
@@ -155,20 +179,20 @@ def test_preserves_explicit_raw_placement_and_parameterized_connection(tmp_path)
             ScaffoldComponent(
                 id="left",
                 type="slab",
-                params={"width": 12, "length": 18, "thickness": 1},
+                params={"width": 12, "length": 18},
                 place={"raw": {"at": [0, 0, 0]}},
             ),
             ScaffoldComponent(
                 id="right",
                 type="slab",
-                params={"width": 12, "length": 18, "thickness": 1},
-                place={"raw": {"at": [12, 0, 0]}},
+                params={"width": 12, "length": 18},
+                place={"raw": {"at": [18, 0, 0]}},
             ),
             ScaffoldComponent(
                 id="screw",
                 type="wood_screw",
                 params={"diameter": 0.16, "length": 1.5},
-                place={"raw": {"at": [12, 6, 9]}},
+                place={"raw": {"at": [18, 6, 9]}},
             ),
         ),
         connections=(ScaffoldConnection(
@@ -184,7 +208,7 @@ def test_preserves_explicit_raw_placement_and_parameterized_connection(tmp_path)
     doc = load_spec_text(documents.spec_text)
     detail = compile_spec(doc)
     detail.build()
-    assert doc.components[1].place.at == (12, 0, 0)
+    assert doc.components[1].place.at == (18, 0, 0)
     assert doc.connections[0].type == "butt_screwed"
     assert doc.connections[0].params == {"n_screws": 1}
     assert doc.connections[0].hardware == ["screw"]
@@ -303,6 +327,66 @@ def test_rejects_connection_that_would_crash_package_validation(tmp_path):
 
     with pytest.raises(ValueError, match="expected 1 hardware item"):
         build_scaffold(request)
+
+
+def test_scaffold_rejects_all_definite_validation_failures_with_mate_guidance(
+    tmp_path,
+):
+    with pytest.raises(ScaffoldError) as error:
+        build_scaffold(_overlapping_slab_request(tmp_path))
+
+    message = str(error.value)
+    assert "scaffold validation failed with 3 definite failure(s):" in message
+    assert message.count("[FAIL] interference:") == 3
+    assert "first <-> second" in message
+    assert "first <-> third" in message
+    assert "second <-> third" in message
+    assert "datum" in message and "to_datum" in message
+    assert "reserve `raw` transforms" in message
+
+
+def test_validation_failure_leaves_no_partial_outputs(tmp_path):
+    with pytest.raises(ScaffoldError):
+        write_scaffold(_overlapping_slab_request(tmp_path))
+
+    assert not (tmp_path / "overlapping_slabs.spec.yaml").exists()
+    assert not (tmp_path / "overlapping_slabs.cert.yaml").exists()
+
+
+def test_unknown_validation_does_not_block_scaffold_preview(tmp_path, monkeypatch):
+    class UnknownDetail:
+        def build(self):
+            return None
+
+        def connections(self):
+            return ()
+
+        def validate(self):
+            report = ValidationReport("unknown preview")
+            report.add(Finding(
+                "support",
+                "generic support fact",
+                False,
+                "not resolved",
+                verdict=UNKNOWN_VERDICT,
+            ))
+            return report
+
+    monkeypatch.setattr(
+        "detailgen.authoring.scaffold.compile_spec",
+        lambda _doc: UnknownDetail(),
+    )
+    request = ScaffoldRequest(
+        "unknown_preview",
+        tmp_path,
+        (ScaffoldComponent(
+            "base", "slab", {"width": 12, "length": 18, "thickness": 1},
+        ),),
+    )
+
+    documents = build_scaffold(request)
+
+    assert "name: unknown_preview" in documents.spec_text
 
 
 def test_refuses_to_overwrite_before_expensive_build(tmp_path, monkeypatch):
@@ -435,3 +519,6 @@ def test_readme_teaches_scaffold_and_non_inference_conventions():
     assert "degrees off square" in readme
     assert "No rotation-invariant member-length measure" in readme
     assert "Bare numeric component and placement lengths are millimeters" in readme
+    assert "definite validation failure" in readme
+    assert "UNKNOWN" in readme
+    assert "datum mate" in readme

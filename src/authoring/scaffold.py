@@ -208,7 +208,17 @@ def build_scaffold(request: ScaffoldRequest) -> ScaffoldDocuments:
     detail = compile_spec(load_spec_text(spec_text))
     detail.build()
     detail.connections()
-    detail.validate()
+    report = detail.validate()
+    failures = report.failures
+    if failures:
+        rendered = "\n".join(str(finding) for finding in failures)
+        raise ScaffoldError(
+            f"scaffold validation failed with {len(failures)} definite "
+            f"failure(s):\n{rendered}\n"
+            "Parts seated on neighbors should use a datum mate placement with "
+            "`datum`, `to`, and `to_datum`; reserve `raw` transforms for global "
+            "measurements or genuine free degrees of freedom."
+        )
 
     contract = {
         "schema_version": 1,

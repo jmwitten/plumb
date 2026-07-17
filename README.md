@@ -104,7 +104,10 @@ and connection registries. For a connection that requires hardware, declare
 each hardware item as a component and attach its id with
 `--connection-hardware INDEX=ID[,ID...]`; scaffold verification executes the
 validation pipeline and rejects declarations that would make package generation
-crash, while allowing an ordinary blocked/unknown preview verdict.
+crash. A definite validation failure also stops publication and reports every
+blocker with datum mate guidance for parts seated on neighbors. Honest `UNKNOWN`
+findings remain allowed in a preview scaffold; unresolved evidence is not
+relabeled as passing.
 
 The compiler generates the model, standard views, technical/fabrication/
 assembly documents, review evidence, CSVs, hashes, and final package manifest
