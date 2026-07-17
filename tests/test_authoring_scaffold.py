@@ -1,5 +1,7 @@
 """Generic, fail-closed DetailSpec scaffolding."""
 
+import json
+from pathlib import Path
 import yaml
 
 import pytest
@@ -14,6 +16,109 @@ from detailgen.authoring.scaffold import (
 )
 from detailgen.certification import load_contract
 from detailgen.spec import compile_spec, compile_spec_file, load_spec_file, load_spec_text
+
+
+def test_authoring_cli_without_subcommand_still_prints_manifest(capsys):
+    from detailgen.authoring.__main__ import main
+
+    assert main([]) == 0
+    assert json.loads(capsys.readouterr().out)["schema"] \
+        == "detailgen/authoring-manifest/v2"
+
+
+def test_authoring_cli_grammar_is_bounded_without_full_registry(capsys):
+    from detailgen.authoring.__main__ import main
+
+    assert main(["grammar"]) == 0
+    output = capsys.readouterr().out
+    grammar = json.loads(output)
+    assert grammar["schema"] == "detailgen/authoring-grammar/v1"
+    assert len(output.splitlines()) < 300
+    assert "components" not in grammar
+
+
+def test_authoring_cli_scaffolds_explicit_components_and_connection(tmp_path, capsys):
+    from detailgen.authoring.__main__ import main
+
+    exit_code = main([
+        "scaffold",
+        "--slug", "joined_panels",
+        "--out", str(tmp_path),
+        "--component", "left:slab",
+        "--set", "left.width=12",
+        "--set", "left.length=18",
+        "--place", "left={raw: {at: [0, 0, 0]}}",
+        "--component", "right:slab",
+        "--set", "right.width=12",
+        "--set", "right.length=18",
+        "--place", "right={raw: {at: [12, 0, 0]}}",
+        "--component", "screw:wood_screw",
+        "--set", "screw.diameter=0.16",
+        "--set", "screw.length=1.5",
+        "--place", "screw={raw: {at: [12, 6, 9]}}",
+        "--connection", "butt_screwed:left,right",
+        "--connection-set", "0.n_screws=1",
+        "--connection-hardware", "0=screw",
+    ])
+
+    result = json.loads(capsys.readouterr().out)
+    doc = load_spec_file(tmp_path / "joined_panels.spec.yaml")
+    assert exit_code == 0
+    assert result == {
+        "schema": "detailgen/scaffold-result/v1",
+        "spec": str(tmp_path / "joined_panels.spec.yaml"),
+        "certification": str(tmp_path / "joined_panels.cert.yaml"),
+        "implicit_identity_placements": [],
+        "geometry_inferred": False,
+    }
+    assert doc.components[1].place.at == (12, 0, 0)
+    assert doc.connections[0].params == {"n_screws": 1}
+    assert doc.connections[0].hardware == ["screw"]
+
+
+def test_authoring_cli_yaml_value_keeps_nominal_size_string(tmp_path, capsys):
+    from detailgen.authoring.__main__ import main
+
+    assert main([
+        "scaffold", "--slug", "single_member", "--out", str(tmp_path),
+        "--component", "member:lumber",
+        "--set", "member.nominal=2x4",
+        "--set", "member.length=36",
+    ]) == 0
+    capsys.readouterr()
+
+    raw = yaml.safe_load((tmp_path / "single_member.spec.yaml").read_text())
+    assert raw["components"][0]["params"]["nominal"] == "2x4"
+
+
+def test_authoring_cli_reports_malformed_yaml_value(tmp_path, capsys):
+    from detailgen.authoring.__main__ import main
+
+    with pytest.raises(SystemExit) as error:
+        main([
+            "scaffold", "--slug", "bad_value", "--out", str(tmp_path),
+            "--component", "base:slab",
+            "--set", "base.width=[",
+            "--set", "base.length=18",
+        ])
+
+    assert error.value.code == 2
+    assert "invalid YAML value" in capsys.readouterr().err
+
+
+def test_authoring_cli_reports_unknown_component_with_known_keys(tmp_path, capsys):
+    from detailgen.authoring.__main__ import main
+
+    with pytest.raises(SystemExit) as error:
+        main([
+            "scaffold", "--slug", "bad_type", "--out", str(tmp_path),
+            "--component", "base:slba",
+        ])
+
+    assert error.value.code == 2
+    stderr = capsys.readouterr().err
+    assert "unknown component 'slba'" in stderr
+    assert "slab" in stderr
 
 
 def test_writes_generic_component_spec_and_resolvable_certification(tmp_path):
@@ -57,11 +162,18 @@ def test_preserves_explicit_raw_placement_and_parameterized_connection(tmp_path)
                 params={"width": 12, "length": 18, "thickness": 1},
                 place={"raw": {"at": [12, 0, 0]}},
             ),
+            ScaffoldComponent(
+                id="screw",
+                type="wood_screw",
+                params={"diameter": 0.16, "length": 1.5},
+                place={"raw": {"at": [12, 6, 9]}},
+            ),
         ),
         connections=(ScaffoldConnection(
             type="butt_screwed",
             parts=("left", "right"),
-            params={"n_screws": 0},
+            params={"n_screws": 1},
+            hardware=("screw",),
         ),),
     )
 
@@ -72,7 +184,8 @@ def test_preserves_explicit_raw_placement_and_parameterized_connection(tmp_path)
     detail.build()
     assert doc.components[1].place.at == (12, 0, 0)
     assert doc.connections[0].type == "butt_screwed"
-    assert doc.connections[0].params == {"n_screws": 0}
+    assert doc.connections[0].params == {"n_screws": 1}
+    assert doc.connections[0].hardware == ["screw"]
     assert len(detail.connections()) == 1
     assert documents.implicit_identity_placements == ()
 
@@ -168,6 +281,28 @@ def test_build_scaffold_instantiates_geometry_before_success(tmp_path):
         build_scaffold(request)
 
 
+def test_rejects_connection_that_would_crash_package_validation(tmp_path):
+    request = ScaffoldRequest(
+        "missing_hardware",
+        tmp_path,
+        (
+            ScaffoldComponent(
+                "left", "slab", {"width": 12, "length": 18},
+            ),
+            ScaffoldComponent(
+                "right", "slab", {"width": 12, "length": 18},
+                {"raw": {"at": [12, 0, 0]}},
+            ),
+        ),
+        (ScaffoldConnection(
+            "butt_screwed", ("left", "right"), {"n_screws": 1},
+        ),),
+    )
+
+    with pytest.raises(ValueError, match="expected 1 hardware item"):
+        build_scaffold(request)
+
+
 def test_refuses_to_overwrite_either_output_without_force(tmp_path):
     request = ScaffoldRequest(
         "garden_slab",
@@ -249,3 +384,12 @@ def test_scaffold_api_is_public():
     assert PublicRequest is ScaffoldRequest
     assert public_build is build_scaffold
     assert public_write is write_scaffold
+
+
+def test_readme_teaches_scaffold_and_non_inference_conventions():
+    readme = (Path(__file__).parents[1] / "README.md").read_text()
+
+    assert "detailgen.authoring scaffold" in readme
+    assert "world-axis bounding-box" in readme
+    assert "degrees off square" in readme
+    assert "No rotation-invariant member-length measure" in readme

@@ -39,6 +39,7 @@ class ScaffoldConnection:
     type: str
     parts: tuple[str, ...]
     params: Mapping[str, object] = field(default_factory=dict)
+    hardware: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -158,10 +159,16 @@ def _validate_request(request: ScaffoldRequest) -> None:
                 f"{owner}: undeclared parts {undeclared}; declared component ids: "
                 f"{sorted(ids)}"
             )
+        undeclared_hardware = sorted(set(connection.hardware) - ids)
+        if undeclared_hardware:
+            raise ScaffoldError(
+                f"{owner}: undeclared hardware {undeclared_hardware}; declared "
+                f"component ids: {sorted(ids)}"
+            )
 
 
 def build_scaffold(request: ScaffoldRequest) -> ScaffoldDocuments:
-    """Build text and prove it passes the DetailSpec loader and compiler."""
+    """Build text and prove loader, compiler, and validation can execute."""
     _validate_request(request)
     component_rows = []
     implicit = []
@@ -191,6 +198,8 @@ def build_scaffold(request: ScaffoldRequest) -> ScaffoldDocuments:
                 "type": connection.type,
                 **({"params": dict(connection.params)} if connection.params else {}),
                 "parts": list(connection.parts),
+                **({"hardware": list(connection.hardware)}
+                   if connection.hardware else {}),
             }
             for connection in request.connections
         ]
@@ -198,6 +207,7 @@ def build_scaffold(request: ScaffoldRequest) -> ScaffoldDocuments:
     detail = compile_spec(load_spec_text(spec_text))
     detail.build()
     detail.connections()
+    detail.validate()
 
     contract = {
         "schema_version": 1,

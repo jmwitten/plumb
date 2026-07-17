@@ -14,7 +14,7 @@ def test_authoring_manifest_is_deterministic_and_project_agnostic():
     second = json.loads(authoring_manifest_json())
 
     assert first == second
-    assert first["schema"] == "detailgen/authoring-manifest/v3"
+    assert first["schema"] == "detailgen/authoring-manifest/v2"
     assert first["components"] == sorted(
         first["components"], key=lambda row: row["key"]
     )
@@ -54,7 +54,7 @@ def test_authoring_manifest_publishes_parameters_and_workflow_contract():
     lumber = next(row for row in payload["components"] if row["key"] == "lumber")
     lumber_parameters = {parameter["name"] for parameter in lumber["parameters"]}
 
-    assert payload["schema"] == "detailgen/authoring-manifest/v3"
+    assert payload["schema"] == "detailgen/authoring-manifest/v2"
     assert {"end_cuts", "length_semantics"} <= lumber_parameters
     assert "miter_angle_degrees" in lumber["summary"]
     assert "long_point_to_long_point" in lumber["summary"]
@@ -121,6 +121,12 @@ def test_authoring_manifest_publishes_compact_nested_grammar():
     assert grammar["scaffold_command"]["argv"][:3] == [
         "python", "-m", "detailgen.authoring",
     ]
+    assert grammar["scaffold_command"]["grammar_argv"] == [
+        "python", "-m", "detailgen.authoring", "grammar",
+    ]
+    assert "--component" in grammar["scaffold_command"]["example"]
+    assert "--set" in grammar["scaffold_command"]["example"]
+    assert "--connection-hardware" in grammar["scaffold_command"]["repeatable"]
 
     grammar["component"]["required"].append("mutation")
     assert "mutation" not in build_authoring_grammar()["component"]["required"]

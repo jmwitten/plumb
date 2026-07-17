@@ -27,20 +27,20 @@
 
 **Interfaces:**
 - Consumes: live component and connection registries plus `DETAIL_SPEC_KEYS`.
-- Produces: `build_authoring_grammar() -> dict[str, object]` and manifest schema `detailgen/authoring-manifest/v3` with `authoring_grammar`.
+- Produces: `build_authoring_grammar() -> dict[str, object]` and a backward-compatible manifest schema `detailgen/authoring-manifest/v2` with `authoring_grammar`.
 
 - [ ] **Step 1: Write failing manifest tests**
 
-Add assertions for v3, exact component/placement/connection/certification shapes,
+Add assertions for the backward-compatible v2 contract, exact component/placement/connection/certification shapes,
 world-axis dimension wording, absence of an intrinsic-length recommendation,
 and the lumber off-square/long-point convention.
 
-- [ ] **Step 2: Verify the tests fail for the missing v3 grammar**
+- [ ] **Step 2: Verify the tests fail for the missing nested grammar**
 
 Run:
 `plumb-python --source <worktree>/src --venv <repo>/.venv -- pytest tests/test_authoring_manifest.py -q`
 
-Expected: failures because the schema is v2 and `authoring_grammar` is absent.
+Expected: failures because `authoring_grammar` is absent.
 
 - [ ] **Step 3: Implement the minimal deterministic grammar**
 
@@ -108,9 +108,10 @@ fails.
 
 - [ ] **Step 1: Write failing CLI tests**
 
-Exercise repeated `--component`, `--set`, `--place`, `--connection`, and
-`--connection-set` arguments; assert exit code 2 and actionable stderr for bad
-input; assert no-argument output remains valid manifest JSON.
+Exercise repeated `--component`, `--set`, `--place`, `--connection`,
+`--connection-set`, and `--connection-hardware` arguments; assert exit code 2
+and actionable stderr for bad input; assert no-argument output remains valid
+manifest JSON and `grammar` stays under 300 lines.
 
 - [ ] **Step 2: Verify CLI tests fail before dispatch exists**
 

@@ -54,6 +54,47 @@ author a `DetailSpec`, and invoke the generic full-package compiler:
   --out outputs/example --preview
 ```
 
+For a fresh product, the registry-backed scaffolder removes the need to invent
+the nested DetailSpec shape. Give it only explicit component values and
+placements:
+
+```bash
+.venv/bin/python -m detailgen.authoring scaffold \
+  --slug example_detail \
+  --out details \
+  --component base:slab \
+  --set base.width=12 \
+  --set base.length=18 \
+  --place 'base={raw: {at: [0, 0, 0]}}'
+```
+
+It writes `details/example_detail.spec.yaml` and the discoverable
+`details/example_detail.cert.yaml`, after loading and compiling the spec and
+resolving the certification contract. It never guesses dimensions, datums,
+placements, or validation claims. An omitted placement is DetailSpec's identity
+placement at the origin; with multiple components that is structurally valid
+but physically unresolved until the author supplies relationships or explicit
+placements.
+
+Dimension checks use the placed solid's **world-axis bounding-box** measures.
+`xlen`, `ylen`, and `zlen` are projections on those world axes, so they change
+when a member rotates. No rotation-invariant member-length measure currently
+exists; omit that claim or extend the platform instead of calling a rotated
+member's `xlen` its length.
+
+For lumber `end_cuts`, `miter_angle_degrees` means **degrees off square**, not
+the acute angle between joined members. Every cut mapping must contain `end`,
+`miter_angle_degrees`, and `long_face`, and cut members must also author
+`length_semantics: long_point_to_long_point`.
+
+Use `.venv/bin/python -m detailgen.authoring grammar` when only the nested field
+shapes and conventions are needed. Its bounded output omits the full component
+and connection registries. For a connection that requires hardware, declare
+each hardware item as a component and attach its id with
+`--connection-hardware INDEX=ID[,ID...]`; scaffold verification executes the
+validation pipeline and rejects declarations that would make package generation
+crash, while allowing an ordinary blocked/unknown preview verdict.
+
 The compiler generates the model, standard views, technical/fabrication/
 assembly documents, review evidence, CSVs, hashes, and final package manifest
 from one compiled detail. The installation audit renderer remains available as

@@ -31,7 +31,7 @@ preview package or review as part of scaffolding.
 
 ```text
 python -m detailgen.authoring scaffold \
-  --slug garden-frame \
+  --slug garden_frame \
   --out details \
   --component post:lumber \
   --set post.nominal=2x4 \
@@ -46,6 +46,8 @@ python -m detailgen.authoring scaffold \
 - `--connection TYPE:PART[,PART...]` is repeatable.
 - `--connection-set INDEX.PARAM=YAML_VALUE` is repeatable, where `INDEX` is the
   zero-based connection occurrence.
+- `--connection-hardware INDEX=PART[,PART...]` attaches an ordered hardware
+  stack from declared component ids.
 - `--out` is a directory. Existing outputs are not overwritten without
   `--force`.
 
@@ -56,11 +58,16 @@ spec beside it.
 
 ## Compact Grammar
 
-The authoring manifest advances to v3 and adds an `authoring_grammar` object.
-It documents exact nested field shapes for top-level metadata, components,
+The authoring manifest remains backward-compatible v2 and adds an
+`authoring_grammar` object. This avoids breaking the current Plumb preflight,
+which correctly fails closed on unknown authoring protocols. The object
+documents exact nested field shapes for top-level metadata, components,
 placements (`mate`, `raw`, and `mount`), connections, validation dimensions,
 and the minimal certification contract. This object is deliberately compact:
 it is a grammar and convention index, not a copy of every schema dataclass.
+`python -m detailgen.authoring grammar` emits this object alone in fewer than
+300 lines, avoiding the full live-registry payload when only field shapes are
+needed.
 
 The dimension section explicitly states that `xmin` through `zlen` are measured
 from the placed solid's world-axis bounding box. No rotation-invariant member
@@ -76,22 +83,27 @@ off square, not the acute angle between joined members. It documents the exact
 ## Boundaries and Failure Handling
 
 `detailgen.authoring.scaffold` owns parsing, validation against live registry
-signatures, document assembly, atomic-ish output checks, and post-write
-load/compile/contract verification. It reuses the DetailSpec loader/compiler and
-certification contract loader as the authority. It does not reproduce geometry
-rules, infer datums, run product gates, generate a package, or certify physical
-adequacy.
+signatures, document assembly, staged output checks, and pre-publication
+load/compile/contract verification. It also executes validation once: a blocked
+or unknown report is allowed, but an invalid connection declaration (such as a
+missing required hardware role) fails before files are emitted because it would
+otherwise crash package generation. It reuses the DetailSpec loader/compiler
+and certification contract loader as the authority. It does not reproduce
+geometry rules, infer datums, run product gates, require a clean review, generate
+a package, or certify physical adequacy.
 
 Input errors use one `ScaffoldError` family and produce CLI exit code 2 with a
-single actionable message. Unexpected compiler or contract errors retain their
-native diagnostics. Output collision is checked before either file is written;
-post-write verification failure removes both newly-created outputs.
+single actionable message. Compiler and contract errors keep their native
+message when the CLI normalizes them to the same exit code. Output collision is
+checked before either target is written; verification occurs in a temporary
+directory before both targets replace their prior versions.
 
 ## Tests
 
 Focused tests cover:
 
-- deterministic v3 grammar and the two convention warnings;
+- deterministic v1 nested grammar inside the backward-compatible v2 manifest
+  and the two convention warnings;
 - a generic one-component scaffold that loads, compiles, and whose certification
   contract resolves;
 - explicit raw placement and a generic connection with registry parameters;

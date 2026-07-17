@@ -17,9 +17,18 @@ from .workflow import build_workflow_contract
 _AUTHORING_GRAMMAR: dict[str, object] = {
     "schema": "detailgen/authoring-grammar/v1",
     "scaffold_command": {
+        "grammar_argv": ["python", "-m", "detailgen.authoring", "grammar"],
         "argv": [
             "python", "-m", "detailgen.authoring", "scaffold",
             "--slug", "{slug}", "--out", "details",
+        ],
+        "example": [
+            "python", "-m", "detailgen.authoring", "scaffold",
+            "--slug", "example_detail", "--out", "details",
+            "--component", "base:slab",
+            "--set", "base.width=12",
+            "--set", "base.length=18",
+            "--place", "base={raw: {at: [0, 0, 0]}}",
         ],
         "repeatable": {
             "--component": "ID:REGISTERED_TYPE",
@@ -27,6 +36,7 @@ _AUTHORING_GRAMMAR: dict[str, object] = {
             "--place": "ID=YAML_PLACEMENT_MAPPING",
             "--connection": "REGISTERED_TYPE:PART_ID[,PART_ID...]",
             "--connection-set": "ZERO_BASED_INDEX.PARAM=YAML_VALUE",
+            "--connection-hardware": "ZERO_BASED_INDEX=PART_ID[,PART_ID...]",
         },
         "policy": (
             "Values and placements are explicit; the scaffolder fails closed "
@@ -72,6 +82,7 @@ _AUTHORING_GRAMMAR: dict[str, object] = {
             "expect", "install", "process",
         ],
         "params": "mapping passed to the selected registered connection type",
+        "hardware": "ordered list of declared component ids",
     },
     "validation": {
         "dimensions": {
@@ -159,7 +170,7 @@ def _rows(registry: object) -> list[dict[str, object]]:
 def build_authoring_manifest() -> dict[str, object]:
     """Return the live, project-agnostic vocabulary needed to author a spec."""
     return {
-        "schema": "detailgen/authoring-manifest/v3",
+        "schema": "detailgen/authoring-manifest/v2",
         "components": _rows(components),
         "connections": _rows(connection_types),
         "views": sorted(VIEWS),
