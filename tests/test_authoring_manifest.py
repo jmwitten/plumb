@@ -47,7 +47,13 @@ def test_authoring_manifest_covers_live_registries_and_schema():
 def test_authoring_manifest_publishes_parameters_and_workflow_contract():
     payload = build_authoring_manifest()
 
+    lumber = next(row for row in payload["components"] if row["key"] == "lumber")
+    lumber_parameters = {parameter["name"] for parameter in lumber["parameters"]}
+
     assert payload["schema"] == "detailgen/authoring-manifest/v2"
+    assert {"end_cuts", "length_semantics"} <= lumber_parameters
+    assert "miter_angle_degrees" in lumber["summary"]
+    assert "long_point_to_long_point" in lumber["summary"]
     assert all(
         set(row) == {"key", "constructor", "summary", "parameters"}
         for row in (*payload["components"], *payload["connections"])
