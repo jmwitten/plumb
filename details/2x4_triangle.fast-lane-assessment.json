@@ -1,0 +1,49 @@
+{
+  "schema": "plumb/fast-lane-assessment/v1",
+  "blocked_command": ".venv/bin/python -m detailgen.package details/2x4_triangle.spec.yaml --out build/2x4_triangle --preview",
+  "risk": {
+    "level": "low",
+    "structural": false,
+    "code_or_life_safety": false,
+    "professional_approval_required": false
+  },
+  "vocabulary": {
+    "components": [
+      {
+        "role": "three nominal 2x4 triangle members with 30-degree end cuts",
+        "key": "lumber",
+        "required_parameters": ["nominal", "length", "miter_ends"]
+      },
+      {
+        "role": "two alignment keys at each miter",
+        "key": "wood_dowel",
+        "required_parameters": ["diameter", "length"]
+      }
+    ],
+    "connections": [
+      {
+        "role": "three glued and dowel-reinforced miter joints",
+        "key": "dowel_reinforced_miter",
+        "required_parameters": []
+      }
+    ],
+    "missing": [],
+    "requires_escape_hatch": false
+  },
+  "dimensions": {
+    "unresolved": [],
+    "conflicts": [],
+    "reference_semantics": "Equilateral triangle; each outside edge is the long-point-to-long-point outside face edge and is 48 in. Each member presents its 3.5 in face in the triangle plane and is 1.5 in deep."
+  },
+  "architecture": {
+    "part_topology": "Three equal nominal 2x4 members forming one closed equilateral ring.",
+    "joint_family": "Three 60-degree included corners, each made by paired 30-degree end cuts and a glued, two-dowel reinforced miter.",
+    "orientation": "The 3.5 in lumber faces lie in one plane; the 1.5 in thickness is normal to that plane.",
+    "support_installation_model": "Low-consequence decorative shop assembly with no site attachment or structural duty.",
+    "material_alternatives": [],
+    "load_path_alternatives": []
+  },
+  "delegation": {
+    "ordinary_choices": true
+  }
+}
