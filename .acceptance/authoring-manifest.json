@@ -1,0 +1,1547 @@
+{
+  "authoring_grammar": {
+    "certification_contract": {
+      "filename": "{slug}.cert.yaml",
+      "minimal": {
+        "schema_version": 1,
+        "subject": {
+          "kind": "standalone_detail",
+          "source": "{slug}.spec.yaml"
+        }
+      }
+    },
+    "component": {
+      "optional": [
+        "name",
+        "reader_name",
+        "params",
+        "place",
+        "features",
+        "was"
+      ],
+      "params": "mapping passed to the selected registered component",
+      "required": [
+        "id",
+        "type"
+      ]
+    },
+    "component_conventions": {
+      "lumber": {
+        "end": [
+          "near",
+          "far"
+        ],
+        "end_cut_required": [
+          "end",
+          "miter_angle_degrees",
+          "long_face"
+        ],
+        "end_cuts": "list of end-cut mappings",
+        "length_semantics": "long_point_to_long_point",
+        "long_face": [
+          "top",
+          "bottom"
+        ],
+        "miter_angle_degrees": "degrees off square",
+        "rule": "Any end_cuts require length_semantics to be authored as long_point_to_long_point. For equal symmetric planar miters, derive the conventional off-square angle from the included corner angle before authoring the cuts.",
+        "symmetric_planar_miter": "off_square_degrees = 90 - included_corner_degrees / 2"
+      }
+    },
+    "connection": {
+      "hardware": "ordered list of declared component ids",
+      "optional": [
+        "hardware",
+        "params",
+        "surfaces",
+        "assumptions",
+        "label",
+        "expect",
+        "install",
+        "process"
+      ],
+      "params": "mapping passed to the selected registered connection type",
+      "required": [
+        "type",
+        "parts"
+      ]
+    },
+    "detail_spec": {
+      "optional": [
+        "callouts",
+        "connections",
+        "cross_check",
+        "derived",
+        "design_review",
+        "doc",
+        "explode",
+        "export",
+        "foundations",
+        "params",
+        "retire",
+        "roles",
+        "sequence",
+        "spatial",
+        "type",
+        "units",
+        "validation"
+      ],
+      "required": [
+        "name",
+        "components"
+      ]
+    },
+    "placement": {
+      "exactly_one": {
+        "mate": {
+          "example": {
+            "datum": "cut_near",
+            "flip": true,
+            "to": "previous_member",
+            "to_datum": "cut_far"
+          },
+          "optional": [
+            "to_datum",
+            "offset",
+            "rotate",
+            "flip"
+          ],
+          "physical_cut_face_rule": "For cut_near/cut_far mates, use flip: true so face normals oppose. If an omitted or false flip produces interference, scaffold reports the exact corrected --place assignment.",
+          "required": [
+            "datum",
+            "to"
+          ],
+          "shape_note": "Use these keys directly in the placement mapping; do not wrap them in a nested mate key."
+        },
+        "mount": {
+          "optional": [
+            "center",
+            "ground",
+            "mirror"
+          ],
+          "required": [
+            "to",
+            "face",
+            "axis"
+          ],
+          "standoff_exactly_one": [
+            "flush",
+            "clear_by",
+            "offset"
+          ]
+        },
+        "raw": {
+          "example": {
+            "raw": {
+              "at": [
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "optional": [
+            "rotate"
+          ],
+          "required": [
+            "at"
+          ],
+          "shape": {
+            "at": "[x, y, z]",
+            "rotate": "[[axis, degrees], ...]"
+          },
+          "shape_note": "The raw wrapper is required; author raw fields inside a single raw mapping.",
+          "wrapper": "raw"
+        }
+      },
+      "form_selection": "Choose exactly one form below. Mate fields are authored directly in the placement mapping; raw and mount fields require their named YAML wrappers.",
+      "omitted": "Identity placement at the origin; valid syntax, but multiple members may remain physically unresolved."
+    },
+    "scaffold_command": {
+      "argv": [
+        "python",
+        "-m",
+        "detailgen.authoring",
+        "scaffold",
+        "--slug",
+        "{slug}",
+        "--out",
+        "details"
+      ],
+      "example": [
+        "python",
+        "-m",
+        "detailgen.authoring",
+        "scaffold",
+        "--slug",
+        "example_detail",
+        "--out",
+        "details",
+        "--component",
+        "base:slab",
+        "--set",
+        "base.width=12 in",
+        "--set",
+        "base.length=18 in",
+        "--place",
+        "base={raw: {at: [0, 0, 0]}}"
+      ],
+      "grammar_argv": [
+        "python",
+        "-m",
+        "detailgen.authoring",
+        "grammar"
+      ],
+      "length_values": {
+        "bare_numbers": "millimeters",
+        "generated_document_units": "mm",
+        "other_units": "use a unit-suffixed YAML string, such as '42 in'"
+      },
+      "policy": "Values and placements are explicit; the scaffolder fails closed instead of inferring geometry. Bare numeric component and placement lengths are millimeters.",
+      "repeatable": {
+        "--component": "ID:REGISTERED_TYPE",
+        "--connection": "REGISTERED_TYPE:PART_ID[,PART_ID...]",
+        "--connection-hardware": "ZERO_BASED_INDEX=PART_ID[,PART_ID...]",
+        "--connection-set": "ZERO_BASED_INDEX.PARAM=YAML_VALUE",
+        "--place": "ID=YAML_MAPPING. Mate fields are direct (no mate wrapper), for example ID={datum: LOCAL_DATUM, to: TARGET_ID, to_datum: TARGET_DATUM, flip: true}. The raw wrapper is required for raw transforms, for example ID={raw: {at: [0, 0, 0]}}.",
+        "--set": "ID.PARAM=YAML_VALUE"
+      }
+    },
+    "schema": "detailgen/authoring-grammar/v1",
+    "validation": {
+      "dimensions": {
+        "intrinsic_length_guidance": "No intrinsic member-length measure exists: do not use xlen for a rotated member; omit the claim or extend the platform.",
+        "measures": [
+          "xmin",
+          "xmax",
+          "xmid",
+          "xlen",
+          "ymin",
+          "ymax",
+          "ymid",
+          "ylen",
+          "zmin",
+          "zmax",
+          "zmid",
+          "zlen"
+        ],
+        "optional": [
+          "tolerance",
+          "negate",
+          "op",
+          "minus_part",
+          "minus_measure"
+        ],
+        "required": [
+          "name",
+          "part",
+          "measure",
+          "expected"
+        ],
+        "rotation_invariant_member_length": null,
+        "semantics": "Every measure is taken from the placed solid's world-axis bounding box; xlen/ylen/zlen are world-axis projections."
+      }
+    }
+  },
+  "components": [
+    {
+      "constructor": "(leg1: 'float' = 76.19999999999999, leg2: 'float' = 76.19999999999999, thickness: 'float' = 6.35, length: 'float' = 88.89999999999999, bend_radius: 'float | None' = None, holes_base: 'tuple' = (), holes_up: 'tuple' = (), name: 'str' = 'angle bracket')",
+      "key": "angle_bracket",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "leg1",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "leg2",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "thickness",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "bend_radius",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "holes_base",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "holes_up",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Hot-rolled / bent steel angle with a real inner bend radius, broken toe corners and (optionally) punched bolt holes."
+    },
+    {
+      "constructor": "(width: 'float', length: 'float', depth: 'float', holes: 'tuple' = (), name: 'str' = 'boulder')",
+      "key": "boulder",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "width",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "depth",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "holes",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Natural rock foundation (e.g. a glacial boulder anchored into with epoxy rods). Modeled as an exact rectangular chunk so it is a clean validation body; the organic surface is a render-time concern, not a CAD one."
+    },
+    {
+      "constructor": "(diameter: 'float', length: 'float', name: 'str' = 'zipline cable')",
+      "key": "cable",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Pre-existing zipline cable \u2014 reference/context geometry only; not purchased, not in this build's BOM. Anchored to the tree at the far end (out of scope \u2014 the tree-attachment detail owns that anchorage); this models a short straight segment at the launch end, long enough to read as a cable in the assembly, not the full tree-to-launch run."
+    },
+    {
+      "constructor": "(length: 'float', width: 'float', thickness: 'float', ease_radius: 'float' = 0.0, name: 'str' = 'cedar panel')",
+      "key": "cedar_panel",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "width",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "thickness",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "ease_radius",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Compatibility surface for an untreated exterior cedar panel."
+    },
+    {
+      "constructor": "(diameter: 'float', depth: 'float', exposure: 'float' = 0.0, name: 'str' = 'pier')",
+      "key": "concrete_pier",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "depth",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "exposure",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Cylindrical cast pier (e.g. Sonotube)."
+    },
+    {
+      "constructor": "(length: 'float', name: 'str' = 'deck board', ease_radius: 'float' = 3.175, trunk_cut: 'tuple | None' = None)",
+      "key": "deck_board",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "ease_radius",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "trunk_cut",
+          "required": false
+        }
+      ],
+      "summary": "A 5/4x6 pressure-treated decking board (1\" x 5.5\" dressed), laid flat."
+    },
+    {
+      "constructor": "(hole_diameter: 'float', rod_diameter: 'float', depth: 'float', name: 'str' = 'epoxy')",
+      "key": "epoxy",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "hole_diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "rod_diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "depth",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Anchoring-epoxy annulus filling a drilled hole around an anchor rod. Datum: top at Z=0, annulus extends into -Z."
+    },
+    {
+      "constructor": "(diameter: 'float', length: 'float', name: 'str | None' = None)",
+      "key": "exterior_wood_screw",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Compatibility wrapper preserving the detailed exterior screw model."
+    },
+    {
+      "constructor": "(length: 'float', width: 'float', thickness: 'float', material_key: 'str', stock_label: 'str | None' = None, material_assumptions: 'str | None' = None, miter_ends=(), ease_radius: 'float' = 0.0, name: 'str' = 'fabricated panel')",
+      "key": "fabricated_panel",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "width",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "thickness",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "material_key",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "stock_label",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "material_assumptions",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "miter_ends",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "ease_radius",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "A solid panel whose material identity and fabrication are data."
+    },
+    {
+      "constructor": "(width: 'float', length: 'float', thickness: 'float', name: 'str' = 'footing')",
+      "key": "footing",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "width",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "thickness",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Rectangular spread footing. Datum: top face at Z=0, centered in X/Y."
+    },
+    {
+      "constructor": "(diameter: 'float', length: 'float', name: 'str' = 'grab bar')",
+      "key": "grab_bar",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Pre-existing grab bar the rider holds before/during launch \u2014 reference/ context geometry only; not purchased, not in this build's BOM. Its height is the platform's primary design driver."
+    },
+    {
+      "constructor": "(grip_length: 'float', diameter: 'float', standoff: 'float', name: 'str' = 'grab handle')",
+      "key": "grab_handle",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "grip_length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "standoff",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "NEW \u2014 fabricated. Fixed galvanized grab handle mounted on the launch-corner post (in the project's shopping list), so a kid has something to hold before the trolley bar takes their weight. Modeled as a bent tube: two short standoff legs perpendicular to the mounting face, joined by a vertical grip bar \u2014 engineering-grade but legible, not a specific manufacturer SKU."
+    },
+    {
+      "constructor": "(diameter: 'float', length: 'float', name: 'str' = 'hanger')",
+      "key": "hanger",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Pre-existing rod/chain connecting the trolley to the grab bar \u2014 reference/context geometry only; not purchased, not in this build's BOM."
+    },
+    {
+      "constructor": "(length: 'float', width: 'float', thickness: 'float', miter_ends=(), ease_radius: 'float' = 0.0, name: 'str' = 'hardwood panel')",
+      "key": "hardwood_panel",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "width",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "thickness",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "miter_ends",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "ease_radius",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "A solid indoor-hardwood panel laid flat in local X/Y/Z."
+    },
+    {
+      "constructor": "(diameter: 'float', length: 'float', name: 'str | None' = None)",
+      "key": "hex_bolt",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Hex bolt (flat end). Datum: underside of head at Z=0."
+    },
+    {
+      "constructor": "(diameter: 'float', height: 'float | None' = None, across_flats: 'float | None' = None, name: 'str | None' = None, label: 'str' = 'hex nut')",
+      "key": "hex_nut",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "height",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "across_flats",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "label",
+          "required": false
+        }
+      ],
+      "summary": "Finished hex nut with washer-face chamfers."
+    },
+    {
+      "constructor": "(joist_thickness: 'float', joist_depth: 'float', height_ratio: 'float' = 0.75, name: 'str' = 'joist hanger')",
+      "key": "joist_hanger",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "joist_thickness",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "joist_depth",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "height_ratio",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Face-mount joist hanger (U shape + header flanges)."
+    },
+    {
+      "constructor": "(diameter: 'float', length: 'float', name: 'str | None' = None)",
+      "key": "lag_screw",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Hex-head lag screw with a conical gimlet tip."
+    },
+    {
+      "constructor": "(nominal: 'str', length: 'float', name: 'str | None' = None, treated: 'bool' = False, ease_radius: 'float' = 0.0, holes: 'tuple' = (), full_length: 'float | None' = None, end_cuts: 'tuple' = (), length_semantics: 'str | None' = None)",
+      "key": "lumber",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "nominal",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "treated",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "ease_radius",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "holes",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "full_length",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "end_cuts",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length_semantics",
+          "required": false
+        }
+      ],
+      "summary": "A straight dimensional-lumber member. Optional ``end_cuts`` entries are mappings with ``end`` (``near``/``far``), conventional ``miter_angle_degrees`` off square, and ``long_face`` (``top``/``bottom``); they require ``length_semantics=\"long_point_to_long_point\"`` and expose physical ``cut_near``/``cut_far`` mating datums."
+    },
+    {
+      "constructor": "(width: 'float', length: 'float', height: 'float', exposure: 'float' = 0.0, name: 'str' = 'pier_block')",
+      "key": "pier_block",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "width",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "height",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "exposure",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Precast concrete pier block \u2014 the foundation under a free-standing post that does not land on the rock anchor."
+    },
+    {
+      "constructor": "(length: 'float', width: 'float', thickness: 'float', grooves=(), name: 'str' = 'plywood panel')",
+      "key": "plywood_panel",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "width",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "thickness",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "grooves",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "A rectangular plywood panel cut from sheet stock."
+    },
+    {
+      "constructor": "(post_size: 'float', standoff: 'float' = 25.4, name: 'str' = 'post base')",
+      "key": "post_base",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "post_size",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "standoff",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Elevated post base (plate + standoff + U bracket), e.g. Simpson ABU."
+    },
+    {
+      "constructor": "(width: 'float', length: 'float', thickness: 'float' = 101.6, name: 'str' = 'slab')",
+      "key": "slab",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "width",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "thickness",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Slab-on-grade \u2014 a Footing with a slab-appropriate default check."
+    },
+    {
+      "constructor": "(nominal: 'str', length: 'float', slots: 'tuple' = (), slot_w: 'float' = 14.2875, slot_h: 'float' = 38.099999999999994, shank_dia: 'float' = 12.7, name: 'str | None' = None, treated: 'bool' = True, ease_radius: 'float' = 0.0, full_length: 'float | None' = None)",
+      "key": "slotted_beam_end",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "nominal",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "slots",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "slot_w",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "slot_h",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "shank_dia",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "treated",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "ease_radius",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "full_length",
+          "required": false
+        }
+      ],
+      "summary": "A 2x6 platform-beam end segment with vertical slotted lag holes."
+    },
+    {
+      "constructor": "(width: 'float', length: 'float', height: 'float', name: 'str' = 'post_base')",
+      "key": "standoff_post_base",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "width",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "height",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "An adjustable standoff post base \u2014 the purchased mechanical connector that holds a post DOWN onto its foundation against uplift and lateral load (exemplar: a Simpson ABU-class galvanized standoff). This is the part R29 found missing: a pier block a leg merely *rests on* has no attachment; a post base is the attachment."
+    },
+    {
+      "constructor": "(span: 'float', width: 'float', thickness: 'float', ring_od: 'float', ring_tube_dia: 'float', name: 'str' = 'strap gate')",
+      "key": "strap_gate",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "span",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "width",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "thickness",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "ring_od",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "ring_tube_dia",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "NEW \u2014 fabricated. Closes the open launch edge with a short safety strap/chain and a carabiner at each end (in the project's shopping list). Modeled as simple solids per the common brief (straps/gates are not modeled as a real buckle/hook mechanism): a flat webbing strap with a torus ring fused at each end representing the carabiner attachment point."
+    },
+    {
+      "constructor": "(diameter: 'float | None' = None, length: 'float | None' = None, name: 'str | None' = None, catalog_ref: 'str | None' = None)",
+      "key": "structural_screw",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "catalog_ref",
+          "required": false
+        }
+      ],
+      "summary": "Structural wood screw (GRK/LedgerLOK class) \u2014 geometry is lag-like; exists as its own class so BOMs and checks can distinguish it."
+    },
+    {
+      "constructor": "(diameter: 'float', length: 'float', thread_zones: 'list[tuple[float, float]] | None' = None, name: 'str | None' = None)",
+      "key": "threaded_rod",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "thread_zones",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "All-thread rod (anchor rod). Thread representation on chosen zones only; the embedded portion is left smooth."
+    },
+    {
+      "constructor": "(diameter: 'float', height: 'float', name: 'str' = 'trunk')",
+      "key": "tree_trunk",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "height",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "A live tree trunk, modeled as a clean vertical cylinder (context only)."
+    },
+    {
+      "constructor": "(diameter: 'float', width: 'float', bore_diameter: 'float', name: 'str' = 'trolley wheel')",
+      "key": "trolley_wheel",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "width",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "bore_diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Pre-existing zipline trolley wheel/pulley \u2014 reference/context geometry only; not purchased, not in this build's BOM. Rides on the cable."
+    },
+    {
+      "constructor": "(inner_diameter: 'float', outer_diameter: 'float | None' = None, thickness: 'float | None' = None, name: 'str | None' = None, fender: 'bool' = False)",
+      "key": "washer",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "inner_diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "outer_diameter",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "thickness",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "fender",
+          "required": false
+        }
+      ],
+      "summary": "Flat/fender washer. Datum: bottom face at Z=0, axis +Z."
+    },
+    {
+      "constructor": "(length: 'float', height: 'float', thickness: 'float' = 3.175, opening: 'float' = 50.8, name: 'str' = 'wire mesh')",
+      "key": "wire_mesh",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "height",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "thickness",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "opening",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "A welded-wire / hardware-cloth guard panel, modeled as one thin solid panel (see module docstring)."
+    },
+    {
+      "constructor": "(diameter: 'float', length: 'float', name: 'str' = 'hardwood dowel', end_trim: 'str' = 'square')",
+      "key": "wood_dowel",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "end_trim",
+          "required": false
+        }
+      ],
+      "summary": "A finished flush hardwood dowel pin with its axis along local +X."
+    },
+    {
+      "constructor": "(diameter: 'float', length: 'float', material_key: 'str' = 'steel_galv', exposure: 'str' = 'exterior', representation: 'str' = 'envelope', name: 'str | None' = None)",
+      "key": "wood_screw",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "diameter",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "length",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "material_key",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "exposure",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "representation",
+          "required": false
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "name",
+          "required": false
+        }
+      ],
+      "summary": "Ordinary pointed wood screw with selectable service and representation."
+    }
+  ],
+  "connections": [
+    {
+      "constructor": "(axis: 'str', hardware_area: 'float', end_plate_area: 'float')",
+      "key": "bolted_clamp",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "axis",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "hardware_area",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "end_plate_area",
+          "required": true
+        }
+      ],
+      "summary": "A through-bolt (with a head-side washer and a nut-side washer + nut) clamping 2+ flat plates together \u2014 exemplar: the rock anchor's leg thru-bolts (``details/rock_anchor.py``, leg sandwiched between two steel angles); the same shape covers the platform's leg-to-beam carriage bolts (not re-authored this wave \u2014 see the task brief's scope note)."
+    },
+    {
+      "constructor": "(n_screws: 'int')",
+      "key": "butt_screwed",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "n_screws",
+          "required": true
+        }
+      ],
+      "summary": "A screwed BUTT joint: one member's end/edge butts against another member's FACE, and screws are driven through that face into the butting member's END/EDGE GRAIN \u2014 the plain glue-and-screw box corner every sheet-goods project reaches for."
+    },
+    {
+      "constructor": "(n_screws: 'int')",
+      "key": "cleat_screwed",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "n_screws",
+          "required": true
+        }
+      ],
+      "summary": "A CLEAT block fastened to an adjacent member by axis-aligned screws driven through the cleat's FACE into the member's FACE \u2014 the hidden-fastener joint the standard cabinet/furniture ladder reaches for (a corner block / glue cleat) when a show-face screw is unacceptable."
+    },
+    {
+      "constructor": "()",
+      "key": "dowel_reinforced_miter",
+      "parameters": [],
+      "summary": "Two hardwood panels joined at a glued miter and keyed by two dowels."
+    },
+    {
+      "constructor": "(seat_axis: 'str', seat_area: 'float', n_header_screws: 'int', n_hung_screws: 'int')",
+      "key": "face_mount_hanger",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "seat_axis",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "seat_area",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "n_header_screws",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "n_hung_screws",
+          "required": true
+        }
+      ],
+      "summary": "A HEADER member (beam or launch leg) carries a HUNG member (joist or ladder rung) in a bent-sheet-metal face-mount hanger, screwed to both."
+    },
+    {
+      "constructor": "()",
+      "key": "glued",
+      "parameters": [],
+      "summary": "Two members joined by an ADHESIVE BOND at a face-to-face mating plane \u2014 no hardware at all: the adhesive is the joint (task GLUE; the R-GLUE work order's plain face-to-face case \u2014 design task #22's glued-miter is the waterfall sibling, not this type)."
+    },
+    {
+      "constructor": "()",
+      "key": "pivot_screwed",
+      "parameters": [],
+      "summary": "An exterior screw acting as one pivot pin for an opening service panel."
+    },
+    {
+      "constructor": "(n_screws: 'int')",
+      "key": "rail_cap_screwed",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "n_screws",
+          "required": true
+        }
+      ],
+      "summary": "A horizontal CAP member (e.g. a top rail) sits flat on a standing SUPPORT's (post or leg) top end grain and is fastened with structural screws driven straight DOWN through the cap into that end grain."
+    },
+    {
+      "constructor": "()",
+      "key": "service_latch_screwed",
+      "parameters": [],
+      "summary": "A removable exterior screw latching an otherwise operable panel."
+    },
+    {
+      "constructor": "(mode: 'str')",
+      "key": "service_panel_screwed",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "mode",
+          "required": true
+        }
+      ],
+      "summary": "One exterior screw retaining a service panel without fixing the joint."
+    },
+    {
+      "constructor": "()",
+      "key": "standoff_post_base",
+      "parameters": [],
+      "summary": "A POST held down onto its FOUNDATION block by an adjustable standoff post base (a :class:`~detailgen.components.concrete.PostBase`) \u2014 the mechanical attachment R29 found missing, where a leg merely *rested* on a pier block with no connection joining them (``retro-index.md:66``)."
+    },
+    {
+      "constructor": "(stack_axis: 'str', nut_washer_area: 'float', washer_bracket_area: 'float', bracket_bearing_axis: 'str', bracket_bearing_area: 'float')",
+      "key": "threaded_rod_epoxy_anchor",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "stack_axis",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "nut_washer_area",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "washer_bracket_area",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "bracket_bearing_axis",
+          "required": true
+        },
+        {
+          "kind": "positional_or_keyword",
+          "name": "bracket_bearing_area",
+          "required": true
+        }
+      ],
+      "summary": "Epoxied all-thread rod anchoring a clamp bracket, which in turn bears against a third member \u2014 exemplar: the rock anchor's rod + leveling-nut + angle stack (``details/rock_anchor.py``): ``Boulder --[epoxy + rod hardware]--> Angle bracket --bears_on--> Leg``."
+    },
+    {
+      "constructor": "(n_screws: 'int')",
+      "key": "toe_screwed",
+      "parameters": [
+        {
+          "kind": "positional_or_keyword",
+          "name": "n_screws",
+          "required": true
+        }
+      ],
+      "summary": "A hung member's end grain bears DIRECTLY on the header (no hanger metal), secured with toe-driven structural screws."
+    }
+  ],
+  "detail_spec_keys": [
+    "callouts",
+    "components",
+    "connections",
+    "cross_check",
+    "derived",
+    "design_review",
+    "doc",
+    "explode",
+    "export",
+    "foundations",
+    "name",
+    "params",
+    "retire",
+    "roles",
+    "sequence",
+    "spatial",
+    "type",
+    "units",
+    "validation"
+  ],
+  "schema": "detailgen/authoring-manifest/v2",
+  "views": [
+    "back",
+    "front",
+    "iso",
+    "iso_back",
+    "right",
+    "top"
+  ],
+  "workflow": {
+    "schema": "detailgen/workflow-contract/v1",
+    "tests": {
+      "platform_audit": {
+        "argv": [
+          "pytest",
+          "--platform-tier",
+          "audit",
+          "-q"
+        ],
+        "normal_product_gate": false
+      },
+      "platform_integration": {
+        "argv": [
+          "pytest",
+          "--platform-tier",
+          "integration",
+          "-q"
+        ],
+        "normal_product_gate": false
+      },
+      "product_inner": {
+        "argv": [
+          "pytest",
+          "--detail-gate",
+          "{slug}",
+          "--detail-cadence",
+          "inner",
+          "-q"
+        ],
+        "normal_product_gate": true
+      },
+      "product_release": {
+        "argv": [
+          "pytest",
+          "--detail-gate",
+          "{slug}",
+          "--detail-cadence",
+          "release",
+          "-q"
+        ],
+        "normal_product_gate": true
+      },
+      "repository_verification": {
+        "argv": [
+          "pytest",
+          "-q",
+          "-n",
+          "4"
+        ],
+        "normal_product_gate": false
+      }
+    }
+  }
+}

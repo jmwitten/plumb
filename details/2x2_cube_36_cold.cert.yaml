@@ -1,0 +1,4 @@
+schema_version: 1
+subject:
+  kind: standalone_detail
+  source: 2x2_cube_36_cold.spec.yaml

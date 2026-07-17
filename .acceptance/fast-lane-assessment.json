@@ -1,0 +1,67 @@
+{
+  "architecture": {
+    "joint_family": "16 glued square butt joints; no hardware",
+    "load_path_alternatives": [],
+    "material_alternatives": [],
+    "orientation": "4 vertical posts, 4 X rails, 4 Y rails, using closed transforms in brief",
+    "part_topology": "4 vertical posts and 8 between-post rails; no other parts",
+    "support_installation_model": "front and rear cured four-part rectangles; bond/cure four side-rail front ends, then fit rear rectangle and bond/cure rear ends"
+  },
+  "blocked_command": [
+    "python3",
+    "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/fast_product_runner.py",
+    "package",
+    "--trace",
+    "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/.acceptance/fast-trace.json",
+    "--out",
+    "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/build/2x2_cube_36_cold"
+  ],
+  "delegation": {
+    "ordinary_choices": true
+  },
+  "dimensions": {
+    "conflicts": [],
+    "derived": [
+      "between-post rail = 36 in - 2(1.5 in) = 33 in"
+    ],
+    "governing": [
+      "outer envelope: 36 in x 36 in x 36 in",
+      "post length: 36 in",
+      "rail length: 33 in",
+      "actual section: 1.5 in x 1.5 in"
+    ],
+    "reference_semantics": [
+      "local lumber length +X, profile +Y and +Z; world placements and rotations explicitly closed in brief"
+    ],
+    "unresolved": []
+  },
+  "project_slug": "2x2_cube_36_cold",
+  "risk": {
+    "code_or_life_safety": false,
+    "level": "low",
+    "professional_approval_required": false,
+    "structural": false
+  },
+  "schema": "plumb/fast-lane-assessment/v1",
+  "vocabulary": {
+    "components": [
+      {
+        "key": "lumber",
+        "required_parameters": [
+          "nominal",
+          "length"
+        ],
+        "role": "edge_member"
+      }
+    ],
+    "connections": [
+      {
+        "key": "glued",
+        "required_parameters": [],
+        "role": "rail_to_post"
+      }
+    ],
+    "missing": [],
+    "requires_escape_hatch": false
+  }
+}

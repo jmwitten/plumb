@@ -1,0 +1,231 @@
+{
+  "artifacts": [
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/0864ad1011a58430e119393401884157a31e4b06bbe31b4eae5b88c1ff24b8dc.png",
+      "sha256": "89c57cf7cd113fbb0f536ef91ae265eeb0b367fd6dddaecfa49d9b5415b473a4",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/093e24979aa0ed612d340f7ec365cf0648fa6a09fbae1c70a0367abbc8f7e152.png",
+      "sha256": "95a509acfee2a8dcbd50e2765393b7d468c1fcb41c61a3b7a51e6294998e191c",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/3c82bc7ba3f452b4442db3195955b59074df40e2c2fa8280c73b4cad29298429.png",
+      "sha256": "c4ba7a572e8df12430d59728aa5c967187d827e87cbe06a7b92cd22e0f582684",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/48361d0c639163f8fa4be12a5fc6ebc052598a24a9acd48cda8b3a9c3cae433f.png",
+      "sha256": "92ae2274fd737e9276365aeff4fdeb0024ece0aee6f89beaff799f7b521848a4",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/56248bfd69544c1255bc5d03e5bdd25b8d5ef9dc5b960f1357523e7f0793a2be.png",
+      "sha256": "5f2ce365e50dee486f20ddfeca911a0f64b0464f84475285f25a2f050e19a50e",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/6a6c4ef27af0d1ac285bf931b367042c1fcf5ee7edb6e7b5487819ec2fa691e2.png",
+      "sha256": "5e728ddf3d63be69943085bc9c7cb162d76eb51a150aa57ea2168a36de117f4e",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/8933e5f4a7369b12cb04086f7c78906992e3981d4b8c47272c59ed460bb19ea0.png",
+      "sha256": "0816143f28eaddff4f3790b4fea54aaf0f5fe2f2fa5d832126b968b196cb748b",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/9b347d718828a1637cac1f18dbce662ec2b8baf2217f24c1d2c99cbbcfbb18b3.png",
+      "sha256": "24157e2ec05d39464cd114813a95cdf4d94b2da8af8acce03b76b4c26a661e29",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/bcb9998f8f5a9c0ee3b36bc4481ac38682d641d953030248cec4b81d1f8edb26.png",
+      "sha256": "ffa9afa6e13f6f1375d3d074d5ab6e7cf63e40c4ce6d56be6cdc78bb09c837f0",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/cb8486c9bdfb7d2c6da7d005c8ee9757f8d93ae72297797d99db646cf4fdc593.png",
+      "sha256": "587c61b08d3f85433d3d24de2a02ead75b0d5b8460351b42aaa63374e055a2f4",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/d443779325c4aa4fd65736ccf33e4bb1bac3138b7abff02b633995e76618cfb0.png",
+      "sha256": "2af4aae6d5501de95c126c689216ba381b7478e6ecf51e6e8a0a54ca65b465ca",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "instruction-image",
+      "media_type": "image/png",
+      "relative_path": "assembly-images/f0fb5677bddf5b40d2bce543c7b757b0e033cc4e806738418e154fdfefe01be5.png",
+      "sha256": "5ff15028c545b7ccea37972b1b3dbfd9231cacb485aa8043262f9e9d920e7a7e",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "assembly",
+      "media_type": "text/html",
+      "relative_path": "assembly.html",
+      "sha256": "0caaeec487125290b6d7ac7a655bc92c95bb7a81758314bb255a191df3fc008a",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "bom",
+      "media_type": "text/csv",
+      "relative_path": "bom.csv",
+      "sha256": "93f1411826b28a5359ca2ec5d39c2e5e889e5819521780645ce7252f44f3f9fc",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "cuts",
+      "media_type": "text/csv",
+      "relative_path": "cuts.csv",
+      "sha256": "8faad55a50ce3303de276af84107eeed80d810ac3c6120e7fefc8d57fb292488",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "fabrication",
+      "media_type": "text/html",
+      "relative_path": "fabrication.html",
+      "sha256": "434728f94b25006c834c872aa8863f9b565be9a4e5b1a71610765d440885a615",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "model",
+      "media_type": "model/step",
+      "relative_path": "model/36_inch_open_2x2_cube.step",
+      "sha256": "be7d150921479cabf2641a830f00ed352ac4f9fdd57d7768a6c06002febec313",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "model",
+      "media_type": "application/json",
+      "relative_path": "model/coverage_matrix.json",
+      "sha256": "efe1239e643c68bb934786dfcf4805347d2261a6b75bad01d234367f1cf44aab",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "model",
+      "media_type": "model/gltf-binary",
+      "relative_path": "model/detail.glb",
+      "sha256": "54de323383270894fb1847d9b6fcac350ee9b3cf4f7e60e1382692f6c1f05077",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "model",
+      "media_type": "application/json",
+      "relative_path": "model/detail.manifest.json",
+      "sha256": "d69b410d779fd989014fc7436476673427f417e161a11e56e9e28bc03611b063",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "model",
+      "media_type": "application/json",
+      "relative_path": "model/evidence_graph.json",
+      "sha256": "c25e4234299afd14972cde12ac3c9e05e0e36dab12b48b59580fecccfb855aae",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "model",
+      "media_type": "text/markdown",
+      "relative_path": "model/validation_report.md",
+      "sha256": "48e72a4ab1cc71e4778fd7953a97542e84acbce925b64d7d0ea18e554c309e9d",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "review-manifest",
+      "media_type": "application/json",
+      "relative_path": "review-manifest.json",
+      "sha256": "5ac774be5d17bc6204634aca47999998444e9f851af7156bb6918ad178e44062",
+      "source": "rendered-artifacts"
+    },
+    {
+      "kind": "technical",
+      "media_type": "text/html",
+      "relative_path": "technical.html",
+      "sha256": "0458213909f99383921abc96b5cd2d1dec396442b81d80151caa2792fe8987a9",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "standard-view",
+      "media_type": "image/png",
+      "relative_path": "views/front.png",
+      "sha256": "2860b12538e0b1fa85d5f8fdce8850e3502e2e159abddd81cb79f58881319309",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "standard-view",
+      "media_type": "image/png",
+      "relative_path": "views/iso.png",
+      "sha256": "97ff7cd3757d94f322733996548d5498206e5a3ad7b4f4a8579fa57d9a91cd10",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "standard-view",
+      "media_type": "image/png",
+      "relative_path": "views/right.png",
+      "sha256": "26a7c2a59c727d05496efd5896936b18ac2e10eab68fc7c154aef77f8d7d4df6",
+      "source": "compiled-detail"
+    },
+    {
+      "kind": "standard-view",
+      "media_type": "image/png",
+      "relative_path": "views/top.png",
+      "sha256": "2f31276d2769371d06c18ce0ff75ccc550f44ea94f09aae6617c263ed100cfcc",
+      "source": "compiled-detail"
+    }
+  ],
+  "assembly_hash": "21a51afbe4a124c57a0741c972019964dbd1b53e856f1895ae3fcb5df0307126",
+  "holds": [
+    "Spatial intent \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Construction completeness \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Fastener installability \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Functional use \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Load-path representation \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Support/Stability representation \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Structural capacity \u2014 UNKNOWN \u2014 NOT ANALYZED",
+    "Code compliance \u2014 UNKNOWN \u2014 NOT ANALYZED"
+  ],
+  "model_fingerprint": null,
+  "release": "preview",
+  "schema": "detailgen/package-manifest/v1",
+  "selection_fingerprint": null,
+  "spec": "2x2_cube_36_cold.spec.yaml",
+  "tests": {
+    "reason": "package generation does not execute tests",
+    "status": "not-run"
+  },
+  "timings_seconds": {
+    "compile_validate": 0.036495540756732225,
+    "documents": 3.67772754188627,
+    "model_export": 0.07801554165780544,
+    "review_trace": 0.005099874921143055,
+    "standard_views": 1.5792059591040015
+  },
+  "validation": {
+    "blocking_count": 0,
+    "ok": true
+  }
+}

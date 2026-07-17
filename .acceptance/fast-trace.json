@@ -1,0 +1,343 @@
+{
+  "clock": {
+    "started_at": "2026-07-17T14:06:48.233192Z"
+  },
+  "events": [
+    {
+      "elapsed_seconds": 68.317829,
+      "kind": "route_validated",
+      "monotonic_ns": 2889487828103708,
+      "sequence": 1
+    },
+    {
+      "elapsed_seconds": 166.963872,
+      "gate_names": [
+        "product_inner",
+        "product_release"
+      ],
+      "kind": "spec_and_gates_ready",
+      "monotonic_ns": 2889586474147208,
+      "sequence": 2,
+      "spec_hash": "e4982d9fd0ca9d2966e5291f1ecd67619d3acf79d229749024b9a2b62ca1f1cd",
+      "spec_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/details/2x2_cube_36_cold.spec.yaml"
+    },
+    {
+      "argv": [
+        "-m",
+        "detailgen.package",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/details/2x2_cube_36_cold.spec.yaml",
+        "--out",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/build/2x2_cube_36_cold",
+        "--preview"
+      ],
+      "command_id": "command-0003",
+      "duration_seconds": 7.366149,
+      "elapsed_seconds": 174.389459,
+      "ended_at": "2026-07-17T14:10:30.451428Z",
+      "executed_argv": [
+        "/Users/joelwitten/Code/construction-detail-generator/.venv/bin/python",
+        "-S",
+        "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/plumb-python.py",
+        "--source",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/src",
+        "--venv",
+        "/Users/joelwitten/Code/construction-detail-generator/.venv",
+        "--",
+        "-m",
+        "detailgen.package",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/details/2x2_cube_36_cold.spec.yaml",
+        "--out",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/build/2x2_cube_36_cold",
+        "--preview"
+      ],
+      "gate": null,
+      "invocation": "initial",
+      "kind": "command",
+      "label": "package-initial",
+      "log_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/.acceptance/fast-trace.logs/03-package-initial.log",
+      "log_sha256": "d191c9d3dbe9b3bce66f5fcd62f29a8b2fb301576888cc13754bce7fb47596a8",
+      "monotonic_ns": 2889593899733416,
+      "returncode": 0,
+      "sequence": 3,
+      "source_binding": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/src/__init__.py",
+      "source_commit": "32d6fb4ba1d0eeae170b79df52eed18f8a5408e0",
+      "started_at": "2026-07-17T14:10:23.085063Z",
+      "status": "PASS"
+    },
+    {
+      "command_id": "command-0003",
+      "duration_seconds": 7.366149,
+      "elapsed_seconds": 174.391767,
+      "invocation": "initial",
+      "kind": "package_generated",
+      "monotonic_ns": 2889593902041708,
+      "package_hash": "8a96a36d1029813b96730e43a6731cfa30f5ac02eed7d815e99668e921b54530",
+      "package_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/build/2x2_cube_36_cold",
+      "sequence": 4,
+      "source_commit": "32d6fb4ba1d0eeae170b79df52eed18f8a5408e0",
+      "spec_hash": "e4982d9fd0ca9d2966e5291f1ecd67619d3acf79d229749024b9a2b62ca1f1cd",
+      "trigger_finding_id": null
+    },
+    {
+      "blocking_finding_ids": [],
+      "elapsed_seconds": 218.638728,
+      "evidence_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/.acceptance/review-evidence.json",
+      "evidence_sha256": "c1f2fd2624bcfd7febe47ea0f374f25ac6974eae10221abacd30f8a89dc4a2c1",
+      "kind": "review_complete",
+      "monotonic_ns": 2889638149002333,
+      "package_hash": "8a96a36d1029813b96730e43a6731cfa30f5ac02eed7d815e99668e921b54530",
+      "pass_number": 1,
+      "sequence": 5,
+      "source_commit": "32d6fb4ba1d0eeae170b79df52eed18f8a5408e0",
+      "spec_hash": "e4982d9fd0ca9d2966e5291f1ecd67619d3acf79d229749024b9a2b62ca1f1cd"
+    },
+    {
+      "argv": [
+        "pytest",
+        "--detail-gate",
+        "2x2_cube_36_cold",
+        "--detail-cadence",
+        "inner",
+        "-q"
+      ],
+      "command_id": "command-0006",
+      "duration_seconds": 3.357331,
+      "elapsed_seconds": 222.059653,
+      "ended_at": "2026-07-17T14:11:25.852003Z",
+      "executed_argv": [
+        "/Users/joelwitten/Code/construction-detail-generator/.venv/bin/python",
+        "-S",
+        "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/plumb-python.py",
+        "--source",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/src",
+        "--venv",
+        "/Users/joelwitten/Code/construction-detail-generator/.venv",
+        "--",
+        "pytest",
+        "--detail-gate",
+        "2x2_cube_36_cold",
+        "--detail-cadence",
+        "inner",
+        "-q"
+      ],
+      "gate": "product_inner",
+      "kind": "command",
+      "label": "product_inner",
+      "log_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/.acceptance/fast-trace.logs/06-product-inner.log",
+      "log_sha256": "8e092a0ec4a4bef84b90fbd3149ae35b4a9bef203b9167efaca237d238c43764",
+      "monotonic_ns": 2889641569927750,
+      "returncode": 0,
+      "sequence": 6,
+      "source_binding": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/src/__init__.py",
+      "source_commit": "32d6fb4ba1d0eeae170b79df52eed18f8a5408e0",
+      "started_at": "2026-07-17T14:11:22.494632Z",
+      "status": "PASS"
+    },
+    {
+      "argv": [
+        "pytest",
+        "--detail-gate",
+        "2x2_cube_36_cold",
+        "--detail-cadence",
+        "release",
+        "-q"
+      ],
+      "command_id": "command-0007",
+      "duration_seconds": 3.238388,
+      "elapsed_seconds": 225.305294,
+      "ended_at": "2026-07-17T14:11:29.097542Z",
+      "executed_argv": [
+        "/Users/joelwitten/Code/construction-detail-generator/.venv/bin/python",
+        "-S",
+        "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/plumb-python.py",
+        "--source",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/src",
+        "--venv",
+        "/Users/joelwitten/Code/construction-detail-generator/.venv",
+        "--",
+        "pytest",
+        "--detail-gate",
+        "2x2_cube_36_cold",
+        "--detail-cadence",
+        "release",
+        "-q"
+      ],
+      "gate": "product_release",
+      "kind": "command",
+      "label": "product_release",
+      "log_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/.acceptance/fast-trace.logs/07-product-release.log",
+      "log_sha256": "8e092a0ec4a4bef84b90fbd3149ae35b4a9bef203b9167efaca237d238c43764",
+      "monotonic_ns": 2889644815569083,
+      "returncode": 0,
+      "sequence": 7,
+      "source_binding": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/src/__init__.py",
+      "source_commit": "32d6fb4ba1d0eeae170b79df52eed18f8a5408e0",
+      "started_at": "2026-07-17T14:11:25.859248Z",
+      "status": "PASS"
+    },
+    {
+      "elapsed_seconds": 225.305767,
+      "kind": "product_gates_complete",
+      "monotonic_ns": 2889644816041791,
+      "sequence": 8
+    },
+    {
+      "artifacts": [
+        {
+          "path": "/Users/joelwitten/Code/JoelBrain/05_Attachments/Organized/2x2 Cube/2026-07-17/36-inch Package",
+          "sha256": "8a96a36d1029813b96730e43a6731cfa30f5ac02eed7d815e99668e921b54530"
+        }
+      ],
+      "elapsed_seconds": 233.447776,
+      "kind": "delivery_complete",
+      "monotonic_ns": 2889652958050833,
+      "package_hash": "8a96a36d1029813b96730e43a6731cfa30f5ac02eed7d815e99668e921b54530",
+      "sequence": 9,
+      "source_commit": "32d6fb4ba1d0eeae170b79df52eed18f8a5408e0",
+      "spec_hash": "e4982d9fd0ca9d2966e5291f1ecd67619d3acf79d229749024b9a2b62ca1f1cd"
+    },
+    {
+      "elapsed_seconds": 233.524018,
+      "kind": "trace_complete",
+      "monotonic_ns": 2889653034292666,
+      "sequence": 10
+    }
+  ],
+  "pre_route_reads": [
+    {
+      "kind": "user_brief",
+      "path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/.acceptance/brief.md",
+      "sha256": "b9dba83410c77422c7702bbbffc3e883466c326c3219fa17a8763bc05ffd6672"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/plumb-preflight.py"
+      ],
+      "duration_seconds": 3.4603,
+      "ended_at": "2026-07-17T14:06:51.693735Z",
+      "kind": "preflight_json",
+      "log_sha256": "8e92f46f35c3f5e985688d1ab7ae8d1157d62919d9dce03fb9edb394c33be7ae",
+      "returncode": 0,
+      "selected_repo": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance",
+      "started_at": "2026-07-17T14:06:48.233417Z",
+      "status": "PASS"
+    },
+    {
+      "kind": "authoring_index",
+      "path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/.acceptance/routing-manifest.json",
+      "sha256": "ae41b42c65ff36bb34103cbf444df67442938890360d0b21460811ccdc430834"
+    }
+  ],
+  "preflight_test_commands": {
+    "product_inner": [
+      "pytest",
+      "--detail-gate",
+      "2x2_cube_36_cold",
+      "--detail-cadence",
+      "inner",
+      "-q"
+    ],
+    "product_release": [
+      "pytest",
+      "--detail-gate",
+      "2x2_cube_36_cold",
+      "--detail-cadence",
+      "release",
+      "-q"
+    ]
+  },
+  "route": "fast_product",
+  "runner": {
+    "package_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/build/2x2_cube_36_cold",
+    "published_test_commands": {
+      "platform_audit": [
+        "pytest",
+        "--platform-tier",
+        "audit",
+        "-q"
+      ],
+      "platform_integration": [
+        "pytest",
+        "--platform-tier",
+        "integration",
+        "-q"
+      ],
+      "product_inner": [
+        "pytest",
+        "--detail-gate",
+        "{slug}",
+        "--detail-cadence",
+        "inner",
+        "-q"
+      ],
+      "product_release": [
+        "pytest",
+        "--detail-gate",
+        "{slug}",
+        "--detail-cadence",
+        "release",
+        "-q"
+      ],
+      "repository_verification": [
+        "pytest",
+        "-q",
+        "-n",
+        "4"
+      ]
+    },
+    "review_count": 1,
+    "route_evidence": {
+      "argv": [
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/fast_lane.py",
+        "--assessment",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/.acceptance/fast-lane-assessment.json",
+        "--manifest",
+        "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/.acceptance/routing-manifest.json"
+      ],
+      "assessment_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/.acceptance/fast-lane-assessment.json",
+      "assessment_sha256": "7269c45f151bf23bfdf4ca61ed11b94f9ad2d856687964acbc9e049ffd2d0a7d",
+      "authoring_index_sha256": "ae41b42c65ff36bb34103cbf444df67442938890360d0b21460811ccdc430834",
+      "duration_seconds": 0.041633,
+      "log_sha256": "c1cc65d7a63e5da103798744fe66c93d535b2939beea9b292a98e0accfff7c05",
+      "result": {
+        "issues": [],
+        "resume": null,
+        "route": "fast_product",
+        "schema": "plumb/fast-lane-result/v1"
+      },
+      "returncode": 0,
+      "status": "PASS"
+    },
+    "schema": "plumb/fast-product-runner/v1",
+    "slug": "2x2_cube_36_cold",
+    "spec_path": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/details/2x2_cube_36_cold.spec.yaml",
+    "started_monotonic_ns": 2889419510274750,
+    "validation": {
+      "issues": [],
+      "passed": true,
+      "validated_at": "2026-07-17T14:11:37.318379Z"
+    }
+  },
+  "schema": "plumb/fast-product-run/v1",
+  "source_binding": {
+    "cwd": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance",
+    "detailgen_file": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/src/__init__.py",
+    "launcher_argv": [
+      "/Users/joelwitten/Code/construction-detail-generator/.venv/bin/python",
+      "-S",
+      "/Users/joelwitten/.codex/plugins/cache/personal/plumb/0.1.0+codex.20260717071551/scripts/plumb-python.py",
+      "--source",
+      "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/src",
+      "--venv",
+      "/Users/joelwitten/Code/construction-detail-generator/.venv",
+      "--"
+    ],
+    "schema": "plumb/source-bound-launcher/v1",
+    "selected_source": "/Users/joelwitten/Code/construction-detail-generator/.worktrees/2x2-cube-36-cold-acceptance/src",
+    "source_commit": "32d6fb4ba1d0eeae170b79df52eed18f8a5408e0"
+  },
+  "source_commit": "32d6fb4ba1d0eeae170b79df52eed18f8a5408e0",
+  "spec_hash": "e4982d9fd0ca9d2966e5291f1ecd67619d3acf79d229749024b9a2b62ca1f1cd"
+}
