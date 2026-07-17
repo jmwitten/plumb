@@ -8,8 +8,10 @@ from conftest import (
     REQUIRED_DETAIL_CONTRACTS,
     _detail_gate_selection,
     _is_detail_gate_candidate,
+    _load_runtime_scope_records,
     _require_complete_detail_gate,
 )
+from scope_manifest import build_nodes, module_paths
 
 
 @dataclass(frozen=True)
@@ -53,6 +55,30 @@ def test_collection_candidate_filter_skips_files_without_gate_markers(tmp_path):
 
     assert _is_detail_gate_candidate(gate) is True
     assert _is_detail_gate_candidate(unrelated) is False
+
+
+def test_runtime_scope_discovers_generic_contract_without_manifest_row(
+    tmp_path,
+):
+    manifest = tmp_path / "test_scope_manifest.csv"
+    manifest.write_text("nodeid,category,owner,cadence,rationale\n")
+    details = tmp_path / "details"
+    details.mkdir()
+    (details / "garden_shelf.spec.yaml").write_text("name: garden shelf\n")
+    (details / "garden_shelf.cert.yaml").write_text(
+        "schema_version: 1\n"
+        "subject:\n"
+        "  kind: standalone_detail\n"
+        "  source: garden_shelf.spec.yaml\n"
+    )
+
+    records = _load_runtime_scope_records(manifest, details, tmp_path)
+
+    selected = build_nodes(records, "garden_shelf")
+    assert [row.nodeid for row in selected] == [
+        "tests/test_certified_builds.py::test_certified_build[garden_shelf]"
+    ]
+    assert module_paths(selected) == ("tests/test_certified_builds.py",)
 
 
 def test_selection_keeps_only_requested_slug():
