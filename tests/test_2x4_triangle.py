@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from detailgen.components import Lumber
+from detailgen.rendering.instruction_panels import build_instruction_manual
 from detailgen.spec import compile_spec_file
 
 
@@ -49,6 +50,24 @@ def test_triangle_has_three_glued_joints_and_no_installation(triangle):
     text = SPEC.read_text(encoding="utf-8")
     assert "uninstalled" in text
     assert "foundations:" not in text
+
+
+@pytest.mark.detail_gate(
+    "2x4_triangle", contracts=("documents",), cadence="release"
+)
+def test_triangle_manual_join_panel_has_no_foreign_context_claims(triangle):
+    triangle.validate()
+    manual = build_instruction_manual(triangle)
+    join = next(panel for panel in manual.panels if panel.action == "join")
+    rendered = " ".join((join.title, *join.instructions, *join.honesty)).lower()
+
+    assert join.title == "Complete 2x4 equilateral triangle bench assembly"
+    assert join.instructions == (
+        "Complete the 2x4 equilateral triangle as one bench assembly.",
+    )
+    assert join.honesty == ()
+    assert "sofa" not in rendered
+    assert "hot-drink" not in rendered
 
 
 @pytest.mark.detail_gate("2x4_triangle", contracts=("documents",), cadence="release")

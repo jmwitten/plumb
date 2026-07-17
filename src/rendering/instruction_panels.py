@@ -377,9 +377,12 @@ def _panel_title(detail, action, graph, steps, cohort, labels) -> str:
         return f"Hold {count} adhesive {noun} to full cure"
     if action == "join":
         context = tuple(graph.context_parts)
-        suffix = (f" over {_counted_names(labels, context)}"
-                  if context else " in the root assembly")
-        return f"Set completed {detail.name}{suffix}"
+        if context:
+            return (
+                f"Fit completed {detail.name} to "
+                f"{_counted_names(labels, context)}"
+            )
+        return f"Complete {detail.name} bench assembly"
     return action.title()
 
 
@@ -599,17 +602,26 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
         if join_presentation is None:
             context = tuple(graph.context_parts)
             context_names = _counted_names(labels, context)
-            instructions.extend((
-                f"Set the completed {detail.name} over {context_names}.",
-                "Choose its along-arm position during fitting; the model does not "
-                "represent that direction as a critical placement station.",
-            ))
-            honesty.append(
-                "DECLARED TRUST — the sofa arm is connection-free context. "
-                "insertion travel is not analyzed; stability, sliding resistance, "
-                "structural capacity, and hot-drink use are not proved.")
-            tools = [DisplayRow(
-                "fit", f"Actual {context_names} for the declared fit placement")]
+            if context:
+                instructions.extend((
+                    f"Bring the completed {detail.name} to {context_names}.",
+                    "Complete its declared final placement during fitting; the "
+                    "model does not represent that position as a critical "
+                    "placement station.",
+                ))
+                honesty.append(
+                    f"DECLARED TRUST — {context_names} is connection-free "
+                    "context. final placement and insertion travel are not "
+                    "analyzed; fit, stability, sliding resistance, structural "
+                    "capacity, and intended-use safety are not proved.")
+                tools = [DisplayRow(
+                    "fit",
+                    f"Actual {context_names} for the declared fit placement",
+                )]
+            else:
+                instructions.append(
+                    f"Complete the {detail.name} as one bench assembly."
+                )
         else:
             instructions.extend(join_presentation.instructions)
             honesty.extend(join_presentation.honesty)

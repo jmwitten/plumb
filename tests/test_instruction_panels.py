@@ -367,10 +367,13 @@ def test_join_carries_declared_trust_and_named_analysis_gaps(caddy):
         caddy, "armchair_caddy_build_document.html")
     join = manual.panels[-1]
     text = " ".join(join.honesty)
+    lower = text.lower()
     assert "DECLARED TRUST" in text
-    for gap in ("insertion travel", "stability", "sliding resistance",
-                "structural capacity", "hot-drink use"):
-        assert gap in text
+    assert "sofa arm is connection-free context" in lower
+    for gap in ("final placement", "insertion travel", "fit", "stability",
+                "sliding resistance", "structural capacity",
+                "intended-use safety"):
+        assert gap in lower
 
 
 def test_part_schedule_reveals_panels_then_keys_then_context(caddy):

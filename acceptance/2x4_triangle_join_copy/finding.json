@@ -1,0 +1,21 @@
+{
+  "id": "triangle-assembly-foreign-proof-boundary",
+  "owner_layer": "renderer",
+  "missing_required_capability": false,
+  "impact": {
+    "geometry": false,
+    "dimensions": false,
+    "fabrication": false,
+    "assembly": false,
+    "installation": false,
+    "instructions": true,
+    "required_artifact_usability": true,
+    "safety_or_honesty": true,
+    "acceptance_criteria": false
+  },
+  "reproduction": "Generate build/2x4_triangle and inspect the final join panel in assembly.html; it names a sofa arm and hot-drink use absent from the authoritative triangle spec.",
+  "severity": "major document correctness defect",
+  "affected_shared_surface": "generic instruction-panel join fallback",
+  "root_cause": "The join fallback in src/rendering/instruction_panels.py hard-codes armchair-caddy instructions and honesty copy without checking or deriving the current detail's context parts.",
+  "deferral": {}
+}

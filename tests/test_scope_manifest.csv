@@ -1,6 +1,7 @@
 nodeid,category,owner,cadence,rationale
 tests/test_2x4_triangle.py::test_triangle_has_three_equal_mitered_2x4_members,document_build_accuracy,2x4_triangle,inner,Checks the accepted triangle geometry dimensions and cut list.
 tests/test_2x4_triangle.py::test_triangle_has_three_glued_joints_and_no_installation,document_build_accuracy,2x4_triangle,inner,Checks the accepted low-consequence uninstalled joint architecture.
+tests/test_2x4_triangle.py::test_triangle_manual_join_panel_has_no_foreign_context_claims,document_build_accuracy,2x4_triangle,release,Checks that the context-free triangle manual does not inherit foreign project claims.
 tests/test_2x4_triangle.py::test_triangle_package_contains_required_acceptance_artifacts,document_build_accuracy,2x4_triangle,release,Checks the delivered triangle package artifact closure.
 tests/test_action_frames.py::TestHardwareLettering::test_letters_are_deterministic_and_sorted_by_identity,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_action_frames.py::TestHardwareLettering::test_input_order_does_not_change_letters,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."

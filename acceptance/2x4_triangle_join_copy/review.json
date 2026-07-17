@@ -1,0 +1,32 @@
+{
+  "schema": "plumb/bounded-product-review/v1",
+  "product_slug": "2x4_triangle",
+  "authoritative_spec": "details/2x4_triangle.spec.yaml",
+  "package": "build/2x4_triangle",
+  "finding_id": "triangle-assembly-foreign-proof-boundary",
+  "disposition": "product_blocking",
+  "status": "closed",
+  "repair": {
+    "owner_layer": "renderer",
+    "source": "src/rendering/instruction_panels.py",
+    "summary": "Context-free root joins now emit a context-free bench-completion panel; context-bearing joins derive their reader copy from the current detail's context part names."
+  },
+  "evidence": {
+    "validation_ok": true,
+    "blocking_count": 0,
+    "package_manifest_sha256": "25893b6005c0e5b7b6ac1ec3e59aea1af14ce2b750c1e6c8acfc7126a6dd4229",
+    "assembly_html_sha256": "0d552fc6e98cf3926d0ffebf19b38e87a703660b3e30a225083ce47e44ff9b10",
+    "forbidden_copy_occurrences": {
+      "sofa": 0,
+      "hot-drink": 0,
+      "Proof boundary": 0
+    },
+    "product_inner": "2 passed, 2 deselected",
+    "product_release": "4 passed",
+    "focused_renderer_tests": "24 passed"
+  },
+  "visual_review": {
+    "standard_and_instruction_images": "regenerated from the current compiled model",
+    "desktop_mobile_print_browser_review": "not run: browser security policy blocked navigation to the isolated local file URL"
+  }
+}
