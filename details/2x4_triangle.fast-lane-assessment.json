@@ -12,18 +12,13 @@
       {
         "role": "three nominal 2x4 triangle members with 30-degree end cuts",
         "key": "lumber",
-        "required_parameters": ["nominal", "length", "miter_ends"]
-      },
-      {
-        "role": "two alignment keys at each miter",
-        "key": "wood_dowel",
-        "required_parameters": ["diameter", "length"]
+        "required_parameters": ["nominal", "length", "end_cuts", "length_semantics"]
       }
     ],
     "connections": [
       {
-        "role": "three glued and dowel-reinforced miter joints",
-        "key": "dowel_reinforced_miter",
+        "role": "three glued miter joints",
+        "key": "glued",
         "required_parameters": []
       }
     ],
@@ -37,7 +32,7 @@
   },
   "architecture": {
     "part_topology": "Three equal nominal 2x4 members forming one closed equilateral ring.",
-    "joint_family": "Three 60-degree included corners, each made by paired 30-degree end cuts and a glued, two-dowel reinforced miter.",
+    "joint_family": "Three 60-degree included corners, each made by paired 30-degree end cuts and a glued miter.",
     "orientation": "The 3.5 in lumber faces lie in one plane; the 1.5 in thickness is normal to that plane.",
     "support_installation_model": "Low-consequence decorative shop assembly with no site attachment or structural duty.",
     "material_alternatives": [],
