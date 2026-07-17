@@ -184,6 +184,22 @@ reproduces the imperative `platform.py` byte-for-byte; `detailgen.spec.metrics`
 reports the compression it buys — genuine derived : authored facts, escape
 hatches excluded from the honest headline.
 
+Dimensional lumber supports semantic miter end cuts without raw geometry. A
+cut's `miter_angle_degrees` is the conventional saw setting off square; the
+authored member length must explicitly be long-point to long-point. The
+physical cut faces are available as `cut_near` and `cut_far` mating datums,
+while `end_near` and `end_far` remain the X=0/X=length reference planes:
+
+```yaml
+params:
+  nominal: 2x4
+  length: 48 in
+  length_semantics: long_point_to_long_point
+  end_cuts:
+    - {end: near, miter_angle_degrees: 30, long_face: top}
+    - {end: far, miter_angle_degrees: 30, long_face: top}
+```
+
 ### Precedent-first design selection
 
 New details can opt into a structured design review before production modeling.
