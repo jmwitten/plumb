@@ -12,6 +12,7 @@ from ..core.registry import components
 from ..rendering.export import VIEWS
 from ..spec.loader import DETAIL_SPEC_KEYS
 from .workflow import build_workflow_contract
+from .component_extension import build_component_extension_guide
 
 
 _AUTHORING_GRAMMAR: dict[str, object] = {
@@ -212,6 +213,7 @@ def _rows(registry: object) -> list[dict[str, object]]:
 
 def build_authoring_manifest() -> dict[str, object]:
     """Return the live, project-agnostic vocabulary needed to author a spec."""
+    component_guide = build_component_extension_guide()
     return {
         "schema": "detailgen/authoring-manifest/v2",
         "components": _rows(components),
@@ -220,6 +222,16 @@ def build_authoring_manifest() -> dict[str, object]:
         "detail_spec_keys": sorted(DETAIL_SPEC_KEYS),
         "authoring_grammar": build_authoring_grammar(),
         "workflow": build_workflow_contract(),
+        "component_extensions": {
+            "guide_argv": [
+                "python", "-m", "detailgen.authoring", "component-guide",
+            ],
+            "check_argv": [
+                "python", "-m", "detailgen.authoring", "component-check",
+                "{contract.yaml}",
+            ],
+            "guide": component_guide,
+        },
     }
 
 

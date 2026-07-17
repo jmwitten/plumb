@@ -130,6 +130,41 @@ Orchestrators must consume `workflow.schema` and `workflow.tests` from this
 live manifest rather than copying test policy into their own instructions. An
 unsupported workflow schema is a fail-closed compatibility error.
 
+## Adding component vocabulary in under a minute
+
+Query the bounded component-extension guide, then verify one YAML contract:
+
+```bash
+.venv/bin/python -m detailgen.authoring component-guide
+.venv/bin/python -m detailgen.authoring component-check \
+  examples/component_extensions/nominal_2x2_lumber.yaml
+```
+
+The contract separates **physical family** from **change risk**. Families are
+stock members, sheets/panels, fasteners, connectors, foundations/site bodies,
+manufactured hardware, and custom geometry. A material such as a wood species
+is normally an explicit identity/parameter on one of those parts; its name
+does not silently supply strength, durability, or capacity properties.
+
+Choose the verification lane from what changes:
+
+| Change class | Use it for | Minimum verification |
+|---|---|---|
+| `catalog_variant` | New size/material value using unchanged component behavior | One public compile, `check()`, exact bounds/material/datums/capabilities |
+| `new_primitive` | New registry key using the existing component/render/BOM contract | Catalog checks, positive solid/BOM identity, one invalid-parameter rejection |
+| `semantic_component` | New capability or datum consumed by existing connection/installation behavior | Primitive checks plus one explicit focused consumer test; semantic tests must avoid CAD |
+| `cross_layer_complex` | New connection, validation, renderer/document behavior, motion, external engineering fact, imported or expensive geometry | Explicit escalation to owning-layer regressions, applicable platform tier, and requesting product gates |
+
+The first three lanes have a hard 60-second combined budget. They never select
+the broad platform integration tier merely because a public registry changed.
+Each contract names at most eight focused pytest node IDs, which are executed
+directly without a shell. Cross-layer work returns `ESCALATE`, never a false
+fast-path `PASS`.
+
+See `examples/component_extensions/nominal_2x2_lumber.yaml` for a data-only
+catalog addition, `fabricated_panel_primitive.yaml` for a new primitive, and
+`exterior_wood_screw.yaml` for a semantic fastener addition.
+
 ## Architecture
 
 ```

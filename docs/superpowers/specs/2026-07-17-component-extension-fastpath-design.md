@@ -198,20 +198,22 @@ and never labels the change release-verified.
 
 ## Scope
 
-This increment adds the public contract, verifier, two representative example
-contracts, focused tests, documentation, and live authoring-manifest guidance.
+This increment adds the public contract, verifier, one representative example
+for each fast lane, focused tests, documentation, and live authoring-manifest guidance.
 It does not migrate every existing component into YAML, generate Python CAD
 classes, infer manufacturer/capacity data, or replace focused consumer tests.
 
 ## Acceptance
 
 1. A nominal 2x2 catalog contract passes through the public compiler.
-2. A wood-screw semantic contract passes and proves its declared capabilities
+2. A fabricated-panel primitive contract passes and proves its registry,
+   geometry, BOM, datum, and invalid-parameter contracts.
+3. A wood-screw semantic contract passes and proves its declared capabilities
    and datums.
-3. Invalid lane evidence and dimension mismatches fail closed.
-4. Cross-layer contracts return `ESCALATE` rather than a false pass.
-5. Both representative fast checks complete below 60 seconds from fresh
+4. Invalid lane evidence and dimension mismatches fail closed.
+5. Cross-layer contracts return `ESCALATE` rather than a false pass.
+6. All representative fast checks complete below 60 seconds from fresh
    processes.
-6. Existing authoring/registry focused tests remain green.
-7. No repository-wide verification is run; only the affected focused tests and
+7. Existing authoring/registry focused tests remain green.
+8. No repository-wide verification is run; only the affected focused tests and
    component-check benchmarks are required for this increment.

@@ -91,6 +91,7 @@ tests/test_authored_identity.py::test_authored_identity_convenience_entry_point,
 tests/test_authoring_manifest.py::test_authoring_manifest_is_deterministic_and_project_agnostic,platform,plumb-platform,unit,Generic authoring-vocabulary serialization contract; no accepted build is evaluated.
 tests/test_authoring_manifest.py::test_authoring_manifest_covers_live_registries_and_schema,platform,plumb-platform,unit,Generic registry/schema coverage contract; no accepted build is evaluated.
 tests/test_authoring_manifest.py::test_authoring_manifest_publishes_parameters_and_workflow_contract,platform,plumb-platform,unit,Public workflow and parameter metadata contract; no accepted build is evaluated.
+tests/test_authoring_manifest.py::test_authoring_manifest_publishes_component_extension_fast_path,platform,plumb-platform,unit,Public component-extension routing and command metadata contract.
 tests/test_authoring_manifest.py::test_authoring_manifest_publishes_compact_nested_grammar,platform,plumb-platform,unit,Generic nested authoring grammar and scaffold command contract.
 tests/test_authoring_manifest.py::test_authoring_grammar_is_explicit_about_dimension_and_lumber_conventions,platform,plumb-platform,unit,Generic measurement and cut convention contract.
 tests/test_authoring_scaffold.py::test_authoring_cli_without_subcommand_still_prints_manifest,platform,plumb-platform,unit,Backward-compatible generic authoring CLI contract.
@@ -505,6 +506,34 @@ tests/test_component_capabilities.py::test_fastener_components_declare_required_
 tests/test_component_capabilities.py::test_stack_and_connector_hardware_are_not_installation_fasteners[component0],platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_component_capabilities.py::test_stack_and_connector_hardware_are_not_installation_fasteners[component1],platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_component_capabilities.py::test_stack_and_connector_hardware_are_not_installation_fasteners[component2],platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
+tests/test_component_extension.py::test_component_extension_guide_separates_family_from_change_risk,platform,plumb-platform,unit,Closed component-extension family and risk vocabulary contract.
+tests/test_component_extension.py::test_component_family_does_not_select_verification_lane,platform,plumb-platform,unit,Component family and change risk remain orthogonal.
+tests/test_component_extension.py::test_loads_catalog_contract_as_immutable_normalized_data,platform,plumb-platform,unit,Component-extension YAML schema normalization contract.
+tests/test_component_extension.py::test_rejects_unknown_contract_vocabulary[schema-detailgen/component-extension/v9-schema],platform,plumb-platform,unit,Fail-closed component-extension schema diagnostic.
+tests/test_component_extension.py::test_rejects_unknown_contract_vocabulary[family-furniture-ish-known families],platform,plumb-platform,unit,Fail-closed component family diagnostic.
+tests/test_component_extension.py::test_rejects_unknown_contract_vocabulary[change_class-small-known change classes],platform,plumb-platform,unit,Fail-closed component change-class diagnostic.
+tests/test_component_extension.py::test_rejects_unknown_contract_vocabulary[change_class-value3-known change classes],platform,plumb-platform,unit,Fail-closed non-scalar component change-class diagnostic.
+tests/test_component_extension.py::test_rejects_unknown_contract_fields[mutation0-unknown fields],platform,plumb-platform,unit,Fail-closed extension top-level field contract.
+tests/test_component_extension.py::test_rejects_unknown_contract_fields[mutation1-expect has unknown fields],platform,plumb-platform,unit,Fail-closed extension expectation field contract.
+tests/test_component_extension.py::test_rejects_unknown_contract_fields[mutation2-dimension keys],platform,plumb-platform,unit,Fail-closed extension dimension field contract.
+tests/test_component_extension.py::test_fast_lanes_require_all_three_dimensions,platform,plumb-platform,unit,Fast component lanes require a complete representative envelope.
+tests/test_component_extension.py::test_new_primitive_requires_invalid_parameter_probe,platform,plumb-platform,unit,New primitive verification requires one negative parameter case.
+tests/test_component_extension.py::test_semantic_component_requires_semantics_and_focused_test,platform,plumb-platform,unit,Semantic component lane requires explicit semantics and consumer evidence.
+tests/test_component_extension.py::test_focused_tests_are_bounded_explicit_node_ids[focused_tests0],platform,plumb-platform,unit,Focused component tests reject shell command strings.
+tests/test_component_extension.py::test_focused_tests_are_bounded_explicit_node_ids[focused_tests1],platform,plumb-platform,unit,Focused component tests require an explicit node ID.
+tests/test_component_extension.py::test_focused_tests_are_bounded_explicit_node_ids[focused_tests2],platform,plumb-platform,unit,Focused component tests enforce a bounded node count.
+tests/test_component_extension.py::test_catalog_verifier_compiles_and_checks_real_nominal_2x2,platform,plumb-platform,integration,Public compiler and CAD contract for a catalog component variant.
+tests/test_component_extension.py::test_verifier_fails_on_wrong_dimension,platform,plumb-platform,integration,Component verifier rejects a mismatched built envelope.
+tests/test_component_extension.py::test_primitive_reject_probe_must_actually_reject,platform,plumb-platform,integration,Primitive verifier proves the negative parameter case is effective.
+tests/test_component_extension.py::test_semantic_verifier_runs_explicit_tests_without_shell,platform,plumb-platform,integration,Semantic component verifier builds one probe and invokes a bounded consumer node.
+tests/test_component_extension.py::test_semantic_verifier_fails_when_focused_test_fails,platform,plumb-platform,integration,Semantic component verifier propagates focused consumer failures.
+tests/test_component_extension.py::test_fast_lane_budget_is_enforced,platform,plumb-platform,integration,Fast component verifier enforces its sixty-second budget after a real probe.
+tests/test_component_extension.py::test_complex_contract_escalates_without_building_or_running_tests,platform,plumb-platform,unit,Complex component work escalates before CAD or test execution.
+tests/test_component_extension.py::test_verifier_wraps_unexpected_component_contract_crash,platform,plumb-platform,unit,Unexpected component contract failures become structured verifier evidence.
+tests/test_component_extension.py::test_component_guide_cli_prints_bounded_public_contract,platform,plumb-platform,unit,Public component-guide CLI serialization contract.
+tests/test_component_extension.py::test_component_check_cli_verifies_catalog_contract,platform,plumb-platform,integration,Public component-check CLI compiles a representative catalog contract.
+tests/test_component_extension.py::test_component_check_cli_returns_structured_error,platform,plumb-platform,unit,Public component-check CLI emits structured fail-closed diagnostics.
+tests/test_component_extension.py::test_component_check_cli_returns_nonzero_escalation,platform,plumb-platform,unit,Public component-check CLI cannot report complex work as a fast-path pass.
 tests/test_config.py::test_default_reproduces_legacy_values,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_config.py::test_tolerances_is_frozen,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_config.py::test_overriding_contact_tolerance_changes_verdict,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."

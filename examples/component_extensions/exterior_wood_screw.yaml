@@ -1,0 +1,31 @@
+schema: detailgen/component-extension/v1
+id: exterior_wood_screw
+family: fastener
+change_class: semantic_component
+component:
+  type: wood_screw
+  params:
+    diameter: 0.16 in
+    length: 2 in
+    exposure: exterior
+    representation: envelope
+expect:
+  dimensions:
+    xlen: 0.368 in
+    ylen: 0.368 in
+    zlen: 2.072 in
+  datums:
+    - head_bearing
+    - tip
+    - axis
+  capabilities:
+    - installation_fastener
+    - wood_screw
+    - ordinary_wood_screw
+    - exterior_use
+  material_key: steel_galv
+reject:
+  - params:
+      exposure: underwater
+focused_tests:
+  - tests/test_component_capabilities.py::test_fastener_components_declare_required_capabilities

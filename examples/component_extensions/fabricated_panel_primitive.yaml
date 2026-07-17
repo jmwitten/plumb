@@ -1,0 +1,27 @@
+schema: detailgen/component-extension/v1
+id: fabricated_panel_primitive
+family: sheet_panel
+change_class: new_primitive
+component:
+  type: fabricated_panel
+  params:
+    length: 24 in
+    width: 12 in
+    thickness: 0.75 in
+    material_key: cedar
+    stock_label: cedar project panel
+expect:
+  dimensions:
+    xlen: 24 in
+    ylen: 12 in
+    zlen: 0.75 in
+  datums:
+    - base
+    - top
+    - end_near
+    - end_far
+  capabilities: []
+  material_key: cedar
+reject:
+  - params:
+      thickness: -0.75 in

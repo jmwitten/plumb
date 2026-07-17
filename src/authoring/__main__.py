@@ -5,10 +5,17 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 
 import yaml
 
 from .manifest import authoring_manifest_json, build_authoring_grammar
+from .component_extension import (
+    ComponentExtensionError,
+    build_component_extension_guide,
+    load_component_extension_contract,
+    verify_component_extension,
+)
 from .scaffold import (
     ScaffoldComponent,
     ScaffoldConnection,
@@ -207,6 +214,20 @@ def _parser() -> argparse.ArgumentParser:
         "grammar",
         help="print only the bounded nested-field grammar",
     )
+    subcommands.add_parser(
+        "component-guide",
+        help="print physical families and risk-classified component checks",
+    )
+    component_check = subcommands.add_parser(
+        "component-check",
+        help="verify one component-extension YAML contract",
+    )
+    component_check.add_argument(
+        "contract",
+        type=Path,
+        metavar="CONTRACT",
+        help="Path to a detailgen/component-extension/v1 YAML contract.",
+    )
     scaffold = subcommands.add_parser(
         "scaffold",
         help="write a registry-checked DetailSpec and certification stub",
@@ -293,6 +314,24 @@ def main(argv=None) -> int:
     if args.command == "grammar":
         print(json.dumps(build_authoring_grammar(), indent=2, sort_keys=True))
         return 0
+    if args.command == "component-guide":
+        print(json.dumps(
+            build_component_extension_guide(), indent=2, sort_keys=True
+        ))
+        return 0
+    if args.command == "component-check":
+        try:
+            contract = load_component_extension_contract(args.contract)
+            result = verify_component_extension(contract)
+        except ComponentExtensionError as error:
+            print(json.dumps({
+                "schema": "detailgen/component-extension-error/v1",
+                "status": "FAIL",
+                "error": str(error),
+            }, indent=2, sort_keys=True), file=sys.stderr)
+            return 2
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 3 if result["status"] == "ESCALATE" else 0
 
     try:
         result = write_scaffold(_request(args))

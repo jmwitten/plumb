@@ -6,6 +6,15 @@ from .manifest import (
     build_authoring_manifest,
 )
 from .workflow import build_workflow_contract
+from .component_extension import (
+    CHANGE_CLASSES,
+    COMPONENT_FAMILIES,
+    ComponentExtensionContract,
+    ComponentExtensionError,
+    build_component_extension_guide,
+    load_component_extension_contract,
+    verify_component_extension,
+)
 from .scaffold import (
     ScaffoldComponent,
     ScaffoldConnection,
@@ -22,6 +31,13 @@ __all__ = [
     "build_authoring_grammar",
     "build_authoring_manifest",
     "build_workflow_contract",
+    "CHANGE_CLASSES",
+    "COMPONENT_FAMILIES",
+    "ComponentExtensionContract",
+    "ComponentExtensionError",
+    "build_component_extension_guide",
+    "load_component_extension_contract",
+    "verify_component_extension",
     "ScaffoldComponent",
     "ScaffoldConnection",
     "ScaffoldDocuments",

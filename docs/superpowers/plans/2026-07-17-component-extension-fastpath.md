@@ -4,7 +4,7 @@
 
 **Goal:** Add a public, risk-classified component-extension contract and verifier that keeps ordinary component-addition checks below 60 seconds and escalates genuinely cross-layer work honestly.
 
-**Architecture:** A new `detailgen.authoring.component_extension` module owns the closed physical-family/change-class vocabulary, YAML schema validation, public-surface component probe, optional bounded focused-test execution, and JSON result. The existing authoring CLI and manifest expose this capability; example contracts exercise catalog and semantic lanes without introducing a second geometry or test framework.
+**Architecture:** A new `detailgen.authoring.component_extension` module owns the closed physical-family/change-class vocabulary, YAML schema validation, public-surface component probe, optional bounded focused-test execution, and JSON result. The existing authoring CLI and manifest expose this capability; representative contracts exercise every fast lane without introducing a second geometry or test framework.
 
 **Tech Stack:** Python 3.12, PyYAML, CadQuery through the existing `Component`/DetailSpec compiler, argparse, pytest.
 
@@ -184,8 +184,10 @@ Expected: all verifier tests pass and the test module remains below 10 seconds.
 - Modify: `tests/test_authoring_manifest.py`
 - Modify: `tests/test_authoring_scaffold.py`
 - Create: `examples/component_extensions/nominal_2x2_lumber.yaml`
+- Create: `examples/component_extensions/fabricated_panel_primitive.yaml`
 - Create: `examples/component_extensions/exterior_wood_screw.yaml`
 - Modify: `README.md`
+- Modify: `CLAUDE.md`
 - Modify: `tests/test_scope_manifest.csv`
 
 **Interfaces:**
@@ -213,7 +215,8 @@ indented JSON. Export the public functions from `detailgen.authoring`. Add
 - [ ] **Step 4: Add representative contracts and README workflow**
 
 The catalog example verifies nominal 2x2 lumber at 24 × 1.5 × 1.5 inches. The
-semantic example verifies a 0.16-inch × 2-inch exterior envelope `wood_screw`,
+primitive example verifies a 24 × 12 × 0.75 inch cedar fabricated panel and a
+negative-thickness rejection. The semantic example verifies a 0.16-inch × 2-inch exterior envelope `wood_screw`,
 its 0.368 × 0.368 × 2.072-inch envelope, head/tip/axis datums, four capability
 tags, invalid exposure rejection, and the focused capability test.
 
@@ -231,10 +234,10 @@ and component-capability test modules. Expected: all pass.
 - Create: `docs/superpowers/specs/2026-07-17-component-extension-fastpath-benchmark.md`
 
 **Interfaces:**
-- Consumes: the two public example contracts and affected pytest modules.
+- Consumes: the three public example contracts and affected pytest modules.
 - Produces: measured acceptance evidence and merged main branch.
 
-- [ ] **Step 1: Benchmark both public contracts**
+- [ ] **Step 1: Benchmark all three public contracts**
 
 Run each through the source-bound launcher in a fresh process under
 `/usr/bin/time -p`. Record command, result, internal elapsed time, and external

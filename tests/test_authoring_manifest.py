@@ -108,6 +108,25 @@ def test_authoring_manifest_publishes_parameters_and_workflow_contract():
     }
 
 
+def test_authoring_manifest_publishes_component_extension_fast_path():
+    from detailgen.authoring.component_extension import (
+        build_component_extension_guide,
+    )
+
+    extension = build_authoring_manifest()["component_extensions"]
+
+    assert extension == {
+        "guide_argv": [
+            "python", "-m", "detailgen.authoring", "component-guide",
+        ],
+        "check_argv": [
+            "python", "-m", "detailgen.authoring", "component-check",
+            "{contract.yaml}",
+        ],
+        "guide": build_component_extension_guide(),
+    }
+
+
 def test_authoring_manifest_publishes_compact_nested_grammar():
     grammar = build_authoring_manifest()["authoring_grammar"]
 

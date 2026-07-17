@@ -69,6 +69,14 @@ oracles such as all-pairs intersection equivalence, artificial geometry edits,
 and deliberate baseline corruption. Never put those platform self-tests in a
 document gate merely because they use a real detail as their fixture.
 
+**Component-extension scope:** before adding physical vocabulary, run
+`.venv/bin/python -m detailgen.authoring component-guide` and author a
+`detailgen/component-extension/v1` contract. `catalog_variant`,
+`new_primitive`, and `semantic_component` use `component-check` with a hard
+60-second combined budget; a registry/catalog addition alone does not select
+`platform_integration`. `cross_layer_complex` returns `ESCALATE` and then uses
+the owning-layer regression plus only the applicable platform/product gates.
+
 **stdlib-shadow gotcha**: `details/platform.py` shadows the stdlib `platform`
 module that numpy imports transitively. Run detail files as scripts (they
 carry a sys.path guard) or import them by explicit file path under a distinct

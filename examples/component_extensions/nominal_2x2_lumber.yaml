@@ -1,0 +1,19 @@
+schema: detailgen/component-extension/v1
+id: nominal_2x2_lumber
+family: stock_member
+change_class: catalog_variant
+component:
+  type: lumber
+  params:
+    nominal: 2x2
+    length: 24 in
+expect:
+  dimensions:
+    xlen: 24 in
+    ylen: 1.5 in
+    zlen: 1.5 in
+  datums:
+    - end_near
+    - end_far
+  capabilities: []
+  material_key: lumber_spf
