@@ -6,10 +6,28 @@ from .manifest import (
     build_authoring_manifest,
 )
 from .workflow import build_workflow_contract
+from .scaffold import (
+    ScaffoldComponent,
+    ScaffoldConnection,
+    ScaffoldDocuments,
+    ScaffoldError,
+    ScaffoldRequest,
+    ScaffoldResult,
+    build_scaffold,
+    write_scaffold,
+)
 
 __all__ = [
     "authoring_manifest_json",
     "build_authoring_grammar",
     "build_authoring_manifest",
     "build_workflow_contract",
+    "ScaffoldComponent",
+    "ScaffoldConnection",
+    "ScaffoldDocuments",
+    "ScaffoldError",
+    "ScaffoldRequest",
+    "ScaffoldResult",
+    "build_scaffold",
+    "write_scaffold",
 ]
