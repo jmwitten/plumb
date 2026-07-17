@@ -2302,6 +2302,7 @@ tests/test_timing.py::test_as_dict_schema,platform,plumb-platform,unit,"Reusable
 tests/test_timing.py::test_reset_clears_state,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_two_by_four_square_frame_e2e.py::test_exact_requested_envelope_and_face_orientation,document_build_accuracy,two_by_four_square_frame,inner,Checks the accepted four-foot square frame envelope and 3.5-inch face orientation.
 tests/test_two_by_four_square_frame_e2e.py::test_all_twelve_screws_are_driveable_from_the_outside_edges,document_build_accuracy,two_by_four_square_frame,inner,Checks the accepted frame's twelve modeled screw installation contracts and clean validation result.
+tests/test_two_by_four_square_frame_e2e.py::test_square_frame_package_contains_required_acceptance_artifacts,document_build_accuracy,two_by_four_square_frame,release,Checks the delivered square-frame package artifact closure.
 tests/test_trebuchet_e2e.py::test_compiles_and_validates_with_honest_embedment_failures,document_build_accuracy,trebuchet,inner,Checks the accepted current trebuchet model or document output.
 tests/test_trebuchet_e2e.py::test_every_member_has_expected_fabrication_record,document_build_accuracy,trebuchet,inner,Checks the accepted current trebuchet model or document output.
 tests/test_trebuchet_e2e.py::test_fabrication_fold_invariant_holds,document_build_accuracy,trebuchet,inner,Checks the accepted current trebuchet model or document output.

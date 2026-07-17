@@ -42,3 +42,23 @@ def test_all_twelve_screws_are_driveable_from_the_outside_edges(compiled_frame):
     assert report.failures == [], "\n".join(str(item) for item in report.failures)
     assert report.blocking == []
     assert report.ok
+
+
+@pytest.mark.detail_gate(
+    "two_by_four_square_frame", contracts=("documents",), cadence="release"
+)
+def test_square_frame_package_contains_required_acceptance_artifacts():
+    package = ROOT / "build" / "two_by_four_square_frame"
+
+    for relative in (
+        "assembly.html",
+        "bom.csv",
+        "cuts.csv",
+        "fabrication.html",
+        "technical.html",
+        "package-manifest.json",
+        "model/four_foot_square_2x4_frame.step",
+        "views/top.png",
+        "views/iso.png",
+    ):
+        assert (package / relative).is_file(), relative

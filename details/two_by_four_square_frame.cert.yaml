@@ -1,0 +1,4 @@
+schema_version: 1
+subject:
+  kind: standalone_detail
+  source: two_by_four_square_frame.spec.yaml
