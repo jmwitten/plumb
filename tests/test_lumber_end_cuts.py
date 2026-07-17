@@ -76,8 +76,8 @@ def test_mitered_lumber_has_physical_cut_face_datums_and_reference_end_planes():
     assert far.origin == pytest.approx(
         (member.length - setback / 2, member.thickness / 2, member.depth / 2)
     )
-    assert near.z_axis == pytest.approx((-0.5, 0.0, -math.sqrt(3) / 2))
-    assert far.z_axis == pytest.approx((0.5, 0.0, -math.sqrt(3) / 2))
+    assert near.z_axis == pytest.approx((-math.sqrt(3) / 2, 0.0, -0.5))
+    assert far.z_axis == pytest.approx((math.sqrt(3) / 2, 0.0, -0.5))
     assert member.datum("end_near").origin[0] == pytest.approx(0.0)
     assert member.datum("end_far").origin[0] == pytest.approx(member.length)
 
@@ -119,3 +119,20 @@ def test_square_lumber_keeps_its_existing_public_identity():
     assert "end_cuts" not in member.params()
     assert "length_semantics" not in member.params()
     assert member.assumptions().endswith('; end grain square.')
+
+
+def test_physical_cut_datums_mate_two_mitered_members_without_overlap():
+    first = _mitered_member()[1]
+    second = _mitered_member()[1]
+    second.name = "second mitered member"
+    assembly = DetailAssembly("miter mate probe")
+    placed_first = assembly.add(first)
+    placed_second = assembly.place(second, "cut_near").on(
+        placed_first, "cut_far", flip=True
+    )
+
+    overlap = placed_first.world_solid().val().intersect(
+        placed_second.world_solid().val()
+    ).Volume()
+
+    assert overlap == pytest.approx(0.0, abs=1e-6)

@@ -1398,6 +1398,7 @@ tests/test_lumber_end_cuts.py::test_mitered_lumber_has_physical_cut_face_datums_
 tests/test_lumber_end_cuts.py::test_lumber_end_cuts_require_explicit_unambiguous_length_semantics,platform,plumb-platform,unit,Fail-closed dimensional contract for angled dimensional-lumber cuts.
 tests/test_lumber_end_cuts.py::test_mitered_lumber_bom_identity_does_not_collapse_into_square_lumber,platform,plumb-platform,unit,Reusable BOM identity and cut-length contract for angled dimensional lumber.
 tests/test_lumber_end_cuts.py::test_square_lumber_keeps_its_existing_public_identity,platform,plumb-platform,unit,Backward-compatible public identity for ordinary square-cut dimensional lumber.
+tests/test_lumber_end_cuts.py::test_physical_cut_datums_mate_two_mitered_members_without_overlap,platform,plumb-platform,integration,Generic cut-face datum placement must match the physical cut plane without overlap.
 tests/test_mate.py::test_every_component_exposes_datums,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_mate.py::test_all_datum_frames_are_orthonormal,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
 tests/test_mate.py::test_missing_datum_raises_helpful_error,platform,plumb-platform,unit,"Reusable behavior, counterfactual probe, migration oracle, or platform-wide audit; exclude from a document/build gate."
