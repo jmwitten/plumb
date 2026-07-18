@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 
 from detailgen.design_review import (
-    DesignReviewGateError,
     load_design_review_file,
     validate_design_review,
 )
@@ -34,7 +33,7 @@ def test_review_remains_complete_and_compares_three_access_architectures():
     assert len(doc.comparison) == 30
 
 
-def test_selected_concept_is_implemented_and_bound_to_owner_modeling_approval():
+def test_selected_concept_is_bound_to_owner_modeling_and_delivery_approval():
     doc = load_design_review_file(REVIEW)
 
     assert doc.decision.selected_concept == "pivot_side_classic"
@@ -42,14 +41,18 @@ def test_selected_concept_is_implemented_and_bound_to_owner_modeling_approval():
     assert doc.modeling_approval is not None
     assert doc.modeling_approval.approved_by == "Joel Witten"
     assert doc.modeling_approval.selection_fingerprint == SELECTION_FP
-    assert doc.delivery_confirmation is None
+    assert doc.delivery_confirmation is not None
+    assert doc.delivery_confirmation.approved_by == "Joel Witten"
+    assert doc.delivery_confirmation.selection_fingerprint == SELECTION_FP
+    assert doc.delivery_confirmation.model_fingerprint == (
+        "75b83fc078b0bbda714986c8c9ebf6f7e54bb0d95cd89185f010f72f66ebf773"
+    )
 
 
-def test_spec_opts_in_and_production_is_ready_but_delivery_remains_gated():
+def test_spec_opts_in_and_production_is_modeling_and_delivery_ready():
     detail = compile_spec_file(SPEC)
 
     assert detail.design_governance is not None
     assert detail.design_governance.selected_concept == "pivot_side_classic"
     assert detail.require_modeling_approval() is detail
-    with pytest.raises(DesignReviewGateError, match="delivery confirmation"):
-        detail.require_delivery_ready()
+    assert detail.require_delivery_ready().ok

@@ -1,5 +1,21 @@
 # Wave 1+2 progress ledger — detailgen framework roadmap
 
+## GENERIC INSTALLATION AUDIT CLOSURE (2026-07-17 — complete)
+
+The generic full-package compiler now emits `installation.html` for every
+package by passing the existing typed `installation_projection()` into the
+existing generic document renderer. The document contains only resolved
+installation contracts, construction-event facts, and connection edges; when
+facts are absent it retains `UNKNOWN — NOT ANALYZED`. No project-name dispatch,
+birdhouse-specific HTML, or prose fallback was added.
+
+The shared builder regression requires the artifact while still proving a
+single spec compilation. The governed family-birdhouse regression additionally
+requires its generated installation audit to preserve the `pivoted_by` and
+`latched_by` service semantics. This closes the artifact mismatch where the
+product-owned generator exposed installation guidance but the public generic
+package silently omitted it.
+
 ## GENERIC PACKAGE TABLE CONTAINMENT (2026-07-16 — complete)
 
 The four-foot square 2x4 frame package exposed a shared presentation defect:

@@ -1,4 +1,4 @@
-"""Generic technical, fabrication, and optional installation renderers."""
+"""Generic technical, fabrication, and installation renderers."""
 
 from __future__ import annotations
 

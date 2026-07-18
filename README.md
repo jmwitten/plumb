@@ -119,9 +119,10 @@ findings remain allowed in a preview scaffold; unresolved evidence is not
 relabeled as passing.
 
 The compiler generates the model, standard views, technical/fabrication/
-assembly documents, review evidence, CSVs, hashes, and final package manifest
-from one compiled detail. The installation audit renderer remains available as
-an explicit internal surface but is not emitted in the default package.
+assembly/installation documents, review evidence, CSVs, hashes, and final
+package manifest from one compiled detail. The installation audit projects
+only typed installation contracts, construction-order facts, and connection
+edges; absent installation facts remain visibly `UNKNOWN — NOT ANALYZED`.
 Ordinary projects require no source-code registration or project-specific
 renderer dispatch. Read framework source or extend a registry only when the
 compact manifest proves that a required capability is absent.
