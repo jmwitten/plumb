@@ -26,6 +26,7 @@ from .html import page
 from .model import PackageArtifact, PackageRequest, PackageResult
 from .projections import (
     fabrication_projection,
+    installation_projection,
     technical_projection,
 )
 from .views import render_standard_views
@@ -178,10 +179,12 @@ def build_package(request: PackageRequest) -> PackageResult:
             tuple(path.relative_to(out) for path in view_paths),
         )
         fabrication = fabrication_projection(detail)
+        installation = installation_projection(detail)
         write_package_documents(
             out,
             technical=technical,
             fabrication=fabrication,
+            installation=installation,
         )
         _write_csv(out / "bom.csv", tuple(detail.bom_table()))
         _write_csv(out / "cuts.csv", _cut_rows(fabrication))

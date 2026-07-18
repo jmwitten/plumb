@@ -43,8 +43,10 @@ def test_builder_compiles_once_and_writes_content_addressed_manifest(
     assert assembly.index('class="viewer-section"') < assembly.index(
         'class="overview"'
     ) < assembly.index('id="panel-1"')
-    assert not (out / "installation.html").exists()
-    assert "installation.html" not in {
+    installation = out / "installation.html"
+    assert installation.is_file()
+    assert "Installation contracts" in installation.read_text(encoding="utf-8")
+    assert "installation.html" in {
         artifact.relative_path for artifact in result.artifacts
     }
 
@@ -64,3 +66,12 @@ def test_two_existing_governed_details_share_the_same_builder(tmp_path):
 
     assert all(result.validation_ok for result in results)
     assert all(len(result.artifacts) >= 8 for result in results)
+    assert all(
+        (result.request.output_dir / "installation.html").is_file()
+        for result in results
+    )
+    birdhouse_installation = (
+        results[1].request.output_dir / "installation.html"
+    ).read_text(encoding="utf-8")
+    assert "pivoted_by" in birdhouse_installation
+    assert "latched_by" in birdhouse_installation

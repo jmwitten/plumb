@@ -8,9 +8,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from detailgen.design_review import DesignReviewGateError
-
-
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
 if str(SCRIPTS) not in sys.path:
@@ -299,14 +296,16 @@ def test_csvs_and_manifest_are_derived_and_fingerprint_bound(package):
     assert all(len(value) == 64 for value in manifest["file_sha256"].values())
 
 
-def test_unconfirmed_delivery_writes_nothing(tmp_path):
+def test_confirmed_delivery_writes_release_package(tmp_path):
     out = tmp_path / "delivery"
 
-    with pytest.raises(DesignReviewGateError, match="delivery confirmation"):
-        FBR.build_family_birdhouse_package(
-            out,
-            image_size=(320, 240),
-            preview=False,
-        )
+    result = FBR.build_family_birdhouse_package(
+        out,
+        image_size=(320, 240),
+        preview=False,
+    )
+    manifest = json.loads(Path(result["package_manifest_path"]).read_text())
 
-    assert not out.exists()
+    assert out.is_dir()
+    assert result["preview"] is False
+    assert manifest["release_state"] == "DELIVERY CONFIRMED"

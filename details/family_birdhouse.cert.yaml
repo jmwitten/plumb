@@ -1,0 +1,11 @@
+schema_version: 1
+subject:
+  kind: standalone_detail
+  source: family_birdhouse.spec.yaml
+intent:
+  governance:
+    selected_concept: pivot_side_classic
+    modeling_ready: true
+    delivery_ready: true
+deliverables: []
+decisions: []
