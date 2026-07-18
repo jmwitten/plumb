@@ -160,6 +160,14 @@ def _still_edge_style() -> dict:
     return {"edgecolors": "none", "linewidths": 0.0}
 
 
+def _canonical_explode_offsets(detail) -> dict[str, tuple[float, float, float]]:
+    """Return the compiler's public millimetre offsets without rescaling."""
+    return {
+        name: tuple(float(value) for value in vector)
+        for name, vector in detail.explode_vectors().items()
+    }
+
+
 def render_family_birdhouse_views(
     detail,
     out_dir: str | Path,
@@ -174,10 +182,7 @@ def render_family_birdhouse_views(
             detail.assembly.isolated_world_solids()
         )
     ]
-    explode = {
-        name: tuple(value * IN for value in vector)
-        for name, vector in detail.explode_vectors().items()
-    }
+    explode = _canonical_explode_offsets(detail)
     written: list[Path] = []
 
     def draw(filename, elev, azim, title, *, ghost=(), exploded=False):

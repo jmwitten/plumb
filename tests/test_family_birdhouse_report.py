@@ -65,6 +65,17 @@ def test_still_faces_do_not_draw_internal_tessellation_edges():
     }
 
 
+def test_still_explode_offsets_remain_canonical_millimeters():
+    class _Detail:
+        @staticmethod
+        def explode_vectors():
+            return {"entrance front": (0.0, -4.0 * IN, 0.0)}
+
+    assert FBR._canonical_explode_offsets(_Detail()) == {
+        "entrance front": (0.0, -101.6, 0.0),
+    }
+
+
 def test_five_still_views_tessellate_each_placed_part_once(monkeypatch, tmp_path):
     class _Component:
         material_key = "cedar"
