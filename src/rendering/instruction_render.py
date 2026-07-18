@@ -83,6 +83,8 @@ def panel_callout_ids(detail, panel) -> tuple[str, ...]:
     separately numbered balloon for every identical screw duplicates the panel
     quantity chip and obscures the work.
     """
+    if panel.action == "join" and not panel.arrival_part_ids:
+        return ()
     candidates = panel.arrival_part_ids or panel.focus_part_ids
     labels = part_labels(detail.assembly.parts)
     by_id = {part.id: part for part in detail.assembly.parts}
@@ -100,16 +102,20 @@ def panel_callout_ids(detail, panel) -> tuple[str, ...]:
 
 
 def panel_fastener_ids(detail, panel) -> tuple[str, ...]:
-    """Current installation fasteners, derived from the panel hardware rows."""
+    """Known installation fasteners referenced by the panel hardware rows.
+
+    Domain packs may use ``source_part_ids`` for workpieces that do not belong
+    to the compiled assembly (for example cabinetry fabrication stock).  Those
+    references are valid hardware-row provenance, but cannot provide modeled
+    fastener datums and therefore do not produce placement markers.
+    """
     by_id = {part.id: part for part in detail.assembly.parts}
     result = []
     for row in panel.hardware:
         for part_id in row.source_part_ids:
             part = by_id.get(part_id)
             if part is None:
-                raise ValueError(
-                    f"panel {panel.index} hardware names unknown part {part_id!r}"
-                )
+                continue
             if "installation_fastener" not in part.component.capability_tags():
                 continue
             if part_id not in result:

@@ -185,17 +185,57 @@ connections:
 
 sequence:
   stages:
-    - name: close the rear fixed corner before adding the pole cleat
+    - name: attach the fixed side to the entrance front
+      parts: [front, side_fixed]
+      connections: ["front -> fixed side"]
+      why: >-
+        Begin with one square L-shaped corner so later boards have a stable
+        reference without hiding the two front screw locations.
+    - name: attach the extended back to the fixed side
+      parts: [back]
       connections: ["back -> fixed side"]
       why: >-
-        Drive the two rear fixed-corner screws while the back face is open on
-        the bench; the later mounting cleat otherwise occupies that driver
-        corridor in the completed model.
-    - name: add the pole cleat after the rear fixed corner
+        Close the second fixed corner while the back face is open on the bench;
+        the later mounting cleat otherwise occupies that driver corridor.
+    - name: seat and secure the recessed floor
+      parts: [floor]
+      connections:
+        - "front -> recessed floor"
+        - "back -> recessed floor"
+        - "fixed side -> recessed floor"
+      why: >-
+        The two fixed corners now hold the shell while the floor is seated at
+        its modeled one-quarter-inch recess and fastened from three accessible
+        faces.
+    - name: install the cleanout side pivots
+      parts: [side_cleanout]
+      connections:
+        - "front pivot -> cleanout side"
+        - "back pivot -> cleanout side"
+      why: >-
+        Install the two aligned upper pivots together so the moving side can be
+        supported and its swing checked before adding the lower latch.
+    - name: close and latch the cleanout side
+      connections: ["lower latch -> cleanout side"]
+      why: >-
+        The latch is a separate service operation: swing the panel closed,
+        install the lower screw, and confirm it remains removable for cleanout.
+    - name: set and secure the roof
+      parts: [roof]
+      connections:
+        - "roof -> front"
+        - "roof -> back"
+        - "roof -> fixed side"
+      why: >-
+        Add the roof only after the moving side operates correctly; all six
+        modeled top-entry screw locations then remain visible as one task.
+    - name: add the pole cleat after the enclosure is complete
+      parts: [mount_cleat]
       connections: ["mounting cleat -> extended back"]
       why: >-
-        The cleat is an exterior interface added only after the rear fixed
-        corner is complete, preserving direct driver access to both operations.
+        The cleat is an exterior interface added after the complete enclosure
+        joins the root assembly, preserving rear-corner access and the field
+        installation hold.
   subassemblies:
     - name: birdhouse enclosure
       parts:

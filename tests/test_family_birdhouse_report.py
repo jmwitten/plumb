@@ -274,9 +274,39 @@ def test_family_manual_marks_screw_locations_without_numbering_each_screw(packag
     assert "orange targets = screw locations" in manual
     assert marker_count == 21
     assert all("screw" not in label.lower() for label in callout_labels)
-    assert "Screw ×11" in manual
     assert "Screw ×6" in manual
+    assert "Screw ×2" in manual
+    assert "Screw ×1" in manual
     assert "fixed-side front lower screw" not in manual
+
+
+def test_family_manual_has_eight_scoped_progressive_panels():
+    from detailgen.rendering.instruction_panels import build_instruction_manual
+    from detailgen.rendering.instruction_render import (
+        panel_callout_ids,
+        panel_fastener_ids,
+    )
+    from detailgen.spec.compiler import compile_spec_file
+
+    detail = compile_spec_file(FBR.SPEC)
+    detail.validate()
+    manual = build_instruction_manual(
+        detail,
+        join_presentation=FBR.BIRDHOUSE_JOIN_PRESENTATION,
+    )
+
+    assert len(manual.panels) == 8
+    assert [len(panel.connections) for panel in manual.panels] == [
+        1, 1, 3, 2, 1, 3, 0, 1,
+    ]
+    assert all(len(panel.instructions) <= 3 for panel in manual.panels)
+    assert len(panel_callout_ids(detail, manual.panels[0])) == 2
+    assert len(panel_fastener_ids(detail, manual.panels[0])) == 2
+    assert panel_callout_ids(detail, manual.panels[6]) == ()
+
+    completion = " ".join(manual.panels[6].instructions).lower()
+    for fact in ("drains", "vents", "swing", "latch"):
+        assert fact in completion
 
 
 def test_reader_documents_compact_print_only_content_without_orphan_pages(package):

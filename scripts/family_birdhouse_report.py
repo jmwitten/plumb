@@ -63,10 +63,12 @@ PREVIEW_NOTICE = "PREVIEW — NOT APPROVED FOR DELIVERY"
 BIRDHOUSE_JOIN_PRESENTATION = JoinPresentation(
     title="Bench assembly complete — field installation remains on hold",
     instructions=(
-        "Confirm all 21 modeled screws are installed and the pivoting cleanout "
-        "side opens, closes, and latches without binding.",
-        "Stop after the bench build. An adult must resolve every hold in the "
-        "separate installation and service guide before mounting the box.",
+        "Confirm all 21 modeled screws are installed, the one-quarter-inch "
+        "floor recess is maintained, and the enclosure seams remain closed.",
+        "Confirm all four floor drains and all four high wall vents remain open.",
+        "Swing the cleanout side open and closed, then confirm the lower latch "
+        "retains it without binding. Stop here until an adult resolves every "
+        "field-installation hold.",
     ),
     honesty=(
         "FIELD HOLD — pole, predator baffle, clamp/U-bolt interface, soil and "

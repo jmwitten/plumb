@@ -1517,6 +1517,14 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
     # Topologically order presentation buckets by the real graph edges. The
     # preferred key makes independent units read bench-all, then set-all, then
     # root work; dependency edges always win. No edge is added to ``graph``.
+    # Unit buckets are provisioned before folding so a connection-free unit can
+    # still receive its place events. A fully staged unit legitimately leaves
+    # that provisional bucket empty; it is not a reader step and must not leak
+    # into the presentation as a content-free panel.
+    for key in tuple(buckets):
+        if not buckets[key]["events"]:
+            del buckets[key]
+
     event_bucket = {}
     for key, bucket in buckets.items():
         for event in bucket["events"]:

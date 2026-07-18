@@ -300,6 +300,6 @@ modeling_approval:
   selection_fingerprint: b7f91b653c95270ebf35968478b2d3a686cf49e356c35482f3e2c2aed4b8e1ff
 delivery_confirmation:
   approved_by: Joel Witten
-  approved_on: 2026-07-17
+  approved_on: 2026-07-18
   selection_fingerprint: b7f91b653c95270ebf35968478b2d3a686cf49e356c35482f3e2c2aed4b8e1ff
-  model_fingerprint: 75b83fc078b0bbda714986c8c9ebf6f7e54bb0d95cd89185f010f72f66ebf773
+  model_fingerprint: 8c9caf36f69f956d9087763cb058ac83abbdcc56b040609bb26c26b0a26d01da
