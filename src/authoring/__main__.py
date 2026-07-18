@@ -12,6 +12,7 @@ import yaml
 from .manifest import authoring_manifest_json, build_authoring_grammar
 from .component_extension import (
     ComponentExtensionError,
+    build_component_context_route,
     build_component_extension_guide,
     load_component_extension_contract,
     verify_component_extension,
@@ -228,6 +229,16 @@ def _parser() -> argparse.ArgumentParser:
         metavar="CONTRACT",
         help="Path to a detailgen/component-extension/v1 YAML contract.",
     )
+    component_route = subcommands.add_parser(
+        "component-route",
+        help="classify repository context for one component-extension contract",
+    )
+    component_route.add_argument(
+        "contract",
+        type=Path,
+        metavar="CONTRACT",
+        help="Path to a detailgen/component-extension/v1 YAML contract.",
+    )
     scaffold = subcommands.add_parser(
         "scaffold",
         help="write a registry-checked DetailSpec and certification stub",
@@ -318,6 +329,19 @@ def main(argv=None) -> int:
         print(json.dumps(
             build_component_extension_guide(), indent=2, sort_keys=True
         ))
+        return 0
+    if args.command == "component-route":
+        try:
+            contract = load_component_extension_contract(args.contract)
+            result = build_component_context_route(contract)
+        except ComponentExtensionError as error:
+            print(json.dumps({
+                "schema": "detailgen/component-extension-error/v1",
+                "status": "FAIL",
+                "error": str(error),
+            }, indent=2, sort_keys=True), file=sys.stderr)
+            return 2
+        print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     if args.command == "component-check":
         try:

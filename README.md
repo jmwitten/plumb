@@ -132,10 +132,13 @@ unsupported workflow schema is a fail-closed compatibility error.
 
 ## Adding component vocabulary in under a minute
 
-Query the bounded component-extension guide, then verify one YAML contract:
+Query the bounded component-extension guide, classify repository context, then
+verify one YAML contract:
 
 ```bash
 .venv/bin/python -m detailgen.authoring component-guide
+.venv/bin/python -m detailgen.authoring component-route \
+  examples/component_extensions/nominal_2x2_lumber.yaml
 .venv/bin/python -m detailgen.authoring component-check \
   examples/component_extensions/nominal_2x2_lumber.yaml
 ```
@@ -160,6 +163,21 @@ the broad platform integration tier merely because a public registry changed.
 Each contract names at most eight focused pytest node IDs, which are executed
 directly without a shell. Cross-layer work returns `ESCALATE`, never a false
 fast-path `PASS`.
+
+`component-route` does not construct CAD. It returns `catalog_micro` only when
+the validated contract declares `catalog_variant` and targets an already
+registered component type. That route permits reading only the contract, the
+exact registered component declaration, and the closest catalog declaration
+and focused test. Release still requires `component-check` to pass and the diff
+to contain only catalog data plus its focused contract/test. Unknown component
+types and every other change class return `full_extension`; malformed or
+ambiguous inputs authorize no shortcut.
+
+Structural products and changes involving geometry, datums, capabilities,
+connections, material semantics, schemas, renderers, documents, site facts,
+loads, safety, code, or capacity always use the full concept/extension/review
+workflow. For example, a zipline platform cannot become a catalog-micro task
+merely because its members use an existing lumber type.
 
 See `examples/component_extensions/nominal_2x2_lumber.yaml` for a data-only
 catalog addition, `fabricated_panel_primitive.yaml` for a new primitive, and

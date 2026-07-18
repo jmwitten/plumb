@@ -115,6 +115,13 @@ CHANGE_CLASSES: dict[str, dict[str, object]] = {
 }
 
 
+_CATALOG_CONTEXT_ALLOWED_READS = (
+    "the component-extension YAML contract",
+    "the exact registered component declaration",
+    "the closest catalog declaration and its focused test",
+)
+
+
 class ComponentExtensionError(ValueError):
     """A component-extension contract or verification failed closed."""
 
@@ -157,6 +164,54 @@ class ComponentExtensionContract:
     material_key: str | None
     reject_params: tuple[Mapping[str, object], ...]
     focused_tests: tuple[str, ...]
+
+
+def build_component_context_route(
+    contract: ComponentExtensionContract,
+) -> dict[str, object]:
+    """Choose bounded catalog context only for an existing component type."""
+    registered = True
+    try:
+        components.get(contract.component_type)
+    except KeyError:
+        registered = False
+
+    catalog_micro = (
+        contract.change_class == "catalog_variant" and registered
+    )
+    if catalog_micro:
+        route = "catalog_micro"
+        reason = (
+            "catalog_variant targets an already registered component type"
+        )
+        context_budget_seconds = 30
+        allowed_reads = list(_CATALOG_CONTEXT_ALLOWED_READS)
+        required_verification = "component-check"
+    else:
+        route = "full_extension"
+        if contract.change_class != "catalog_variant":
+            reason = (
+                f"{contract.change_class} requires the full extension workflow"
+            )
+        else:
+            reason = (
+                "catalog_variant targets an unregistered component type"
+            )
+        context_budget_seconds = None
+        allowed_reads = []
+        required_verification = "full-extension-workflow"
+
+    return {
+        "schema": "detailgen/component-context-route/v1",
+        "id": contract.id,
+        "change_class": contract.change_class,
+        "component_type": contract.component_type,
+        "route": route,
+        "reason": reason,
+        "context_budget_seconds": context_budget_seconds,
+        "allowed_reads": allowed_reads,
+        "required_verification": required_verification,
+    }
 
 
 def _as_mapping(value, *, owner: str) -> dict:
@@ -430,6 +485,7 @@ def _verify_component_extension_impl(
             "elapsed_seconds": round(max(clock() - started, 0.0), 6),
             "budget_seconds": None,
             "checks": ["contract_schema"],
+            "context_route": build_component_context_route(contract),
         }
 
     checks = ["contract_schema"]
@@ -544,6 +600,7 @@ def _verify_component_extension_impl(
         "elapsed_seconds": round(elapsed, 6),
         "budget_seconds": budget,
         "checks": checks,
+        "context_route": build_component_context_route(contract),
     }
 
 
@@ -602,6 +659,13 @@ def build_component_extension_guide() -> dict[str, object]:
         },
         "commands": {
             "guide": ["python", "-m", "detailgen.authoring", "component-guide"],
+            "route": [
+                "python",
+                "-m",
+                "detailgen.authoring",
+                "component-route",
+                "{contract.yaml}",
+            ],
             "check": [
                 "python",
                 "-m",

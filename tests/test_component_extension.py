@@ -13,6 +13,7 @@ from detailgen.authoring.component_extension import (
     CHANGE_CLASSES,
     COMPONENT_FAMILIES,
     ComponentExtensionError,
+    build_component_context_route,
     build_component_extension_guide,
     load_component_extension_contract,
     verify_component_extension,
@@ -134,6 +135,76 @@ def test_loads_catalog_contract_as_immutable_normalized_data(tmp_path):
     assert contract.focused_tests == ()
 
 
+def test_registered_catalog_variant_selects_bounded_context(tmp_path):
+    route = build_component_context_route(
+        _load(tmp_path, _catalog_payload())
+    )
+
+    assert route["schema"] == "detailgen/component-context-route/v1"
+    assert route["route"] == "catalog_micro"
+    assert route["context_budget_seconds"] == 30
+    assert route["required_verification"] == "component-check"
+    assert route["allowed_reads"] == [
+        "the component-extension YAML contract",
+        "the exact registered component declaration",
+        "the closest catalog declaration and its focused test",
+    ]
+
+
+def test_context_route_results_do_not_share_mutable_read_lists(tmp_path):
+    contract = _load(tmp_path, _catalog_payload())
+    first = build_component_context_route(contract)
+    first["allowed_reads"].append("README.md")
+
+    second = build_component_context_route(contract)
+
+    assert "README.md" not in second["allowed_reads"]
+
+
+def test_unknown_component_selects_full_context(tmp_path):
+    payload = _catalog_payload()
+    payload["component"] = {
+        "type": "unimplemented_component",
+        "params": {"length": "24 in"},
+    }
+    route = build_component_context_route(_load(tmp_path, payload))
+
+    assert route["route"] == "full_extension"
+    assert route["context_budget_seconds"] is None
+    assert route["allowed_reads"] == []
+    assert route["required_verification"] == "full-extension-workflow"
+
+
+def test_zipline_platform_complex_contract_uses_full_context_with_known_lumber(
+    tmp_path,
+):
+    payload = _catalog_payload()
+    payload["id"] = "zipline_platform"
+    payload["change_class"] = "cross_layer_complex"
+    payload["expect"] = {}
+
+    route = build_component_context_route(_load(tmp_path, payload))
+
+    assert route["component_type"] == "lumber"
+    assert route["route"] == "full_extension"
+    assert route["reason"] == (
+        "cross_layer_complex requires the full extension workflow"
+    )
+
+
+def test_primitive_and_semantic_components_select_full_context(tmp_path):
+    primitive = _catalog_payload()
+    primitive["change_class"] = "new_primitive"
+    primitive["reject"] = [{"params": {"length": "-1 in"}}]
+
+    assert build_component_context_route(
+        _load(tmp_path, primitive)
+    )["route"] == "full_extension"
+    assert build_component_context_route(
+        _load(tmp_path, _semantic_payload())
+    )["route"] == "full_extension"
+
+
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [
@@ -236,6 +307,9 @@ def test_catalog_verifier_compiles_and_checks_real_nominal_2x2(tmp_path):
     assert result["lane"] == "micro"
     assert result["budget_seconds"] == 60
     assert result["elapsed_seconds"] < 60
+    assert result["context_route"] == build_component_context_route(
+        _load(tmp_path, _catalog_payload())
+    )
     assert {
         "public_compile",
         "component_check",
@@ -370,6 +444,35 @@ def test_component_guide_cli_prints_bounded_public_contract(capsys):
 
     result = json.loads(capsys.readouterr().out)
     assert result == build_component_extension_guide()
+
+
+def test_component_route_cli_classifies_without_building_cad(
+    tmp_path, capsys, monkeypatch,
+):
+    contract_path = _write_contract(tmp_path, _catalog_payload())
+    monkeypatch.setattr(
+        component_extension,
+        "_compile_component",
+        lambda *args, **kwargs: pytest.fail("route command built CAD"),
+    )
+
+    assert authoring_main(["component-route", str(contract_path)]) == 0
+
+    result = json.loads(capsys.readouterr().out)
+    assert result["route"] == "catalog_micro"
+
+
+def test_component_route_cli_fails_closed_on_invalid_contract(tmp_path, capsys):
+    payload = _catalog_payload()
+    payload["schema"] = "detailgen/component-extension/v9"
+    contract_path = _write_contract(tmp_path, payload)
+
+    assert authoring_main(["component-route", str(contract_path)]) == 2
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    error = json.loads(captured.err)
+    assert error["schema"] == "detailgen/component-extension-error/v1"
 
 
 def test_component_check_cli_verifies_catalog_contract(tmp_path, capsys):

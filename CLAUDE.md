@@ -71,7 +71,12 @@ document gate merely because they use a real detail as their fixture.
 
 **Component-extension scope:** before adding physical vocabulary, run
 `.venv/bin/python -m detailgen.authoring component-guide` and author a
-`detailgen/component-extension/v1` contract. `catalog_variant`,
+`detailgen/component-extension/v1` contract. Run `component-route` before
+reading broad repository context. Only exact `catalog_micro` output for a
+registered `catalog_variant` authorizes the contract/exact-registration/closest-
+catalog read allowlist; require `component-check` PASS and a catalog-only diff.
+All other, invalid, or ambiguous routes use the full extension workflow.
+`catalog_variant`,
 `new_primitive`, and `semantic_component` use `component-check` with a hard
 60-second combined budget; a registry/catalog addition alone does not select
 `platform_integration`. `cross_layer_complex` returns `ESCALATE` and then uses
