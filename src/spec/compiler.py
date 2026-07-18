@@ -1380,14 +1380,22 @@ class SpecDetail(Detail):
     def explode_vectors(self) -> dict:
         """Compile the ``explode:`` block to a display-name-keyed offset dict
         (the key the viewer/manifest use). Each id resolves to its part's display
-        name; each vector coordinate resolves through the value language (a bare
-        number passes through, a directive resolves to mm) — reproducing each
-        detail's own unit convention."""
+        name and every returned coordinate is canonical internal millimeters, as
+        required by :class:`Detail`. Legacy specs that declare
+        ``explode_authoring_units`` author bare vectors in their top-level unit
+        and are scaled here once so every consumer sees the same displacement."""
         self.build()
+        authored_units = bool(
+            self.doc.export is not None
+            and self.doc.export.explode_authoring_units
+        )
+        scale = self.unit_factor if authored_units else 1.0
         out: dict = {}
         for e in self.doc.explode:
             name = self._resolve_part(e.id, "explode").name
-            out[name] = tuple(self.resolver.resolve(c) for c in e.vector)
+            out[name] = tuple(
+                self.resolver.resolve(c) * scale for c in e.vector
+            )
         return out
 
     def cross_check(self) -> dict | None:
@@ -1421,20 +1429,20 @@ class SpecDetail(Detail):
             self._inject_explode(mpath, exp.explode_authoring_units)
 
     def _inject_explode(self, manifest_path, authoring_units: bool) -> None:
-        """Merge explode vectors into the manifest parts (post-export), matching
-        each detail's convention: vectors authored in internal mm are written
-        as-is; vectors authored in authoring units are scaled by the unit
-        factor first (the trolley's per-detail choice)."""
+        """Merge canonical-millimeter explode vectors into the manifest.
+
+        ``authoring_units`` remains in this private signature for serialized
+        schema compatibility; :meth:`explode_vectors` already owns the one
+        authoring-unit conversion so static renders, viewers, and manifests
+        cannot drift.
+        """
         import json
 
         ev = self.explode_vectors()
         data = json.loads(manifest_path.read_text())
         for part in data["parts"]:
             offset = ev.get(part["name"], (0, 0, 0))
-            if authoring_units:
-                part["explode"] = [c * self.unit_factor for c in offset]
-            else:
-                part["explode"] = list(offset)
+            part["explode"] = list(offset)
         manifest_path.write_text(json.dumps(data, indent=1))
 
     def _document(self, out_dir) -> None:

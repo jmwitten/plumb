@@ -17,6 +17,7 @@ suites share it; the Panel E markup / payload-wiring checks stay render-free.
 from __future__ import annotations
 
 import importlib.util
+import json
 import math
 import sys
 from pathlib import Path
@@ -193,6 +194,28 @@ def test_authored_explode_wins_over_derivation():
             return {"widget": (1.0, 2.0, 3.0)}
 
     assert _explode_for(_Authored(), assembly=None) == {"widget": (1.0, 2.0, 3.0)}
+
+
+def test_inch_authored_explode_is_canonical_for_every_consumer(tmp_path):
+    """Detail.explode_vectors() promises millimeters, so the static render,
+    viewer payload, and exported manifest must not disagree about authored
+    inch-unit vectors."""
+    birdhouse = compile_spec_file(DETAILS / "family_birdhouse.spec.yaml")
+    birdhouse.validate()
+
+    vectors = birdhouse.explode_vectors()
+    payload = build_viewer_payload(birdhouse)
+    birdhouse.render_documentation(tmp_path)
+    manifest = json.loads((tmp_path / "detail.manifest.json").read_text())
+    manifest_by_name = {row["name"]: row["explode"] for row in manifest["parts"]}
+
+    assert vectors["entrance front"] == pytest.approx((0.0, -101.6, 0.0))
+    assert payload["parts"]["entrance front"]["explode"] == pytest.approx(
+        (0.0, -101.6, 0.0)
+    )
+    assert manifest_by_name["entrance front"] == pytest.approx(
+        (0.0, -101.6, 0.0)
+    )
 
 
 # --------------------------------------------------------------------------- #
