@@ -37,8 +37,6 @@ from detailgen.design_review import (
 )
 from detailgen.rendering.instruction_manual import render_instruction_manual_html
 from detailgen.rendering.instruction_panels import (
-    DisplayRow,
-    JoinPresentation,
     RelatedDocumentLink,
     build_instruction_manual,
 )
@@ -59,24 +57,6 @@ BOM_CSV_BASENAME = "family_birdhouse_bom.csv"
 CUT_CSV_BASENAME = "family_birdhouse_cut_list.csv"
 PACKAGE_MANIFEST_BASENAME = "family_birdhouse_package_manifest.json"
 PREVIEW_NOTICE = "PREVIEW — NOT APPROVED FOR DELIVERY"
-
-BIRDHOUSE_JOIN_PRESENTATION = JoinPresentation(
-    title="Bench assembly complete — field installation remains on hold",
-    instructions=(
-        "Confirm all 21 modeled screws are installed, the one-quarter-inch "
-        "floor recess is maintained, and the enclosure seams remain closed.",
-        "Confirm all four floor drains and all four high wall vents remain open.",
-        "Swing the cleanout side open and closed, then confirm the lower latch "
-        "retains it without binding. Stop here until an adult resolves every "
-        "field-installation hold.",
-    ),
-    honesty=(
-        "FIELD HOLD — pole, predator baffle, clamp/U-bolt interface, soil and "
-        "foundation conditions, frost and wind, utilities, coating, and "
-        "installation fastener capacity are not selected or analyzed.",
-    ),
-    tools=(DisplayRow("fit", "Adult review of the installation hold checklist"),),
-)
 
 VIEW_FILES = {
     "iso": "iso.png",
@@ -561,7 +541,6 @@ def build_family_birdhouse_package(
             "capacity NOT analyzed."
         ),
         related_documents=related,
-        join_presentation=BIRDHOUSE_JOIN_PRESENTATION,
     )
     if preview:
         manual = replace(

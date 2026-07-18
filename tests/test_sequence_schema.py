@@ -480,6 +480,34 @@ def test_staging_only_sequence_loads_typed_subassemblies_in_order():
     assert doc.sequence.subassemblies[1].parts == ("leg_b", "rail")
 
 
+def test_subassembly_completion_loads_typed_reader_checks():
+    seq = {"subassemblies": [{
+        "name": "side_a",
+        "parts": ["leg_a"],
+        "why": "Build this unit flat.",
+        "completion": {
+            "title": "Inspect side A before joining",
+            "instructions": [
+                "Confirm both joints are closed.",
+                "Confirm the service opening remains clear.",
+            ],
+            "honesty": ["FIELD HOLD — final anchorage is not represented."],
+        },
+    }]}
+
+    doc = _load(_base_doc(seq))
+    completion = doc.sequence.subassemblies[0].completion
+
+    assert completion.title == "Inspect side A before joining"
+    assert completion.instructions == (
+        "Confirm both joints are closed.",
+        "Confirm the service opening remains clear.",
+    )
+    assert completion.honesty == (
+        "FIELD HOLD — final anchorage is not represented.",
+    )
+
+
 @pytest.mark.parametrize("mode", ["bench", "set_in_place", "", None])
 def test_assembly_mode_is_a_loud_closed_vocabulary(mode):
     seq = {"assembly": {"mode": mode, "why": "a real reason"}}

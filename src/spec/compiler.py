@@ -26,7 +26,7 @@ from dataclasses import dataclass
 
 from ..assemblies.assembly import DetailAssembly, Placed
 from ..assemblies.connection import Connection, DerivedFact, connection_types
-from ..assemblies.event_graph import ProcessFact
+from ..assemblies.event_graph import ProcessFact, ResolvedCompletion
 from ..assemblies.installation import EntryFace, Exit, ToolAxis, ToolEnvelope
 from ..core import IN
 from ..core.config import DEFAULT
@@ -911,7 +911,19 @@ class SpecDetail(Detail):
                     pids.extend(expand(
                         ref, f"sequence subassembly {unit.name!r}"))
                 units.append(ResolvedUnit(
-                    name=unit.name, why=unit.why, parts=tuple(pids)))
+                    name=unit.name,
+                    why=unit.why,
+                    parts=tuple(pids),
+                    completion=(
+                        None
+                        if unit.completion is None
+                        else ResolvedCompletion(
+                            title=unit.completion.title,
+                            instructions=unit.completion.instructions,
+                            honesty=unit.completion.honesty,
+                        )
+                    ),
+                ))
             return ResolvedStaging(
                 mode="subassemblies", units=tuple(units),
                 context_parts=context_parts)

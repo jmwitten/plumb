@@ -232,12 +232,22 @@ class ResolvedAfter:
 
 
 @dataclass(frozen=True)
+class ResolvedCompletion:
+    """Reader checks bound to a resolved bench-unit join event."""
+
+    title: str
+    instructions: tuple
+    honesty: tuple = ()
+
+
+@dataclass(frozen=True)
 class ResolvedUnit:
     """One authored bench unit resolved to built ``Placed.id`` values."""
 
     name: str
     why: str
     parts: tuple = ()
+    completion: ResolvedCompletion | None = None
 
 
 @dataclass(frozen=True)

@@ -360,7 +360,31 @@ def _counted_names(labels, part_ids) -> str:
     return ", ".join(chunks[:-1]) + ", and " + chunks[-1]
 
 
-def _panel_title(detail, action, graph, steps, cohort, labels) -> str:
+def _service_panel_group(connections, semantics):
+    """Return one homogeneous service-panel operation for a panel cohort."""
+    rows = tuple(semantics.get(label) for label in connections)
+    if not rows or any(row is None for row in rows):
+        return None
+    modes = {row[0] for row in rows}
+    panel_ids = {row[1] for row in rows}
+    if len(modes) != 1 or len(panel_ids) != 1:
+        return None
+    return next(iter(modes)), next(iter(panel_ids))
+
+
+def _service_panel_semantics(detail) -> dict[str, tuple[str, str]]:
+    """Map typed pivot/latch connections to their moving service panel."""
+    result = {}
+    for connection in detail.connections():
+        mode = getattr(connection.kind, "mode", None)
+        if mode in {"pivot", "latch"} and len(connection.parts) >= 2:
+            result[connection.label] = (mode, connection.parts[1].id)
+    return result
+
+
+def _panel_title(
+    detail, action, graph, steps, cohort, labels, service_semantics,
+) -> str:
     if action == "prepare":
         ids = tuple(pid for index in cohort
                     for pid in steps[index].parts_placed)
@@ -368,6 +392,13 @@ def _panel_title(detail, action, graph, steps, cohort, labels) -> str:
     if action in {"bond", "fasten"}:
         connections = tuple(label for index in cohort
                             for label in steps[index].connections)
+        service = _service_panel_group(connections, service_semantics)
+        if action == "fasten" and service is not None:
+            mode, service_panel_id = service
+            service_panel = _display(labels, service_panel_id)
+            if mode == "pivot":
+                return f"Install {service_panel} pivot screws"
+            return f"Close and latch {service_panel}"
         ids = _members_for(graph, connections)
         verb = "Bond" if action == "bond" else "Fasten"
         return f"{verb} {_counted_names(labels, ids)}"
@@ -379,6 +410,9 @@ def _panel_title(detail, action, graph, steps, cohort, labels) -> str:
         joins = tuple(unit for index in cohort
                       for unit in steps[index].joins)
         if joins != ("whole detail",):
+            completion = graph.units[joins[0]].completion
+            if completion is not None:
+                return completion.title
             return f"Complete {joins[0]} subassembly"
         context = tuple(graph.context_parts)
         if context:
@@ -509,7 +543,8 @@ def _consumable_inventory(graph) -> tuple[DisplayRow, ...]:
 
 
 def _panel_content(detail, graph, steps, cohort, action, labels,
-                   installs_by_connection, join_presentation):
+                   installs_by_connection, join_presentation,
+                   service_semantics):
     by_id = {p.id: p for p in detail.assembly.parts}
     connections = tuple(label for i in cohort for label in steps[i].connections)
     joins = tuple(unit for i in cohort for unit in steps[i].joins)
@@ -580,27 +615,56 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
         installs = tuple(inst for connection in connections
                          for inst in installs_by_connection.get(connection, ()))
         hardware = _hardware_rows(detail, installs)
-        for connection in connections:
-            resolved = installs_by_connection.get(connection, ())
+        service = _service_panel_group(connections, service_semantics)
+        if service is not None:
+            mode, service_panel_id = service
+            service_panel = _display(labels, service_panel_id)
             entry_ids = tuple(dict.fromkeys(
-                install.contract.entry_face.part for install in resolved
+                install.contract.entry_face.part for install in installs
             ))
-            member_ids = graph.members_of[connection]
-            receiving_ids = tuple(
-                pid for pid in member_ids if pid not in entry_ids
-            )
-            receiving_names = " and ".join(
-                _display(labels, pid) for pid in receiving_ids)
             entry_names = " and ".join(
-                _display(labels, pid) for pid in entry_ids)
-            count = sum(len(install.fasteners) for install in resolved)
-            head = _HEAD_TEXT.get(
-                resolved[0].contract.head,
-                resolved[0].contract.head.replace("_", " "))
-            instructions.append(
-                f"Fasten {receiving_names} to {entry_names}; drive all {count} "
-                f"modeled fasteners through {entry_names} into {receiving_names}, "
-                f"with each {head}.")
+                _display(labels, pid) for pid in entry_ids
+            )
+            count = sum(len(install.fasteners) for install in installs)
+            if mode == "pivot":
+                instructions.extend((
+                    f"Support {service_panel} in its closed position. Install "
+                    f"the {count} aligned pivot screws through {entry_names} "
+                    f"into {service_panel}; leave each head proud enough for "
+                    "the panel to pivot without binding.",
+                    f"Swing {service_panel} open and closed to confirm free "
+                    "movement before installing the lower latch.",
+                ))
+            else:
+                instructions.extend((
+                    f"Close {service_panel}. Install the removable latch screw "
+                    f"through {entry_names} into {service_panel}; keep its head "
+                    "proud and do not glue or permanently fix it.",
+                    f"Open, close, and re-latch {service_panel} to confirm "
+                    "service access.",
+                ))
+        else:
+            for connection in connections:
+                resolved = installs_by_connection.get(connection, ())
+                entry_ids = tuple(dict.fromkeys(
+                    install.contract.entry_face.part for install in resolved
+                ))
+                member_ids = graph.members_of[connection]
+                receiving_ids = tuple(
+                    pid for pid in member_ids if pid not in entry_ids
+                )
+                receiving_names = " and ".join(
+                    _display(labels, pid) for pid in receiving_ids)
+                entry_names = " and ".join(
+                    _display(labels, pid) for pid in entry_ids)
+                count = sum(len(install.fasteners) for install in resolved)
+                head = _HEAD_TEXT.get(
+                    resolved[0].contract.head,
+                    resolved[0].contract.head.replace("_", " "))
+                instructions.append(
+                    f"Fasten {receiving_names} to {entry_names}; drive all "
+                    f"{count} modeled fasteners through {entry_names} into "
+                    f"{receiving_names}, with each {head}.")
         rationales.extend(_constraint_whys(graph, connections=connections))
         method_keys = tuple(dict.fromkeys(
             install.contract.method for install in installs))
@@ -612,7 +676,14 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
                    if key in _HEAD_TOOL_ROWS)]
 
     elif action == "join":
-        if join_presentation is None:
+        authored_completion = (
+            graph.units[joins[0]].completion
+            if joins != ("whole detail",) else None
+        )
+        if join_presentation is None and authored_completion is not None:
+            instructions.extend(authored_completion.instructions)
+            honesty.extend(authored_completion.honesty)
+        elif join_presentation is None:
             if joins != ("whole detail",):
                 instructions.append(
                     f"Complete the {joins[0]} as one subassembly."
@@ -651,7 +722,10 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
         "title": (
             join_presentation.title
             if action == "join" and join_presentation is not None
-            else _panel_title(detail, action, graph, steps, cohort, labels)
+            else _panel_title(
+                detail, action, graph, steps, cohort, labels,
+                service_semantics,
+            )
         ),
         "connections": connections,
         "joins": joins,
@@ -729,6 +803,7 @@ def build_instruction_manual(
     step_edges = _reader_step_edges(graph, steps)
     cohorts = _panel_cohorts(steps, actions)
     labels = part_labels(detail.assembly.parts)
+    service_semantics = _service_panel_semantics(detail)
 
     by_id = {part.id: part for part in detail.assembly.parts}
     excluded = tuple(dict.fromkeys(excluded_part_ids))
@@ -777,7 +852,7 @@ def build_instruction_manual(
         action = actions[cohort[0]]
         content = _panel_content(
             detail, graph, steps, cohort, action, labels,
-            installs_by_connection, join_presentation)
+            installs_by_connection, join_presentation, service_semantics)
         arrivals = tuple(part.id for part in detail.assembly.parts
                          if part.id in schedule
                          and schedule[part.id] == panel_index)

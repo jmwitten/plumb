@@ -290,6 +290,16 @@ def test_family_manual_marks_screw_locations_without_numbering_each_screw(packag
     assert "Screw ×1" in manual
     assert "fixed-side front lower screw" not in manual
 
+    with Image.open(result["panel_images"][3]) as pivot_image:
+        rgb = pivot_image.convert("RGB")
+        orange = [
+            (x, y)
+            for y in range(pivot_image.height)
+            for x in range(pivot_image.width)
+            if rgb.getpixel((x, y)) == (194, 65, 12)
+        ]
+    assert min(y for _x, y in orange) >= 60
+
 
 def test_family_manual_has_eight_scoped_progressive_panels():
     from detailgen.rendering.instruction_panels import build_instruction_manual
@@ -301,10 +311,7 @@ def test_family_manual_has_eight_scoped_progressive_panels():
 
     detail = compile_spec_file(FBR.SPEC)
     detail.validate()
-    manual = build_instruction_manual(
-        detail,
-        join_presentation=FBR.BIRDHOUSE_JOIN_PRESENTATION,
-    )
+    manual = build_instruction_manual(detail)
 
     assert len(manual.panels) == 8
     assert [len(panel.connections) for panel in manual.panels] == [
@@ -317,6 +324,28 @@ def test_family_manual_has_eight_scoped_progressive_panels():
 
     completion = " ".join(manual.panels[6].instructions).lower()
     for fact in ("drains", "vents", "swing", "latch"):
+        assert fact in completion
+
+    generic = build_instruction_manual(detail)
+    pivot = " ".join((
+        generic.panels[3].title,
+        *generic.panels[3].instructions,
+    )).lower()
+    latch = " ".join((
+        generic.panels[4].title,
+        *generic.panels[4].instructions,
+    )).lower()
+    completion = " ".join((
+        generic.panels[6].title,
+        *generic.panels[6].instructions,
+        *generic.panels[6].honesty,
+    )).lower()
+
+    for phrase in ("pivot", "aligned", "swing", "without binding"):
+        assert phrase in pivot
+    for phrase in ("latch", "removable", "open", "close"):
+        assert phrase in latch
+    for fact in ("21", "drains", "vents", "swing", "latch", "field"):
         assert fact in completion
 
 

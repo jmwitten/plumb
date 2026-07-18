@@ -24,6 +24,7 @@ import yaml
 from .schema import (
     ASSEMBLY_MODES,
     AuthoredAfter,
+    AuthoredCompletion,
     RENDERABLE_CHECK_KINDS,
     RESERVED_SPATIAL_NAMES,
     AuthoredAssembly,
@@ -665,7 +666,9 @@ def _build_subassembly(raw: dict, index: int,
     if not isinstance(raw, dict):
         raise SpecSchemaError(
             f"{ctx}: expected a mapping with name, parts, and why")
-    f = _take(raw, {"name": True, "parts": True, "why": True}, ctx)
+    f = _take(raw, {
+        "name": True, "parts": True, "why": True, "completion": False,
+    }, ctx)
     name = f["name"].strip() if isinstance(f["name"], str) else ""
     if not name:
         raise SpecSchemaError(f"{ctx}: 'name' must be non-empty")
@@ -688,7 +691,48 @@ def _build_subassembly(raw: dict, index: int,
         raise SpecSchemaError(
             f"{ctx} ({name!r}): part(s) {dupes} are repeated inside one "
             f"subassembly; list each part exactly once.")
-    return AuthoredSubassembly(name=name, why=why, parts=parts)
+    completion = (
+        None
+        if f["completion"] is _MISSING
+        else _build_subassembly_completion(f["completion"], ctx)
+    )
+    return AuthoredSubassembly(
+        name=name, why=why, parts=parts, completion=completion,
+    )
+
+
+def _build_subassembly_completion(raw: dict, unit_ctx: str) -> AuthoredCompletion:
+    ctx = f"{unit_ctx}.completion"
+    f = _take(raw, {
+        "title": True, "instructions": True, "honesty": False,
+    }, ctx)
+    title = f["title"].strip() if isinstance(f["title"], str) else ""
+    if not title:
+        raise SpecSchemaError(f"{ctx}: 'title' must be non-empty")
+
+    def text_rows(value, field, *, required):
+        raw_rows = _as_list(value, f"{ctx}.{field}")
+        rows = tuple(
+            row.strip() if isinstance(row, str) else "" for row in raw_rows
+        )
+        if any(not row for row in rows) or (required and not rows):
+            requirement = "at least one " if required else "only non-empty "
+            raise SpecSchemaError(
+                f"{ctx}.{field}: list {requirement}text instruction"
+            )
+        return rows
+
+    instructions = text_rows(
+        f["instructions"], "instructions", required=True,
+    )
+    honesty = (
+        ()
+        if f["honesty"] is _MISSING
+        else text_rows(f["honesty"], "honesty", required=False)
+    )
+    return AuthoredCompletion(
+        title=title, instructions=instructions, honesty=honesty,
+    )
 
 
 def _build_assembly(raw: dict, seq_ctx: str) -> AuthoredAssembly:

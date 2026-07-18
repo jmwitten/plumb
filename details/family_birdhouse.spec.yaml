@@ -271,6 +271,24 @@ sequence:
         is closed. The complete empty box is field-mounted only after every
         installation hold is resolved; lifting and insertion travel are not
         analyzed.
+      completion:
+        title: Bench assembly complete — field installation remains on hold
+        instructions:
+          - >-
+            Confirm all 21 modeled screws are installed, the one-quarter-inch
+            floor recess is maintained, and the enclosure seams remain closed.
+          - >-
+            Confirm all four floor drains and all four high wall vents remain
+            open.
+          - >-
+            Swing the cleanout side open and closed, then confirm the lower
+            latch retains it without binding. Stop here until an adult resolves
+            every field-installation hold.
+        honesty:
+          - >-
+            FIELD HOLD — pole, predator baffle, clamp/U-bolt interface, soil
+            and foundation conditions, frost and wind, utilities, coating, and
+            installation fastener capacity are not selected or analyzed.
 
 validation:
   dimensions:

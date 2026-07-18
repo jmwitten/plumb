@@ -15,7 +15,7 @@ from ..details.base import fmt_frac_in
 from .part_labels import part_labels
 
 
-RENDERER_VERSION = "instruction-panel-v2"
+RENDERER_VERSION = "instruction-panel-v3"
 DEFAULT_SIZE = (1500, 1100)
 
 CALLOUT_INK = (17, 24, 39)
@@ -136,6 +136,25 @@ def _fastener_marker_payload(detail, panel) -> tuple[tuple, ...]:
         )
         markers.append((part_id, tuple(head), approach))
     return tuple(markers)
+
+
+def _camera_bounds_with_fastener_markers(bounds, markers) -> tuple[float, ...]:
+    """Expand actor bounds to include every drawn screw approach arrow."""
+    if not markers:
+        return tuple(float(value) for value in bounds)
+    points = [point for _part_id, head, approach in markers
+              for point in (head, approach)]
+    lows = [min(float(bounds[axis * 2]), *(p[axis] for p in points))
+            for axis in range(3)]
+    highs = [max(float(bounds[axis * 2 + 1]), *(p[axis] for p in points))
+             for axis in range(3)]
+    spans = [max(highs[axis] - lows[axis], 1.0) for axis in range(3)]
+    margin = [span * 0.08 for span in spans]
+    return tuple(
+        value
+        for axis in range(3)
+        for value in (lows[axis] - margin[axis], highs[axis] + margin[axis])
+    )
 
 
 def panel_camera(panel) -> tuple[float, float, float]:
@@ -555,8 +574,16 @@ def render_instruction_panel(
         camera.SetPosition(*panel_camera(panel))
         camera.SetFocalPoint(0, 0, 0)
         camera.SetViewUp(0, 0, 1)
-        renderer.ResetCamera()
-        camera.Zoom(1.12)
+        fastener_markers = _fastener_marker_payload(detail, panel)
+        if fastener_markers:
+            bounds = _camera_bounds_with_fastener_markers(
+                renderer.ComputeVisiblePropBounds(), fastener_markers,
+            )
+            renderer.ResetCamera(*bounds)
+            camera.Zoom(0.98)
+        else:
+            renderer.ResetCamera()
+            camera.Zoom(1.12)
         window.Render()
 
         grabber = vtk.vtkWindowToImageFilter()

@@ -1023,6 +1023,20 @@ class AuthoredStage:
 
 
 @dataclass(frozen=True)
+class AuthoredCompletion:
+    """Reader-facing checks performed when a bench unit joins the root.
+
+    This copy is authored beside the staging claim because geometry and event
+    order cannot infer product-specific inspection criteria or field holds.
+    ``instructions`` is required; ``honesty`` carries explicit limitations.
+    """
+
+    title: str
+    instructions: tuple
+    honesty: tuple = ()
+
+
+@dataclass(frozen=True)
 class AuthoredSubassembly:
     """One named unit assembled in its own bench frame before it joins root.
 
@@ -1035,6 +1049,7 @@ class AuthoredSubassembly:
     name: str
     why: str
     parts: tuple = ()
+    completion: AuthoredCompletion | None = None
 
 
 @dataclass(frozen=True)
