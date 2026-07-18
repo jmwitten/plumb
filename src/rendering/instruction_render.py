@@ -10,6 +10,7 @@ import tempfile
 
 from ..core.buildinfo import build_manifest
 from ..core.buildinfo import MESH_TOL_ANGULAR, MESH_TOL_LINEAR
+from ..core.units import IN
 from ..details.base import fmt_frac_in
 from .part_labels import part_labels
 
@@ -19,6 +20,7 @@ DEFAULT_SIZE = (1500, 1100)
 
 CALLOUT_INK = (17, 24, 39)
 DIMENSION_BLUE = (37, 99, 235)
+FASTENER_ORANGE = (194, 65, 12)
 
 
 @dataclass(frozen=True)
@@ -75,18 +77,59 @@ def instruction_style(name: str) -> InstructionStyle:
 
 
 def panel_callout_ids(detail, panel) -> tuple[str, ...]:
-    """One representative per reader part family, preserving source order."""
+    """One structural-part representative per family, preserving source order.
+
+    Installation fasteners use unnumbered model-derived placement markers; a
+    separately numbered balloon for every identical screw duplicates the panel
+    quantity chip and obscures the work.
+    """
     candidates = panel.arrival_part_ids or panel.focus_part_ids
     labels = part_labels(detail.assembly.parts)
+    by_id = {part.id: part for part in detail.assembly.parts}
     seen = set()
     result = []
     for part_id in candidates:
+        if "installation_fastener" in by_id[part_id].component.capability_tags():
+            continue
         family = labels[part_id].reader_name
         if family in seen:
             continue
         seen.add(family)
         result.append(part_id)
     return tuple(result)
+
+
+def panel_fastener_ids(detail, panel) -> tuple[str, ...]:
+    """Current installation fasteners, derived from the panel hardware rows."""
+    by_id = {part.id: part for part in detail.assembly.parts}
+    result = []
+    for row in panel.hardware:
+        for part_id in row.source_part_ids:
+            part = by_id.get(part_id)
+            if part is None:
+                raise ValueError(
+                    f"panel {panel.index} hardware names unknown part {part_id!r}"
+                )
+            if "installation_fastener" not in part.component.capability_tags():
+                continue
+            if part_id not in result:
+                result.append(part_id)
+    return tuple(result)
+
+
+def _fastener_marker_payload(detail, panel) -> tuple[tuple, ...]:
+    """World head stations and approach points for the current fasteners."""
+    by_id = {part.id: part for part in detail.assembly.parts}
+    markers = []
+    for part_id in panel_fastener_ids(detail, panel):
+        part = by_id[part_id]
+        head = part.datum_world("head_bearing").origin
+        drive = part.datum_world("axis").z_axis
+        approach = tuple(
+            head[index] - drive[index] * 0.75 * IN for index in range(3)
+        )
+        markers.append((part_id, tuple(head), approach))
+    return tuple(markers)
 
 
 def panel_camera(panel) -> tuple[float, float, float]:
@@ -151,6 +194,7 @@ def panel_content_key(
         "camera": panel_camera(panel),
         "size": size,
         "callouts": panel_callout_ids(detail, panel),
+        "fastener_markers": _fastener_marker_payload(detail, panel),
         "stations": tuple(_station_payload(value) for value in panel.stations),
     }
     # The established technical register predates styles; leaving it out of
@@ -259,6 +303,7 @@ def _draw_overlay(
     centers = _part_centers(detail)
     labels = part_labels(detail.assembly.parts)
     callout_ids = panel_callout_ids(detail, panel) if callouts else ()
+    fastener_markers = _fastener_marker_payload(detail, panel)
     callout_font = _font(34)
     dimension_font = _font(19)
 
@@ -290,6 +335,35 @@ def _draw_overlay(
             (x - (box[2] - box[0]) / 2,
              y - (box[3] - box[1]) / 2 - box[1]),
             text, fill=CALLOUT_INK, font=callout_font)
+
+    for _part_id, head, approach in fastener_markers:
+        start_x, start_y = _project(renderer, vtk, approach, size[1])
+        head_x, head_y = _project(renderer, vtk, head, size[1])
+        draw.line(
+            (start_x, start_y, head_x, head_y),
+            fill=FASTENER_ORANGE,
+            width=5,
+        )
+        dx, dy = head_x - start_x, head_y - start_y
+        length = max((dx * dx + dy * dy) ** 0.5, 1.0)
+        ux, uy = dx / length, dy / length
+        base_x, base_y = head_x - ux * 13, head_y - uy * 13
+        px, py = -uy * 6, ux * 6
+        draw.polygon(
+            (
+                (head_x, head_y),
+                (base_x + px, base_y + py),
+                (base_x - px, base_y - py),
+            ),
+            fill=FASTENER_ORANGE,
+        )
+        radius = 11
+        draw.ellipse(
+            (head_x - radius, head_y - radius,
+             head_x + radius, head_y + radius),
+            outline=FASTENER_ORANGE,
+            width=4,
+        )
 
     station_markers, stations_to_draw = _stations_for_overlay(panel)
 
@@ -353,6 +427,12 @@ def _draw_overlay(
     metadata = PngInfo()
     metadata.add_text("detailgen_panel_key", key)
     metadata.add_text("detailgen_callout_count", str(len(callout_ids)))
+    metadata.add_text(
+        "detailgen_fastener_marker_count", str(len(fastener_markers)))
+    metadata.add_text(
+        "detailgen_fastener_marker_ids",
+        ",".join(marker[0] for marker in fastener_markers),
+    )
     metadata.add_text("detailgen_station_count", str(len(panel.stations)))
     metadata.add_text(
         "detailgen_drawn_station_reference_ids",

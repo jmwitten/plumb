@@ -251,10 +251,32 @@ def test_family_manual_uses_birdhouse_join_and_member_neutral_fastener_copy(pack
         assert stale not in manual.lower()
     assert "Bench assembly complete" in manual
     assert "field installation remains on hold" in manual
-    assert "11 × Exterior wood screw" in manual
-    assert "6 × Exterior wood screw" in manual
-    assert "15 × Exterior wood screw" in manual
+    assert "Screw ×" in manual
+    assert "1-1/2&quot; long" in manual
+    assert "2-1/4&quot; long" in manual
     assert "17 × fixed-side front lower screw" not in manual
+
+
+def test_family_manual_marks_screw_locations_without_numbering_each_screw(package):
+    from PIL import Image
+
+    _out, result = package
+    manual = Path(result["manual_path"]).read_text()
+    callout_labels = []
+    marker_count = 0
+    for path in result["panel_images"]:
+        with Image.open(path) as image:
+            marker_count += int(image.info["detailgen_fastener_marker_count"])
+            callout_labels.extend(
+                json.loads(image.info["detailgen_callout_labels"])
+            )
+
+    assert "orange targets = screw locations" in manual
+    assert marker_count == 21
+    assert all("screw" not in label.lower() for label in callout_labels)
+    assert "Screw ×11" in manual
+    assert "Screw ×6" in manual
+    assert "fixed-side front lower screw" not in manual
 
 
 def test_reader_documents_compact_print_only_content_without_orphan_pages(package):

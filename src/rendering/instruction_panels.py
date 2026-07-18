@@ -412,9 +412,18 @@ def _hardware_rows(detail, installs) -> tuple[DisplayRow, ...]:
         head = _HEAD_TEXT.get(head_key, head_key.replace("_", " "))
         for part_id in install.fasteners:
             component = by_id[part_id].component
+            capabilities = component.capability_tags()
+            family = (
+                "Screw"
+                if "wood_screw" in capabilities
+                else labels[part_id].item
+            )
+            size = reader_dimensions(component)
+            if "wood_screw" in capabilities:
+                size = f"{fmt_frac_in(component.length / 25.4)} long"
             key = (
-                labels[part_id].item,
-                reader_dimensions(component),
+                family,
+                size,
                 head,
                 component.bom_group(),
             )
@@ -424,7 +433,7 @@ def _hardware_rows(detail, installs) -> tuple[DisplayRow, ...]:
     return tuple(
         DisplayRow(
             "screw",
-            f"{len(ids)} × {item} — {size}, {head}; builder-selected "
+            f"{item} ×{len(ids)} — {size}, {head}; builder-selected "
             "fastener system, with maker/model and drilling requirements "
             "selected before work begins",
             count=len(ids),

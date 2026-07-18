@@ -12,7 +12,7 @@ from .instruction_panels import (
     InstructionPresentationError,
     _relative_html_basename,
 )
-from .instruction_render import panel_callout_ids
+from .instruction_render import panel_callout_ids, panel_fastener_ids
 from .part_labels import part_labels
 
 
@@ -100,6 +100,8 @@ def _callout_rows(detail, panel) -> str:
         rows.append(
             f'<li><span class="callout-number">{number}</span>'
             f'<span>{_e(count_text + family)}</span></li>')
+    if not rows:
+        return ""
     return '<ol class="picture-key">' + "".join(rows) + "</ol>"
 
 
@@ -249,6 +251,16 @@ def _panel_html(detail, panel, image_path: Path, total: int) -> str:
             f'<th>Recorded value</th></tr></thead><tbody>{rows}</tbody></table>'
             '</section>'
         )
+    picture_rows = _callout_rows(detail, panel)
+    picture_key = (
+        f"<strong>Current parts</strong>{picture_rows}"
+        if picture_rows else ""
+    )
+    fastener_legend = (
+        '<i class="swatch screw-location"></i>'
+        'orange targets = screw locations'
+        if panel_fastener_ids(detail, panel) else ""
+    )
 
     return f"""
     <article class="instruction-panel" id="panel-{panel.index}"
@@ -270,10 +282,10 @@ def _panel_html(detail, panel, image_path: Path, total: int) -> str:
         <img class="scene" src="{_data_uri(image_path)}"
              alt="Model-backed assembly view for panel {panel.index}: {_e(panel.title)}">
         <figcaption>
-          <strong>Picture key</strong>
-          {_callout_rows(detail, panel)}
+          {picture_key}
           <span class="render-legend"><i class="swatch current"></i>work in color
-          <i class="swatch ghost"></i>prior work ghosted</span>
+          <i class="swatch ghost"></i>prior work ghosted
+          {fastener_legend}</span>
         </figcaption>
       </figure>
       {diagrams}
@@ -461,7 +473,7 @@ h1{{font-size:clamp(2rem,5vw,3.25rem);line-height:1.05;margin:.35rem 0 .75rem}} 
 figcaption{{display:flex;align-items:center;flex-wrap:wrap;gap:.6rem 1rem;padding:.55rem 1rem;background:#f8fafc;border-top:1px solid var(--line);font-size:.86rem}}
 .picture-key{{display:flex;gap:.8rem 1.15rem;flex-wrap:wrap;list-style:none;margin:0;padding:0}} .picture-key li{{display:flex;align-items:center;gap:.35rem}}
 .callout-number{{display:inline-grid;place-items:center;width:1.55rem;height:1.55rem;border:2px solid var(--ink);border-radius:50%;background:white;font-weight:850}}
-.render-legend{{margin-left:auto;color:var(--muted)}} .swatch{{display:inline-block;width:.85rem;height:.85rem;border:1px solid #64748b;margin:0 .3rem 0 .8rem;vertical-align:-.1rem}} .current{{background:#9a7b4f}} .ghost{{background:#e5e7eb}}
+.render-legend{{margin-left:auto;color:var(--muted)}} .swatch{{display:inline-block;width:.85rem;height:.85rem;border:1px solid #64748b;margin:0 .3rem 0 .8rem;vertical-align:-.1rem}} .current{{background:#9a7b4f}} .ghost{{background:#e5e7eb}} .screw-location{{background:#c2410c;border:3px solid #fff;outline:2px solid #c2410c;border-radius:50%}}
 .operation-diagrams{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.8rem;margin:1rem 1.2rem}}
 .operation-diagram{{margin:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:white}}
 .operation-diagram h3{{margin:0;padding:.55rem .75rem;background:#f8fafc;border-bottom:1px solid var(--line);font-size:.95rem}}
