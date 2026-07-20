@@ -1,0 +1,35 @@
+schema_version: 1
+subject:
+  kind: standalone_detail
+  source: wooden_diaper_caddy.spec.yaml
+intent:
+  counts:
+    - selector: {component: PlywoodPanel}
+      exactly: 6
+    - selector: {component: WoodDowel}
+      exactly: 1
+    - selector: {component: WoodScrew}
+      exactly: 27
+  connections:
+    - selector: {kind: fastened_by}
+      exactly: 13
+    - selector: {kind: bonded_to}
+      exactly: 2
+    - selector: {kind: installed_before}
+      exactly: 54
+  validation:
+    - selector: {check: dimension, verdict: PASS}
+      exactly: 8
+    - selector: {check: capacity}
+      exactly: 0
+  fabrication:
+    - selector: {name: bottom panel}
+      steps: [crosscut]
+    - selector: {name_contains: long wall}
+      steps: [crosscut]
+    - selector: {name_contains: raised end panel}
+      steps: [crosscut]
+    - selector: {name: center divider}
+      steps: [crosscut]
+deliverables: []
+decisions: []

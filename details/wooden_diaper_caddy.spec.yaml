@@ -1,0 +1,204 @@
+# DetailSpec — portable wooden diaper caddy.
+#
+# A low-consequence indoor organizer built from 12 mm Baltic-birch plywood,
+# one 18 mm maple dowel handle, and countersunk interior wood screws. Two
+# raised end panels carry the lengthwise handle; a body-height center divider
+# creates two equal bays. Glue supplements the screwed joints, but no adhesive,
+# screw, panel, handle, or assembled-product capacity is analyzed.
+#
+# Datum: bottom outside face is Z=0. X is overall length, Y is overall width,
+# and Z is up. All governing dimensions are millimetres.
+
+name: wooden diaper caddy
+type: armchair_caddy
+units: mm
+
+params:
+  overall_l: 406
+  overall_w: 254
+  overall_h: 254
+  body_h: 152
+  ply_thk: 12
+  handle_dia: 18
+  handle_axis_z: 216
+  screw_dia: 3.5
+  screw_len: 35
+  edge_ease_r: 3
+  body_corner_r: 12
+  payload_limit_kg: 8
+
+derived:
+  body_panel_h: "= body_h - ply_thk"
+  end_panel_h: "= overall_h - ply_thk"
+  inner_l: "= overall_l - 2*ply_thk"
+  inner_w: "= overall_w - 2*ply_thk"
+  divider_x: "= overall_l/2 - ply_thk/2"
+  handle_l: "$inner_l"
+  handle_y: "= overall_w/2"
+  handle_finger_clear: "= handle_axis_z - handle_dia/2 - body_h"
+  end_left_center_x: "= ply_thk/2"
+  end_right_center_x: "= overall_l - ply_thk/2"
+  wall_near_center_y: "= ply_thk/2"
+  wall_far_center_y: "= overall_w - ply_thk/2"
+
+components:
+  - id: bottom
+    type: plywood_panel
+    name: bottom panel
+    reader_name: Bottom panel
+    params: {length: "$overall_l", width: "$overall_w", thickness: "$ply_thk"}
+
+  - id: wall_near
+    type: plywood_panel
+    name: near long wall
+    reader_name: Long wall
+    params: {length: "$overall_l", width: "$body_panel_h", thickness: "$ply_thk"}
+    place: {raw: {at: [0, "$ply_thk", "$ply_thk"], rotate: [["X", 90]]}}
+
+  - id: wall_far
+    type: plywood_panel
+    name: far long wall
+    reader_name: Long wall
+    params: {length: "$overall_l", width: "$body_panel_h", thickness: "$ply_thk"}
+    place: {raw: {at: [0, "$overall_w", "$ply_thk"], rotate: [["X", 90]]}}
+
+  - id: end_left
+    type: plywood_panel
+    name: left raised end panel
+    reader_name: Raised end panel
+    params: {length: "$inner_w", width: "$end_panel_h", thickness: "$ply_thk"}
+    place: {raw: {at: [0, "$ply_thk", "$ply_thk"], rotate: [["X", 90], ["Z", 90]]}}
+
+  - id: end_right
+    type: plywood_panel
+    name: right raised end panel
+    reader_name: Raised end panel
+    params: {length: "$inner_w", width: "$end_panel_h", thickness: "$ply_thk"}
+    place: {raw: {at: ["= overall_l - ply_thk", "$ply_thk", "$ply_thk"], rotate: [["X", 90], ["Z", 90]]}}
+
+  - id: divider
+    type: plywood_panel
+    name: center divider
+    reader_name: Center divider
+    params: {length: "$inner_w", width: "$body_panel_h", thickness: "$ply_thk"}
+    place: {raw: {at: ["$divider_x", "$ply_thk", "$ply_thk"], rotate: [["X", 90], ["Z", 90]]}}
+
+  - id: handle
+    type: wood_dowel
+    name: maple handle
+    reader_name: Maple handle
+    params: {diameter: "$handle_dia", length: "$handle_l"}
+    place: {raw: {at: ["$ply_thk", "$handle_y", "$handle_axis_z"]}}
+
+  # Bottom-to-wall screws: heads are countersunk on the underside and shanks
+  # drive +Z through the bottom into panel edge grain.
+  - {id: bottom_near_1, type: wood_screw, name: "bottom-to-near-wall screw 1", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [75, "$wall_near_center_y", 0], rotate: [["X", 180]]}}}
+  - {id: bottom_near_2, type: wood_screw, name: "bottom-to-near-wall screw 2", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [203, "$wall_near_center_y", 0], rotate: [["X", 180]]}}}
+  - {id: bottom_near_3, type: wood_screw, name: "bottom-to-near-wall screw 3", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [331, "$wall_near_center_y", 0], rotate: [["X", 180]]}}}
+  - {id: bottom_far_1, type: wood_screw, name: "bottom-to-far-wall screw 1", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [75, "$wall_far_center_y", 0], rotate: [["X", 180]]}}}
+  - {id: bottom_far_2, type: wood_screw, name: "bottom-to-far-wall screw 2", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [203, "$wall_far_center_y", 0], rotate: [["X", 180]]}}}
+  - {id: bottom_far_3, type: wood_screw, name: "bottom-to-far-wall screw 3", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [331, "$wall_far_center_y", 0], rotate: [["X", 180]]}}}
+  - {id: bottom_left_1, type: wood_screw, name: "bottom-to-left-end screw 1", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: ["$end_left_center_x", 80, 0], rotate: [["X", 180]]}}}
+  - {id: bottom_left_2, type: wood_screw, name: "bottom-to-left-end screw 2", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: ["$end_left_center_x", 174, 0], rotate: [["X", 180]]}}}
+  - {id: bottom_right_1, type: wood_screw, name: "bottom-to-right-end screw 1", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: ["$end_right_center_x", 80, 0], rotate: [["X", 180]]}}}
+  - {id: bottom_right_2, type: wood_screw, name: "bottom-to-right-end screw 2", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: ["$end_right_center_x", 174, 0], rotate: [["X", 180]]}}}
+  - {id: bottom_div_1, type: wood_screw, name: "bottom-to-divider screw 1", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [203, 65, 0], rotate: [["X", 180]]}}}
+  - {id: bottom_div_2, type: wood_screw, name: "bottom-to-divider screw 2", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [203, 127, 0], rotate: [["X", 180]]}}}
+  - {id: bottom_div_3, type: wood_screw, name: "bottom-to-divider screw 3", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [203, 189, 0], rotate: [["X", 180]]}}}
+
+  # Side screws: near-wall screws drive +Y; far-wall screws drive -Y.
+  - {id: corner_nl_1, type: wood_screw, name: "near-left corner screw 1", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [6, 0, 55], rotate: [["X", 90]]}}}
+  - {id: corner_nl_2, type: wood_screw, name: "near-left corner screw 2", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [6, 0, 110], rotate: [["X", 90]]}}}
+  - {id: corner_nr_1, type: wood_screw, name: "near-right corner screw 1", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [400, 0, 55], rotate: [["X", 90]]}}}
+  - {id: corner_nr_2, type: wood_screw, name: "near-right corner screw 2", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [400, 0, 110], rotate: [["X", 90]]}}}
+  - {id: corner_fl_1, type: wood_screw, name: "far-left corner screw 1", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [6, 254, 55], rotate: [["X", -90]]}}}
+  - {id: corner_fl_2, type: wood_screw, name: "far-left corner screw 2", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [6, 254, 110], rotate: [["X", -90]]}}}
+  - {id: corner_fr_1, type: wood_screw, name: "far-right corner screw 1", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [400, 254, 55], rotate: [["X", -90]]}}}
+  - {id: corner_fr_2, type: wood_screw, name: "far-right corner screw 2", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [400, 254, 110], rotate: [["X", -90]]}}}
+  - {id: divider_near_1, type: wood_screw, name: "near-wall-to-divider screw 1", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [203, 0, 55], rotate: [["X", 90]]}}}
+  - {id: divider_near_2, type: wood_screw, name: "near-wall-to-divider screw 2", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [203, 0, 110], rotate: [["X", 90]]}}}
+  - {id: divider_far_1, type: wood_screw, name: "far-wall-to-divider screw 1", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [203, 254, 55], rotate: [["X", -90]]}}}
+  - {id: divider_far_2, type: wood_screw, name: "far-wall-to-divider screw 2", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [203, 254, 110], rotate: [["X", -90]]}}}
+
+  # Handle screws drive through the raised end panels into dowel end grain.
+  - {id: handle_left_screw, type: wood_screw, name: "left handle screw", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [0, "$handle_y", "$handle_axis_z"], rotate: [["Y", -90]]}}}
+  - {id: handle_right_screw, type: wood_screw, name: "right handle screw", params: {diameter: "$screw_dia", length: "$screw_len", material_key: steel_zinc, exposure: interior}, place: {raw: {at: [406, "$handle_y", "$handle_axis_z"], rotate: [["Y", 90]]}}}
+
+connections:
+  - {type: butt_screwed, label: "bottom -> near long wall", params: {n_screws: 3}, parts: [bottom, wall_near], hardware: [bottom_near_1, bottom_near_2, bottom_near_3], assumptions: ["Screws drive from the countersunk bottom face into plywood edge grain; glue supplements the joint; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "bottom -> far long wall", params: {n_screws: 3}, parts: [bottom, wall_far], hardware: [bottom_far_1, bottom_far_2, bottom_far_3], assumptions: ["Screws drive from the countersunk bottom face into plywood edge grain; glue supplements the joint; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "bottom -> left raised end", params: {n_screws: 2}, parts: [bottom, end_left], hardware: [bottom_left_1, bottom_left_2], assumptions: ["Screws drive from the countersunk bottom face into plywood edge grain; glue supplements the joint; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "bottom -> right raised end", params: {n_screws: 2}, parts: [bottom, end_right], hardware: [bottom_right_1, bottom_right_2], assumptions: ["Screws drive from the countersunk bottom face into plywood edge grain; glue supplements the joint; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "bottom -> center divider", params: {n_screws: 3}, parts: [bottom, divider], hardware: [bottom_div_1, bottom_div_2, bottom_div_3], assumptions: ["Screws drive from the countersunk bottom face into the divider plywood edge; glue supplements the joint; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "near wall -> left raised end", params: {n_screws: 2}, parts: [wall_near, end_left], hardware: [corner_nl_1, corner_nl_2], assumptions: ["Screws drive through the long-wall face into raised-end plywood edge grain; glue supplements the joint; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "near wall -> right raised end", params: {n_screws: 2}, parts: [wall_near, end_right], hardware: [corner_nr_1, corner_nr_2], assumptions: ["Screws drive through the long-wall face into raised-end plywood edge grain; glue supplements the joint; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "far wall -> left raised end", params: {n_screws: 2}, parts: [wall_far, end_left], hardware: [corner_fl_1, corner_fl_2], assumptions: ["Screws drive through the long-wall face into raised-end plywood edge grain; glue supplements the joint; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "far wall -> right raised end", params: {n_screws: 2}, parts: [wall_far, end_right], hardware: [corner_fr_1, corner_fr_2], assumptions: ["Screws drive through the long-wall face into raised-end plywood edge grain; glue supplements the joint; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "near wall -> center divider", params: {n_screws: 2}, parts: [wall_near, divider], hardware: [divider_near_1, divider_near_2], assumptions: ["Screws drive through the long-wall face into divider plywood edge grain; glue supplements the joint; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "far wall -> center divider", params: {n_screws: 2}, parts: [wall_far, divider], hardware: [divider_far_1, divider_far_2], assumptions: ["Screws drive through the long-wall face into divider plywood edge grain; glue supplements the joint; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "left raised end -> handle end", params: {n_screws: 1}, parts: [end_left, handle], hardware: [handle_left_screw], assumptions: ["The screw bites the maple handle's end grain; glue bonds the circular handle end to the plywood face; capacity NOT analyzed."]}
+  - {type: butt_screwed, label: "right raised end -> handle end", params: {n_screws: 1}, parts: [end_right, handle], hardware: [handle_right_screw], assumptions: ["The screw bites the maple handle's end grain; glue bonds the circular handle end to the plywood face; capacity NOT analyzed."]}
+  - type: glued
+    label: "left raised end -> handle adhesive bond"
+    parts: [end_left, handle]
+    assumptions: ["The maple handle's circular end grain is bonded to the sanded plywood face; end-grain bond capacity is NOT analyzed; the screw is a separate declared connection."]
+    process: {cure: {instructions: ["Prepare and apply the selected interior wood adhesive per its label.", "Clamp the handle between the raised end panels and maintain the label-required fixture state."], completion: selected_label_full_cure, why: "The adhesive label and actual shop conditions govern full cure."}}
+  - type: glued
+    label: "right raised end -> handle adhesive bond"
+    parts: [end_right, handle]
+    assumptions: ["The maple handle's circular end grain is bonded to the sanded plywood face; end-grain bond capacity is NOT analyzed; the screw is a separate declared connection."]
+    process: {cure: {instructions: ["Prepare and apply the selected interior wood adhesive per its label.", "Clamp the handle between the raised end panels and maintain the label-required fixture state."], completion: selected_label_full_cure, why: "The adhesive label and actual shop conditions govern full cure."}}
+
+sequence:
+  assembly:
+    mode: bench_then_set
+    why: >-
+      Cut and dry-fit the seven wood parts; ease and round the specified shop
+      edges; assemble the plywood tray square on a bench; fit, glue, and screw
+      the handle last; keep the glue-up clamped until the selected adhesive
+      label's full-cure condition; then sand, finish, fully cure, and place the
+      freestanding caddy on a stable horizontal surface.
+
+validation:
+  dimensions:
+    - {name: "governing overall length", part: bottom, measure: xlen, expected: 406, tolerance: 0.5}
+    - {name: "governing overall width", part: bottom, measure: ylen, expected: 254, tolerance: 0.5}
+    - {name: "governing overall height", part: end_left, measure: zmax, expected: 254, tolerance: 0.5}
+    - {name: "body wall height", part: wall_near, measure: zmax, expected: 152, tolerance: 0.5}
+    - {name: "handle clear span", part: handle, measure: xlen, expected: 382, tolerance: 0.5}
+    - {name: "handle left end seats on raised panel", part: handle, measure: xmin, expected: 12, tolerance: 0.5}
+    - {name: "handle right end seats on raised panel", part: handle, measure: xmax, expected: 394, tolerance: 0.5}
+    - {name: "minimum finger clearance below handle", part: handle, measure: zmin, expected: 207, tolerance: 0.5}
+
+callouts:
+  - {param: overall_l, label: "OVERALL LENGTH {v}", p0: [0, -28, 0], p1: ["$overall_l", -28, 0]}
+  - {param: overall_w, label: "OVERALL WIDTH {v}", p0: ["= overall_l + 28", 0, 0], p1: ["= overall_l + 28", "$overall_w", 0]}
+  - {param: overall_h, label: "OVERALL HEIGHT {v}", p0: ["= overall_l + 28", "= overall_w + 28", 0], p1: ["= overall_l + 28", "= overall_w + 28", "$overall_h"]}
+  - {param: handle_finger_clear, label: "FINGER CLEAR {v}", p0: [203, 127, "$body_h"], p1: [203, 127, "= handle_axis_z - handle_dia/2"]}
+
+export: {glb_tolerance: 0.1, glb_angular_tolerance: 0.15}
+
+doc:
+  sections:
+    - prose: |
+        # Wooden Diaper Caddy — Validation Report
+
+        A portable two-bay indoor organizer generated from one canonical Plumb DetailSpec. Six 12 mm Baltic-birch plywood parts form the tray and divider; one 18 mm maple dowel spans between raised end panels as the handle. Twenty-seven 3.5 x 35 mm countersunk interior wood screws reinforce the glued butt joints. The caddy is freestanding and has no building attachment.
+    - hardware_presence: {header: "## Connection hardware presence", cap: 27}
+    - derivation_log:
+        header: "## Construction Graph — derivation log"
+        preamble: "Every screw and handle adhesive bond is derived from a declared public Plumb connection:"
+        mode: per_connection
+        cap: 32
+    - findings: {header: "## Governing dimension checks", check: dimension}
+    - prose: "## Result: **{result_verdict}**"
+    - bom_table: {header: "## Bill of materials"}
+    - prose: |
+        ## Fabrication, use, and honest limits
+        - **Cut list source.** The compiler derives rectangular panel cuts from ripped strips. Sheet nesting and rip sequencing are not modeled; verify actual 12 mm sheet thickness before cutting.
+        - **Shop-only edge treatment.** Ease all exposed edges to approximately 3 mm radius and round the four body corners to approximately 12 mm radius. The public plywood primitive remains rectangular, so these sanding/router operations are specified but not represented in model geometry.
+        - **Joinery.** Predrill and countersink every screw. Glue every wood-to-wood mating surface. The selected adhesive label controls preparation, clamping, and full cure. Countersunk underside screw heads must finish flush and receive non-marking pads if the caddy will sit on delicate furniture.
+        - **Finish.** Apply a water-based satin clear polyurethane compatible with the selected adhesive and allow the manufacturer's full cure before loading the caddy. Keep finish out of glue surfaces until assembly is complete.
+        - **Payload boundary.** The intended-use limit is 8 kg distributed across the two bays. Screw withdrawal, glue, panel, handle, impact, and assembled-product capacity are NOT ANALYZED and the 8 kg value is not a certification.
+        - **Not child-support equipment.** This is not a seat, step, toy, child restraint, bassinet, changing surface, or infant-support product. Do not let a child hang from the handle. Keep creams, medicines, bags, cords, and small items out of children's reach.
+        - **Commissioning.** After full finish cure, confirm the caddy sits flat without rocking; verify all screw heads are flush, the handle is immobile, edges are smooth, and no splinters or sharp corners remain. Stop use if any joint loosens, wood cracks, or finish is damaged.
