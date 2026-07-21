@@ -60,12 +60,20 @@ invent structural proof.
 Identical screws appear as a hardware family with quantities and unnumbered
 location targets, while numbered callouts identify only arriving workpieces.
 
+The process projection must keep all same-stage bond events ahead of their
+derived cure events and carry the authored stage identity onto those cure
+steps. Otherwise one ready cure can interrupt the remaining same-stage bonds,
+falsely teaching a one-end-at-a-time glue-up. With the handle-preparation frame
+retained, the caddy therefore projects to nine panels: four shell fastening
+goals, handle preparation, one two-end bond operation, one two-end cure hold,
+one handle-fastening operation, and completion inspection.
+
 The caddy release test will enforce the reader outcome rather than a global
-panel count: eight panels, no fastening panel with more than three connection
-instructions, no picture key containing fastener components, and no panel with
-more than four numbered workpiece callouts. This product-specific gate prevents
-the exact regression without imposing an unsuitable universal limit on all
-projects.
+platform panel count: exactly nine panels for this declared sequence, no
+fastening panel with more than three connection instructions, no picture key
+containing fastener components, and no panel with more than four numbered
+workpiece callouts. This product-specific gate prevents the exact regression
+without imposing an unsuitable universal limit on all projects.
 
 ## Review classification
 

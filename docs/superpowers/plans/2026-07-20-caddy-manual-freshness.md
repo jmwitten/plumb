@@ -14,7 +14,7 @@
 - The default authoritative source is the live `origin/main`, verified with `git ls-remote` and the local `origin/main` ref.
 - Stale, diverged, missing-ref, or unreachable-remote states fail closed unless `PLUMB_ALLOW_STALE_SOURCE=1` is explicitly recorded.
 - Generated HTML is never authoritative and must not be edited.
-- Each caddy panel has one physical goal; no fastening panel may contain more than three connection instructions.
+- Each caddy panel has one physical goal; the declared sequence projects to nine panels and no fastening panel may contain more than three connection instructions.
 - Numbered picture keys identify at most four arriving workpieces and never identify individual fasteners.
 - Existing geometry, dimensions, materials, 27-fastener inventory, honest UNKNOWN states, and architecture remain unchanged.
 - Every production change follows a demonstrated red/green test cycle.
@@ -77,10 +77,12 @@ git commit -m "fix: reject stale Plumb compiler checkouts"
 - Modify: `details/wooden_diaper_caddy.spec.yaml`
 - Modify: `tests/test_wooden_diaper_caddy_release.py`
 - Modify: `tests/test_scope_manifest.csv`
+- Modify: `src/assemblies/event_graph.py`
+- Modify: `tests/test_reader_steps.py`
 
 **Interfaces:**
 - Consumes: public `sequence.stages`, subassembly completion, installation fastener markers, and generic instruction-manual projection from current `main`.
-- Produces: an eight-panel caddy manual and product release assertions for panel scope and callout clarity.
+- Produces: a nine-panel caddy manual, correct same-stage process ordering, and product release assertions for panel scope and callout clarity.
 
 - [ ] **Step 1: Bring the accepted caddy source onto the fresh branch**
 
@@ -88,7 +90,7 @@ Cherry-pick commit `aab9c57`, resolving only scope-manifest context if required.
 
 - [ ] **Step 2: Write the failing readability regression**
 
-Compile the caddy and build its instruction manual in `tests/test_wooden_diaper_caddy_release.py`. Assert eight panels; fastening panel connection counts no greater than three; every `panel_fastener_ids()` result is excluded from `panel_callout_ids()`; and at most four numbered callouts per panel.
+Compile the caddy and build its instruction manual in `tests/test_wooden_diaper_caddy_release.py`. Assert nine panels; fastening panel connection counts no greater than three; every `panel_fastener_ids()` result is excluded from `panel_callout_ids()`; and at most four numbered callouts per panel. In `tests/test_reader_steps.py`, add a minimal two-bond late-stage regression proving both bond steps precede both cure steps and the two cure steps retain one shared authored stage.
 
 - [ ] **Step 3: Run the product release test and confirm RED**
 
@@ -98,11 +100,11 @@ Run through the source-bound launcher:
 pytest tests/test_wooden_diaper_caddy_release.py -q
 ```
 
-Expected: failure showing the unstaged caddy has four panels and an oversized fastening panel.
+Expected: the product test fails because the unstaged caddy has four panels and an oversized fastening panel; the reader-step regression fails because the first cure interrupts the second same-stage bond and loses stage identity.
 
 - [ ] **Step 4: Add progressive stages and completion semantics**
 
-Declare the eight goals from the design spec using public `sequence.stages`, top-level `sequence.after`, and a named caddy subassembly. Put both handle glue connections in the bond stage and both handle-screw connections in the following fastening stage. Require each handle-screw connection to occur after both glue-connection cure events. Add a completion record that verifies all 27 screws, handle immobility, flush heads, smooth edges, flat bearing, and the existing stop-use conditions.
+Declare the nine-panel flow from the design spec using public `sequence.stages`, top-level `sequence.after`, and a named caddy subassembly. Put both handle glue connections in the bond stage and both handle-screw connections in the following fastening stage. Require each handle-screw connection to occur after both glue-connection cure events. In reader-step projection, give same-stage primary connection events priority over their process events and carry the connection's authored stage onto derived process steps. Add a completion record that verifies all 27 screws, handle immobility, flush heads, smooth edges, flat bearing, and the existing stop-use conditions.
 
 - [ ] **Step 5: Run the focused regression and product gates**
 
