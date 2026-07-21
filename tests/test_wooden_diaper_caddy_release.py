@@ -59,6 +59,53 @@ def test_instruction_manual_has_nine_readable_progressive_panels():
     detail = compile_spec_file(SPEC)
     detail.validate()
     manual = build_instruction_manual(detail)
+    expected_cohorts = (
+        (
+            "fasten",
+            ("bottom -> near long wall", "bottom -> far long wall"),
+        ),
+        (
+            "fasten",
+            (
+                "bottom -> left raised end",
+                "near wall -> left raised end",
+                "far wall -> left raised end",
+            ),
+        ),
+        (
+            "fasten",
+            (
+                "bottom -> right raised end",
+                "near wall -> right raised end",
+                "far wall -> right raised end",
+            ),
+        ),
+        (
+            "fasten",
+            (
+                "bottom -> center divider",
+                "near wall -> center divider",
+                "far wall -> center divider",
+            ),
+        ),
+        ("prepare", ()),
+        (
+            "bond",
+            (
+                "left raised end -> handle adhesive bond",
+                "right raised end -> handle adhesive bond",
+            ),
+        ),
+        ("cure", ()),
+        (
+            "fasten",
+            (
+                "left raised end -> handle end",
+                "right raised end -> handle end",
+            ),
+        ),
+        ("join", ()),
+    )
     fastening_panels = tuple(
         panel for panel in manual.panels if panel.action == "fasten"
     )
@@ -68,6 +115,51 @@ def test_instruction_manual_has_nine_readable_progressive_panels():
     )
 
     assert readability[0] == 9 and readability[1] <= 3, readability
+    assert tuple(
+        (panel.action, panel.connections) for panel in manual.panels
+    ) == expected_cohorts
+
+    installs = detail.resolved_installations
+    assert len(installs) == 13
+    assert sum(len(install.fasteners) for install in installs) == 27
+    assert all(
+        install.contract.head == "flush_countersunk" for install in installs
+    )
+    assert all(
+        install.provenance_map["head"] == "authored_override"
+        for install in installs
+    )
+    assert all(
+        "head seated flush in its countersink" in instruction
+        for panel in fastening_panels
+        for instruction in panel.instructions
+    )
+
+    graph = detail.construction_event_graph
+    glue_connections = (
+        "left raised end -> handle adhesive bond",
+        "right raised end -> handle adhesive bond",
+    )
+    screw_connections = (
+        "left raised end -> handle end",
+        "right raised end -> handle end",
+    )
+    cure_screw_prerequisites = {
+        (glue, screw)
+        for glue in glue_connections
+        for screw in screw_connections
+        if graph.precedes(
+            next(event for event in graph.processes_of[glue]
+                 if event.group == "cure"),
+            graph.drives_of[screw][0],
+        )
+    }
+    assert cure_screw_prerequisites == {
+        (glue, screw)
+        for glue in glue_connections
+        for screw in screw_connections
+    }
+
     for panel in manual.panels:
         callout_ids = set(panel_callout_ids(detail, panel))
         fastener_ids = set(panel_fastener_ids(detail, panel))
