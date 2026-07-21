@@ -1370,9 +1370,15 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
     process_adjacent = {
         label for label, events in graph.processes_of.items() if events}
     process_adjacent.update(claim.connection for claim in graph.constraints)
+    process_stage_keys = {
+        (stage.chain, stage.name)
+        for label in process_adjacent
+        if (stage := stage_of_conn.get(label)) is not None
+    }
 
     unit_idx = {u.name: i for i, u in enumerate(
         graph.staging.units if graph.staging is not None else ())}
+    root_base = 2
 
     def bucket_for(key: tuple, stage: ResolvedStage | None, title: str,
                    *, unit: ResolvedUnit | None = None, joins=(),
@@ -1433,11 +1439,19 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
             key = ("stage-conn", st.chain, st.name, label)
             return bucket_for(
                 key, st,
-                f"stage {st.name!r} (declared order): install {label}")
+                f"stage {st.name!r} (declared order): install {label}",
+                preferred=(root_base,
+                           1 + stage_order[(st.chain, st.name)],
+                           first, label))
         if st is not None:
             key = ("stage", st.chain, st.name)
+            preferred = None
+            if (st.chain, st.name) in process_stage_keys:
+                preferred = (root_base,
+                             1 + stage_order[(st.chain, st.name)])
             return bucket_for(
-                key, st, f"stage {st.name!r} (declared order)")
+                key, st, f"stage {st.name!r} (declared order)",
+                preferred=preferred)
         return bucket_for(
             ("conn", label), None, f"install {label}")
 
@@ -1471,12 +1485,13 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
             unit = graph.units.get(frame)
             st = stage_of_conn.get(label)
             preferred = None
-            if unit is not None:
-                if st is not None:
-                    # Same-stage connection buckets use their first event
-                    # position in this slot. A sentinel beyond every event
-                    # keeps all of those primary acts ahead of their derived
-                    # process steps without adding a graph dependency.
+            if st is not None:
+                # Same-stage connection buckets use their first event
+                # position in this slot. A sentinel beyond every event keeps
+                # all of those primary acts ahead of their derived process
+                # steps without adding a graph dependency. Root stages use
+                # the same presentation rule as named staging units.
+                if unit is not None:
                     preferred = (
                         0,
                         unit_idx[frame],
@@ -1487,8 +1502,17 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
                         ev.group,
                     )
                 else:
-                    preferred = (0, unit_idx[frame], 2,
-                                 pos.get(ev, len(order)), label, ev.group)
+                    preferred = (
+                        root_base,
+                        1 + stage_order[(st.chain, st.name)],
+                        len(order) + 1,
+                        pos.get(ev, len(order)),
+                        label,
+                        ev.group,
+                    )
+            elif unit is not None:
+                preferred = (0, unit_idx[frame], 2,
+                             pos.get(ev, len(order)), label, ev.group)
             pb = bucket_for(
                 ("process", label, ev.group), st,
                 f"{ev.group} {label}", unit=unit, preferred=preferred,
@@ -1577,7 +1601,6 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
             "consumed placement, staged placement, and bench-unit placement "
             "must have one reader owner.")
 
-    root_base = 2
     def presentation_key(key):
         b = buckets[key]
         preferred = b["preferred"]

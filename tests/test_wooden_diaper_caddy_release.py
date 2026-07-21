@@ -165,3 +165,25 @@ def test_instruction_manual_has_nine_readable_progressive_panels():
         fastener_ids = set(panel_fastener_ids(detail, panel))
         assert fastener_ids.isdisjoint(callout_ids)
         assert len(callout_ids) <= 4
+
+
+def test_single_handle_fasteners_use_singular_action_grammar():
+    from detailgen.rendering.instruction_panels import build_instruction_manual
+    from detailgen.spec.compiler import compile_spec_file
+
+    detail = compile_spec_file(SPEC)
+    detail.validate()
+    manual = build_instruction_manual(detail)
+    handle_instructions = tuple(
+        instruction
+        for panel in manual.panels
+        if panel.connections == (
+            "left raised end -> handle end",
+            "right raised end -> handle end",
+        )
+        for instruction in panel.instructions
+    )
+
+    assert len(handle_instructions) == 2
+    assert all("drive 1 screw through" in text for text in handle_instructions)
+    assert all("drive 1 screws" not in text for text in handle_instructions)

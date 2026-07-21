@@ -690,13 +690,15 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
                 entry_names = " and ".join(
                     _display(labels, pid) for pid in entry_ids)
                 count = sum(len(install.fasteners) for install in resolved)
+                fastener_noun = "screw" if count == 1 else "screws"
                 head = _HEAD_ACTION.get(
                     resolved[0].contract.head,
                     f"finish each head as {resolved[0].contract.head.replace('_', ' ')}")
                 instructions.append(
                     f"At the marked centers, prepare the holes required by "
-                    f"the selected screw maker, then drive {count} screws "
-                    f"through {entry_names} into {receiving_names}; {head}.")
+                    f"the selected screw maker, then drive {count} "
+                    f"{fastener_noun} through {entry_names} into "
+                    f"{receiving_names}; {head}.")
         instructions.extend(checks)
         rationales.extend(_constraint_whys(graph, connections=connections))
         method_keys = tuple(dict.fromkeys(
