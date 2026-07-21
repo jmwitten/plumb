@@ -130,7 +130,7 @@ def test_instruction_manual_has_nine_readable_progressive_panels():
         for install in installs
     )
     assert all(
-        "head seated flush in its countersink" in instruction
+        "seat each head flush in its countersink" in instruction
         for panel in fastening_panels
         for instruction in panel.instructions
     )
