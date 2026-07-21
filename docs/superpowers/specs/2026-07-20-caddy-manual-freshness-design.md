@@ -21,10 +21,13 @@ Use two independent, fail-closed controls.
 
 The maintained Plumb plugin preflight will inspect the selected compiler
 checkout against a configurable authoritative ref, defaulting to
-`origin/main`. A release-capable preflight passes only when the authoritative
-ref is present and is an ancestor of `HEAD`. A checkout that is behind or has
-diverged fails with a required `source-freshness` check containing the selected
-HEAD, authoritative ref, authoritative commit, and ahead/behind counts.
+`origin/main`. It will read the corresponding remote branch with `git
+ls-remote` without changing local refs. A release-capable preflight passes only
+when the local remote-tracking ref matches the advertised remote commit and
+that commit is an ancestor of `HEAD`. A checkout that is behind, has diverged,
+or relies on a stale remote-tracking ref fails with a required
+`source-freshness` check containing the selected HEAD, authoritative ref,
+advertised commit, local tracked commit, and ahead/behind counts.
 
 `PLUMB_ALLOW_STALE_SOURCE=1` is the sole escape hatch. It makes an intentional
 historical or offline build explicit in the preflight evidence; it never occurs
@@ -41,17 +44,19 @@ concurrent user work.
 The caddy specification will declare a progressive bench sequence with one
 physical goal per stage:
 
-1. Attach the near long wall to the bottom.
-2. Attach the far long wall to the bottom.
-3. Attach the left raised end to the bottom and both long walls.
-4. Attach the right raised end to the bottom and both long walls.
-5. Install the center divider against the bottom and both long walls.
-6. Fit, glue, and screw the handle between the raised ends.
-7. Hold the handle bonds through the selected adhesive label's full cure.
+1. Attach both long walls to the bottom as one mirrored side-wall operation.
+2. Attach the left raised end to the bottom and both long walls.
+3. Attach the right raised end to the bottom and both long walls.
+4. Install the center divider against the bottom and both long walls.
+5. Fit, glue, and clamp the handle between the raised ends.
+6. Hold both handle bonds through the selected adhesive label's full cure.
+7. Drive the two handle screws only after both adhesive bonds reach full cure.
 8. Inspect the completed caddy.
 
-The generic process graph remains authoritative for dependencies. The stages
-declare presentation and build strategy; they do not invent structural proof.
+The two handle-screw connections carry explicit authored dependencies on both
+handle-bond cure events. The generic process graph remains authoritative for
+dependencies. The stages declare presentation and build strategy; they do not
+invent structural proof.
 Identical screws appear as a hardware family with quantities and unnumbered
 location targets, while numbered callouts identify only arriving workpieces.
 
