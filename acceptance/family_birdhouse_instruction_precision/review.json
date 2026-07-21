@@ -1,0 +1,66 @@
+{
+  "schema": "plumb/bounded-product-review/v1",
+  "product_slug": "family_birdhouse",
+  "authoritative_spec": "details/family_birdhouse.spec.yaml",
+  "package": "build/family_birdhouse_compiled",
+  "finding_ids": [
+    "birdhouse-fasteners-lack-transferable-placement",
+    "birdhouse-fixed-screws-render-proud",
+    "birdhouse-stages-lack-setup-and-check",
+    "birdhouse-closeout-precedes-cleat",
+    "birdhouse-panel-one-hides-receiver",
+    "birdhouse-regeneration-retains-orphan-images"
+  ],
+  "disposition": "product_blocking",
+  "status": "closed",
+  "repair": {
+    "owner_layers": [
+      "compiler",
+      "renderer",
+      "document_generator"
+    ],
+    "sources": [
+      "src/rendering/fastener_layouts.py",
+      "src/rendering/instruction_panels.py",
+      "src/rendering/instruction_render.py",
+      "src/package/builder.py",
+      "src/spec/schema.py",
+      "details/family_birdhouse.spec.yaml"
+    ],
+    "summary": "Sequence stages carry one setup and one observable check; fastener panels derive transferable edge-datum schedules, conventional sixteenth-inch dimensions, approach direction, and seated-versus-proud head behavior from the compiled model; completion derives its fastener total from bench-unit membership; the camera favors the active work side; and package regeneration removes orphaned panel images. The birdhouse now uses 11 tightly scoped install panels plus one closeout panel."
+  },
+  "evidence": {
+    "implementation_head": "d55b7cf9b2ad8b1921f556da860e96854ca6a089",
+    "model_fingerprint": "ab3fb92ce56a78973258e55bb89a2b9c47ddeca4a0b641db30f69a9d1e6145dd",
+    "assembly_hash": "76700d6a41a718a1250cbcd10eb392cebde00fdcc9b96731f7d7e8dd820593cc",
+    "spec_sha256": "56857f6cffccf45bf4ca086b38b7bee0686434e22001ed178d5c25d199661aef",
+    "package_manifest_sha256": "0c3bbed871e2cebecff486808735b55aec5d36628c614068277786780e462c13",
+    "assembly_html_sha256": "a7a4166cd7410e343c1590973b8ca9e5864e14433c64a0407e7a8cf7e92b42aa",
+    "review_manifest_sha256": "b8b826dc14cd02f10453440e94be9dcf30ef8f2678103eaffdcf665ac042eac4",
+    "validation_ok": true,
+    "blocking_count": 0,
+    "artifact_count": 30,
+    "instruction_panel_count": 12,
+    "exterior_screw_count": 21,
+    "finding_dispositions": "6 of 6 classified product_blocking and repaired before release",
+    "product_inner": "11 passed, 5 deselected",
+    "product_release": "25 passed, 6 deselected",
+    "platform_integration": "277 passed, 600 deselected",
+    "viewer_explode": "27 passed",
+    "clean_delivery_build_seconds": 8.99
+  },
+  "reader_review": {
+    "scope": "Every assembly panel and its manifest-backed diagram",
+    "initial_result": "0 blockers, 0 major findings, 2 minor findings",
+    "minor_repairs": [
+      "Panel 9 now identifies the extended back's physical top edge instead of a modeled slope datum.",
+      "Panel 11 explicitly pairs the left and right cleat offsets with their respective heights."
+    ],
+    "closeout_result": "0 blockers, 0 major findings, 0 minor findings"
+  },
+  "visual_review": {
+    "all_instruction_images": "12 of 12 inspected at original resolution; panel 1 shows both the entrance front and receiving fixed side, and every orange target remains visible.",
+    "manifest_image_closure": "All 12 embedded images hash-match their manifest files; no superseded instruction images remain.",
+    "desktop_mobile_interactive_browser_review": "Not run: browser security policy blocked navigation to the isolated local file URL. Static HTML, original-resolution images, model data, and existing viewer/explode tests were reviewed instead."
+  }
+}
