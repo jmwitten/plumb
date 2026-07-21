@@ -1,0 +1,21 @@
+{
+  "id": "birdhouse-regeneration-retains-orphan-images",
+  "owner_layer": "document_generator",
+  "missing_required_capability": false,
+  "impact": {
+    "geometry": false,
+    "dimensions": false,
+    "fabrication": false,
+    "assembly": false,
+    "installation": false,
+    "instructions": false,
+    "required_artifact_usability": true,
+    "safety_or_honesty": true,
+    "acceptance_criteria": true
+  },
+  "reproduction": "Regenerate family_birdhouse into an existing package after changing a panel camera: the new 12 panel images are written, but four superseded content-key PNGs remain and are included as instruction-image artifacts in the package manifest.",
+  "severity": "major governed artifact-closure defect",
+  "affected_shared_surface": "generic package instruction-image lifecycle",
+  "root_cause": "The package builder wrote content-keyed instruction images into a persistent directory without pruning files that were no longer referenced by the current panel map.",
+  "deferral": {}
+}

@@ -207,11 +207,16 @@ def build_package(request: PackageRequest) -> PackageResult:
                     "graph."
                 ),
             )
+            image_dir = out / "assembly-images"
             image_paths = render_instruction_images(
                 detail,
                 manual,
-                out / "assembly-images",
+                image_dir,
             )
+            active_images = set(image_paths.values())
+            for prior_image in image_dir.glob("*.png"):
+                if prior_image not in active_images:
+                    prior_image.unlink()
             assembly_path.write_text(
                 render_instruction_manual_html(
                     detail,
