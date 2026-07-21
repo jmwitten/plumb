@@ -15,6 +15,7 @@ from pathlib import Path
 
 from ..assemblies.event_graph import derive_reader_steps, reader_step_event_map
 from ..details.base import fmt_frac_in
+from .fastener_layouts import FastenerLayout, derive_fastener_layouts
 from .part_labels import part_labels
 
 
@@ -152,6 +153,7 @@ class InstructionPanel:
     procedure_links: tuple[ProcedureLink, ...] = ()
     diagrams: tuple[OperationDiagram, ...] = ()
     stations: tuple[PlacementStation, ...] = ()
+    fastener_layouts: tuple[FastenerLayout, ...] = ()
     stop_notice: StopNotice | None = None
     record_title: str = ""
     record_fields: tuple[RecordField, ...] = ()
@@ -213,9 +215,16 @@ _HEAD_TOOL_ROWS = {
         "Pilot/countersink selected from the fastener maker's instructions"),
 }
 _HEAD_TEXT = {
+    "seated": "head seated snug against the surface",
     "flush_countersunk": "head seated flush in its countersink",
 }
-
+_HEAD_ACTION = {
+    "seated": "seat each head snug against the surface",
+    "proud": "leave each head proud",
+    "flush_countersunk": "seat each head flush in its countersink",
+    "recessed_in_pocket": "seat each head in its pocket",
+    "nut_and_washer": "complete each nut-and-washer stack",
+}
 
 def _relative_html_basename(value: str, field: str) -> str:
     if (not isinstance(value, str) or not value
@@ -385,6 +394,13 @@ def _service_panel_semantics(detail) -> dict[str, tuple[str, str]]:
 def _panel_title(
     detail, action, graph, steps, cohort, labels, service_semantics,
 ) -> str:
+    stages = tuple(dict.fromkeys(
+        steps[index].stage for index in cohort
+        if steps[index].stage is not None
+    ))
+    if len(stages) == 1 and action in {"bond", "fasten"}:
+        name = stages[0].name.strip()
+        return name[:1].upper() + name[1:]
     if action == "prepare":
         ids = tuple(pid for index in cohort
                     for pid in steps[index].parts_placed)
@@ -467,9 +483,8 @@ def _hardware_rows(detail, installs) -> tuple[DisplayRow, ...]:
     return tuple(
         DisplayRow(
             "screw",
-            f"{item} ×{len(ids)} — {size}, {head}; builder-selected "
-            "fastener system, with maker/model and drilling requirements "
-            "selected before work begins",
+            f"{item} ×{len(ids)} — {size}; select the exterior screw and "
+            "its maker-specified drilling requirements before work begins",
             count=len(ids),
             source_part_ids=tuple(ids),
         )
@@ -556,6 +571,13 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
                     else None)
     instructions, rationales, honesty, tools = [], [], [], []
     hardware = ()
+    fastener_layouts = ()
+    stages = tuple(dict.fromkeys(
+        steps[index].stage for index in cohort
+        if steps[index].stage is not None
+    ))
+    setups = tuple(stage.setup for stage in stages if stage.setup)
+    checks = tuple(stage.check for stage in stages if stage.check)
 
     if action == "prepare":
         prepared_ids = tuple(pid for i in cohort for pid in steps[i].parts_placed)
@@ -615,6 +637,9 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
         installs = tuple(inst for connection in connections
                          for inst in installs_by_connection.get(connection, ()))
         hardware = _hardware_rows(detail, installs)
+        fastener_layouts = derive_fastener_layouts(
+            detail, graph, labels, connections, installs_by_connection)
+        instructions.extend(setups)
         service = _service_panel_group(connections, service_semantics)
         if service is not None:
             mode, service_panel_id = service
@@ -627,22 +652,29 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
             )
             count = sum(len(install.fasteners) for install in installs)
             if mode == "pivot":
-                instructions.extend((
-                    f"Support {service_panel} in its closed position. Install "
-                    f"the {count} aligned pivot screws through {entry_names} "
-                    f"into {service_panel}; leave each head proud enough for "
-                    "the panel to pivot without binding.",
-                    f"Swing {service_panel} open and closed to confirm free "
-                    "movement before installing the lower latch.",
-                ))
+                instructions.append(
+                    f"At the marked centers, drill clearance holes through "
+                    f"{entry_names} and pilot holes into {service_panel}; "
+                    f"install {count} aligned pivot screws with their heads "
+                    "proud enough for the panel to swing freely."
+                )
+                if not checks:
+                    instructions.append(
+                        f"Swing {service_panel} open and closed to confirm "
+                        "free movement before installing the lower latch."
+                    )
             else:
-                instructions.extend((
-                    f"Close {service_panel}. Install the removable latch screw "
-                    f"through {entry_names} into {service_panel}; keep its head "
-                    "proud and do not glue or permanently fix it.",
-                    f"Open, close, and re-latch {service_panel} to confirm "
-                    "service access.",
-                ))
+                instructions.append(
+                    f"At the marked center, drill a clearance hole through "
+                    f"{entry_names} and a pilot hole into {service_panel}; "
+                    "install the removable latch screw with its head proud. "
+                    "Do not glue it."
+                )
+                if not checks:
+                    instructions.append(
+                        f"Open, close, and re-latch {service_panel} to confirm "
+                        "service access."
+                    )
         else:
             for connection in connections:
                 resolved = installs_by_connection.get(connection, ())
@@ -658,13 +690,14 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
                 entry_names = " and ".join(
                     _display(labels, pid) for pid in entry_ids)
                 count = sum(len(install.fasteners) for install in resolved)
-                head = _HEAD_TEXT.get(
+                head = _HEAD_ACTION.get(
                     resolved[0].contract.head,
-                    resolved[0].contract.head.replace("_", " "))
+                    f"finish each head as {resolved[0].contract.head.replace('_', ' ')}")
                 instructions.append(
-                    f"Fasten {receiving_names} to {entry_names}; drive all "
-                    f"{count} modeled fasteners through {entry_names} into "
-                    f"{receiving_names}, with each {head}.")
+                    f"At the marked centers, prepare the holes required by "
+                    f"the selected screw maker, then drive {count} screws "
+                    f"through {entry_names} into {receiving_names}; {head}.")
+        instructions.extend(checks)
         rationales.extend(_constraint_whys(graph, connections=connections))
         method_keys = tuple(dict.fromkeys(
             install.contract.method for install in installs))
@@ -681,6 +714,18 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
             if joins != ("whole detail",) else None
         )
         if join_presentation is None and authored_completion is not None:
+            unit = graph.units[joins[0]]
+            modeled_fasteners = tuple(
+                part_id for part_id in unit.parts
+                if "installation_fastener" in
+                by_id[part_id].component.capability_tags()
+            )
+            if modeled_fasteners:
+                noun = "screw" if len(modeled_fasteners) == 1 else "screws"
+                instructions.append(
+                    f"Confirm all {len(modeled_fasteners)} modeled {noun} "
+                    f"assigned to the {unit.name} are installed."
+                )
             instructions.extend(authored_completion.instructions)
             honesty.extend(authored_completion.honesty)
         elif join_presentation is None:
@@ -736,6 +781,7 @@ def _panel_content(detail, graph, steps, cohort, action, labels,
         "honesty": tuple(honesty),
         "hardware": hardware,
         "tools": tuple(tools),
+        "fastener_layouts": fastener_layouts,
     }
 
 

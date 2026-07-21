@@ -45,7 +45,7 @@ def test_selected_concept_is_bound_to_owner_modeling_and_delivery_approval():
     assert doc.delivery_confirmation.approved_by == "Joel Witten"
     assert doc.delivery_confirmation.selection_fingerprint == SELECTION_FP
     assert doc.delivery_confirmation.model_fingerprint == (
-        "8c9caf36f69f956d9087763cb058ac83abbdcc56b040609bb26c26b0a26d01da"
+        "416a06834aff05f087287227a5efbaad4104553a941205310ed5bfacf42d0af5"
     )
 
 

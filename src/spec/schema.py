@@ -1012,6 +1012,12 @@ class AuthoredStage:
     override precedent applied to order claims: an order claim ships with
     its defense, never a bare assertion.
 
+    ``setup`` and ``check`` are optional single reader sentences. They carry
+    physical alignment/preparation and the observable acceptance check that
+    geometry cannot infer. Keeping each as one string deliberately bounds a
+    reader stage to one setup and one check instead of reopening an unbounded
+    instruction list.
+
     Stages are TOTALLY ORDERED by their declaration position in
     ``SequenceSpec.stages`` — that tuple position IS the order; there is no
     separate index field to drift from it."""
@@ -1020,6 +1026,8 @@ class AuthoredStage:
     why: str
     connections: tuple = ()
     parts: tuple = ()
+    setup: str = ""
+    check: str = ""
 
 
 @dataclass(frozen=True)

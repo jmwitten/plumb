@@ -101,8 +101,8 @@ EXIT_CONDITIONS = ("none", "concealed_exit", "through_exit_required")
 #: ``recessed_in_pocket`` judges against a MODELED void where vocabulary
 #: exists and against the declared condition (disclosed, REPRESENTED rung)
 #: where it does not yet (design §verdict axes).
-HEAD_CONDITIONS = ("proud", "flush_countersunk", "recessed_in_pocket",
-                   "nut_and_washer")
+HEAD_CONDITIONS = ("seated", "proud", "flush_countersunk",
+                   "recessed_in_pocket", "nut_and_washer")
 
 #: Tool-axis modes (CLOSED): ``shank`` — the tool drives along the fastener's
 #: own ``axis`` datum (the drawn solid IS the semantics); ``angled`` — the
@@ -456,11 +456,14 @@ def _half_length_embedment(screws) -> tuple[object, tuple[str, ...]]:
 
 def straight_screw_group(role: str, screws, entry_part_id: str,
                          entry_face: str = "free_face",
-                         stack: tuple[str, ...] = ()) -> RoleGroup:
+                         stack: tuple[str, ...] = (),
+                         head: str = "seated") -> RoleGroup:
     """The shared default for a straight-driven screw group
     (cleat/rail-cap/butt/hanger screws): ``driven_straight`` along the
-    shank, entering ``entry_part_id``'s ``entry_face``, no exit, proud head,
-    module-default tool envelope. Embedment is the half-length rule —
+    shank, entering ``entry_part_id``'s ``entry_face``, no exit, head bearing
+    seated against the entry member, module-default tool envelope. ``head``
+    remains an explicit argument for mechanisms such as a pivot that require
+    a proud head. Embedment is the half-length rule —
     stamped ``assumption``. ``stack`` names non-driven hardware this same
     contract covers (a hanger installed by its screws)."""
     embedment, notes = _half_length_embedment(screws)
@@ -470,7 +473,7 @@ def straight_screw_group(role: str, screws, entry_part_id: str,
         tool_axis=ToolAxis("shank"),
         exit=Exit("none"),
         embedment=embedment,
-        head="proud",
+        head=head,
         tool_envelope=tool_envelope_for("driven_straight"),
     )
     return RoleGroup(

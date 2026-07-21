@@ -202,6 +202,8 @@ class ResolvedStage:
     chain: str = ""
     connections: tuple = ()
     parts: tuple = ()
+    setup: str = ""
+    check: str = ""
 
 
 @dataclass(frozen=True)

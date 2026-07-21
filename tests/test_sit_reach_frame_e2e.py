@@ -227,7 +227,7 @@ def test_frame_joinery_uses_existing_words_honestly(frame):
             assert "bears_on" in edge_kinds  # the cap genuinely seats
 
 
-def test_cap_screw_heads_are_authored_flush_while_inner_rail_heads_may_be_proud(frame):
+def test_cap_screw_heads_are_authored_flush_while_inner_rail_heads_are_seated(frame):
     detail, _report = frame
     installs = detail._connection_checks.installs
     caps = [ri for ri in installs if ri.role == "cap_screws"]
@@ -235,7 +235,7 @@ def test_cap_screw_heads_are_authored_flush_while_inner_rail_heads_may_be_proud(
     assert len(caps) == 4 and len(rails) == 4
     assert all(ri.contract.head == "flush_countersunk" for ri in caps)
     assert all(ri.provenance_map["head"] == "authored_override" for ri in caps)
-    assert all(ri.contract.head == "proud" for ri in rails)
+    assert all(ri.contract.head == "seated" for ri in rails)
 
 
 def test_prose_truthfulness_guard(frame, tmp_path):

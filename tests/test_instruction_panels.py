@@ -27,11 +27,19 @@ from detailgen.rendering.instruction_panels import (
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = ROOT / "details" / "armchair_caddy.spec.yaml"
+BIRDHOUSE_SPEC = ROOT / "details" / "family_birdhouse.spec.yaml"
 
 
 @pytest.fixture(scope="module")
 def caddy():
     detail = compile_spec_file(SPEC)
+    detail.validate()
+    return detail
+
+
+@pytest.fixture(scope="module")
+def birdhouse():
+    detail = compile_spec_file(BIRDHOUSE_SPEC)
     detail.validate()
     return detail
 
@@ -156,6 +164,45 @@ def test_named_subassembly_join_panels_use_each_subassembly_name(
             ("Complete the right trestle as one subassembly.",),
         ),
     ]
+
+
+def test_birdhouse_panels_are_scoped_locatable_and_close_after_all_screws(
+    birdhouse,
+):
+    manual = build_instruction_manual(birdhouse)
+    fasten = [panel for panel in manual.panels if panel.action == "fasten"]
+
+    assert len(manual.panels) == 12
+    assert all(len(panel.connections) == 1 for panel in fasten
+               if "pivot" not in panel.title.lower())
+    assert all(len(panel.instructions) <= 3 for panel in fasten)
+    assert all(panel.fastener_layouts for panel in fasten)
+    assert any(
+        "3/8\" from the left edge" in layout.label
+        and "2-1/2\" and 5-1/2\" above the bottom" in layout.label
+        for panel in fasten
+        for layout in panel.fastener_layouts
+    )
+
+    service = [
+        install for install in birdhouse.resolved_installations
+        if "cleanout side" in install.connection
+    ]
+    fixed = [
+        install for install in birdhouse.resolved_installations
+        if "cleanout side" not in install.connection
+    ]
+    assert service and all(install.contract.head == "proud"
+                           for install in service)
+    assert fixed and all(install.contract.head == "seated"
+                         for install in fixed)
+
+    closeout = manual.panels[-1]
+    assert closeout.action == "join"
+    assert closeout.instructions[0] == (
+        "Confirm all 21 modeled screws assigned to the birdhouse enclosure "
+        "are installed."
+    )
 
 
 def test_caddy_panels_cover_each_reader_step_once(caddy):

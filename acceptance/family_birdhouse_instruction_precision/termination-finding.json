@@ -1,0 +1,21 @@
+{
+  "id": "birdhouse-fixed-screws-render-proud",
+  "owner_layer": "compiler",
+  "missing_required_capability": false,
+  "impact": {
+    "geometry": false,
+    "dimensions": false,
+    "fabrication": false,
+    "assembly": true,
+    "installation": true,
+    "instructions": true,
+    "required_artifact_usability": true,
+    "safety_or_honesty": true,
+    "acceptance_criteria": false
+  },
+  "reproduction": "Compile family_birdhouse at source commit 0bb67a5 and inspect every resolved butt_screwed and cleat_screwed install contract: all ordinary fixed-joint screws declare head=proud, and the manual prints that token as the required finish.",
+  "severity": "major installation-contract defect",
+  "affected_shared_surface": "straight-driven screw installation contract",
+  "root_cause": "straight_screw_group used proud as an indiscriminate default even though ordinary fixed screws need bearing engagement; only the pivot and removable latch mechanisms require clearance under a proud head.",
+  "deferral": {}
+}

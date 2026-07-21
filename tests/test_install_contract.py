@@ -80,7 +80,7 @@ def test_cleat_screwed_default(screwed_joint):
     assert c.tool_axis.mode == "shank" and not c.tool_axis.axis_idealized
     assert c.exit.condition == "none"
     assert c.embedment == pytest.approx(0.75 * IN)  # half the 1.5in screw
-    assert c.head == "proud"
+    assert c.head == "seated"
     assert c.tool_envelope == DEFAULT_TOOL_ENVELOPE
     assert c.stage == "own_connection"
     assert r.fasteners == tuple(s.id for s in screws)

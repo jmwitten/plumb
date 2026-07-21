@@ -205,6 +205,10 @@ def _stage_to_dict(st) -> dict:
         out["connections"] = list(st.connections)
     if st.parts:
         out["parts"] = list(st.parts)
+    if st.setup:
+        out["setup"] = st.setup
+    if st.check:
+        out["check"] = st.check
     out["why"] = st.why
     return out
 

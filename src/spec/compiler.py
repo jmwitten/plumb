@@ -819,7 +819,8 @@ class SpecDetail(Detail):
                 pids.extend(self._by_id[cid].id for cid in instances)
             out.append(ResolvedStage(
                 name=st.name, why=st.why, chain="",
-                connections=tuple(labels), parts=tuple(pids)))
+                connections=tuple(labels), parts=tuple(pids),
+                setup=st.setup, check=st.check))
         return tuple(out)
 
     def resolved_after(self) -> tuple:

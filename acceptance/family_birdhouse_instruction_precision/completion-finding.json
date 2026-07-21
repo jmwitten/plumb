@@ -1,0 +1,21 @@
+{
+  "id": "birdhouse-closeout-precedes-cleat",
+  "owner_layer": "document_generator",
+  "missing_required_capability": false,
+  "impact": {
+    "geometry": false,
+    "dimensions": false,
+    "fabrication": false,
+    "assembly": true,
+    "installation": true,
+    "instructions": true,
+    "required_artifact_usability": true,
+    "safety_or_honesty": true,
+    "acceptance_criteria": true
+  },
+  "reproduction": "Generate family_birdhouse at source commit 0bb67a5: panel 7 says all 21 screws are installed and tells the reader to stop, while panel 8 subsequently installs the two pole-cleat screws.",
+  "severity": "major sequence and closeout contradiction",
+  "affected_shared_surface": "bench-unit join completion projection",
+  "root_cause": "The project excluded the cleat from the completed bench unit and duplicated a manually counted fastener total in completion prose; the renderer did not derive the unit fastener count from compiled membership.",
+  "deferral": {}
+}

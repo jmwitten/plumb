@@ -185,57 +185,104 @@ connections:
 
 sequence:
   stages:
-    - name: attach the fixed side to the entrance front
+    - name: Attach the fixed side to the entrance front
       parts: [front, side_fixed]
       connections: ["front -> fixed side"]
+      setup: >-
+        Stand the fixed side behind the entrance front with both bottom edges
+        flush; clamp the corner square.
+      check: Confirm the bottom edges remain flush and the corner remains square.
       why: >-
         Begin with one square L-shaped corner so later boards have a stable
         reference without hiding the two front screw locations.
-    - name: attach the extended back to the fixed side
+    - name: Attach the extended back to the fixed side
       parts: [back]
       connections: ["back -> fixed side"]
+      setup: >-
+        Align the back's box-bottom line, 2 1/2 inches above its lower end,
+        with the bottom of the fixed side; clamp the corner square.
+      check: Confirm the back extends 2 1/2 inches below the box and the corner remains square.
       why: >-
         Close the second fixed corner while the back face is open on the bench;
         the later mounting cleat otherwise occupies that driver corridor.
-    - name: seat and secure the recessed floor
+    - name: Seat the floor and fasten it through the entrance front
       parts: [floor]
-      connections:
-        - "front -> recessed floor"
-        - "back -> recessed floor"
-        - "fixed side -> recessed floor"
+      connections: ["front -> recessed floor"]
+      setup: >-
+        Seat and support the floor level between the walls with its underside
+        1/4 inch above the wall bottoms.
+      check: Confirm the 1/4-inch recess before moving to the back screws.
       why: >-
         The two fixed corners now hold the shell while the floor is seated at
-        its modeled one-quarter-inch recess and fastened from three accessible
-        faces.
-    - name: install the cleanout side pivots
+        its modeled one-quarter-inch recess and first captured from the front.
+    - name: Fasten the recessed floor through the extended back
+      connections: ["back -> recessed floor"]
+      setup: Keep the floor supported level at the confirmed 1/4-inch recess.
+      check: Confirm the floor remains level and the back seam is closed.
+      why: >-
+        The front screws now locate the floor while the accessible back face
+        secures the opposite edge without combining two driver directions.
+    - name: Fasten the recessed floor through the fixed side
+      connections: ["fixed side -> recessed floor"]
+      setup: Keep the floor supported and the two fixed corners clamped square.
+      check: Confirm the floor is captured on three sides and every drain remains open.
+      why: >-
+        The final floor edge closes the three-sided support only after its
+        front and back elevations are fixed.
+    - name: Install the cleanout-side pivots
       parts: [side_cleanout]
       connections:
         - "front pivot -> cleanout side"
         - "back pivot -> cleanout side"
+      setup: >-
+        Support the cleanout side closed with its bottom flush to the wall
+        bottoms and its front and back gaps even.
+      check: Swing the side fully open and closed; it must move freely before the latch is added.
       why: >-
         Install the two aligned upper pivots together so the moving side can be
         supported and its swing checked before adding the lower latch.
-    - name: close and latch the cleanout side
+    - name: Close and latch the cleanout side
       connections: ["lower latch -> cleanout side"]
+      setup: Close and support the cleanout side with its front gap even.
+      check: Loosen, open, close, and re-latch the side once; the screw must remain removable.
       why: >-
         The latch is a separate service operation: swing the panel closed,
         install the lower screw, and confirm it remains removable for cleanout.
-    - name: set and secure the roof
+    - name: Set the roof and fasten it to the entrance front
       parts: [roof]
-      connections:
-        - "roof -> front"
-        - "roof -> back"
-        - "roof -> fixed side"
+      connections: ["roof -> front"]
+      setup: >-
+        Center the roof left to right with a 1-inch side overhang, and set its
+        front edge 1 inch beyond the entrance front.
+      check: Confirm both side overhangs and the front overhang remain 1 inch.
       why: >-
         Add the roof only after the moving side operates correctly; all six
-        modeled top-entry screw locations then remain visible as one task.
-    - name: add the pole cleat after the enclosure is complete
+        modeled top-entry screw locations remain visible, while the front pair
+        fixes the roof datum before the other pairs.
+    - name: Fasten the roof to the extended back
+      connections: ["roof -> back"]
+      setup: Keep the roof centered and hold its rear edge against the modeled slope datum.
+      check: Confirm the roof remains centered and the rear seam is closed.
+      why: >-
+        The fixed front pair holds the roof position while the back pair closes
+        the uphill seam as its own driver operation.
+    - name: Fasten the roof to the fixed side
+      connections: ["roof -> fixed side"]
+      setup: Keep the roof centered without closing the intentional ventilation wedge.
+      check: Confirm the ventilation wedge remains open and all roof overhangs remain even.
+      why: >-
+        The side pair completes the roof only after the front and back slopes
+        are fixed, without hiding the intended ventilation gap.
+    - name: Add the pole mounting cleat
       parts: [mount_cleat]
       connections: ["mounting cleat -> extended back"]
+      setup: >-
+        Center the cleat across the back with its ends flush to the back's side
+        edges and its bottom 2 3/4 inches above the box bottom.
+      check: Confirm the cleat is level, centered, and tight to the back.
       why: >-
-        The cleat is an exterior interface added after the complete enclosure
-        joins the root assembly, preserving rear-corner access and the field
-        installation hold.
+        The cleat is the last bench connection, preserving rear-corner access
+        while keeping the separate field pole/clamp installation on hold.
   subassemblies:
     - name: birdhouse enclosure
       parts:
@@ -264,19 +311,21 @@ sequence:
         - pivot_front
         - pivot_back
         - latch_front
+        - mount_cleat
+        - cleat_left
+        - cleat_right
       why: >-
-        Build the six-board enclosure, roof, and moving service side as one
-        stable bench unit while the pole mounting cleat and its fasteners are
-        absent. Add that cleat only at the root assembly after the rear corner
-        is closed. The complete empty box is field-mounted only after every
-        installation hold is resolved; lifting and insertion travel are not
-        analyzed.
+        Build the six-board enclosure, roof, moving service side, and pole
+        mounting cleat as one stable bench unit. Add the cleat only after the
+        rear corner and roof are closed. The complete empty box is field-mounted
+        only after every installation hold is resolved; lifting and insertion
+        travel are not analyzed.
       completion:
-        title: Bench assembly complete — field installation remains on hold
+        title: Birdhouse assembly complete — field installation remains on hold
         instructions:
           - >-
-            Confirm all 21 modeled screws are installed, the one-quarter-inch
-            floor recess is maintained, and the enclosure seams remain closed.
+            Confirm the one-quarter-inch floor recess is maintained and the
+            enclosure seams remain closed.
           - >-
             Confirm all four floor drains and all four high wall vents remain
             open.

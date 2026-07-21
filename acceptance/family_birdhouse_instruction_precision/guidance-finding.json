@@ -1,0 +1,21 @@
+{
+  "id": "birdhouse-stages-lack-setup-and-check",
+  "owner_layer": "compiler",
+  "missing_required_capability": true,
+  "impact": {
+    "geometry": false,
+    "dimensions": false,
+    "fabrication": false,
+    "assembly": true,
+    "installation": true,
+    "instructions": true,
+    "required_artifact_usability": true,
+    "safety_or_honesty": false,
+    "acceptance_criteria": true
+  },
+  "reproduction": "Inspect family_birdhouse assembly panels 1-6 at source commit 0bb67a5: the sequence stages carry why provenance, but the reader receives no consistent flush/recess/overhang setup, support/clamp state, or observable per-panel acceptance check.",
+  "severity": "major assembly precision defect",
+  "affected_shared_surface": "sequence-stage authoring and instruction projection",
+  "root_cause": "AuthoredStage and ResolvedStage represented order targets and rationale only; the compiler had no bounded fields for one physical setup sentence and one reader check sentence.",
+  "deferral": {}
+}

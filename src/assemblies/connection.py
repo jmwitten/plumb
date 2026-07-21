@@ -1825,7 +1825,8 @@ class ServicePanelScrewed(ConnectionType):
 
     def install_contract(self, conn: Connection):
         frame_member, _service_panel, screw = self._unpack(conn)
-        return (straight_screw_group(self.role, [screw], frame_member.id),)
+        return (straight_screw_group(
+            self.role, [screw], frame_member.id, head="proud"),)
 
 
 @connection_types.register("pivot_screwed")

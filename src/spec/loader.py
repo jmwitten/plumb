@@ -765,6 +765,7 @@ def _build_stage(raw: dict, index: int, seq_ctx: str) -> AuthoredStage:
         )
     f = _take(raw, {
         "name": True, "connections": False, "parts": False, "why": True,
+        "setup": False, "check": False,
     }, ctx)
     name = f["name"].strip() if isinstance(f["name"], str) else ""
     if not name:
@@ -790,7 +791,21 @@ def _build_stage(raw: dict, index: int, seq_ctx: str) -> AuthoredStage:
             f"'connections' or 'parts' — a stage naming nothing claims no "
             f"order over anything."
         )
-    return AuthoredStage(name=name, why=why, connections=connections, parts=parts)
+    guidance = {}
+    for field in ("setup", "check"):
+        value = "" if f[field] is _MISSING else f[field]
+        if not isinstance(value, str) or not value.strip():
+            if f[field] is not _MISSING:
+                raise SpecSchemaError(
+                    f"{ctx} ({name!r}): '{field}' must be one non-empty "
+                    "reader-facing sentence"
+                )
+            value = ""
+        guidance[field] = value.strip()
+    return AuthoredStage(
+        name=name, why=why, connections=connections, parts=parts,
+        setup=guidance["setup"], check=guidance["check"],
+    )
 
 
 # -- foundation systems (task FAB-3, retire R29) -----------------------------

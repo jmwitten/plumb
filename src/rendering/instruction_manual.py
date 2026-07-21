@@ -209,6 +209,17 @@ def _panel_html(detail, panel, image_path: Path, total: int) -> str:
           <h3>Placement marks — measured from the compiled model</h3>
           <ul>{station_rows}</ul>
         </section>"""
+    fastener_layouts = ""
+    if panel.fastener_layouts:
+        layout_rows = "".join(
+            f"<li>{_e(layout.label)}</li>"
+            for layout in panel.fastener_layouts
+        )
+        fastener_layouts = f"""
+        <section class="station-box screw-layouts">
+          <h3>Screw locations — measured from the compiled model</h3>
+          <ul>{layout_rows}</ul>
+        </section>"""
     why = ""
     if panel.rationales:
         why = "".join(f"<p>{_e(value)}</p>" for value in panel.rationales)
@@ -293,6 +304,7 @@ def _panel_html(detail, panel, image_path: Path, total: int) -> str:
         <h3>Do this</h3>
         <ol>{instructions}</ol>
       </section>
+      {fastener_layouts}
       {_procedure_links(panel.procedure_links)}
       {stations}
       {why}

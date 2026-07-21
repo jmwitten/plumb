@@ -603,7 +603,8 @@ class SiteDetail(Detail):
             for st in self._frags[sid].resolved_sequence():
                 out.append(ResolvedStage(
                     name=f"{sid}/{st.name}", why=st.why, chain=sid,
-                    connections=st.connections, parts=st.parts))
+                    connections=st.connections, parts=st.parts,
+                    setup=st.setup, check=st.check))
         return tuple(out)
 
     def resolved_after(self) -> tuple:
