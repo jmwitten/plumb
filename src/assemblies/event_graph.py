@@ -1379,6 +1379,8 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
     unit_idx = {u.name: i for i, u in enumerate(
         graph.staging.units if graph.staging is not None else ())}
     root_base = 2
+    root_stage_tag = 0
+    root_ordinary_tag = 1
 
     def bucket_for(key: tuple, stage: ResolvedStage | None, title: str,
                    *, unit: ResolvedUnit | None = None, joins=(),
@@ -1442,13 +1444,15 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
                 f"stage {st.name!r} (declared order): install {label}",
                 preferred=(root_base,
                            1 + stage_order[(st.chain, st.name)],
+                           root_stage_tag,
                            first, label))
         if st is not None:
             key = ("stage", st.chain, st.name)
             preferred = None
             if (st.chain, st.name) in process_stage_keys:
                 preferred = (root_base,
-                             1 + stage_order[(st.chain, st.name)])
+                             1 + stage_order[(st.chain, st.name)],
+                             root_stage_tag)
             return bucket_for(
                 key, st, f"stage {st.name!r} (declared order)",
                 preferred=preferred)
@@ -1505,6 +1509,7 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
                     preferred = (
                         root_base,
                         1 + stage_order[(st.chain, st.name)],
+                        root_stage_tag,
                         len(order) + 1,
                         pos.get(ev, len(order)),
                         label,
@@ -1606,7 +1611,7 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
         preferred = b["preferred"]
         if preferred is not None:
             return preferred
-        return (root_base, b["first"], b["title"])
+        return (root_base, b["first"], root_ordinary_tag, b["title"])
 
     def presentation_sort_key(key):
         return presentation_key(key), repr(key)
@@ -1782,7 +1787,8 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
         preferred = bucket["preferred"]
         if preferred is not None:
             return preferred
-        return (root_base, bucket["first"], bucket["title"])
+        return (root_base, bucket["first"], root_ordinary_tag,
+                bucket["title"])
 
     heap = [(condensed_key(component_index), component_index)
             for component_index, degree in condensed_indeg.items()
