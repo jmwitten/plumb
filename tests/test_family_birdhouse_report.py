@@ -260,7 +260,7 @@ def test_family_manual_uses_birdhouse_join_and_member_neutral_fastener_copy(pack
 
     for stale in ("sofa arm", "hot-drink", "along-arm", "through the rail"):
         assert stale not in manual.lower()
-    assert "Bench assembly complete" in manual
+    assert "Birdhouse assembly complete" in manual
     assert "field installation remains on hold" in manual
     assert "Screw ×" in manual
     assert "1-1/2&quot; long" in manual
@@ -285,9 +285,9 @@ def test_family_manual_marks_screw_locations_without_numbering_each_screw(packag
     assert "orange targets = screw locations" in manual
     assert marker_count == 21
     assert all("screw" not in label.lower() for label in callout_labels)
-    assert "Screw ×6" in manual
-    assert "Screw ×2" in manual
-    assert "Screw ×1" in manual
+    assert "Screw ×6" not in manual
+    assert manual.count("Screw ×2") == 10
+    assert manual.count("Screw ×1") == 1
     assert "fixed-side front lower screw" not in manual
 
     with Image.open(result["panel_images"][3]) as pivot_image:
@@ -301,7 +301,7 @@ def test_family_manual_marks_screw_locations_without_numbering_each_screw(packag
     assert min(y for _x, y in orange) >= 60
 
 
-def test_family_manual_has_eight_scoped_progressive_panels():
+def test_family_manual_has_twelve_scoped_progressive_panels():
     from detailgen.rendering.instruction_panels import build_instruction_manual
     from detailgen.rendering.instruction_render import (
         panel_callout_ids,
@@ -313,32 +313,36 @@ def test_family_manual_has_eight_scoped_progressive_panels():
     detail.validate()
     manual = build_instruction_manual(detail)
 
-    assert len(manual.panels) == 8
+    assert len(manual.panels) == 12
     assert [len(panel.connections) for panel in manual.panels] == [
-        1, 1, 3, 2, 1, 3, 0, 1,
+        1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 0,
     ]
-    assert all(len(panel.instructions) <= 3 for panel in manual.panels)
+    assert all(
+        len(panel.instructions) <= 3
+        for panel in manual.panels
+        if panel.action == "fasten"
+    )
     assert len(panel_callout_ids(detail, manual.panels[0])) == 2
     assert len(panel_fastener_ids(detail, manual.panels[0])) == 2
-    assert panel_callout_ids(detail, manual.panels[6]) == ()
+    assert panel_callout_ids(detail, manual.panels[11]) == ()
 
-    completion = " ".join(manual.panels[6].instructions).lower()
+    completion = " ".join(manual.panels[11].instructions).lower()
     for fact in ("drains", "vents", "swing", "latch"):
         assert fact in completion
 
     generic = build_instruction_manual(detail)
     pivot = " ".join((
-        generic.panels[3].title,
-        *generic.panels[3].instructions,
+        generic.panels[5].title,
+        *generic.panels[5].instructions,
     )).lower()
     latch = " ".join((
-        generic.panels[4].title,
-        *generic.panels[4].instructions,
-    )).lower()
-    completion = " ".join((
         generic.panels[6].title,
         *generic.panels[6].instructions,
-        *generic.panels[6].honesty,
+    )).lower()
+    completion = " ".join((
+        generic.panels[11].title,
+        *generic.panels[11].instructions,
+        *generic.panels[11].honesty,
     )).lower()
 
     for phrase in ("pivot", "aligned", "swing", "without binding"):

@@ -261,7 +261,9 @@ sequence:
         fixes the roof datum before the other pairs.
     - name: Fasten the roof to the extended back
       connections: ["roof -> back"]
-      setup: Keep the roof centered and hold its rear edge against the modeled slope datum.
+      setup: >-
+        Keep the roof centered and hold its underside down against the extended
+        back's top edge.
       check: Confirm the roof remains centered and the rear seam is closed.
       why: >-
         The fixed front pair holds the roof position while the back pair closes

@@ -183,6 +183,13 @@ def test_birdhouse_panels_are_scoped_locatable_and_close_after_all_screws(
         for panel in fasten
         for layout in panel.fastener_layouts
     )
+    cleat_layout = next(
+        layout for panel in fasten for layout in panel.fastener_layouts
+        if layout.connection == "mounting cleat -> extended back"
+    )
+    assert "paired centers" in cleat_layout.label
+    assert "from the left edge" in cleat_layout.label
+    assert "from the right edge" in cleat_layout.label
 
     service = [
         install for install in birdhouse.resolved_installations

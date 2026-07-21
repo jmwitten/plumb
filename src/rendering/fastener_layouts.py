@@ -95,6 +95,26 @@ def _offset_phrase(
     return f"{amounts} from the {low_name}"
 
 
+def _point_offset_phrase(
+    value: float,
+    low: float,
+    high: float,
+    semantic_axis: int,
+    semantic_sign: float,
+) -> str:
+    """Locate one center from the nearest reader-visible edge."""
+    from_low = value - low
+    from_high = high - value
+    if semantic_sign < 0:
+        from_low, from_high = from_high, from_low
+    low_name, high_name, _symmetric_name = _AXIS_EDGE_TEXT[semantic_axis]
+    if semantic_axis == 2:
+        return f"{_station_dimension(from_low)} above the {low_name}"
+    if from_low <= from_high:
+        return f"{_station_dimension(from_low)} from the {low_name}"
+    return f"{_station_dimension(from_high)} from the {high_name}"
+
+
 def _entry_surface_axis(
     points: tuple[tuple[float, float, float], ...],
     lows: tuple[float, float, float],
@@ -146,6 +166,7 @@ def derive_fastener_layouts(
                 )
             else:
                 phrases = []
+                tangent_axes = []
                 for local_axis in range(3):
                     if local_axis == surface_axis:
                         continue
@@ -154,8 +175,16 @@ def derive_fastener_layouts(
                         for axis in range(3)))
                     semantic_axis = max(
                         range(3), key=lambda axis: abs(direction[axis]))
+                    values = tuple(
+                        point[local_axis] for point in local_heads)
+                    tangent_axes.append((
+                        local_axis,
+                        semantic_axis,
+                        direction[semantic_axis],
+                        values,
+                    ))
                     phrases.append(_offset_phrase(
-                        tuple(point[local_axis] for point in local_heads),
+                        values,
                         lows[local_axis], highs[local_axis],
                         semantic_axis, direction[semantic_axis],
                     ))
@@ -164,10 +193,32 @@ def derive_fastener_layouts(
                     if part_id != entry.id)
                 receiver_text = " and ".join(
                     _display(labels, part_id) for part_id in receivers)
-                label = (
-                    f"{_display(labels, entry.id)} → {receiver_text}: screw "
-                    f"centers {_human_list(tuple(phrases))}."
-                )
+                if (len(local_heads) > 1 and all(
+                        len(_rounded_unique(axis[3])) > 1
+                        for axis in tangent_axes)):
+                    paired_centers = tuple(
+                        "(" + _human_list(tuple(
+                            _point_offset_phrase(
+                                point[local_axis],
+                                lows[local_axis],
+                                highs[local_axis],
+                                semantic_axis,
+                                semantic_sign,
+                            )
+                            for (local_axis, semantic_axis, semantic_sign,
+                                 _values) in tangent_axes
+                        )) + ")"
+                        for point in local_heads
+                    )
+                    label = (
+                        f"{_display(labels, entry.id)} → {receiver_text}: "
+                        f"paired centers {_human_list(paired_centers)}."
+                    )
+                else:
+                    label = (
+                        f"{_display(labels, entry.id)} → {receiver_text}: "
+                        f"screw centers {_human_list(tuple(phrases))}."
+                    )
             drive_axis = _axis_index(axes[0])
             if drive_axis is None:
                 drive_direction = "modeled direction"
@@ -192,4 +243,3 @@ def derive_fastener_layouts(
                 drive_direction=drive_direction,
             ))
     return tuple(result)
-
