@@ -1,0 +1,21 @@
+{
+  "id": "birdhouse-panel-one-hides-receiver",
+  "owner_layer": "renderer",
+  "missing_required_capability": false,
+  "impact": {
+    "geometry": false,
+    "dimensions": false,
+    "fabrication": false,
+    "assembly": true,
+    "installation": false,
+    "instructions": true,
+    "required_artifact_usability": true,
+    "safety_or_honesty": false,
+    "acceptance_criteria": false
+  },
+  "reproduction": "Render family_birdhouse panel 1 at source commit 23dc80d: the fixed side sits behind the entrance front from the established right-front camera, so it reads as a thin sliver instead of the receiving member.",
+  "severity": "major first-step readability defect",
+  "affected_shared_surface": "instruction-panel semantic camera selection",
+  "root_cause": "Fastener panels used one fixed right-front camera regardless of whether the current connection occupied the left or right side of the assembly.",
+  "deferral": {}
+}

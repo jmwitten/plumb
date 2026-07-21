@@ -157,13 +157,41 @@ def _camera_bounds_with_fastener_markers(bounds, markers) -> tuple[float, ...]:
     )
 
 
-def panel_camera(panel) -> tuple[float, float, float]:
-    """Stable camera region selected by semantic action family."""
+def panel_camera(panel, detail=None) -> tuple[float, float, float]:
+    """Stable action camera, biased toward the side containing current work."""
     if panel.action == "prepare":
         return (1.0, 1.0, 0.75)
     if panel.action in {"bond", "cure", "fasten"}:
-        return (1.0, -1.0, -0.35)
+        x = 1.0
+        if detail is not None and panel.action == "fasten":
+            by_id = {part.id: part for part in detail.assembly.parts}
+            work = tuple(
+                by_id[part_id] for part_id in panel.focus_part_ids
+                if "installation_fastener" not in
+                by_id[part_id].component.capability_tags()
+            )
+            structural = tuple(
+                part for part in detail.assembly.parts
+                if "installation_fastener" not in
+                part.component.capability_tags()
+            )
+            if work and structural:
+                work_x = sum(_part_centers_for(work)) / len(work)
+                all_x = _part_centers_for(structural)
+                center_x = (min(all_x) + max(all_x)) / 2
+                span = max(all_x) - min(all_x)
+                if work_x < center_x - 0.05 * max(span, 1.0):
+                    x = -1.0
+        return (x, -1.0, -0.35)
     return (1.0, -1.0, 0.6)
+
+
+def _part_centers_for(parts) -> tuple[float, ...]:
+    result = []
+    for part in parts:
+        bb = part.world_solid().val().BoundingBox()
+        result.append((bb.xmin + bb.xmax) / 2)
+    return tuple(result)
 
 
 def _station_payload(station) -> dict:
@@ -216,7 +244,7 @@ def panel_content_key(
         "visible_part_ids": panel.visible_part_ids,
         "arrival_part_ids": panel.arrival_part_ids,
         "focus_part_ids": panel.focus_part_ids,
-        "camera": panel_camera(panel),
+        "camera": panel_camera(panel, detail),
         "size": size,
         "callouts": panel_callout_ids(detail, panel),
         "fastener_markers": _fastener_marker_payload(detail, panel),
@@ -571,7 +599,7 @@ def render_instruction_panel(
     temporary = None
     try:
         camera = renderer.GetActiveCamera()
-        camera.SetPosition(*panel_camera(panel))
+        camera.SetPosition(*panel_camera(panel, detail))
         camera.SetFocalPoint(0, 0, 0)
         camera.SetViewUp(0, 0, 1)
         fastener_markers = _fastener_marker_payload(detail, panel)

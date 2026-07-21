@@ -51,6 +51,12 @@ to drive the orange targets in the diagram; the layout text supplies the
 transferable measurements those targets lacked. Unsupported non-axis-aligned
 geometry stays explicit instead of receiving guessed coordinates.
 
+For fastener scenes, the shared camera biases toward the side of the assembly
+where the current structural members sit. A left-side corner is therefore seen
+from the left-front instead of being hidden behind its front board; centered
+and right-side work retains the established view. This is geometry-derived and
+does not add a project camera override.
+
 ### 3. Honest screw termination language
 
 Introduce `seated` as the ordinary straight-driven screw head condition.
@@ -88,4 +94,3 @@ This change does not select a screw product, pilot diameter, countersink,
 torque, coating system, pole, baffle, foundation, or field clamp. Those remain
 manufacturer- or field-controlled holds. It improves the executable assembly
 contract without inventing missing engineering capacity.
-
