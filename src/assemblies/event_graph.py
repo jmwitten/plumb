@@ -1469,12 +1469,28 @@ def derive_reader_steps(graph: EventGraph) -> tuple[ReaderStep, ...]:
         for ev in graph.processes_of.get(label, ()):
             frame = graph.frame_of.get(ev, "root")
             unit = graph.units.get(frame)
+            st = stage_of_conn.get(label)
             preferred = None
             if unit is not None:
-                preferred = (0, unit_idx[frame], 2,
-                             pos.get(ev, len(order)), label, ev.group)
+                if st is not None:
+                    # Same-stage connection buckets use their first event
+                    # position in this slot. A sentinel beyond every event
+                    # keeps all of those primary acts ahead of their derived
+                    # process steps without adding a graph dependency.
+                    preferred = (
+                        0,
+                        unit_idx[frame],
+                        1 + stage_order[(st.chain, st.name)],
+                        len(order) + 1,
+                        pos.get(ev, len(order)),
+                        label,
+                        ev.group,
+                    )
+                else:
+                    preferred = (0, unit_idx[frame], 2,
+                                 pos.get(ev, len(order)), label, ev.group)
             pb = bucket_for(
-                ("process", label, ev.group), None,
+                ("process", label, ev.group), st,
                 f"{ev.group} {label}", unit=unit, preferred=preferred,
                 process_event=ev, process_fact=graph.process_facts[ev])
             pb["events"].append(ev)

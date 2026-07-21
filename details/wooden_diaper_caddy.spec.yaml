@@ -150,14 +150,132 @@ connections:
     process: {cure: {instructions: ["Prepare and apply the selected interior wood adhesive per its label.", "Clamp the handle between the raised end panels and maintain the label-required fixture state."], completion: selected_label_full_cure, why: "The adhesive label and actual shop conditions govern full cure."}}
 
 sequence:
-  assembly:
-    mode: bench_then_set
-    why: >-
-      Cut and dry-fit the seven wood parts; ease and round the specified shop
-      edges; assemble the plywood tray square on a bench; fit, glue, and screw
-      the handle last; keep the glue-up clamped until the selected adhesive
-      label's full-cure condition; then sand, finish, fully cure, and place the
-      freestanding caddy on a stable horizontal surface.
+  stages:
+    - name: attach both long walls to the bottom
+      parts: [bottom, wall_near, wall_far]
+      connections:
+        - "bottom -> near long wall"
+        - "bottom -> far long wall"
+      why: >-
+        Secure the mirrored long walls in one square bench setup while both
+        ends remain open, keeping all six underside screw locations visible
+        and the walls parallel for the raised-end installation.
+    - name: attach the left raised end to the tray
+      parts: [end_left]
+      connections:
+        - "bottom -> left raised end"
+        - "near wall -> left raised end"
+        - "far wall -> left raised end"
+      why: >-
+        Close one end only after both long walls are fixed square to the bottom,
+        while the open right end still permits access for alignment and driving.
+    - name: attach the right raised end to the tray
+      parts: [end_right]
+      connections:
+        - "bottom -> right raised end"
+        - "near wall -> right raised end"
+        - "far wall -> right raised end"
+      why: >-
+        Close the second end against the established tray, checking the raised
+        panels remain parallel before the center divider restricts access.
+    - name: install the center divider
+      parts: [divider]
+      connections:
+        - "bottom -> center divider"
+        - "near wall -> center divider"
+        - "far wall -> center divider"
+      why: >-
+        Seat and secure the divider after the outer tray is square so its three
+        joints can register to the completed shell without shifting the walls.
+    - name: fit and bond the handle between the raised ends
+      parts: [handle]
+      connections:
+        - "left raised end -> handle adhesive bond"
+        - "right raised end -> handle adhesive bond"
+      why: >-
+        Dry-fit the handle, apply adhesive to both prepared ends, and clamp both
+        bonds in one setup so the dowel remains seated and aligned through cure.
+    - name: fasten the cured handle to both raised ends
+      connections:
+        - "left raised end -> handle end"
+        - "right raised end -> handle end"
+      why: >-
+        Drive the two handle screws only after both adhesive bonds have reached
+        the selected label's full-cure condition, preserving the cured seating.
+  after:
+    - connection: "left raised end -> handle end"
+      after:
+        - {cure: "left raised end -> handle adhesive bond"}
+        - {cure: "right raised end -> handle adhesive bond"}
+      why: >-
+        Both handle bonds must reach the selected adhesive label's full-cure
+        condition before either end-grain handle screw is driven.
+    - connection: "right raised end -> handle end"
+      after:
+        - {cure: "left raised end -> handle adhesive bond"}
+        - {cure: "right raised end -> handle adhesive bond"}
+      why: >-
+        Both handle bonds must reach the selected adhesive label's full-cure
+        condition before either end-grain handle screw is driven.
+  subassemblies:
+    - name: wooden diaper caddy
+      parts:
+        - bottom
+        - wall_near
+        - wall_far
+        - end_left
+        - end_right
+        - divider
+        - handle
+        - bottom_near_1
+        - bottom_near_2
+        - bottom_near_3
+        - bottom_far_1
+        - bottom_far_2
+        - bottom_far_3
+        - bottom_left_1
+        - bottom_left_2
+        - bottom_right_1
+        - bottom_right_2
+        - bottom_div_1
+        - bottom_div_2
+        - bottom_div_3
+        - corner_nl_1
+        - corner_nl_2
+        - corner_nr_1
+        - corner_nr_2
+        - corner_fl_1
+        - corner_fl_2
+        - corner_fr_1
+        - corner_fr_2
+        - divider_near_1
+        - divider_near_2
+        - divider_far_1
+        - divider_far_2
+        - handle_left_screw
+        - handle_right_screw
+      why: >-
+        Assemble the complete freestanding caddy as one square bench unit,
+        keeping every joint accessible and both handle ends clamped through the
+        selected adhesive label's full-cure condition before final inspection.
+      completion:
+        title: Inspect the completed wooden diaper caddy
+        instructions:
+          - >-
+            Confirm all 27 modeled screws are installed with every countersunk
+            head flush, and confirm the handle is immobile between the raised
+            end panels.
+          - >-
+            Confirm every exposed edge is smooth with no splinters or sharp
+            corners, and confirm the caddy bears flat without rocking on a
+            stable horizontal surface.
+          - >-
+            Stop use if any joint loosens, wood cracks, or finish is damaged.
+        honesty:
+          - >-
+            The 8 kg intended-use limit is not a capacity certification; screw
+            withdrawal, glue, panel, handle, impact, stability, and assembled-
+            product capacity remain not analyzed.
 
 validation:
   dimensions:
