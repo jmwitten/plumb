@@ -1,5 +1,5 @@
 {
-  "_doc": "CURRENT-DESIGN determinism baseline for details/platform.spec.yaml, re-frozen from the SPEC path at base SHA c4692f559fca83624064c52f04c5e51007845f3c by scripts/refreeze_from_spec.py (task STRUCT #19 / addendum A2). The imperative path is gone (milestone 4B); this corpus IS the canonical record the compiled spec must reproduce byte-for-byte. The imperative-era testimony is retrievable at b52626b. Regenerate only with a justified, reviewed diff: python scripts/refreeze_from_spec.py.",
+  "_doc": "CURRENT-DESIGN determinism baseline for details/platform.spec.yaml, re-frozen from the SPEC path at base SHA 435940b4631a2b4715f494676565504fffb46b99 by scripts/refreeze_from_spec.py (task STRUCT #19 / addendum A2). The imperative path is gone (milestone 4B); this corpus IS the canonical record the compiled spec must reproduce byte-for-byte. The imperative-era testimony is retrievable at b52626b. Regenerate only with a justified, reviewed diff: python scripts/refreeze_from_spec.py.",
   "bom": [
     {
       "assumptions": "Actual dressed dimensions (PS 20). Long edges eased r=0.12\"; end grain square.",
@@ -407,7 +407,7 @@
     "symmetric_about": 66,
     "through_hole": 16
   },
-  "captured_at_sha": "c4692f559fca83624064c52f04c5e51007845f3c",
+  "captured_at_sha": "435940b4631a2b4715f494676565504fffb46b99",
   "connection_kind_types": [
     "BoltedClamp",
     "FaceMountHanger",
@@ -415,9 +415,9 @@
     "StandoffPostBase",
     "ToeScrewed"
   ],
-  "content_fp": "01c1796eef0b29a975615d0081f2181a084046355641052710616dadda2e7dd5",
+  "content_fp": "db0a019bc31fce05a8e6e479edd67e5333bc8115ead81fb49134d77a23923056",
   "content_fp_divergence": {},
-  "content_fp_spec": "01c1796eef0b29a975615d0081f2181a084046355641052710616dadda2e7dd5",
+  "content_fp_spec": "db0a019bc31fce05a8e6e479edd67e5333bc8115ead81fb49134d77a23923056",
   "counts": {
     "bom_rows": 20,
     "derivation_log": 762,
